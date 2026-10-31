@@ -1,12 +1,13 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
+import { ProVerificationStatus } from '@prisma/client';
 import {
   SeedCoverageZone,
-  SeedProfessionalRecord,
   SeedServiceCategory,
   SeedServiceOffering,
 } from '../../prisma/egypt-demo-seed.data';
 import { InMemoryStoreService } from '../../prisma/in-memory-store.service';
 import { PrismaService, StoragePersistenceMode } from '../../prisma/prisma.service';
+import { PublicProfessionalDto } from './dto/public-professional.dto';
 import { QueryProfessionalsDto, QueryServicesDto } from './dto/query-services.dto';
 
 export interface PaginatedResponse<T> {
@@ -172,7 +173,7 @@ export class ServicesService {
 
   async listProfessionals(
     query: QueryProfessionalsDto,
-  ): Promise<PaginatedResponse<SeedProfessionalRecord>> {
+  ): Promise<PaginatedResponse<PublicProfessionalDto>> {
     const page = query.page ?? 1;
     const limit = query.limit ?? 20;
     const search = query.search?.trim().toLowerCase();
@@ -184,14 +185,12 @@ export class ServicesService {
     if (categoryFilter) {
       allPros = allPros.filter(
         (pro) =>
-          pro.primaryCategoryId.toLowerCase() === categoryFilter ||
           pro.primaryCategorySlug.toLowerCase() === categoryFilter,
       );
     }
 
     if (zoneFilter) {
-      // Allow matching zone slug or label, or return all Greater Cairo & Giza pros if general zone
-      const zoneMatches = allPros.filter((pro) => {
+      allPros = allPros.filter((pro) => {
         const zoneHaystack = [
           pro.primaryZoneSlug,
           pro.zonesLabelEn,
@@ -201,7 +200,6 @@ export class ServicesService {
           .toLowerCase();
         return zoneHaystack.includes(zoneFilter);
       });
-      allPros = zoneMatches;
     }
 
     if (search) {
@@ -213,7 +211,7 @@ export class ServicesService {
           pro.specialtyAr,
           pro.zonesLabelEn,
           pro.zonesLabelAr,
-          pro.badgeEn,
+          pro.badgeEn ?? '',
           pro.primaryCategorySlug,
         ]
           .join(' ')
@@ -273,49 +271,79 @@ export class ServicesService {
     return this.memoryStore.getOfferings();
   }
 
-  private async loadAllProfessionals(): Promise<SeedProfessionalRecord[]> {
+  private async loadAllProfessionals(): Promise<PublicProfessionalDto[]> {
     if (this.prisma.isDatabaseConnected()) {
+      // Security Invariant: Only APPROVED profiles appear in public discovery.
+      // DRAFT, PENDING_REVIEW, ACTION_REQUIRED, SUSPENDED are strictly excluded.
       const rows = await this.prisma.proProfile.findMany({
+        where: {
+          verificationStatus: ProVerificationStatus.APPROVED,
+        },
         include: {
           user: true,
           primaryCategory: true,
           primaryZone: true,
         },
       });
-      if (rows.length > 0) {
-        return rows.map((row) => ({
-          id: row.id,
-          userId: row.userId,
-          fullNameEn: row.user.fullName ?? 'Cairo Technician',
-          fullNameAr: row.user.fullName ?? 'فني القاهرة',
-          phone: row.user.phone,
-          dossierCode: row.dossierCode,
-          primaryCategoryId: row.primaryCategoryId ?? 'cat-ac-maintenance',
-          primaryCategorySlug: row.primaryCategory?.slug ?? 'ac-maintenance',
-          primaryZoneSlug: row.primaryZone?.slug ?? 'sheikh-zayed',
-          specialtyEn: row.specialtyEn ?? 'Certified Artisan',
-          specialtyAr: row.specialtyAr ?? 'فني معتمد',
-          zonesLabelEn: row.zonesLabelEn ?? 'Cairo & Giza',
-          zonesLabelAr: row.zonesLabelAr ?? 'القاهرة والجيزة',
-          ratingAvg: row.ratingAvg,
-          reviewsCount: row.reviewsCount,
-          completedJobsCount: row.completedJobsCount,
-          acceptanceRatePct: row.acceptanceRatePct,
-          estimatedPriceEgp: row.estimatedPriceEgp,
-          badgeEn: row.badgeEn ?? 'Verified Master Pro',
-          badgeAr: row.badgeAr ?? 'فني خبير معتمد',
-          badgeVariant:
-            row.badgeEn?.toLowerCase().includes('fast')
-              ? 'fast_responder'
-              : 'verified_master',
-          transportMode: row.transportMode,
-          experienceTier: row.experienceTier,
-          verificationStatus: row.verificationStatus,
-          isOnline: row.isOnline,
-        }));
-      }
+
+      // Security: Genuine empty results returned when no approved pros exist in DB
+      return rows.map((row) => ({
+        id: row.id,
+        fullNameEn: row.user.fullName ?? 'Cairo Specialist',
+        fullNameAr: row.user.fullName ?? 'فني معتمد',
+        specialtyEn: row.specialtyEn ?? 'Certified Specialist',
+        specialtyAr: row.specialtyAr ?? 'فني معتمد',
+        primaryCategorySlug: row.primaryCategory?.slug ?? 'ac-maintenance',
+        primaryZoneSlug: row.primaryZone?.slug ?? 'sheikh-zayed',
+        zonesLabelEn: row.zonesLabelEn ?? 'Cairo & Giza',
+        zonesLabelAr: row.zonesLabelAr ?? 'القاهرة والجيزة',
+        ratingAvg: row.ratingAvg,
+        reviewsCount: row.reviewsCount,
+        completedJobsCount: row.completedJobsCount,
+        acceptanceRatePct: row.acceptanceRatePct,
+        estimatedPriceEgp: row.estimatedPriceEgp,
+        badgeEn: row.badgeEn,
+        badgeAr: row.badgeAr,
+        badgeVariant: row.badgeEn
+          ? row.badgeEn.toLowerCase().includes('fast')
+            ? 'fast_responder'
+            : 'verified_master'
+          : null,
+        isOnline: row.isOnline,
+      }));
     }
-    return this.memoryStore.getProfessionals();
+
+    // In-memory fallback: strictly prohibited from synthetic demo leaking in production
+    if (
+      process.env.NODE_ENV === 'production' ||
+      process.env.ENABLE_DEMO_SEED === 'false'
+    ) {
+      return [];
+    }
+
+    const demoPros = this.memoryStore
+      .getProfessionals()
+      .filter((pro) => pro.verificationStatus === ProVerificationStatus.APPROVED);
+
+    return demoPros.map((pro) => ({
+      id: pro.id,
+      fullNameEn: pro.fullNameEn,
+      fullNameAr: pro.fullNameAr,
+      specialtyEn: pro.specialtyEn,
+      specialtyAr: pro.specialtyAr,
+      primaryCategorySlug: pro.primaryCategorySlug,
+      primaryZoneSlug: pro.primaryZoneSlug,
+      zonesLabelEn: pro.zonesLabelEn,
+      zonesLabelAr: pro.zonesLabelAr,
+      ratingAvg: pro.ratingAvg,
+      reviewsCount: pro.reviewsCount,
+      completedJobsCount: pro.completedJobsCount,
+      acceptanceRatePct: pro.acceptanceRatePct,
+      estimatedPriceEgp: pro.estimatedPriceEgp,
+      badgeEn: pro.badgeEn,
+      badgeAr: pro.badgeAr,
+      badgeVariant: pro.badgeVariant,
+      isOnline: pro.isOnline,
+    }));
   }
 }
-

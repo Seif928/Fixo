@@ -1,4 +1,5 @@
 import { Test, TestingModule } from '@nestjs/testing';
+import { PrismaModule } from '../../prisma/prisma.module';
 import { HealthController } from './health.controller';
 
 describe('HealthController', () => {
@@ -6,6 +7,7 @@ describe('HealthController', () => {
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
+      imports: [PrismaModule],
       controllers: [HealthController],
     }).compile();
 
@@ -18,7 +20,7 @@ describe('HealthController', () => {
     expect(result.service).toBe('fixo-backend');
     expect(result.market).toBe('EG');
     expect(result.currency).toBe('EGP');
+    expect(result.persistence).toBeDefined();
     expect(typeof result.timestamp).toBe('string');
   });
 });
-

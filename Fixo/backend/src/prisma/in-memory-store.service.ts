@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { UserRole } from '@prisma/client';
 import { randomUUID } from 'crypto';
+import { verifyOtpHmacTimingSafe } from '../modules/auth/utils/jwt-token.util';
 import {
   DEFAULT_DEMO_CUSTOMER,
   EGYPT_COVERAGE_ZONES,
@@ -33,9 +34,41 @@ export interface StoredRefreshToken {
   createdAt: Date;
 }
 
+export type OtpVerificationStatus =
+  | 'SUCCESS'
+  | 'INVALID_CODE'
+  | 'EXPIRED'
+  | 'LOCKED'
+  | 'ALREADY_CONSUMED'
+  | 'NOT_FOUND';
+
+export interface AtomicOtpVerificationResult {
+  status: OtpVerificationStatus;
+  attemptsUsed: number;
+  attemptsRemaining: number;
+  challenge: StoredOtpChallenge | null;
+}
+
+export type RefreshTokenRotationStatus =
+  | 'SUCCESS'
+  | 'REPLAY_DETECTED'
+  | 'EXPIRED'
+  | 'REVOKED'
+  | 'NOT_FOUND';
+
+export interface AtomicRefreshTokenRotationResult {
+  status: RefreshTokenRotationStatus;
+  userId?: string;
+  revokedFamilyCount?: number;
+}
+
 /**
- * Explicitly separated in-memory repository store used when a local PostgreSQL
- * server (`localhost:5432`) is not running on the host machine or during unit tests.
+ * Explicitly separated in-memory repository store used strictly when
+ * running in isolated local test mode or development environments with
+ * ALLOW_IN_MEMORY_FALLBACK="true".
+ *
+ * Implements atomic verification, single-consumption challenge locking,
+ * and family revocation replay detection.
  */
 @Injectable()
 export class InMemoryStoreService {
@@ -102,7 +135,6 @@ export class InMemoryStoreService {
       fullName: 'Cairo Homeowner',
       email: null,
       avatarUrl: null,
-      // Security invariant: client OTP login NEVER escalates role above CUSTOMER
       role: UserRole.CUSTOMER,
       preferredLocale: 'en',
       arrivalAlertsEnabled: true,
@@ -135,6 +167,13 @@ export class InMemoryStoreService {
     return this.otpChallenges.get(id) ?? null;
   }
 
+  getLatestChallengeForPhone(phone: string): StoredOtpChallenge | null {
+    const matches = Array.from(this.otpChallenges.values())
+      .filter((item) => item.phone === phone)
+      .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
+    return matches[0] ?? null;
+  }
+
   findLatestActiveChallengeForPhone(phone: string): StoredOtpChallenge | null {
     const matches = Array.from(this.otpChallenges.values())
       .filter((item) => item.phone === phone && item.consumedAt === null)
@@ -148,22 +187,98 @@ export class InMemoryStoreService {
     ).length;
   }
 
-  incrementOtpChallengeAttempts(id: string): StoredOtpChallenge | null {
-    const item = this.otpChallenges.get(id);
-    if (!item) {
-      return null;
+  /**
+   * Synchronously and atomically validates code, increments attempt counter,
+   * locks on brute-force threshold, and consumes the OTP challenge in a single step.
+   * Eliminates race conditions between check and consume.
+   */
+  atomicVerifyAndConsumeChallenge(params: {
+    phone: string;
+    challengeId?: string;
+    code: string;
+    secret: string;
+    maxAttempts: number;
+  }): AtomicOtpVerificationResult {
+    let challenge: StoredOtpChallenge | null = null;
+    if (params.challengeId) {
+      const byId = this.otpChallenges.get(params.challengeId);
+      if (byId && byId.phone === params.phone) {
+        challenge = byId;
+      }
+    } else {
+      challenge = this.findLatestActiveChallengeForPhone(params.phone);
     }
-    item.attempts += 1;
-    return item;
-  }
 
-  markOtpChallengeConsumed(id: string): StoredOtpChallenge | null {
-    const item = this.otpChallenges.get(id);
-    if (!item) {
-      return null;
+    if (!challenge) {
+      return {
+        status: 'NOT_FOUND',
+        attemptsUsed: 0,
+        attemptsRemaining: 0,
+        challenge: null,
+      };
     }
-    item.consumedAt = new Date();
-    return item;
+
+    if (challenge.consumedAt !== null) {
+      return {
+        status: 'ALREADY_CONSUMED',
+        attemptsUsed: challenge.attempts,
+        attemptsRemaining: 0,
+        challenge,
+      };
+    }
+
+    if (challenge.expiresAt.getTime() <= Date.now()) {
+      return {
+        status: 'EXPIRED',
+        attemptsUsed: challenge.attempts,
+        attemptsRemaining: 0,
+        challenge,
+      };
+    }
+
+    if (challenge.attempts >= params.maxAttempts) {
+      return {
+        status: 'LOCKED',
+        attemptsUsed: challenge.attempts,
+        attemptsRemaining: 0,
+        challenge,
+      };
+    }
+
+    const isValid = verifyOtpHmacTimingSafe(
+      params.phone,
+      params.code,
+      challenge.codeHash,
+      params.secret,
+    );
+
+    if (!isValid) {
+      challenge.attempts += 1;
+      const remaining = Math.max(0, params.maxAttempts - challenge.attempts);
+      if (challenge.attempts >= params.maxAttempts) {
+        return {
+          status: 'LOCKED',
+          attemptsUsed: challenge.attempts,
+          attemptsRemaining: 0,
+          challenge,
+        };
+      }
+      return {
+        status: 'INVALID_CODE',
+        attemptsUsed: challenge.attempts,
+        attemptsRemaining: remaining,
+        challenge,
+      };
+    }
+
+    // Atomic consumption
+    challenge.consumedAt = new Date();
+    return {
+      status: 'SUCCESS',
+      attemptsUsed: challenge.attempts,
+      attemptsRemaining: params.maxAttempts - challenge.attempts,
+      challenge,
+    };
   }
 
   saveRefreshToken(params: {
@@ -187,6 +302,49 @@ export class InMemoryStoreService {
     return this.refreshTokensByHash.get(tokenHash) ?? null;
   }
 
+  /**
+   * Atomically claims and revokes the old refresh token while inserting the new token.
+   * If the old token was ALREADY revoked, triggers replay attack detection and
+   * performs family revocation for all refresh tokens belonging to the user.
+   */
+  atomicRotateRefreshToken(params: {
+    oldTokenHash: string;
+    newToken: {
+      userId: string;
+      tokenHash: string;
+      expiresAt: Date;
+    };
+  }): AtomicRefreshTokenRotationResult {
+    const oldRecord = this.refreshTokensByHash.get(params.oldTokenHash);
+
+    if (!oldRecord) {
+      return { status: 'NOT_FOUND' };
+    }
+
+    // REPLAY ATTACK DETECTION
+    if (oldRecord.revokedAt !== null) {
+      const revokedCount = this.revokeAllRefreshTokensForUser(oldRecord.userId);
+      return {
+        status: 'REPLAY_DETECTED',
+        userId: oldRecord.userId,
+        revokedFamilyCount: revokedCount,
+      };
+    }
+
+    if (oldRecord.expiresAt.getTime() <= Date.now()) {
+      return { status: 'EXPIRED', userId: oldRecord.userId };
+    }
+
+    // Atomic claim & insert replacement
+    oldRecord.revokedAt = new Date();
+    this.saveRefreshToken(params.newToken);
+
+    return {
+      status: 'SUCCESS',
+      userId: oldRecord.userId,
+    };
+  }
+
   revokeRefreshTokenByHash(tokenHash: string): boolean {
     const record = this.refreshTokensByHash.get(tokenHash);
     if (!record || record.revokedAt !== null) {
@@ -194,6 +352,18 @@ export class InMemoryStoreService {
     }
     record.revokedAt = new Date();
     return true;
+  }
+
+  revokeAllRefreshTokensForUser(userId: string): number {
+    let count = 0;
+    const now = new Date();
+    for (const record of this.refreshTokensByHash.values()) {
+      if (record.userId === userId && record.revokedAt === null) {
+        record.revokedAt = now;
+        count += 1;
+      }
+    }
+    return count;
   }
 
   getZones(): SeedCoverageZone[] {
@@ -222,4 +392,3 @@ export class InMemoryStoreService {
     return [...this.professionals];
   }
 }
-

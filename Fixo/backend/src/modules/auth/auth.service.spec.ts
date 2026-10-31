@@ -8,8 +8,8 @@ import {
 import { Reflector } from '@nestjs/core';
 import { Test, TestingModule } from '@nestjs/testing';
 import { UserRole } from '@prisma/client';
-import { PrismaModule } from '../../prisma/prisma.module';
 import { InMemoryStoreService } from '../../prisma/in-memory-store.service';
+import { PrismaModule } from '../../prisma/prisma.module';
 import { UsersController } from '../users/users.controller';
 import { AuthController } from './auth.controller';
 import { AuthModule } from './auth.module';
@@ -40,6 +40,18 @@ describe('AuthModule & UsersController (Phase 2 Authentication)', () => {
     smsProvider = moduleRef.get<DevSmsProvider>(SMS_PROVIDER);
     memoryStore = moduleRef.get(InMemoryStoreService);
     jwtGuard = moduleRef.get(JwtAuthGuard);
+
+    authService.configureSecurity({
+      accessSecret: 'fc6d177aaf07dbda39de2f010ab7f954026f1a34e6f30bbeed9ed531dc09341c',
+      refreshSecret: 'dc804b09046d9998a37fd864f4fa830f0f74bc9b35a46710013ce371baa6fbea',
+      otpHmacSecret: '694ccf28dbdf0583c830c87b751ad463bb6096d171bff9425419c324c1d76964',
+      smsProviderType: 'DEV_SANDBOX_SMS',
+      isProduction: false,
+      allowDevSms: true,
+      allowInMemoryFallback: true,
+      allowTestFixedOtp: true,
+    });
+
     memoryStore.resetToSeedState();
   });
 
@@ -148,7 +160,12 @@ describe('AuthModule & UsersController (Phase 2 Authentication)', () => {
     it('enforces rate limiting after 5 OTP requests within 15 minutes', async () => {
       const phone = '+201112223344';
       for (let i = 0; i < 5; i++) {
-        await authController.requestOtp({ phone });
+        const req = await authController.requestOtp({ phone });
+        // Age the challenge past the 45s resend cooldown but within the 15-min window
+        const challenge = memoryStore.findOtpChallengeById(req.challengeId);
+        if (challenge) {
+          challenge.createdAt = new Date(Date.now() - 50 * 1000 * (5 - i));
+        }
       }
 
       await expect(authController.requestOtp({ phone })).rejects.toMatchObject({
@@ -173,19 +190,32 @@ describe('AuthModule & UsersController (Phase 2 Authentication)', () => {
       expect(rotatedAuth.refreshToken).toBeDefined();
       expect(rotatedAuth.refreshToken).not.toBe(initialAuth.refreshToken);
 
-      // Replaying old refresh token must fail
+      // Replaying old refresh token must fail and trigger family revocation
       await expect(
         authController.refresh({ refreshToken: initialAuth.refreshToken }),
       ).rejects.toThrow(UnauthorizedException);
 
-      // Logout revokes the new refresh token
+      // Due to family revocation, rotated token is also terminated
+      await expect(
+        authController.refresh({ refreshToken: rotatedAuth.refreshToken }),
+      ).rejects.toThrow(UnauthorizedException);
+    });
+
+    it('revokes refresh token and terminates session on POST /api/v1/auth/logout', async () => {
+      const otpReq = await authController.requestOtp({ phone: '+201023456789' });
+      const auth = await authController.verifyOtp({
+        phone: '+201023456789',
+        code: '482910',
+        challengeId: otpReq.challengeId,
+      });
+
       const logoutRes = await authController.logout({
-        refreshToken: rotatedAuth.refreshToken,
+        refreshToken: auth.refreshToken,
       });
       expect(logoutRes.revoked).toBe(true);
 
       await expect(
-        authController.refresh({ refreshToken: rotatedAuth.refreshToken }),
+        authController.refresh({ refreshToken: auth.refreshToken }),
       ).rejects.toThrow(UnauthorizedException);
     });
 
@@ -231,4 +261,3 @@ describe('AuthModule & UsersController (Phase 2 Authentication)', () => {
     });
   });
 });
-

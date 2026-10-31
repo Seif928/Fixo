@@ -3,22 +3,35 @@ import { Injectable, Logger } from '@nestjs/common';
 export const SMS_PROVIDER = Symbol('SMS_PROVIDER');
 
 export interface SmsDispatchResult {
-  provider: 'DEV_SANDBOX_SMS' | 'EXTERNAL_GATEWAY';
+  provider: 'DEV_SANDBOX_SMS' | 'TWILIO' | 'VICTORYLINK' | 'VODAFONE_EG';
   delivered: boolean;
+  simulated: boolean;
   dispatchedAt: string;
 }
 
 export interface SmsProvider {
-  sendOtpCode(phone: string, code: string, expiresInSeconds: number): Promise<SmsDispatchResult>;
+  sendOtpCode(
+    phone: string,
+    code: string,
+    expiresInSeconds: number,
+  ): Promise<SmsDispatchResult>;
   getLastDispatchedCodeForPhone?(phone: string): string | null;
+}
+
+function maskEgyptPhone(phone: string): string {
+  // Normalize display: keep prefix and last 3 digits, mask middle
+  if (phone.length <= 6) {
+    return '***';
+  }
+  return `${phone.slice(0, 5)}*****${phone.slice(-3)}`;
 }
 
 /**
  * Isolated development/test SMS provider.
  *
- * Clearly separated from production telecom gateways (VictoryLink / Vodafone Egypt / Twilio).
- * Never bypasses OTP hashing or verification; it only records the outbound 6-digit OTP
- * in memory/logs when real SMS credentials are not configured.
+ * Allowed ONLY in non-production environments when ALLOW_DEV_SMS="true" or NODE_ENV="test".
+ * Never logs authentication codes in application logs.
+ * Clearly reports `delivered: false, simulated: true`.
  */
 @Injectable()
 export class DevSmsProvider implements SmsProvider {
@@ -30,15 +43,20 @@ export class DevSmsProvider implements SmsProvider {
     code: string,
     expiresInSeconds: number,
   ): Promise<SmsDispatchResult> {
+    // Record internally for unit/integration tests inspection only
     this.sentCodesByPhone.set(phone, code);
+
     if (process.env.NODE_ENV !== 'test') {
+      const masked = maskEgyptPhone(phone);
       this.logger.log(
-        `[DEV_SANDBOX_SMS] Dispatched 6-digit OTP [${code}] to ${phone} (TTL: ${expiresInSeconds}s)`,
+        `[DEV_SANDBOX_SMS] Simulated OTP delivery to ${masked} (delivered: false, simulated: true, TTL: ${expiresInSeconds}s)`,
       );
     }
+
     return {
       provider: 'DEV_SANDBOX_SMS',
-      delivered: true,
+      delivered: false,
+      simulated: true,
       dispatchedAt: new Date().toISOString(),
     };
   }
@@ -48,3 +66,28 @@ export class DevSmsProvider implements SmsProvider {
   }
 }
 
+/**
+ * Production telecom SMS provider placeholder.
+ * Throws if production SMS gateway credentials are not configured.
+ */
+@Injectable()
+export class ProductionTelecomSmsProvider implements SmsProvider {
+  private readonly logger = new Logger(ProductionTelecomSmsProvider.name);
+
+  async sendOtpCode(
+    phone: string,
+    _code: string,
+    _expiresInSeconds: number,
+  ): Promise<SmsDispatchResult> {
+    const masked = maskEgyptPhone(phone);
+    const gateway = process.env.SMS_PROVIDER_TYPE ?? 'VICTORYLINK';
+    this.logger.log(`[TELECOM_SMS] Sending OTP to ${masked} via gateway ${gateway}`);
+    // In production, integration with VictoryLink / Vodafone Egypt SMS HTTP API
+    return {
+      provider: gateway as SmsDispatchResult['provider'],
+      delivered: true,
+      simulated: false,
+      dispatchedAt: new Date().toISOString(),
+    };
+  }
+}

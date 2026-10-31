@@ -3,12 +3,24 @@ import {
   HttpStatus,
   Inject,
   Injectable,
+  Logger,
+  OnModuleInit,
   UnauthorizedException,
 } from '@nestjs/common';
 import { UserRole } from '@prisma/client';
 import { randomInt } from 'crypto';
-import { InMemoryStoreService, StoredOtpChallenge } from '../../prisma/in-memory-store.service';
-import { PrismaService, StoragePersistenceMode } from '../../prisma/prisma.service';
+import {
+  InMemoryStoreService,
+  StoredOtpChallenge,
+} from '../../prisma/in-memory-store.service';
+import {
+  PrismaService,
+  StoragePersistenceMode,
+} from '../../prisma/prisma.service';
+import {
+  validateAuthSecurityConfig,
+  ValidatedAuthSecurityConfig,
+} from './config/auth-security.config';
 import {
   LogoutDto,
   RefreshTokenDto,
@@ -42,9 +54,8 @@ export interface OtpRequestResponse {
   phone: string;
   resendAvailableInSec: number;
   expiresInSec: number;
-  smsProvider: 'DEV_SANDBOX_SMS' | 'EXTERNAL_GATEWAY';
+  smsProvider: 'DEV_SANDBOX_SMS' | 'TWILIO' | 'VICTORYLINK' | 'VODAFONE_EG';
   storageMode: StoragePersistenceMode;
-  demoHint?: string;
 }
 
 export interface AuthTokensResponse {
@@ -56,14 +67,18 @@ export interface AuthTokensResponse {
 }
 
 @Injectable()
-export class AuthService {
-  private static readonly OTP_TTL_SECONDS = 300; // 5 minutes
-  private static readonly RESEND_COOLDOWN_SECONDS = 45;
-  private static readonly MAX_OTP_ATTEMPTS = 5;
-  private static readonly MAX_REQUESTS_PER_WINDOW = 5;
-  private static readonly RATE_LIMIT_WINDOW_MS = 15 * 60 * 1000; // 15 minutes
-  private static readonly ACCESS_TOKEN_TTL_SECONDS = 15 * 60; // 15 minutes
-  private static readonly REFRESH_TOKEN_TTL_SECONDS = 7 * 24 * 60 * 60; // 7 days
+export class AuthService implements OnModuleInit {
+  private readonly logger = new Logger(AuthService.name);
+
+  public static readonly OTP_TTL_SECONDS = 300; // 5 minutes
+  public static readonly RESEND_COOLDOWN_SECONDS = 45;
+  public static readonly MAX_OTP_ATTEMPTS = 5;
+  public static readonly MAX_REQUESTS_PER_WINDOW = 5;
+  public static readonly RATE_LIMIT_WINDOW_MS = 15 * 60 * 1000; // 15 minutes
+  public static readonly ACCESS_TOKEN_TTL_SECONDS = 15 * 60; // 15 minutes
+  public static readonly REFRESH_TOKEN_TTL_SECONDS = 7 * 24 * 60 * 60; // 7 days
+
+  private config!: ValidatedAuthSecurityConfig;
 
   constructor(
     private readonly prisma: PrismaService,
@@ -71,38 +86,73 @@ export class AuthService {
     @Inject(SMS_PROVIDER) private readonly smsProvider: SmsProvider,
   ) {}
 
-  private get accessSecret(): string {
-    return (
-      process.env.JWT_ACCESS_SECRET ??
-      'fixo-local-dev-jwt-access-secret-key-2026-eg'
+  onModuleInit(): void {
+    // Fails startup immediately if configuration is insecure, missing, weak, or identical
+    this.config = validateAuthSecurityConfig();
+    this.logger.log(
+      `AuthService initialized with verified independent cryptographic keys. (SMS Provider: ${this.config.smsProviderType}, Production: ${this.config.isProduction})`,
     );
+  }
+
+  /**
+   * Allows injecting configuration directly (for isolated unit tests).
+   */
+  configureSecurity(config: ValidatedAuthSecurityConfig): void {
+    this.config = config;
+  }
+
+  private get accessSecret(): string {
+    if (!this.config?.accessSecret) {
+      this.config = validateAuthSecurityConfig();
+    }
+    return this.config.accessSecret;
   }
 
   private get refreshSecret(): string {
-    return (
-      process.env.JWT_REFRESH_SECRET ??
-      'fixo-local-dev-jwt-refresh-secret-key-2026-eg'
-    );
+    if (!this.config?.refreshSecret) {
+      this.config = validateAuthSecurityConfig();
+    }
+    return this.config.refreshSecret;
   }
 
   private get otpHmacSecret(): string {
-    return `${this.accessSecret}:otp-hmac-v1`;
+    if (!this.config?.otpHmacSecret) {
+      this.config = validateAuthSecurityConfig();
+    }
+    return this.config.otpHmacSecret;
   }
 
   private generateOtpCode(): string {
+    // Only permit deterministic OTP in automated unit tests with explicit env flag
     if (
-      process.env.NODE_ENV !== 'production' &&
-      process.env.FIXO_DEV_RANDOM_OTP !== 'true'
+      this.config?.allowTestFixedOtp &&
+      process.env.NODE_ENV === 'test'
     ) {
       return process.env.FIXO_DEV_OTP_CODE ?? '482910';
     }
+    // Cryptographically secure random 6-digit integer in range [100000, 999999]
     return String(randomInt(100000, 1000000));
   }
 
   async requestOtp(dto: RequestOtpDto): Promise<OtpRequestResponse> {
     const phone = normalizeEgyptPhone(dto.phone);
-    const windowStart = new Date(Date.now() - AuthService.RATE_LIMIT_WINDOW_MS);
 
+    // 1. Enforce Server-Side Resend Cooldown (45 seconds)
+    const latestChallenge = await this.getLatestChallengeForPhone(phone);
+    if (latestChallenge) {
+      const elapsedMs = Date.now() - latestChallenge.createdAt.getTime();
+      const cooldownMs = AuthService.RESEND_COOLDOWN_SECONDS * 1000;
+      if (elapsedMs < cooldownMs) {
+        const remainingSec = Math.ceil((cooldownMs - elapsedMs) / 1000);
+        throw new HttpException(
+          `Resend cooldown active. Please wait ${remainingSec} seconds before requesting a new code.`,
+          HttpStatus.TOO_MANY_REQUESTS,
+        );
+      }
+    }
+
+    // 2. Enforce Distributed Rate Limiting (5 requests per 15-minute sliding window)
+    const windowStart = new Date(Date.now() - AuthService.RATE_LIMIT_WINDOW_MS);
     const recentCount = await this.countRecentChallenges(phone, windowStart);
     if (recentCount >= AuthService.MAX_REQUESTS_PER_WINDOW) {
       throw new HttpException(
@@ -127,7 +177,7 @@ export class AuthService {
       AuthService.OTP_TTL_SECONDS,
     );
 
-    const response: OtpRequestResponse = {
+    return {
       challengeId: challenge.id,
       phone,
       resendAvailableInSec: AuthService.RESEND_COOLDOWN_SECONDS,
@@ -135,62 +185,130 @@ export class AuthService {
       smsProvider: smsResult.provider,
       storageMode: this.prisma.getStorageMode(),
     };
-
-    if (process.env.NODE_ENV !== 'production') {
-      response.demoHint = `Use ${otpCode} in development/demo mode`;
-    }
-
-    return response;
   }
 
   async verifyOtp(dto: VerifyOtpDto): Promise<AuthTokensResponse> {
     const phone = normalizeEgyptPhone(dto.phone);
-    const challenge = await this.findActiveChallenge(phone, dto.challengeId);
 
-    if (!challenge || challenge.consumedAt !== null) {
-      throw new UnauthorizedException(
-        'No active verification challenge found for this number. Please request a new code.',
+    if (this.prisma.isDatabaseConnected()) {
+      // 1. Find challenge
+      const challenge = await this.findChallengeForVerification(
+        phone,
+        dto.challengeId,
       );
-    }
+      if (!challenge) {
+        throw new UnauthorizedException(
+          'No active verification challenge found for this number. Please request a new code.',
+        );
+      }
 
-    if (challenge.expiresAt.getTime() <= Date.now()) {
-      throw new UnauthorizedException(
-        'Verification code has expired. Please request a new code.',
-      );
-    }
+      if (challenge.consumedAt !== null) {
+        throw new UnauthorizedException(
+          'Verification code has already been used. Please request a new code.',
+        );
+      }
 
-    if (challenge.attempts >= AuthService.MAX_OTP_ATTEMPTS) {
-      throw new HttpException(
-        'Maximum verification attempts exceeded. Please request a new OTP code.',
-        HttpStatus.TOO_MANY_REQUESTS,
-      );
-    }
+      if (challenge.expiresAt.getTime() <= Date.now()) {
+        throw new UnauthorizedException(
+          'Verification code has expired. Please request a new code.',
+        );
+      }
 
-    const isValid = verifyOtpHmacTimingSafe(
-      phone,
-      dto.code,
-      challenge.codeHash,
-      this.otpHmacSecret,
-    );
-
-    if (!isValid) {
-      const updated = await this.incrementChallengeAttempts(challenge.id);
-      const attemptsUsed = updated?.attempts ?? challenge.attempts + 1;
-      if (attemptsUsed >= AuthService.MAX_OTP_ATTEMPTS) {
+      if (challenge.attempts >= AuthService.MAX_OTP_ATTEMPTS) {
         throw new HttpException(
           'Maximum verification attempts exceeded. Please request a new OTP code.',
           HttpStatus.TOO_MANY_REQUESTS,
         );
       }
-      const remaining = AuthService.MAX_OTP_ATTEMPTS - attemptsUsed;
-      throw new UnauthorizedException(
-        `Invalid verification code. ${remaining} attempt(s) remaining.`,
+
+      const isValid = verifyOtpHmacTimingSafe(
+        phone,
+        dto.code,
+        challenge.codeHash,
+        this.otpHmacSecret,
       );
+
+      if (!isValid) {
+        // Atomic attempt counter increment
+        const updated = await this.prisma.otpChallenge.update({
+          where: { id: challenge.id },
+          data: { attempts: { increment: 1 } },
+        });
+
+        if (updated.attempts >= AuthService.MAX_OTP_ATTEMPTS) {
+          throw new HttpException(
+            'Maximum verification attempts exceeded. Please request a new OTP code.',
+            HttpStatus.TOO_MANY_REQUESTS,
+          );
+        }
+
+        const remaining = AuthService.MAX_OTP_ATTEMPTS - updated.attempts;
+        throw new UnauthorizedException(
+          `Invalid verification code. ${remaining} attempt(s) remaining.`,
+        );
+      }
+
+      // 2. Atomic Conditional Consumption: Prevents race condition where two concurrent
+      // requests with the same valid code both consume the challenge independently
+      const claimed = await this.prisma.otpChallenge.updateMany({
+        where: {
+          id: challenge.id,
+          phone,
+          consumedAt: null,
+          attempts: { lt: AuthService.MAX_OTP_ATTEMPTS },
+          expiresAt: { gt: new Date() },
+        },
+        data: {
+          consumedAt: new Date(),
+        },
+      });
+
+      if (claimed.count !== 1) {
+        throw new UnauthorizedException(
+          'Verification code has already been consumed or is no longer valid.',
+        );
+      }
+
+      const user = await this.findOrCreateCustomerUser(phone);
+      return this.issueTokenBundle(user);
     }
 
-    await this.markChallengeConsumed(challenge.id);
-    const user = await this.findOrCreateCustomerUser(phone);
+    // In-Memory Storage Path (Local Test & Fallback Mode)
+    const result = this.memoryStore.atomicVerifyAndConsumeChallenge({
+      phone,
+      challengeId: dto.challengeId,
+      code: dto.code,
+      secret: this.otpHmacSecret,
+      maxAttempts: AuthService.MAX_OTP_ATTEMPTS,
+    });
 
+    switch (result.status) {
+      case 'NOT_FOUND':
+        throw new UnauthorizedException(
+          'No active verification challenge found for this number. Please request a new code.',
+        );
+      case 'ALREADY_CONSUMED':
+        throw new UnauthorizedException(
+          'Verification code has already been used. Please request a new code.',
+        );
+      case 'EXPIRED':
+        throw new UnauthorizedException(
+          'Verification code has expired. Please request a new code.',
+        );
+      case 'LOCKED':
+        throw new HttpException(
+          'Maximum verification attempts exceeded. Please request a new OTP code.',
+          HttpStatus.TOO_MANY_REQUESTS,
+        );
+      case 'INVALID_CODE':
+        throw new UnauthorizedException(
+          `Invalid verification code. ${result.attemptsRemaining} attempt(s) remaining.`,
+        );
+      case 'SUCCESS':
+        break;
+    }
+
+    const user = await this.findOrCreateCustomerUser(phone);
     return this.issueTokenBundle(user);
   }
 
@@ -200,27 +318,101 @@ export class AuthService {
       throw new UnauthorizedException('Provided token is not a refresh token.');
     }
 
-    const tokenHash = hashTokenSha256(dto.refreshToken);
-    const stored = await this.findStoredRefreshToken(tokenHash);
-
-    if (
-      !stored ||
-      stored.revokedAt !== null ||
-      stored.expiresAt.getTime() <= Date.now()
-    ) {
-      throw new UnauthorizedException(
-        'Refresh token is invalid, expired, or has already been rotated.',
-      );
-    }
-
-    await this.revokeStoredRefreshToken(tokenHash);
-
     const user = await this.findUserById(payload.sub);
     if (!user) {
       throw new UnauthorizedException('User account no longer exists.');
     }
 
-    return this.issueTokenBundle(user);
+    const oldTokenHash = hashTokenSha256(dto.refreshToken);
+
+    // Pre-generate replacement bundle
+    const { accessToken, refreshToken } = this.generateTokenStrings(user);
+    const newTokenHash = hashTokenSha256(refreshToken);
+    const refreshExpiresAt = new Date(
+      Date.now() + AuthService.REFRESH_TOKEN_TTL_SECONDS * 1000,
+    );
+
+    if (this.prisma.isDatabaseConnected()) {
+      await this.prisma.$transaction(async (tx) => {
+        // Step A: Atomically claim and revoke the old refresh token
+        const claimed = await tx.refreshToken.updateMany({
+          where: {
+            tokenHash: oldTokenHash,
+            revokedAt: null,
+            expiresAt: { gt: new Date() },
+          },
+          data: {
+            revokedAt: new Date(),
+          },
+        });
+
+        if (claimed.count !== 1) {
+          // Check for REPLAY ATTACK
+          const existing = await tx.refreshToken.findUnique({
+            where: { tokenHash: oldTokenHash },
+          });
+
+          if (existing && existing.revokedAt !== null) {
+            // Replay Attack Detected: Trigger Family Revocation!
+            await tx.refreshToken.updateMany({
+              where: { userId: existing.userId, revokedAt: null },
+              data: { revokedAt: new Date() },
+            });
+            this.logger.warn(
+              `[SECURITY ALERT] Refresh token replay attack detected for userId: ${existing.userId}. All active sessions terminated.`,
+            );
+            throw new UnauthorizedException(
+              'Security Alert: Refresh token replay attack detected. All active sessions have been terminated.',
+            );
+          }
+
+          throw new UnauthorizedException(
+            'Refresh token is invalid, expired, or already revoked.',
+          );
+        }
+
+        // Step B: Persist replacement token inside the EXACT SAME transaction
+        await tx.refreshToken.create({
+          data: {
+            userId: user.id,
+            tokenHash: newTokenHash,
+            expiresAt: refreshExpiresAt,
+          },
+        });
+      });
+    } else {
+      const rotationResult = this.memoryStore.atomicRotateRefreshToken({
+        oldTokenHash,
+        newToken: {
+          userId: user.id,
+          tokenHash: newTokenHash,
+          expiresAt: refreshExpiresAt,
+        },
+      });
+
+      if (rotationResult.status === 'REPLAY_DETECTED') {
+        this.logger.warn(
+          `[SECURITY ALERT] Refresh token replay attack detected in memory store for userId: ${rotationResult.userId}. All active sessions terminated.`,
+        );
+        throw new UnauthorizedException(
+          'Security Alert: Refresh token replay attack detected. All active sessions have been terminated.',
+        );
+      }
+
+      if (rotationResult.status !== 'SUCCESS') {
+        throw new UnauthorizedException(
+          'Refresh token is invalid, expired, or already revoked.',
+        );
+      }
+    }
+
+    return {
+      accessToken,
+      refreshToken,
+      expiresInSec: AuthService.ACCESS_TOKEN_TTL_SECONDS,
+      user,
+      storageMode: this.prisma.getStorageMode(),
+    };
   }
 
   async logout(dto: LogoutDto): Promise<{
@@ -245,9 +437,10 @@ export class AuthService {
     return payload;
   }
 
-  private async issueTokenBundle(
-    user: AuthenticatedUserProfile,
-  ): Promise<AuthTokensResponse> {
+  private generateTokenStrings(user: AuthenticatedUserProfile): {
+    accessToken: string;
+    refreshToken: string;
+  } {
     const { token: accessToken } = signFixoJwt(
       {
         sub: user.id,
@@ -270,6 +463,13 @@ export class AuthService {
       AuthService.REFRESH_TOKEN_TTL_SECONDS,
     );
 
+    return { accessToken, refreshToken };
+  }
+
+  private async issueTokenBundle(
+    user: AuthenticatedUserProfile,
+  ): Promise<AuthTokensResponse> {
+    const { accessToken, refreshToken } = this.generateTokenStrings(user);
     const refreshTokenHash = hashTokenSha256(refreshToken);
     const refreshExpiresAt = new Date(
       Date.now() + AuthService.REFRESH_TOKEN_TTL_SECONDS * 1000,
@@ -290,7 +490,22 @@ export class AuthService {
     };
   }
 
-  private async countRecentChallenges(phone: string, since: Date): Promise<number> {
+  private async getLatestChallengeForPhone(
+    phone: string,
+  ): Promise<StoredOtpChallenge | null> {
+    if (this.prisma.isDatabaseConnected()) {
+      return this.prisma.otpChallenge.findFirst({
+        where: { phone },
+        orderBy: { createdAt: 'desc' },
+      });
+    }
+    return this.memoryStore.getLatestChallengeForPhone(phone);
+  }
+
+  private async countRecentChallenges(
+    phone: string,
+    since: Date,
+  ): Promise<number> {
     if (this.prisma.isDatabaseConnected()) {
       return this.prisma.otpChallenge.count({
         where: {
@@ -319,7 +534,7 @@ export class AuthService {
     return this.memoryStore.createOtpChallenge(params);
   }
 
-  private async findActiveChallenge(
+  private async findChallengeForVerification(
     phone: string,
     challengeId?: string,
   ): Promise<StoredOtpChallenge | null> {
@@ -345,30 +560,6 @@ export class AuthService {
       }
     }
     return this.memoryStore.findLatestActiveChallengeForPhone(phone);
-  }
-
-  private async incrementChallengeAttempts(
-    id: string,
-  ): Promise<StoredOtpChallenge | null> {
-    if (this.prisma.isDatabaseConnected()) {
-      return this.prisma.otpChallenge.update({
-        where: { id },
-        data: { attempts: { increment: 1 } },
-      });
-    }
-    return this.memoryStore.incrementOtpChallengeAttempts(id);
-  }
-
-  private async markChallengeConsumed(
-    id: string,
-  ): Promise<StoredOtpChallenge | null> {
-    if (this.prisma.isDatabaseConnected()) {
-      return this.prisma.otpChallenge.update({
-        where: { id },
-        data: { consumedAt: new Date() },
-      });
-    }
-    return this.memoryStore.markOtpChallengeConsumed(id);
   }
 
   private async findOrCreateCustomerUser(
@@ -475,15 +666,6 @@ export class AuthService {
     this.memoryStore.saveRefreshToken(params);
   }
 
-  private async findStoredRefreshToken(tokenHash: string) {
-    if (this.prisma.isDatabaseConnected()) {
-      return this.prisma.refreshToken.findUnique({
-        where: { tokenHash },
-      });
-    }
-    return this.memoryStore.findRefreshTokenByHash(tokenHash);
-  }
-
   private async revokeStoredRefreshToken(tokenHash: string): Promise<boolean> {
     if (this.prisma.isDatabaseConnected()) {
       const existing = await this.prisma.refreshToken.findUnique({
@@ -501,4 +683,3 @@ export class AuthService {
     return this.memoryStore.revokeRefreshTokenByHash(tokenHash);
   }
 }
-
