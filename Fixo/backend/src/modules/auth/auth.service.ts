@@ -136,40 +136,103 @@ export class AuthService implements OnModuleInit {
 
   async requestOtp(dto: RequestOtpDto): Promise<OtpRequestResponse> {
     const phone = normalizeEgyptPhone(dto.phone);
-
-    // 1. Enforce Server-Side Resend Cooldown (45 seconds)
-    const latestChallenge = await this.getLatestChallengeForPhone(phone);
-    if (latestChallenge) {
-      const elapsedMs = Date.now() - latestChallenge.createdAt.getTime();
-      const cooldownMs = AuthService.RESEND_COOLDOWN_SECONDS * 1000;
-      if (elapsedMs < cooldownMs) {
-        const remainingSec = Math.ceil((cooldownMs - elapsedMs) / 1000);
-        throw new HttpException(
-          `Resend cooldown active. Please wait ${remainingSec} seconds before requesting a new code.`,
-          HttpStatus.TOO_MANY_REQUESTS,
-        );
-      }
-    }
-
-    // 2. Enforce Distributed Rate Limiting (5 requests per 15-minute sliding window)
-    const windowStart = new Date(Date.now() - AuthService.RATE_LIMIT_WINDOW_MS);
-    const recentCount = await this.countRecentChallenges(phone, windowStart);
-    if (recentCount >= AuthService.MAX_REQUESTS_PER_WINDOW) {
-      throw new HttpException(
-        'Too many OTP requests for this mobile number. Please wait 15 minutes before trying again.',
-        HttpStatus.TOO_MANY_REQUESTS,
-      );
-    }
-
     const otpCode = this.generateOtpCode();
     const codeHash = hashOtpHmacSha256(phone, otpCode, this.otpHmacSecret);
     const expiresAt = new Date(Date.now() + AuthService.OTP_TTL_SECONDS * 1000);
 
-    const challenge = await this.persistOtpChallenge({
-      phone,
-      codeHash,
-      expiresAt,
-    });
+    let challenge: StoredOtpChallenge;
+
+    if (this.prisma.isDatabaseConnected()) {
+      type OtpRequestTxResult =
+        | { status: 'SUCCESS'; challenge: StoredOtpChallenge }
+        | { status: 'COOLDOWN_ACTIVE'; remainingSec: number }
+        | { status: 'RATE_LIMIT_EXCEEDED' };
+
+      const txResult: OtpRequestTxResult = await this.prisma.$transaction(
+        async (tx) => {
+          // Advisory lock strictly serializes concurrent requests for the SAME phone number
+          await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${'fixo_otp_req_lock:' + phone}))`;
+
+          // 1. Check server-side 45s resend cooldown
+          const latest = await tx.otpChallenge.findFirst({
+            where: { phone },
+            orderBy: { createdAt: 'desc' },
+          });
+
+          if (latest) {
+            const elapsedMs = Date.now() - latest.createdAt.getTime();
+            const cooldownMs = AuthService.RESEND_COOLDOWN_SECONDS * 1000;
+            if (elapsedMs < cooldownMs) {
+              const remainingSec = Math.ceil((cooldownMs - elapsedMs) / 1000);
+              return { status: 'COOLDOWN_ACTIVE', remainingSec };
+            }
+          }
+
+          // 2. Check distributed rate limit (5 requests / 15 minutes)
+          const windowStart = new Date(Date.now() - AuthService.RATE_LIMIT_WINDOW_MS);
+          const recentCount = await tx.otpChallenge.count({
+            where: { phone, createdAt: { gte: windowStart } },
+          });
+
+          if (recentCount >= AuthService.MAX_REQUESTS_PER_WINDOW) {
+            return { status: 'RATE_LIMIT_EXCEEDED' };
+          }
+
+          // 3. Atomically create challenge in the same transaction
+          const created = await tx.otpChallenge.create({
+            data: { phone, codeHash, expiresAt },
+          });
+
+          return { status: 'SUCCESS', challenge: created };
+        },
+        {
+          isolationLevel: 'ReadCommitted',
+          timeout: 5000,
+        },
+      );
+
+      if (txResult.status === 'COOLDOWN_ACTIVE') {
+        throw new HttpException(
+          `Resend cooldown active. Please wait ${txResult.remainingSec} seconds before requesting a new code.`,
+          HttpStatus.TOO_MANY_REQUESTS,
+        );
+      }
+
+      if (txResult.status === 'RATE_LIMIT_EXCEEDED') {
+        throw new HttpException(
+          'Too many OTP requests for this mobile number. Please wait 15 minutes before trying again.',
+          HttpStatus.TOO_MANY_REQUESTS,
+        );
+      }
+
+      challenge = txResult.challenge;
+    } else {
+      // In-Memory atomic execution (synchronous turn prevents race conditions)
+      const memResult = this.memoryStore.atomicRequestOtpChallenge({
+        phone,
+        codeHash,
+        expiresAt,
+        cooldownSeconds: AuthService.RESEND_COOLDOWN_SECONDS,
+        rateLimitWindowMs: AuthService.RATE_LIMIT_WINDOW_MS,
+        maxRequestsPerWindow: AuthService.MAX_REQUESTS_PER_WINDOW,
+      });
+
+      if (memResult.status === 'COOLDOWN_ACTIVE') {
+        throw new HttpException(
+          `Resend cooldown active. Please wait ${memResult.remainingCooldownSec} seconds before requesting a new code.`,
+          HttpStatus.TOO_MANY_REQUESTS,
+        );
+      }
+
+      if (memResult.status === 'RATE_LIMIT_EXCEEDED') {
+        throw new HttpException(
+          'Too many OTP requests for this mobile number. Please wait 15 minutes before trying again.',
+          HttpStatus.TOO_MANY_REQUESTS,
+        );
+      }
+
+      challenge = memResult.challenge!;
+    }
 
     const smsResult = await this.smsProvider.sendOtpCode(
       phone,
@@ -333,53 +396,74 @@ export class AuthService implements OnModuleInit {
     );
 
     if (this.prisma.isDatabaseConnected()) {
-      await this.prisma.$transaction(async (tx) => {
-        // Step A: Atomically claim and revoke the old refresh token
-        const claimed = await tx.refreshToken.updateMany({
-          where: {
-            tokenHash: oldTokenHash,
-            revokedAt: null,
-            expiresAt: { gt: new Date() },
-          },
-          data: {
-            revokedAt: new Date(),
-          },
-        });
+      type RefreshTxResult =
+        | { status: 'SUCCESS' }
+        | { status: 'REPLAY_DETECTED'; userId: string }
+        | { status: 'INVALID_OR_EXPIRED' };
 
-        if (claimed.count !== 1) {
-          // Check for REPLAY ATTACK
+      const txResult: RefreshTxResult = await this.prisma.$transaction(
+        async (tx) => {
+          // Step A: Atomically claim and revoke the old refresh token
+          const claimed = await tx.refreshToken.updateMany({
+            where: {
+              tokenHash: oldTokenHash,
+              revokedAt: null,
+              expiresAt: { gt: new Date() },
+            },
+            data: {
+              revokedAt: new Date(),
+            },
+          });
+
+          if (claimed.count === 1) {
+            // Step B: Persist replacement token inside the EXACT SAME transaction
+            await tx.refreshToken.create({
+              data: {
+                userId: user.id,
+                tokenHash: newTokenHash,
+                expiresAt: refreshExpiresAt,
+              },
+            });
+            return { status: 'SUCCESS' };
+          }
+
+          // Claim failed. Check for REPLAY ATTACK
           const existing = await tx.refreshToken.findUnique({
             where: { tokenHash: oldTokenHash },
           });
 
           if (existing && existing.revokedAt !== null) {
             // Replay Attack Detected: Trigger Family Revocation!
+            // CRITICAL: DO NOT throw inside transaction! Let this transaction COMMIT the revocations to disk!
             await tx.refreshToken.updateMany({
               where: { userId: existing.userId, revokedAt: null },
               data: { revokedAt: new Date() },
             });
-            this.logger.warn(
-              `[SECURITY ALERT] Refresh token replay attack detected for userId: ${existing.userId}. All active sessions terminated.`,
-            );
-            throw new UnauthorizedException(
-              'Security Alert: Refresh token replay attack detected. All active sessions have been terminated.',
-            );
+            return { status: 'REPLAY_DETECTED', userId: existing.userId };
           }
 
-          throw new UnauthorizedException(
-            'Refresh token is invalid, expired, or already revoked.',
-          );
-        }
+          return { status: 'INVALID_OR_EXPIRED' };
+        },
+        {
+          isolationLevel: 'Serializable',
+          timeout: 5000,
+        },
+      );
 
-        // Step B: Persist replacement token inside the EXACT SAME transaction
-        await tx.refreshToken.create({
-          data: {
-            userId: user.id,
-            tokenHash: newTokenHash,
-            expiresAt: refreshExpiresAt,
-          },
-        });
-      });
+      if (txResult.status === 'REPLAY_DETECTED') {
+        this.logger.warn(
+          `[SECURITY ALERT] Refresh token replay attack detected for userId: ${txResult.userId}. All active sessions terminated.`,
+        );
+        throw new UnauthorizedException(
+          'Security Alert: Refresh token replay attack detected. All active sessions have been terminated.',
+        );
+      }
+
+      if (txResult.status !== 'SUCCESS') {
+        throw new UnauthorizedException(
+          'Refresh token is invalid, expired, or already revoked.',
+        );
+      }
     } else {
       const rotationResult = this.memoryStore.atomicRotateRefreshToken({
         oldTokenHash,

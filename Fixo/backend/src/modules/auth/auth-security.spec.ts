@@ -1,15 +1,19 @@
 import { HttpException, HttpStatus, UnauthorizedException } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
-import { UserRole } from '@prisma/client';
 import { InMemoryStoreService } from '../../prisma/in-memory-store.service';
 import { PrismaModule } from '../../prisma/prisma.module';
 import { AuthController } from './auth.controller';
 import { AuthModule } from './auth.module';
 import { AuthService } from './auth.service';
 import { validateAuthSecurityConfig } from './config/auth-security.config';
-import { DevSmsProvider, SMS_PROVIDER } from './sms/sms.provider';
+import {
+  DevSmsProvider,
+  ProductionTelecomSmsProvider,
+  SMS_PROVIDER,
+} from './sms/sms.provider';
+import { hashTokenSha256 } from './utils/jwt-token.util';
 
-describe('Phase 2.1 Critical Backend Security Hardening Suite', () => {
+describe('Phase 2.1.1 Critical Backend Security Hardening Suite', () => {
   let moduleRef: TestingModule;
   let authController: AuthController;
   let authService: AuthService;
@@ -91,6 +95,16 @@ describe('Phase 2.1 Critical Backend Security Hardening Suite', () => {
       ).toThrow(/'DEV_SANDBOX_SMS' is strictly forbidden in production/);
     });
 
+    it('fails startup if SMS_PROVIDER_TYPE is not in allowlist', () => {
+      expect(() =>
+        validateAuthSecurityConfig({
+          JWT_ACCESS_SECRET: validTestConfig.accessSecret,
+          JWT_REFRESH_SECRET: validTestConfig.refreshSecret,
+          SMS_PROVIDER_TYPE: 'UNKNOWN_TELECOM_GATEWAY' as any,
+        }),
+      ).toThrow(/Unknown SMS_PROVIDER_TYPE/);
+    });
+
     it('fails startup in production if ALLOW_IN_MEMORY_FALLBACK is true', () => {
       expect(() =>
         validateAuthSecurityConfig({
@@ -105,7 +119,7 @@ describe('Phase 2.1 Critical Backend Security Hardening Suite', () => {
     });
   });
 
-  describe('STEP 3 & 4: Server-Side Cooldown, Rate Limiting & Atomic Consumption', () => {
+  describe('PRIORITY 2: Server-Side Cooldown, Rate Limiting & Atomic Consumption', () => {
     it('enforces 45-second server-side resend cooldown for the same Egyptian number', async () => {
       const phone = '+201011112222';
       const firstReq = await authController.requestOtp({ phone });
@@ -118,6 +132,26 @@ describe('Phase 2.1 Critical Backend Security Hardening Suite', () => {
       });
     });
 
+    it('prevents simultaneous concurrent OTP requests from bypassing the 45s resend cooldown', async () => {
+      const phone = '+201088887777';
+      const results = await Promise.allSettled([
+        authController.requestOtp({ phone }),
+        authController.requestOtp({ phone }),
+        authController.requestOtp({ phone }),
+      ]);
+
+      const fulfilled = results.filter((r) => r.status === 'fulfilled');
+      const rejected = results.filter((r) => r.status === 'rejected');
+
+      expect(fulfilled).toHaveLength(1);
+      expect(rejected).toHaveLength(2);
+      for (const r of rejected) {
+        expect((r as PromiseRejectedResult).reason).toMatchObject({
+          status: HttpStatus.TOO_MANY_REQUESTS,
+        });
+      }
+    });
+
     it('never leaks plaintext OTP in API response or public logs', async () => {
       const reqRes = (await authController.requestOtp({
         phone: '+201099998888',
@@ -126,6 +160,27 @@ describe('Phase 2.1 Critical Backend Security Hardening Suite', () => {
       expect(reqRes['demoHint']).toBeUndefined();
       expect(reqRes['code']).toBeUndefined();
       expect(reqRes['otpCode']).toBeUndefined();
+    });
+
+    it('strictly redacts OTP codes from logs and masks Egyptian mobile numbers', async () => {
+      const originalEnv = process.env.NODE_ENV;
+      const logSpy = jest.spyOn((smsProvider as any).logger, 'log');
+      try {
+        process.env.NODE_ENV = 'development';
+        const phone = '+201023456789';
+        await smsProvider.sendOtpCode(phone, '948215', 300);
+
+        expect(logSpy).toHaveBeenCalled();
+        for (const call of logSpy.mock.calls) {
+          const loggedMessage = call.join(' ');
+          expect(loggedMessage).not.toContain('948215'); // OTP code MUST NOT appear in logs
+          expect(loggedMessage).toContain('+2010*****789'); // Phone number MUST be masked
+          expect(loggedMessage).toContain('simulated: true');
+        }
+      } finally {
+        process.env.NODE_ENV = originalEnv;
+        logSpy.mockRestore();
+      }
     });
 
     it('consumes OTP challenge atomically: single-use only', async () => {
@@ -150,6 +205,24 @@ describe('Phase 2.1 Critical Backend Security Hardening Suite', () => {
           challengeId: reqRes.challengeId,
         }),
       ).rejects.toThrow(UnauthorizedException);
+    });
+
+    it('prevents concurrent verification requests from independently consuming the same challenge', async () => {
+      const phone = '+201066665555';
+      const reqRes = await authController.requestOtp({ phone });
+      const code = smsProvider.getLastDispatchedCodeForPhone(phone)!;
+
+      const results = await Promise.allSettled([
+        authController.verifyOtp({ phone, code, challengeId: reqRes.challengeId }),
+        authController.verifyOtp({ phone, code, challengeId: reqRes.challengeId }),
+      ]);
+
+      const fulfilled = results.filter((r) => r.status === 'fulfilled');
+      const rejected = results.filter((r) => r.status === 'rejected');
+
+      expect(fulfilled).toHaveLength(1);
+      expect(rejected).toHaveLength(1);
+      expect((rejected[0] as PromiseRejectedResult).reason).toBeInstanceOf(UnauthorizedException);
     });
 
     it('locks OTP challenge after 5 failed attempts atomically', async () => {
@@ -187,7 +260,7 @@ describe('Phase 2.1 Critical Backend Security Hardening Suite', () => {
     });
   });
 
-  describe('STEP 5: Refresh Token Rotation & Replay Attack Family Revocation', () => {
+  describe('PRIORITY 1: Refresh Token Rotation & Replay Attack Family Revocation', () => {
     it('rotates refresh token and issues replacement pair', async () => {
       const phone = '+201023456789';
       const reqRes = await authController.requestOtp({ phone });
@@ -239,6 +312,55 @@ describe('Phase 2.1 Critical Backend Security Hardening Suite', () => {
       ).rejects.toThrow(UnauthorizedException);
     });
 
+    it('persists revocation to storage upon replay detection and verifies token state', async () => {
+      const phone = '+201023456789';
+      const reqRes = await authController.requestOtp({ phone });
+      const code = smsProvider.getLastDispatchedCodeForPhone(phone)!;
+      const initial = await authController.verifyOtp({
+        phone,
+        code,
+        challengeId: reqRes.challengeId,
+      });
+      const rotated = await authController.refresh({ refreshToken: initial.refreshToken });
+
+      // Replay old token -> triggers replay detection and family revocation
+      await expect(
+        authController.refresh({ refreshToken: initial.refreshToken }),
+      ).rejects.toThrow(/replay attack/i);
+
+      // Inspect persisted records in store
+      const initialHash = hashTokenSha256(initial.refreshToken);
+      const rotatedHash = hashTokenSha256(rotated.refreshToken);
+
+      const storedInitial = memoryStore.findRefreshTokenByHash(initialHash);
+      const storedRotated = memoryStore.findRefreshTokenByHash(rotatedHash);
+
+      expect(storedInitial?.revokedAt).not.toBeNull();
+      expect(storedRotated?.revokedAt).not.toBeNull(); // Persisted state confirmed revoked!
+    });
+
+    it('prevents concurrent refresh requests on the same token from creating multiple surviving sessions', async () => {
+      const phone = '+201023456789';
+      const reqRes = await authController.requestOtp({ phone });
+      const code = smsProvider.getLastDispatchedCodeForPhone(phone)!;
+      const initialAuth = await authController.verifyOtp({
+        phone,
+        code,
+        challengeId: reqRes.challengeId,
+      });
+
+      const results = await Promise.allSettled([
+        authController.refresh({ refreshToken: initialAuth.refreshToken }),
+        authController.refresh({ refreshToken: initialAuth.refreshToken }),
+      ]);
+
+      const fulfilled = results.filter((r) => r.status === 'fulfilled');
+      const rejected = results.filter((r) => r.status === 'rejected');
+
+      expect(fulfilled).toHaveLength(1);
+      expect(rejected).toHaveLength(1);
+    });
+
     it('rejects expired refresh tokens', async () => {
       const phone = '+201023456789';
       const reqRes = await authController.requestOtp({ phone });
@@ -284,6 +406,34 @@ describe('Phase 2.1 Critical Backend Security Hardening Suite', () => {
           refreshToken: tokens.refreshToken,
         }),
       ).rejects.toThrow(UnauthorizedException);
+    });
+  });
+
+  describe('PRIORITY 3: Production Telecom SMS Fail-Closed Invariant', () => {
+    it('ProductionTelecomSmsProvider fails closed with HTTP 503 and never fabricates delivery', async () => {
+      const prodSms = new ProductionTelecomSmsProvider();
+      const original = process.env.SMS_PROVIDER_TYPE;
+      try {
+        process.env.SMS_PROVIDER_TYPE = 'VICTORYLINK';
+        await expect(prodSms.sendOtpCode('+201023456789', '123456', 300)).rejects.toMatchObject({
+          status: HttpStatus.SERVICE_UNAVAILABLE,
+        });
+      } finally {
+        process.env.SMS_PROVIDER_TYPE = original;
+      }
+    });
+
+    it('ProductionTelecomSmsProvider rejects unconfigured or unknown provider with HTTP 500', async () => {
+      const prodSms = new ProductionTelecomSmsProvider();
+      const original = process.env.SMS_PROVIDER_TYPE;
+      try {
+        process.env.SMS_PROVIDER_TYPE = 'UNKNOWN_PROVIDER';
+        await expect(prodSms.sendOtpCode('+201023456789', '123456', 300)).rejects.toMatchObject({
+          status: HttpStatus.INTERNAL_SERVER_ERROR,
+        });
+      } finally {
+        process.env.SMS_PROVIDER_TYPE = original;
+      }
     });
   });
 });

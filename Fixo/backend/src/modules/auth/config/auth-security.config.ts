@@ -1,10 +1,15 @@
 import { createHmac } from 'crypto';
+import {
+  isSupportedSmsProvider,
+  SupportedSmsProvider,
+  SUPPORTED_SMS_PROVIDERS,
+} from '../sms/sms.provider';
 
 export interface ValidatedAuthSecurityConfig {
   accessSecret: string;
   refreshSecret: string;
   otpHmacSecret: string;
-  smsProviderType: 'DEV_SANDBOX_SMS' | 'TWILIO' | 'VICTORYLINK' | 'VODAFONE_EG';
+  smsProviderType: SupportedSmsProvider;
   isProduction: boolean;
   allowDevSms: boolean;
   allowInMemoryFallback: boolean;
@@ -113,8 +118,15 @@ export function validateAuthSecurityConfig(
   }
 
   // 4. Telecom SMS Provider & Sandbox Isolation
-  const smsProviderType = (env.SMS_PROVIDER_TYPE?.trim() ??
-    (isProduction ? '' : 'DEV_SANDBOX_SMS')) as ValidatedAuthSecurityConfig['smsProviderType'];
+  const rawSmsProvider = env.SMS_PROVIDER_TYPE?.trim();
+  if (rawSmsProvider && !isSupportedSmsProvider(rawSmsProvider)) {
+    throw new Error(
+      `FATAL AUTH CONFIGURATION ERROR: Unknown SMS_PROVIDER_TYPE '${rawSmsProvider}'. Supported options: ${SUPPORTED_SMS_PROVIDERS.join(', ')}.`,
+    );
+  }
+
+  const smsProviderType = (rawSmsProvider ??
+    (isProduction ? '' : 'DEV_SANDBOX_SMS')) as SupportedSmsProvider;
 
   const allowDevSms = env.ALLOW_DEV_SMS === 'true';
 

@@ -1,9 +1,30 @@
-import { Injectable, Logger } from '@nestjs/common';
+import {
+  HttpException,
+  HttpStatus,
+  Injectable,
+  Logger,
+} from '@nestjs/common';
 
 export const SMS_PROVIDER = Symbol('SMS_PROVIDER');
 
+export const SUPPORTED_SMS_PROVIDERS = [
+  'DEV_SANDBOX_SMS',
+  'TWILIO',
+  'VICTORYLINK',
+  'VODAFONE_EG',
+] as const;
+
+export type SupportedSmsProvider = (typeof SUPPORTED_SMS_PROVIDERS)[number];
+
+export function isSupportedSmsProvider(val: unknown): val is SupportedSmsProvider {
+  return (
+    typeof val === 'string' &&
+    (SUPPORTED_SMS_PROVIDERS as readonly string[]).includes(val)
+  );
+}
+
 export interface SmsDispatchResult {
-  provider: 'DEV_SANDBOX_SMS' | 'TWILIO' | 'VICTORYLINK' | 'VODAFONE_EG';
+  provider: SupportedSmsProvider;
   delivered: boolean;
   simulated: boolean;
   dispatchedAt: string;
@@ -18,8 +39,7 @@ export interface SmsProvider {
   getLastDispatchedCodeForPhone?(phone: string): string | null;
 }
 
-function maskEgyptPhone(phone: string): string {
-  // Normalize display: keep prefix and last 3 digits, mask middle
+export function maskEgyptPhone(phone: string): string {
   if (phone.length <= 6) {
     return '***';
   }
@@ -28,10 +48,9 @@ function maskEgyptPhone(phone: string): string {
 
 /**
  * Isolated development/test SMS provider.
- *
  * Allowed ONLY in non-production environments when ALLOW_DEV_SMS="true" or NODE_ENV="test".
- * Never logs authentication codes in application logs.
- * Clearly reports `delivered: false, simulated: true`.
+ * Never logs authentication codes.
+ * Explicitly identifies dispatch as simulated (`delivered: false, simulated: true`).
  */
 @Injectable()
 export class DevSmsProvider implements SmsProvider {
@@ -43,7 +62,6 @@ export class DevSmsProvider implements SmsProvider {
     code: string,
     expiresInSeconds: number,
   ): Promise<SmsDispatchResult> {
-    // Record internally for unit/integration tests inspection only
     this.sentCodesByPhone.set(phone, code);
 
     if (process.env.NODE_ENV !== 'test') {
@@ -67,8 +85,13 @@ export class DevSmsProvider implements SmsProvider {
 }
 
 /**
- * Production telecom SMS provider placeholder.
- * Throws if production SMS gateway credentials are not configured.
+ * Production telecom SMS provider adapter.
+ *
+ * Security Invariant:
+ * - Fails closed: until live telecom gateway credentials (VictoryLink / Vodafone Egypt / Twilio)
+ *   are connected, it explicitly rejects delivery with HTTP 503 (SERVICE_UNAVAILABLE).
+ * - Never fabricates fake delivery success.
+ * - Validates provider against runtime allowlist.
  */
 @Injectable()
 export class ProductionTelecomSmsProvider implements SmsProvider {
@@ -79,15 +102,26 @@ export class ProductionTelecomSmsProvider implements SmsProvider {
     _code: string,
     _expiresInSeconds: number,
   ): Promise<SmsDispatchResult> {
+    const rawProvider = process.env.SMS_PROVIDER_TYPE?.trim();
+
+    if (!isSupportedSmsProvider(rawProvider) || rawProvider === 'DEV_SANDBOX_SMS') {
+      this.logger.error(
+        `[TELECOM_SMS_ERROR] Invalid or unauthorized SMS provider '${rawProvider}' in production.`,
+      );
+      throw new HttpException(
+        'Telecom SMS gateway configuration is invalid or missing.',
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
+
     const masked = maskEgyptPhone(phone);
-    const gateway = process.env.SMS_PROVIDER_TYPE ?? 'VICTORYLINK';
-    this.logger.log(`[TELECOM_SMS] Sending OTP to ${masked} via gateway ${gateway}`);
-    // In production, integration with VictoryLink / Vodafone Egypt SMS HTTP API
-    return {
-      provider: gateway as SmsDispatchResult['provider'],
-      delivered: true,
-      simulated: false,
-      dispatchedAt: new Date().toISOString(),
-    };
+    this.logger.error(
+      `[TELECOM_SMS_ERROR] Telecom gateway adapter for ${rawProvider} is pending live gateway credentials. Rejecting delivery to ${masked} (fail-closed).`,
+    );
+
+    throw new HttpException(
+      `SMS delivery is temporarily unavailable. Live telecom gateway adapter for ${rawProvider} requires production credentials.`,
+      HttpStatus.SERVICE_UNAVAILABLE,
+    );
   }
 }

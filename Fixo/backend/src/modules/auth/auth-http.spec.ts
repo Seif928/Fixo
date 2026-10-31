@@ -166,6 +166,14 @@ describe('HTTP-Level Integration Suite (Validation Pipes, Guards & Endpoints)', 
       expect(data['currency']).toBe('EGP');
       expect(data['persistence']).toBeDefined();
     });
+
+    it('returns HTTP 200 on /health/ready when storage backend is operational', async () => {
+      const response = await fetch(`${baseUrl}/health/ready`);
+      expect(response.status).toBe(200);
+      const data = (await response.json()) as Record<string, unknown>;
+      expect(data['status']).toBe('ready');
+      expect((data['database'] as any)['ready']).toBe(true);
+    });
   });
 });
 

@@ -1,5 +1,7 @@
 import { NotFoundException } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
+import { ProVerificationStatus } from '@prisma/client';
+import { InMemoryStoreService } from '../../prisma/in-memory-store.service';
 import { PrismaModule } from '../../prisma/prisma.module';
 import { ProfessionalsController } from './professionals.controller';
 import { ServicesController } from './services.controller';
@@ -8,6 +10,7 @@ import { ServicesModule } from './services.module';
 describe('ServicesController & ProfessionalsController (Phase 2 Marketplace API)', () => {
   let servicesController: ServicesController;
   let professionalsController: ProfessionalsController;
+  let memoryStore: InMemoryStoreService;
 
   beforeEach(async () => {
     const moduleRef: TestingModule = await Test.createTestingModule({
@@ -16,6 +19,8 @@ describe('ServicesController & ProfessionalsController (Phase 2 Marketplace API)
 
     servicesController = moduleRef.get(ServicesController);
     professionalsController = moduleRef.get(ProfessionalsController);
+    memoryStore = moduleRef.get(InMemoryStoreService);
+    memoryStore.resetToSeedState();
   });
 
   it('GET /api/v1/services/categories returns all 6 Fixo categories in EGP', async () => {
@@ -110,6 +115,103 @@ describe('ServicesController & ProfessionalsController (Phase 2 Marketplace API)
         expect(rawPro['nationalIdSynthetic']).toBeUndefined();
         expect(rawPro['reviewerNote']).toBeUndefined();
       }
+    });
+
+    it('strictly excludes DRAFT, PENDING_REVIEW, ACTION_REQUIRED, and SUSPENDED pro profiles', async () => {
+      // Inject unapproved negative fixtures into store
+      (memoryStore as any).professionals.push(
+        {
+          id: 'pro-draft-test',
+          userId: 'u-draft-test',
+          fullNameEn: 'Unapproved Draft Tech',
+          fullNameAr: 'فني مسودة',
+          phone: '+20109990001',
+          dossierCode: 'DOS-DRAFT-01',
+          verificationStatus: ProVerificationStatus.DRAFT,
+          primaryCategoryId: 'cat-ac-maintenance',
+          primaryCategorySlug: 'ac-maintenance',
+          primaryZoneSlug: 'sheikh-zayed',
+          specialtyEn: 'Draft',
+          specialtyAr: 'مسودة',
+          zonesLabelEn: 'Cairo',
+          zonesLabelAr: 'القاهرة',
+          ratingAvg: 5.0,
+          reviewsCount: 0,
+          completedJobsCount: 0,
+          acceptanceRatePct: 100,
+          estimatedPriceEgp: 200,
+          badgeEn: null,
+          badgeAr: null,
+          badgeVariant: null,
+          transportMode: 'MOTORCYCLE',
+          experienceTier: 'JUNIOR_1_2Y',
+          isOnline: true,
+        },
+        {
+          id: 'pro-pending-test',
+          userId: 'u-pending-test',
+          fullNameEn: 'Pending Review Tech',
+          fullNameAr: 'فني قيد المراجعة',
+          phone: '+20109990002',
+          dossierCode: 'DOS-PENDING-02',
+          verificationStatus: ProVerificationStatus.PENDING_REVIEW,
+          primaryCategoryId: 'cat-ac-maintenance',
+          primaryCategorySlug: 'ac-maintenance',
+          primaryZoneSlug: 'sheikh-zayed',
+          specialtyEn: 'Pending',
+          specialtyAr: 'قيد المراجعة',
+          zonesLabelEn: 'Cairo',
+          zonesLabelAr: 'القاهرة',
+          ratingAvg: 5.0,
+          reviewsCount: 0,
+          completedJobsCount: 0,
+          acceptanceRatePct: 100,
+          estimatedPriceEgp: 200,
+          badgeEn: null,
+          badgeAr: null,
+          badgeVariant: null,
+          transportMode: 'MOTORCYCLE',
+          experienceTier: 'JUNIOR_1_2Y',
+          isOnline: true,
+        },
+        {
+          id: 'pro-suspended-test',
+          userId: 'u-suspended-test',
+          fullNameEn: 'Suspended Tech',
+          fullNameAr: 'فني موقوف',
+          phone: '+20109990003',
+          dossierCode: 'DOS-SUSPENDED-03',
+          verificationStatus: ProVerificationStatus.SUSPENDED,
+          primaryCategoryId: 'cat-ac-maintenance',
+          primaryCategorySlug: 'ac-maintenance',
+          primaryZoneSlug: 'sheikh-zayed',
+          specialtyEn: 'Suspended',
+          specialtyAr: 'موقوف',
+          zonesLabelEn: 'Cairo',
+          zonesLabelAr: 'القاهرة',
+          ratingAvg: 2.0,
+          reviewsCount: 5,
+          completedJobsCount: 2,
+          acceptanceRatePct: 40,
+          estimatedPriceEgp: 200,
+          badgeEn: null,
+          badgeAr: null,
+          badgeVariant: null,
+          transportMode: 'MOTORCYCLE',
+          experienceTier: 'JUNIOR_1_2Y',
+          isOnline: false,
+        },
+      );
+
+      const response = await professionalsController.listProfessionals({
+        page: 1,
+        limit: 50,
+      });
+
+      const returnedIds = response.items.map((p) => p.id);
+      expect(returnedIds).not.toContain('pro-draft-test');
+      expect(returnedIds).not.toContain('pro-pending-test');
+      expect(returnedIds).not.toContain('pro-suspended-test');
     });
 
     it('returns genuine empty list when in production or when demo seed is disabled', async () => {

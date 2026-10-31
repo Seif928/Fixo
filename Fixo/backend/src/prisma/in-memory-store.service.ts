@@ -163,6 +163,56 @@ export class InMemoryStoreService {
     return challenge;
   }
 
+  /**
+   * Synchronously and atomically enforces 45-second resend cooldown,
+   * rate limits (5 requests / 15 mins), and creates challenge in a single atomic step.
+   * Eliminates concurrent request bypass.
+   */
+  atomicRequestOtpChallenge(params: {
+    phone: string;
+    codeHash: string;
+    expiresAt: Date;
+    cooldownSeconds: number;
+    rateLimitWindowMs: number;
+    maxRequestsPerWindow: number;
+  }): {
+    status: 'SUCCESS' | 'COOLDOWN_ACTIVE' | 'RATE_LIMIT_EXCEEDED';
+    challenge?: StoredOtpChallenge;
+    remainingCooldownSec?: number;
+  } {
+    const latest = this.getLatestChallengeForPhone(params.phone);
+    if (latest) {
+      const elapsedMs = Date.now() - latest.createdAt.getTime();
+      const cooldownMs = params.cooldownSeconds * 1000;
+      if (elapsedMs < cooldownMs) {
+        const remainingCooldownSec = Math.ceil((cooldownMs - elapsedMs) / 1000);
+        return {
+          status: 'COOLDOWN_ACTIVE',
+          remainingCooldownSec,
+        };
+      }
+    }
+
+    const windowStart = new Date(Date.now() - params.rateLimitWindowMs);
+    const recentCount = this.countRecentChallengesForPhone(params.phone, windowStart);
+    if (recentCount >= params.maxRequestsPerWindow) {
+      return {
+        status: 'RATE_LIMIT_EXCEEDED',
+      };
+    }
+
+    const challenge = this.createOtpChallenge({
+      phone: params.phone,
+      codeHash: params.codeHash,
+      expiresAt: params.expiresAt,
+    });
+
+    return {
+      status: 'SUCCESS',
+      challenge,
+    };
+  }
+
   findOtpChallengeById(id: string): StoredOtpChallenge | null {
     return this.otpChallenges.get(id) ?? null;
   }

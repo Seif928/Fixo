@@ -102,6 +102,54 @@ export class PrismaService
     return this.connectionFailureReason;
   }
 
+  /**
+   * Executes a real-time live ping against the storage backend.
+   * Returns current operational readiness, not merely the startup state.
+   * Sanitizes all output to prevent credential or raw stack leakage.
+   */
+  async checkReadiness(): Promise<{
+    ready: boolean;
+    storageMode: StoragePersistenceMode;
+    reason?: string;
+  }> {
+    if (this.connected) {
+      try {
+        await Promise.race([
+          this.$queryRaw`SELECT 1`,
+          new Promise<never>((_, reject) =>
+            setTimeout(
+              () => reject(new Error('Database readiness check timed out (1000ms)')),
+              1000,
+            ),
+          ),
+        ]);
+        return { ready: true, storageMode: 'POSTGRESQL_PRISMA' };
+      } catch (err) {
+        this.logger.error(
+          `[HEALTH_CHECK_FAILED] Database ping failed: ${err instanceof Error ? err.message : 'Unknown error'}`,
+        );
+        return {
+          ready: false,
+          storageMode: 'POSTGRESQL_PRISMA',
+          reason: 'Database connection check failed',
+        };
+      }
+    }
+
+    if (process.env.NODE_ENV === 'production') {
+      return {
+        ready: false,
+        storageMode: 'IN_MEMORY_FALLBACK',
+        reason: 'In-memory storage is strictly prohibited in production mode',
+      };
+    }
+
+    return {
+      ready: true,
+      storageMode: 'IN_MEMORY_FALLBACK',
+    };
+  }
+
   getPersistenceDiagnostics(): PersistenceDiagnostics {
     return {
       connected: this.connected,
