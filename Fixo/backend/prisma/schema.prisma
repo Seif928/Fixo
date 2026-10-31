@@ -1,0 +1,366 @@
+// FIXO — Normalized PostgreSQL Schema (Prisma)
+// Matches docs/DATABASE_SCHEMA.md
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserRole {
+  CUSTOMER
+  PRO
+  ADMIN
+}
+
+enum ProVerificationStatus {
+  DRAFT
+  PENDING_REVIEW
+  ACTION_REQUIRED
+  APPROVED
+  SUSPENDED
+}
+
+enum TransportMode {
+  MOTORCYCLE
+  WORK_VAN
+  METRO_BUS
+}
+
+enum ExperienceTier {
+  JUNIOR_1_2Y
+  SKILLED_3_5Y
+  SENIOR_6_8Y
+  MASTER_8_PLUS_Y
+}
+
+enum DocumentType {
+  NATIONAL_ID_FRONT
+  NATIONAL_ID_BACK
+  CRIMINAL_RECORD_CERT
+  SYNDICATE_LICENSE
+}
+
+enum DocumentStatus {
+  PENDING
+  VERIFIED
+  REJECTED
+}
+
+enum BookingStatus {
+  DRAFT
+  PENDING_DISPATCH
+  OFFERED_TO_PRO
+  CONFIRMED
+  PRO_EN_ROUTE
+  ARRIVED
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+}
+
+enum TimeWindow {
+  MORNING_09_12
+  AFTERNOON_13_16
+  EVENING_17_20
+}
+
+enum PaymentMethodType {
+  CASH_ON_SERVICE
+  INSTAPAY_SANDBOX
+  SMART_WALLET_SANDBOX
+  CARD_MEEZA_SANDBOX
+  FAWRY_SANDBOX
+}
+
+enum PaymentStatus {
+  PENDING
+  AUTHORIZED
+  PAID
+  REFUNDED
+  FAILED
+}
+
+enum JobOfferStatus {
+  PENDING
+  ACCEPTED
+  DECLINED
+  EXPIRED
+}
+
+model User {
+  id                   String            @id @default(uuid())
+  phone                String            @unique
+  fullName             String?
+  email                String?           @unique
+  avatarUrl            String?
+  role                 UserRole          @default(CUSTOMER)
+  preferredLocale      String            @default("en")
+  arrivalAlertsEnabled Boolean           @default(true)
+  rewardPoints         Int               @default(0)
+  createdAt            DateTime          @default(now())
+  updatedAt            DateTime          @updatedAt
+
+  proProfile           ProProfile?
+  addresses            CustomerAddress[]
+  bookings             Booking[]         @relation("CustomerBookings")
+  refreshTokens        RefreshToken[]
+  sentMessages         ChatMessage[]
+  reviews              Review[]
+}
+
+model OtpChallenge {
+  id         String    @id @default(uuid())
+  phone      String
+  codeHash   String
+  expiresAt  DateTime
+  attempts   Int       @default(0)
+  consumedAt DateTime?
+  createdAt  DateTime  @default(now())
+
+  @@index([phone])
+}
+
+model RefreshToken {
+  id        String    @id @default(uuid())
+  userId    String
+  tokenHash String    @unique
+  expiresAt DateTime
+  revokedAt DateTime?
+  createdAt DateTime  @default(now())
+
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model CoverageZone {
+  id          String            @id @default(uuid())
+  slug        String            @unique
+  nameEn      String
+  nameAr      String
+  governorate String
+  isActive    Boolean           @default(true)
+
+  addresses   CustomerAddress[]
+  primaryPros ProProfile[]      @relation("PrimaryZonePros")
+  coveredPros ProProfile[]      @relation("ProCoverageZones")
+}
+
+model CustomerAddress {
+  id           String       @id @default(uuid())
+  userId       String
+  zoneId       String
+  label        String
+  buildingLine String
+  districtLine String
+  gateNotes    String?
+  latitude     Float?
+  longitude    Float?
+  isDefault    Boolean      @default(false)
+  createdAt    DateTime     @default(now())
+
+  user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  zone         CoverageZone @relation(fields: [zoneId], references: [id])
+  bookings     Booking[]
+}
+
+model ServiceCategory {
+  id               String            @id @default(uuid())
+  slug             String            @unique
+  nameEn           String
+  nameAr           String
+  subtitleEn       String
+  subtitleAr       String
+  iconName         String
+  startingPriceEgp Int
+  sortOrder        Int               @default(0)
+  isActive         Boolean           @default(true)
+
+  subSkills        ServiceSubSkill[]
+  offerings        ServiceOffering[]
+  primaryPros      ProProfile[]
+}
+
+model ServiceSubSkill {
+  id         String          @id @default(uuid())
+  categoryId String
+  slug       String          @unique
+  nameEn     String
+  nameAr     String
+
+  category   ServiceCategory @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  pros       ProProfile[]    @relation("ProSubSkills")
+}
+
+model ServiceOffering {
+  id                    String          @id @default(uuid())
+  categoryId            String
+  slug                  String          @unique
+  titleEn               String
+  titleAr               String
+  descriptionEn         String
+  descriptionAr         String
+  baseInspectionEgp     Int
+  serviceFeeEgp         Int
+  estimatedDurationMins Int             @default(60)
+  isSeasonalPromo       Boolean         @default(false)
+
+  category              ServiceCategory @relation(fields: [categoryId], references: [id])
+  bookings              Booking[]
+}
+
+model ProProfile {
+  id                         String                    @id @default(uuid())
+  userId                     String                    @unique
+  dossierCode                String                    @unique
+  nationalIdSynthetic        String
+  primaryCategoryId          String?
+  primaryZoneId              String?
+  transportMode              TransportMode             @default(MOTORCYCLE)
+  experienceTier             ExperienceTier            @default(MASTER_8_PLUS_Y)
+  acceptsStandardRateCard    Boolean                   @default(true)
+  toolkitCommitmentConfirmed Boolean                   @default(false)
+  verificationStatus         ProVerificationStatus     @default(DRAFT)
+  reviewerNote               String?
+  isOnline                   Boolean                   @default(false)
+  vehicleDescription         String?
+  vehiclePlateAr             String?
+  ratingAvg                  Float                     @default(5.0)
+  completedJobsCount         Int                       @default(0)
+  acceptanceRatePct          Int                       @default(100)
+  createdAt                  DateTime                  @default(now())
+  updatedAt                  DateTime                  @updatedAt
+
+  user                       User                      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  primaryCategory            ServiceCategory?          @relation(fields: [primaryCategoryId], references: [id])
+  primaryZone                CoverageZone?             @relation("PrimaryZonePros", fields: [primaryZoneId], references: [id])
+  coverageZones              CoverageZone[]            @relation("ProCoverageZones")
+  subSkills                  ServiceSubSkill[]         @relation("ProSubSkills")
+  documents                  ProVerificationDocument[]
+  bookings                   Booking[]
+  jobOffers                  JobOffer[]
+  reviews                    Review[]
+}
+
+model ProVerificationDocument {
+  id              String         @id @default(uuid())
+  proProfileId    String
+  docType         DocumentType
+  fileName        String
+  fileSizeBytes   Int
+  storageKey      String
+  status          DocumentStatus @default(PENDING)
+  reviewerComment String?
+  uploadedAt      DateTime       @default(now())
+
+  proProfile      ProProfile     @relation(fields: [proProfileId], references: [id], onDelete: Cascade)
+}
+
+model Booking {
+  id                 String               @id @default(uuid())
+  orderCode          String               @unique
+  customerId         String
+  proProfileId       String?
+  offeringId         String
+  addressId          String
+  status             BookingStatus        @default(DRAFT)
+  scheduledDate      DateTime
+  timeWindow         TimeWindow
+  issueDescription   String?
+  issuePhotoUrls     String[]
+  baseInspectionEgp  Int
+  serviceFeeEgp      Int
+  transportFeeEgp    Int                  @default(0)
+  totalEgp           Int
+  platformFeeEgp     Int
+  netArtisanEgp      Int
+  arrivalPinCode     String
+  cancellationReason String?
+  createdAt          DateTime             @default(now())
+  updatedAt          DateTime             @updatedAt
+  completedAt        DateTime?
+
+  customer           User                 @relation("CustomerBookings", fields: [customerId], references: [id])
+  proProfile         ProProfile?          @relation(fields: [proProfileId], references: [id])
+  offering           ServiceOffering      @relation(fields: [offeringId], references: [id])
+  address            CustomerAddress      @relation(fields: [addressId], references: [id])
+  statusEvents       BookingStatusEvent[]
+  jobOffers          JobOffer[]
+  payment            PaymentRecord?
+  messages           ChatMessage[]
+  review             Review?
+}
+
+model BookingStatusEvent {
+  id          String        @id @default(uuid())
+  bookingId   String
+  fromStatus  BookingStatus?
+  toStatus    BookingStatus
+  actorUserId String?
+  note        String?
+  createdAt   DateTime      @default(now())
+
+  booking     Booking       @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+}
+
+model JobOffer {
+  id            String         @id @default(uuid())
+  bookingId     String
+  proProfileId  String
+  status        JobOfferStatus @default(PENDING)
+  expiresAt     DateTime
+  declineReason String?
+  respondedAt   DateTime?
+  createdAt     DateTime       @default(now())
+
+  booking       Booking        @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  proProfile    ProProfile     @relation(fields: [proProfileId], references: [id], onDelete: Cascade)
+}
+
+model PaymentRecord {
+  id                String            @id @default(uuid())
+  bookingId         String            @unique
+  method            PaymentMethodType @default(CASH_ON_SERVICE)
+  status            PaymentStatus     @default(PENDING)
+  amountEgp         Int
+  tipEgp            Int               @default(0)
+  externalReference String?
+  paidAt            DateTime?
+  createdAt         DateTime          @default(now())
+
+  booking           Booking           @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+}
+
+model ChatMessage {
+  id                String    @id @default(uuid())
+  bookingId         String
+  senderUserId      String
+  body              String
+  attachmentUrl     String?
+  attachmentCaption String?
+  readAt            DateTime?
+  createdAt         DateTime  @default(now())
+
+  booking           Booking   @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  sender            User      @relation(fields: [senderUserId], references: [id])
+}
+
+model Review {
+  id           String     @id @default(uuid())
+  bookingId    String     @unique
+  customerId   String
+  proProfileId String
+  rating       Int
+  tags         String[]
+  comment      String?
+  photoUrls    String[]
+  tipAmountEgp Int        @default(0)
+  createdAt    DateTime   @default(now())
+
+  booking      Booking    @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  customer     User       @relation(fields: [customerId], references: [id])
+  proProfile   ProProfile @relation(fields: [proProfileId], references: [id])
+}
+
