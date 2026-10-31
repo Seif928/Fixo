@@ -72,7 +72,7 @@ void main() {
     );
 
     testWidgets(
-      'navigates to /auth/phone on Get Started and returns to Onboarding',
+      'navigates to /auth/phone (Screen 02 PhoneAuthPage) on Get Started and returns to Onboarding',
       (WidgetTester tester) async {
         await tester.pumpWidget(const ProviderScope(child: FixoApp()));
         await tester.pumpAndSettle();
@@ -82,8 +82,8 @@ void main() {
         await tester.tap(getStartedFinder);
         await tester.pumpAndSettle();
 
-        expect(find.text('Screen 02: Phone Auth & OTP'), findsOneWidget);
-        expect(find.text('Demo Navigation: Get Started Flow'), findsOneWidget);
+        expect(find.text('Welcome to FIXO'), findsOneWidget);
+        expect(find.text('Egyptian Mobile Number'), findsOneWidget);
 
         await tester.tap(find.byKey(const Key('btn-back-to-onboarding')));
         await tester.pumpAndSettle();
@@ -103,7 +103,8 @@ void main() {
         await tester.tap(signInFinder);
         await tester.pumpAndSettle();
 
-        expect(find.text('Demo Navigation: Sign In Flow'), findsOneWidget);
+        expect(find.text('Welcome to FIXO'), findsOneWidget);
+        expect(find.byKey(const Key('tab-phone-input')), findsOneWidget);
       },
     );
   });

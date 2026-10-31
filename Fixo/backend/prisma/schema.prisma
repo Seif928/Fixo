@@ -202,10 +202,16 @@ model ServiceOffering {
   titleAr               String
   descriptionEn         String
   descriptionAr         String
+  badgeEn               String?
+  badgeAr               String?
+  providerTagEn         String?
+  providerTagAr         String?
   baseInspectionEgp     Int
   serviceFeeEgp         Int
+  flatPriceEgp          Int?
   estimatedDurationMins Int             @default(60)
   isSeasonalPromo       Boolean         @default(false)
+  isBundle              Boolean         @default(false)
 
   category              ServiceCategory @relation(fields: [categoryId], references: [id])
   bookings              Booking[]
@@ -218,6 +224,14 @@ model ProProfile {
   nationalIdSynthetic        String
   primaryCategoryId          String?
   primaryZoneId              String?
+  specialtyEn                String?
+  specialtyAr                String?
+  zonesLabelEn               String?
+  zonesLabelAr               String?
+  badgeEn                    String?
+  badgeAr                    String?
+  estimatedPriceEgp          Int                       @default(250)
+  reviewsCount               Int                       @default(0)
   transportMode              TransportMode             @default(MOTORCYCLE)
   experienceTier             ExperienceTier            @default(MASTER_8_PLUS_Y)
   acceptsStandardRateCard    Boolean                   @default(true)

@@ -79,12 +79,17 @@ abstract final class FixoTypography {
   );
 
   /// Headline Small (18px / 26px, w600)
-  static TextStyle headlineSm({Color? color, Locale? locale}) => TextStyle(
+  static TextStyle headlineSm({
+    Color? color,
+    Locale? locale,
+    bool tabularFigures = false,
+  }) => TextStyle(
     fontFamily: fontFamilyForLocale(locale),
     fontFamilyFallback: fallbackFonts,
     fontSize: 18,
     height: 26 / 18,
     fontWeight: FontWeight.w600,
+    fontFeatures: tabularFigures ? const [FontFeature.tabularFigures()] : null,
     color: color ?? FixoColors.onSurface,
   );
 
@@ -131,26 +136,34 @@ abstract final class FixoTypography {
   );
 
   /// Label Large (14px / 20px, w600)
-  static TextStyle labelLg({Color? color, Locale? locale}) => TextStyle(
+  static TextStyle labelLg({
+    Color? color,
+    Locale? locale,
+    bool tabularFigures = true,
+  }) => TextStyle(
     fontFamily: fontFamilyForLocale(locale),
     fontFamilyFallback: fallbackFonts,
     fontSize: 14,
     height: 20 / 14,
     fontWeight: FontWeight.w600,
     letterSpacing: 0.14,
-    fontFeatures: const [FontFeature.tabularFigures()],
+    fontFeatures: tabularFigures ? const [FontFeature.tabularFigures()] : null,
     color: color ?? FixoColors.onSurface,
   );
 
   /// Label Medium (12px / 16px, w600)
-  static TextStyle labelMd({Color? color, Locale? locale}) => TextStyle(
+  static TextStyle labelMd({
+    Color? color,
+    Locale? locale,
+    bool tabularFigures = true,
+  }) => TextStyle(
     fontFamily: fontFamilyForLocale(locale),
     fontFamilyFallback: fallbackFonts,
     fontSize: 12,
     height: 16 / 12,
     fontWeight: FontWeight.w600,
     letterSpacing: 0.24,
-    fontFeatures: const [FontFeature.tabularFigures()],
+    fontFeatures: tabularFigures ? const [FontFeature.tabularFigures()] : null,
     color: color ?? FixoColors.onSurfaceVariant,
   );
 
