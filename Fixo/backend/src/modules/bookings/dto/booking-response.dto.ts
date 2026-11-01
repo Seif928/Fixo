@@ -1,4 +1,21 @@
-import { BookingStatus, TimeWindow } from '@prisma/client';
+import {
+  BookingStatus,
+  PaymentMethodType,
+  PaymentStatus,
+  TimeWindow,
+} from '@prisma/client';
+
+export interface BookingPaymentSummary {
+  id: string;
+  bookingId: string;
+  method: PaymentMethodType;
+  status: PaymentStatus;
+  amountEgp: number;
+  tipEgp: number;
+  externalReference: string | null;
+  paidAt: string | null;
+  createdAt: string;
+}
 
 export interface BookingPricingBreakdown {
   baseInspectionEgp: number;
@@ -69,6 +86,7 @@ export interface BookingDetailResponse {
   offering: BookingOfferingSummary;
   address: BookingAddressSummary;
   proProfile?: BookingProSummary | null;
+  payment?: BookingPaymentSummary | null;
   statusEvents?: Array<{
     id: string;
     fromStatus: BookingStatus | null;

@@ -6,6 +6,8 @@ import {
 import { Test, TestingModule } from '@nestjs/testing';
 import {
   BookingStatus,
+  PaymentMethodType,
+  PaymentStatus,
   PrismaClient,
   ProVerificationStatus,
   TimeWindow,
@@ -24,6 +26,7 @@ import {
 } from '../../prisma/test-database-safety.util';
 import { BookingsModule } from './bookings.module';
 import { BookingsService } from './bookings.service';
+import { CheckoutBookingDto } from './dto/checkout-booking.dto';
 import { CreateBookingDto } from './dto/create-booking.dto';
 
 // Load .env configuration
@@ -520,6 +523,254 @@ describe('Bookings PostgreSQL Real Database Integration Suite (fixo_test)', () =
           false,
         ),
       ).rejects.toThrow(NotFoundException);
+    });
+  });
+
+  describe('POST /api/v1/bookings/:bookingId/checkout — Phase 4A Cash on Service Checkout', () => {
+    let draftBooking: any;
+    const tomorrowStr = new Date(Date.now() + 86400000).toISOString().split('T')[0];
+
+    beforeEach(async () => {
+      // Create a fresh DRAFT booking for Customer A before each test in this suite
+      draftBooking = await bookingsService.createBooking(customerUserA.id, {
+        offeringId: offeringAc.id,
+        addressId: addressA.id,
+        scheduledDate: tomorrowStr,
+        timeWindow: TimeWindow.MORNING_09_12,
+        issueDescription: 'AC blowing warm air in living room',
+      });
+    });
+
+    it('rejects unsupported digital payment methods (INSTAPAY_SANDBOX) with BadRequestException', async () => {
+      await expect(
+        bookingsService.checkoutBooking(
+          customerUserA.id,
+          draftBooking.id,
+          { paymentMethod: PaymentMethodType.INSTAPAY_SANDBOX },
+        ),
+      ).rejects.toThrow(BadRequestException);
+
+      // Verify booking status was not altered in PostgreSQL
+      const dbBooking = await prisma.booking.findUnique({
+        where: { id: draftBooking.id },
+      });
+      expect(dbBooking?.status).toBe(BookingStatus.DRAFT);
+    });
+
+    it('throws NotFoundException for non-existent booking ID', async () => {
+      await expect(
+        bookingsService.checkoutBooking(
+          customerUserA.id,
+          '00000000-0000-0000-0000-000000000000',
+          { paymentMethod: PaymentMethodType.CASH_ON_SERVICE },
+        ),
+      ).rejects.toThrow(NotFoundException);
+    });
+
+    it('forbids another customer from checking out booking (HTTP 403)', async () => {
+      await expect(
+        bookingsService.checkoutBooking(
+          customerUserB.id,
+          draftBooking.id,
+          { paymentMethod: PaymentMethodType.CASH_ON_SERVICE },
+          false,
+        ),
+      ).rejects.toThrow(ForbiddenException);
+
+      // Verify no payment record created in PostgreSQL
+      const paymentCount = await prisma.paymentRecord.count({
+        where: { bookingId: draftBooking.id },
+      });
+      expect(paymentCount).toBe(0);
+    });
+
+    it('rejects checkout when booking is in invalid lifecycle state (CANCELLED)', async () => {
+      // Update booking directly to CANCELLED in DB
+      await prisma.booking.update({
+        where: { id: draftBooking.id },
+        data: { status: BookingStatus.CANCELLED },
+      });
+
+      await expect(
+        bookingsService.checkoutBooking(
+          customerUserA.id,
+          draftBooking.id,
+          { paymentMethod: PaymentMethodType.CASH_ON_SERVICE },
+        ),
+      ).rejects.toThrow(BadRequestException);
+
+      const dbBooking = await prisma.booking.findUnique({
+        where: { id: draftBooking.id },
+      });
+      expect(dbBooking?.status).toBe(BookingStatus.CANCELLED);
+    });
+
+    it('atomically transitions DRAFT booking to PENDING_DISPATCH with PENDING cash payment record in PostgreSQL', async () => {
+      const result = await bookingsService.checkoutBooking(
+        customerUserA.id,
+        draftBooking.id,
+        { paymentMethod: PaymentMethodType.CASH_ON_SERVICE },
+      );
+
+      // 1. Verify returned response structure
+      expect(result.id).toBe(draftBooking.id);
+      expect(result.status).toBe(BookingStatus.PENDING_DISPATCH);
+      expect(result.payment).toBeDefined();
+      expect(result.payment?.method).toBe(PaymentMethodType.CASH_ON_SERVICE);
+      expect(result.payment?.status).toBe(PaymentStatus.PENDING);
+      expect(result.payment?.amountEgp).toBe(draftBooking.pricing.totalEgp);
+      expect(result.payment?.tipEgp).toBe(0);
+      expect(result.payment?.paidAt).toBeNull();
+      expect(result.payment?.externalReference).toBeNull();
+
+      // 2. Verify Booking table directly in PostgreSQL
+      const dbBooking = await prisma.booking.findUnique({
+        where: { id: draftBooking.id },
+      });
+      expect(dbBooking?.status).toBe(BookingStatus.PENDING_DISPATCH);
+      expect(dbBooking?.proProfileId).toBeNull(); // No pro assigned at checkout
+
+      // 3. Verify PaymentRecord table directly in PostgreSQL
+      const dbPayment = await prisma.paymentRecord.findUnique({
+        where: { bookingId: draftBooking.id },
+      });
+      expect(dbPayment).not.toBeNull();
+      expect(dbPayment?.method).toBe(PaymentMethodType.CASH_ON_SERVICE);
+      expect(dbPayment?.status).toBe(PaymentStatus.PENDING);
+      expect(dbPayment?.amountEgp).toBe(draftBooking.pricing.totalEgp);
+      expect(dbPayment?.paidAt).toBeNull();
+      expect(dbPayment?.externalReference).toBeNull();
+
+      // 4. Verify BookingStatusEvent table directly in PostgreSQL
+      const statusEvents = await prisma.bookingStatusEvent.findMany({
+        where: { bookingId: draftBooking.id },
+        orderBy: { createdAt: 'asc' },
+      });
+      expect(statusEvents.length).toBe(2);
+      expect(statusEvents[0].toStatus).toBe(BookingStatus.DRAFT);
+      expect(statusEvents[1].fromStatus).toBe(BookingStatus.DRAFT);
+      expect(statusEvents[1].toStatus).toBe(BookingStatus.PENDING_DISPATCH);
+      expect(statusEvents[1].actorUserId).toBe(customerUserA.id);
+      expect(statusEvents[1].note).toBe('Customer confirmed Cash on Service checkout');
+    });
+
+    it('is idempotent and retry-safe: duplicate sequential checkout calls return identical data without duplicating records', async () => {
+      // First checkout call
+      const firstResult = await bookingsService.checkoutBooking(
+        customerUserA.id,
+        draftBooking.id,
+        { paymentMethod: PaymentMethodType.CASH_ON_SERVICE },
+      );
+      expect(firstResult.status).toBe(BookingStatus.PENDING_DISPATCH);
+
+      // Second checkout call (retry / double-submit)
+      const secondResult = await bookingsService.checkoutBooking(
+        customerUserA.id,
+        draftBooking.id,
+        { paymentMethod: PaymentMethodType.CASH_ON_SERVICE },
+      );
+      expect(secondResult.status).toBe(BookingStatus.PENDING_DISPATCH);
+      expect(secondResult.id).toBe(firstResult.id);
+      expect(secondResult.payment?.id).toBe(firstResult.payment?.id);
+
+      // Verify PostgreSQL counts: strictly 1 PaymentRecord and strictly 1 PENDING_DISPATCH event
+      const paymentRecordsCount = await prisma.paymentRecord.count({
+        where: { bookingId: draftBooking.id },
+      });
+      expect(paymentRecordsCount).toBe(1);
+
+      const dispatchEventsCount = await prisma.bookingStatusEvent.count({
+        where: {
+          bookingId: draftBooking.id,
+          toStatus: BookingStatus.PENDING_DISPATCH,
+        },
+      });
+      expect(dispatchEventsCount).toBe(1);
+    });
+
+    it('handles concurrent checkout requests safely with PostgreSQL row locking', async () => {
+      // Fire 5 concurrent requests on the exact same DRAFT booking
+      const concurrentAttempts = [1, 2, 3, 4, 5].map(() =>
+        bookingsService.checkoutBooking(
+          customerUserA.id,
+          draftBooking.id,
+          { paymentMethod: PaymentMethodType.CASH_ON_SERVICE },
+        ),
+      );
+
+      const results = await Promise.all(concurrentAttempts);
+
+      // All 5 requests must succeed idempotently with PENDING_DISPATCH status
+      for (const res of results) {
+        expect(res.status).toBe(BookingStatus.PENDING_DISPATCH);
+        expect(res.payment?.method).toBe(PaymentMethodType.CASH_ON_SERVICE);
+        expect(res.payment?.status).toBe(PaymentStatus.PENDING);
+      }
+
+      // Verify PostgreSQL database integrity: exactly 1 payment record was created
+      const payments = await prisma.paymentRecord.findMany({
+        where: { bookingId: draftBooking.id },
+      });
+      expect(payments.length).toBe(1);
+
+      // Verify status events: exactly 1 PENDING_DISPATCH transition was recorded
+      const dispatchEvents = await prisma.bookingStatusEvent.findMany({
+        where: {
+          bookingId: draftBooking.id,
+          toStatus: BookingStatus.PENDING_DISPATCH,
+        },
+      });
+      expect(dispatchEvents.length).toBe(1);
+    });
+
+    it('aborts and rolls back entire transaction if any failure occurs during checkout: booking remains DRAFT', async () => {
+      const realTransaction = prisma.$transaction.bind(prisma);
+
+      // Spy on $transaction to simulate a mid-transaction database crash during payment creation
+      const txSpy = jest
+        .spyOn(prisma, '$transaction')
+        .mockImplementationOnce(async (callback: any) => {
+          return realTransaction(async (tx: any) => {
+            // Override tx.paymentRecord.create to simulate unexpected failure
+            tx.paymentRecord.create = jest
+              .fn()
+              .mockRejectedValueOnce(
+                new Error('SIMULATED_POSTGRES_PAYMENT_INSERT_FAILURE'),
+              );
+            return callback(tx);
+          });
+        });
+
+      await expect(
+        bookingsService.checkoutBooking(
+          customerUserA.id,
+          draftBooking.id,
+          { paymentMethod: PaymentMethodType.CASH_ON_SERVICE },
+        ),
+      ).rejects.toThrow('SIMULATED_POSTGRES_PAYMENT_INSERT_FAILURE');
+
+      txSpy.mockRestore();
+
+      // Inspect PostgreSQL directly: verify that Booking status rolled back to DRAFT!
+      const dbBooking = await prisma.booking.findUnique({
+        where: { id: draftBooking.id },
+      });
+      expect(dbBooking?.status).toBe(BookingStatus.DRAFT);
+
+      // Verify no payment record was committed
+      const paymentCount = await prisma.paymentRecord.count({
+        where: { bookingId: draftBooking.id },
+      });
+      expect(paymentCount).toBe(0);
+
+      // Verify no PENDING_DISPATCH status event was committed
+      const dispatchEvents = await prisma.bookingStatusEvent.findMany({
+        where: {
+          bookingId: draftBooking.id,
+          toStatus: BookingStatus.PENDING_DISPATCH,
+        },
+      });
+      expect(dispatchEvents.length).toBe(0);
     });
   });
 });

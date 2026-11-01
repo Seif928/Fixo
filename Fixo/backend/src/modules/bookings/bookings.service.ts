@@ -4,13 +4,19 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { BookingStatus, ProVerificationStatus } from '@prisma/client';
+import {
+  BookingStatus,
+  PaymentMethodType,
+  PaymentStatus,
+  ProVerificationStatus,
+} from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import { BookingQueryDto } from './dto/booking-query.dto';
 import {
   BookingDetailResponse,
   BookingListResponse,
 } from './dto/booking-response.dto';
+import { CheckoutBookingDto } from './dto/checkout-booking.dto';
 import { CreateBookingDto } from './dto/create-booking.dto';
 
 const ACTIVE_BOOKING_STATUSES: BookingStatus[] = [
@@ -149,6 +155,26 @@ export class BookingsService {
                   avatarUrl: booking.proProfile.user.avatarUrl ?? null,
                 }
               : null,
+          }
+        : null,
+      payment: booking.payment
+        ? {
+            id: booking.payment.id,
+            bookingId: booking.payment.bookingId,
+            method: booking.payment.method,
+            status: booking.payment.status,
+            amountEgp: booking.payment.amountEgp,
+            tipEgp: booking.payment.tipEgp ?? 0,
+            externalReference: booking.payment.externalReference ?? null,
+            paidAt: booking.payment.paidAt
+              ? booking.payment.paidAt instanceof Date
+                ? booking.payment.paidAt.toISOString()
+                : String(booking.payment.paidAt)
+              : null,
+            createdAt:
+              booking.payment.createdAt instanceof Date
+                ? booking.payment.createdAt.toISOString()
+                : String(booking.payment.createdAt),
           }
         : null,
       statusEvents: Array.isArray(booking.statusEvents)
@@ -299,6 +325,7 @@ export class BookingsService {
               user: true,
             },
           },
+          payment: true,
           statusEvents: {
             orderBy: { createdAt: 'desc' },
           },
@@ -357,6 +384,7 @@ export class BookingsService {
               user: true,
             },
           },
+          payment: true,
           statusEvents: {
             orderBy: { createdAt: 'desc' },
           },
@@ -400,6 +428,7 @@ export class BookingsService {
             user: true,
           },
         },
+        payment: true,
         statusEvents: {
           orderBy: { createdAt: 'desc' },
         },
@@ -415,6 +444,133 @@ export class BookingsService {
     }
 
     return this.formatBookingResponse(booking);
+  }
+
+  /**
+   * Confirms payment method and atomically transitions booking from DRAFT to PENDING_DISPATCH.
+   *
+   * Business & Security Rules:
+   * 1. Only CASH_ON_SERVICE is accepted in MVP. Unsupported digital payment methods are rejected.
+   * 2. Validates that the booking exists and is owned by the authenticated customer (or admin).
+   * 3. Idempotent & retry-safe: if already PENDING_DISPATCH with a matching payment record, returns the booking.
+   * 4. Enforces lifecycle state: only DRAFT bookings can transition to checkout.
+   * 5. Atomically transitions Booking status to PENDING_DISPATCH, creates PaymentRecord (PENDING),
+   *    and creates BookingStatusEvent.
+   * 6. Uses PostgreSQL row-level locking (FOR UPDATE) to guarantee concurrency safety against
+   *    race conditions, double submissions, and duplicate payment records.
+   * 7. Leaves paidAt and externalReference null; no technician is assigned or dispatched.
+   */
+  async checkoutBooking(
+    customerId: string,
+    bookingId: string,
+    dto: CheckoutBookingDto,
+    isAdmin = false,
+  ): Promise<BookingDetailResponse> {
+    // 1. Initially accept only CASH_ON_SERVICE
+    if (dto.paymentMethod !== PaymentMethodType.CASH_ON_SERVICE) {
+      throw new BadRequestException(
+        `Payment method "${dto.paymentMethod}" is not supported yet. Only "${PaymentMethodType.CASH_ON_SERVICE}" is currently accepted.`,
+      );
+    }
+
+    // 2. Fetch booking and validate existence
+    const booking = await this.prisma.booking.findUnique({
+      where: { id: bookingId },
+      include: {
+        payment: true,
+      },
+    });
+
+    if (!booking) {
+      throw new NotFoundException(`Booking with ID "${bookingId}" not found.`);
+    }
+
+    // 3. Ownership validation: reject if belongs to another customer
+    if (booking.customerId !== customerId && !isAdmin) {
+      throw new ForbiddenException('You do not have access to this booking.');
+    }
+
+    // 4. Idempotency fast path: if already in PENDING_DISPATCH with matching payment record
+    if (
+      booking.status === BookingStatus.PENDING_DISPATCH &&
+      booking.payment &&
+      booking.payment.method === dto.paymentMethod
+    ) {
+      return this.findCustomerBookingById(customerId, bookingId, isAdmin);
+    }
+
+    // 5. Reject invalid lifecycle states: only DRAFT bookings can transition to checkout
+    if (booking.status !== BookingStatus.DRAFT) {
+      throw new BadRequestException(
+        `Cannot checkout booking with status "${booking.status}". Only bookings in DRAFT status can be checked out.`,
+      );
+    }
+
+    // 6. Atomic State Transition with Concurrency Protection
+    await this.prisma.$transaction(async (tx) => {
+      // Row-level lock: serialize concurrent checkout transactions for this booking
+      if (this.prisma.isDatabaseConnected()) {
+        await tx.$queryRaw`
+          SELECT "id" FROM "Booking" WHERE "id" = ${bookingId} FOR UPDATE;
+        `;
+      }
+
+      // Re-read booking state within the locked transaction
+      const current = await tx.booking.findUnique({
+        where: { id: bookingId },
+        include: { payment: true },
+      });
+
+      if (!current) {
+        throw new NotFoundException(`Booking with ID "${bookingId}" not found.`);
+      }
+
+      // If a concurrent transaction already transitioned this booking to PENDING_DISPATCH
+      if (current.status === BookingStatus.PENDING_DISPATCH && current.payment) {
+        return;
+      }
+
+      if (current.status !== BookingStatus.DRAFT) {
+        throw new BadRequestException(
+          `Cannot checkout booking with status "${current.status}". Only bookings in DRAFT status can be checked out.`,
+        );
+      }
+
+      // A. Transition status to PENDING_DISPATCH
+      await tx.booking.update({
+        where: { id: bookingId },
+        data: {
+          status: BookingStatus.PENDING_DISPATCH,
+        },
+      });
+
+      // B. Create PaymentRecord with status: PENDING and amountEgp from booking total
+      await tx.paymentRecord.create({
+        data: {
+          bookingId,
+          method: dto.paymentMethod,
+          status: PaymentStatus.PENDING,
+          amountEgp: current.totalEgp,
+          tipEgp: 0,
+          externalReference: null,
+          paidAt: null,
+        },
+      });
+
+      // C. Create BookingStatusEvent
+      await tx.bookingStatusEvent.create({
+        data: {
+          bookingId,
+          fromStatus: BookingStatus.DRAFT,
+          toStatus: BookingStatus.PENDING_DISPATCH,
+          actorUserId: customerId,
+          note: 'Customer confirmed Cash on Service checkout',
+        },
+      });
+    });
+
+    // 7. Return complete booking detail with payment and updated status
+    return this.findCustomerBookingById(customerId, bookingId, isAdmin);
   }
 }
 

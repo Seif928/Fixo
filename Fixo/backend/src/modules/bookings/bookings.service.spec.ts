@@ -3,9 +3,16 @@ import {
   ForbiddenException,
   NotFoundException,
 } from '@nestjs/common';
-import { BookingStatus, ProVerificationStatus, TimeWindow } from '@prisma/client';
+import {
+  BookingStatus,
+  PaymentMethodType,
+  PaymentStatus,
+  ProVerificationStatus,
+  TimeWindow,
+} from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import { BookingsService } from './bookings.service';
+import { CheckoutBookingDto } from './dto/checkout-booking.dto';
 import { CreateBookingDto } from './dto/create-booking.dto';
 
 describe('BookingsService (Unit Tests)', () => {
@@ -83,10 +90,16 @@ describe('BookingsService (Unit Tests)', () => {
         findMany: jest.fn(),
         count: jest.fn(),
         create: jest.fn(),
+        update: jest.fn(),
+      },
+      paymentRecord: {
+        create: jest.fn(),
       },
       bookingStatusEvent: {
         create: jest.fn(),
       },
+      $queryRaw: jest.fn().mockResolvedValue([{ id: 'mock-id' }]),
+      isDatabaseConnected: jest.fn().mockReturnValue(false),
       $transaction: jest.fn(async (callback) => {
         return callback(prismaMock);
       }),
@@ -434,6 +447,219 @@ describe('BookingsService (Unit Tests)', () => {
       );
       expect(result.id).toBe('bk-target-1');
       expect(result.customerId).toBe(mockCustomerId);
+    });
+  });
+
+  describe('checkoutBooking (Phase 4A Cash on Service)', () => {
+    const mockDraftBooking: any = {
+      id: 'bk-checkout-1',
+      orderCode: 'FX-7788',
+      customerId: mockCustomerId,
+      proProfileId: null,
+      offeringId: 'off-ac-clean',
+      addressId: 'addr-01',
+      status: BookingStatus.DRAFT,
+      scheduledDate: new Date('2026-11-15T00:00:00.000Z'),
+      timeWindow: TimeWindow.AFTERNOON_13_16,
+      issueDescription: 'Need AC maintenance',
+      issuePhotoUrls: [],
+      baseInspectionEgp: 150,
+      serviceFeeEgp: 250,
+      transportFeeEgp: 0,
+      totalEgp: 400,
+      platformFeeEgp: 40,
+      netArtisanEgp: 360,
+      arrivalPinCode: '4321',
+      offering: mockOffering,
+      address: mockAddress,
+      proProfile: null,
+      payment: null,
+      statusEvents: [
+        {
+          id: 'evt-1',
+          fromStatus: null,
+          toStatus: BookingStatus.DRAFT,
+          note: 'Initial draft',
+          createdAt: new Date(),
+        },
+      ],
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
+
+    const cashCheckoutDto: CheckoutBookingDto = {
+      paymentMethod: PaymentMethodType.CASH_ON_SERVICE,
+    };
+
+    it('rejects unsupported digital payment methods with BadRequestException', async () => {
+      const unsupportedDto: CheckoutBookingDto = {
+        paymentMethod: PaymentMethodType.INSTAPAY_SANDBOX,
+      };
+
+      await expect(
+        service.checkoutBooking(mockCustomerId, 'bk-checkout-1', unsupportedDto),
+      ).rejects.toThrow(BadRequestException);
+      await expect(
+        service.checkoutBooking(mockCustomerId, 'bk-checkout-1', unsupportedDto),
+      ).rejects.toThrow(/not supported yet/);
+    });
+
+    it('throws NotFoundException when booking does not exist', async () => {
+      prismaMock.booking.findUnique.mockResolvedValue(null);
+
+      await expect(
+        service.checkoutBooking(mockCustomerId, 'non-existent', cashCheckoutDto),
+      ).rejects.toThrow(NotFoundException);
+    });
+
+    it('throws ForbiddenException when another customer attempts checkout', async () => {
+      prismaMock.booking.findUnique.mockResolvedValue(mockDraftBooking);
+
+      await expect(
+        service.checkoutBooking(mockOtherCustomerId, 'bk-checkout-1', cashCheckoutDto, false),
+      ).rejects.toThrow(ForbiddenException);
+    });
+
+    it('throws BadRequestException when booking is not in DRAFT status', async () => {
+      const cancelledBooking = {
+        ...mockDraftBooking,
+        status: BookingStatus.CANCELLED,
+      };
+      prismaMock.booking.findUnique.mockResolvedValue(cancelledBooking);
+
+      await expect(
+        service.checkoutBooking(mockCustomerId, 'bk-checkout-1', cashCheckoutDto),
+      ).rejects.toThrow(BadRequestException);
+      await expect(
+        service.checkoutBooking(mockCustomerId, 'bk-checkout-1', cashCheckoutDto),
+      ).rejects.toThrow(/Only bookings in DRAFT status can be checked out/);
+    });
+
+    it('atomically transitions DRAFT booking to PENDING_DISPATCH and creates pending cash payment', async () => {
+      prismaMock.booking.findUnique
+        .mockResolvedValueOnce(mockDraftBooking) // initial check
+        .mockResolvedValueOnce(mockDraftBooking) // inside transaction check
+        .mockResolvedValueOnce({                 // final findCustomerBookingById reload
+          ...mockDraftBooking,
+          status: BookingStatus.PENDING_DISPATCH,
+          payment: {
+            id: 'pay-001',
+            bookingId: 'bk-checkout-1',
+            method: PaymentMethodType.CASH_ON_SERVICE,
+            status: PaymentStatus.PENDING,
+            amountEgp: 400,
+            tipEgp: 0,
+            externalReference: null,
+            paidAt: null,
+            createdAt: new Date(),
+          },
+          statusEvents: [
+            {
+              id: 'evt-2',
+              fromStatus: BookingStatus.DRAFT,
+              toStatus: BookingStatus.PENDING_DISPATCH,
+              note: 'Customer confirmed Cash on Service checkout',
+              createdAt: new Date(),
+            },
+          ],
+        });
+
+      prismaMock.booking.update.mockResolvedValue({
+        ...mockDraftBooking,
+        status: BookingStatus.PENDING_DISPATCH,
+      });
+
+      prismaMock.paymentRecord.create.mockResolvedValue({
+        id: 'pay-001',
+        bookingId: 'bk-checkout-1',
+        method: PaymentMethodType.CASH_ON_SERVICE,
+        status: PaymentStatus.PENDING,
+        amountEgp: 400,
+        tipEgp: 0,
+        externalReference: null,
+        paidAt: null,
+      });
+
+      prismaMock.bookingStatusEvent.create.mockResolvedValue({
+        id: 'evt-2',
+        bookingId: 'bk-checkout-1',
+        fromStatus: BookingStatus.DRAFT,
+        toStatus: BookingStatus.PENDING_DISPATCH,
+        actorUserId: mockCustomerId,
+      });
+
+      const result = await service.checkoutBooking(
+        mockCustomerId,
+        'bk-checkout-1',
+        cashCheckoutDto,
+      );
+
+      expect(prismaMock.booking.update).toHaveBeenCalledWith({
+        where: { id: 'bk-checkout-1' },
+        data: { status: BookingStatus.PENDING_DISPATCH },
+      });
+
+      expect(prismaMock.paymentRecord.create).toHaveBeenCalledWith({
+        data: {
+          bookingId: 'bk-checkout-1',
+          method: PaymentMethodType.CASH_ON_SERVICE,
+          status: PaymentStatus.PENDING,
+          amountEgp: 400,
+          tipEgp: 0,
+          externalReference: null,
+          paidAt: null,
+        },
+      });
+
+      expect(prismaMock.bookingStatusEvent.create).toHaveBeenCalledWith({
+        data: {
+          bookingId: 'bk-checkout-1',
+          fromStatus: BookingStatus.DRAFT,
+          toStatus: BookingStatus.PENDING_DISPATCH,
+          actorUserId: mockCustomerId,
+          note: 'Customer confirmed Cash on Service checkout',
+        },
+      });
+
+      expect(result.status).toBe(BookingStatus.PENDING_DISPATCH);
+      expect(result.payment).toBeDefined();
+      expect(result.payment?.method).toBe(PaymentMethodType.CASH_ON_SERVICE);
+      expect(result.payment?.status).toBe(PaymentStatus.PENDING);
+      expect(result.payment?.amountEgp).toBe(400);
+      expect(result.payment?.paidAt).toBeNull();
+      expect(result.payment?.externalReference).toBeNull();
+    });
+
+    it('returns idempotent response without duplicate update when already PENDING_DISPATCH with cash payment', async () => {
+      const alreadyCheckedOutBooking: any = {
+        ...mockDraftBooking,
+        status: BookingStatus.PENDING_DISPATCH,
+        payment: {
+          id: 'pay-001',
+          bookingId: 'bk-checkout-1',
+          method: PaymentMethodType.CASH_ON_SERVICE,
+          status: PaymentStatus.PENDING,
+          amountEgp: 400,
+          tipEgp: 0,
+          externalReference: null,
+          paidAt: null,
+          createdAt: new Date(),
+        },
+      };
+
+      prismaMock.booking.findUnique.mockResolvedValue(alreadyCheckedOutBooking);
+
+      const result = await service.checkoutBooking(
+        mockCustomerId,
+        'bk-checkout-1',
+        cashCheckoutDto,
+      );
+
+      expect(prismaMock.booking.update).not.toHaveBeenCalled();
+      expect(prismaMock.paymentRecord.create).not.toHaveBeenCalled();
+      expect(prismaMock.bookingStatusEvent.create).not.toHaveBeenCalled();
+      expect(result.status).toBe(BookingStatus.PENDING_DISPATCH);
+      expect(result.payment?.method).toBe(PaymentMethodType.CASH_ON_SERVICE);
     });
   });
 });

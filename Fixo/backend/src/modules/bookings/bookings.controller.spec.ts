@@ -1,10 +1,16 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { BookingStatus, TimeWindow, UserRole } from '@prisma/client';
+import {
+  BookingStatus,
+  PaymentMethodType,
+  TimeWindow,
+  UserRole,
+} from '@prisma/client';
 import { AuthService } from '../auth/auth.service';
 import { FixoJwtPayload } from '../auth/utils/jwt-token.util';
 import { BookingsController } from './bookings.controller';
 import { BookingsService } from './bookings.service';
 import { BookingQueryDto } from './dto/booking-query.dto';
+import { CheckoutBookingDto } from './dto/checkout-booking.dto';
 import { CreateBookingDto } from './dto/create-booking.dto';
 
 describe('BookingsController (Unit Tests)', () => {
@@ -36,6 +42,7 @@ describe('BookingsController (Unit Tests)', () => {
       createBooking: jest.fn(),
       findCustomerBookings: jest.fn(),
       findCustomerBookingById: jest.fn(),
+      checkoutBooking: jest.fn(),
     };
 
     const module: TestingModule = await Test.createTestingModule({
@@ -131,5 +138,59 @@ describe('BookingsController (Unit Tests)', () => {
       true,
     );
     expect(res).toEqual(expectedResponse);
+  });
+
+  describe('POST /:bookingId/checkout', () => {
+    it('forwards customer ID, booking ID, dto, and isAdmin=false for customers', async () => {
+      const bookingId = 'bk-target-123';
+      const dto: CheckoutBookingDto = {
+        paymentMethod: PaymentMethodType.CASH_ON_SERVICE,
+      };
+      const expectedResponse: any = {
+        id: bookingId,
+        status: BookingStatus.PENDING_DISPATCH,
+      };
+      serviceMock.checkoutBooking!.mockResolvedValue(expectedResponse);
+
+      const res = await controller.checkoutBooking(
+        mockCustomerJwt,
+        bookingId,
+        dto,
+      );
+
+      expect(serviceMock.checkoutBooking).toHaveBeenCalledWith(
+        mockCustomerJwt.sub,
+        bookingId,
+        dto,
+        false,
+      );
+      expect(res).toEqual(expectedResponse);
+    });
+
+    it('forwards isAdmin=true when caller has ADMIN role', async () => {
+      const bookingId = 'bk-target-123';
+      const dto: CheckoutBookingDto = {
+        paymentMethod: PaymentMethodType.CASH_ON_SERVICE,
+      };
+      const expectedResponse: any = {
+        id: bookingId,
+        status: BookingStatus.PENDING_DISPATCH,
+      };
+      serviceMock.checkoutBooking!.mockResolvedValue(expectedResponse);
+
+      const res = await controller.checkoutBooking(
+        mockAdminJwt,
+        bookingId,
+        dto,
+      );
+
+      expect(serviceMock.checkoutBooking).toHaveBeenCalledWith(
+        mockAdminJwt.sub,
+        bookingId,
+        dto,
+        true,
+      );
+      expect(res).toEqual(expectedResponse);
+    });
   });
 });

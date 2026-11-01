@@ -27,6 +27,7 @@ import {
   BookingDetailResponse,
   BookingListResponse,
 } from './dto/booking-response.dto';
+import { CheckoutBookingDto } from './dto/checkout-booking.dto';
 import { CreateBookingDto } from './dto/create-booking.dto';
 
 @ApiTags('bookings')
@@ -120,6 +121,48 @@ export class BookingsController {
     return this.bookingsService.findCustomerBookingById(
       currentUser.sub,
       id,
+      isAdmin,
+    );
+  }
+
+  @Post(':bookingId/checkout')
+  @HttpCode(HttpStatus.OK)
+  @Roles(UserRole.CUSTOMER, UserRole.ADMIN)
+  @ApiOperation({
+    summary:
+      'Confirm Cash on Service checkout and transition booking from DRAFT to PENDING_DISPATCH',
+  })
+  @ApiResponse({
+    status: 200,
+    description:
+      'Booking successfully transitioned to PENDING_DISPATCH with pending cash payment record',
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Invalid payment method or booking not in DRAFT status',
+  })
+  @ApiResponse({
+    status: 401,
+    description: 'Missing or invalid Bearer token',
+  })
+  @ApiResponse({
+    status: 403,
+    description: 'Forbidden: booking belongs to another customer',
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'Booking not found',
+  })
+  async checkoutBooking(
+    @CurrentUser() currentUser: FixoJwtPayload,
+    @Param('bookingId') bookingId: string,
+    @Body() dto: CheckoutBookingDto,
+  ): Promise<BookingDetailResponse> {
+    const isAdmin = currentUser.role === UserRole.ADMIN;
+    return this.bookingsService.checkoutBooking(
+      currentUser.sub,
+      bookingId,
+      dto,
       isAdmin,
     );
   }
