@@ -105,18 +105,6 @@ class SelectedServiceCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final palette = context.fixoPalette;
 
-    final rating = preferredPro != null
-        ? preferredPro!.ratingAvg.toStringAsFixed(2)
-        : '4.95';
-    final reviews = preferredPro != null
-        ? '(${preferredPro!.reviewsCount} jobs)'
-        : '(142 jobs)';
-    final proName = preferredPro != null
-        ? preferredPro!.localizedName(isArabic)
-        : (isArabic ? 'م. حسن السيد' : 'Eng. Hassan El-Sayed');
-    final leadProName =
-        '${isArabic ? "الفني المسؤول: " : "Lead Pro: "}$proName';
-
     return Container(
       padding: const EdgeInsets.all(FixoSpacing.md),
       decoration: BoxDecoration(
@@ -136,7 +124,7 @@ class SelectedServiceCard extends StatelessWidget {
           Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Provider Avatar box with verified badge
+              // Provider / Service Avatar box
               Stack(
                 clipBehavior: Clip.none,
                 children: [
@@ -149,28 +137,31 @@ class SelectedServiceCard extends StatelessWidget {
                     ),
                     child: Center(
                       child: Icon(
-                        Icons.handyman_rounded,
+                        preferredPro != null
+                            ? Icons.handyman_rounded
+                            : Icons.home_repair_service_rounded,
                         color: palette.limeAccent,
                         size: 28,
                       ),
                     ),
                   ),
-                  Positioned(
-                    bottom: -2,
-                    right: -2,
-                    child: Container(
-                      padding: const EdgeInsets.all(2),
-                      decoration: BoxDecoration(
-                        color: palette.cardSurface,
-                        shape: BoxShape.circle,
-                      ),
-                      child: const Icon(
-                        Icons.verified_rounded,
-                        color: FixoColors.secondary,
-                        size: 16,
+                  if (preferredPro != null)
+                    Positioned(
+                      bottom: -2,
+                      right: -2,
+                      child: Container(
+                        padding: const EdgeInsets.all(2),
+                        decoration: BoxDecoration(
+                          color: palette.cardSurface,
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Icon(
+                          Icons.verified_rounded,
+                          color: FixoColors.secondary,
+                          size: 16,
+                        ),
                       ),
                     ),
-                  ),
                 ],
               ),
               const SizedBox(width: FixoSpacing.sm),
@@ -178,29 +169,40 @@ class SelectedServiceCard extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Row(
-                      children: [
-                        const Icon(
-                          Icons.star_rounded,
-                          color: Color(0xFFE29500),
-                          size: 16,
-                        ),
-                        const SizedBox(width: 4),
-                        Text(
-                          rating,
-                          style: FixoTypography.labelMd(
-                            color: palette.primaryBrand,
-                          ).copyWith(fontWeight: FontWeight.bold),
-                        ),
-                        const SizedBox(width: 4),
-                        Text(
-                          reviews,
-                          style: FixoTypography.bodySm(
-                            color: palette.mutedText,
+                    if (preferredPro != null) ...[
+                      Row(
+                        children: [
+                          const Icon(
+                            Icons.star_rounded,
+                            color: Color(0xFFE29500),
+                            size: 16,
                           ),
-                        ),
-                      ],
-                    ),
+                          const SizedBox(width: 4),
+                          Text(
+                            preferredPro!.ratingAvg.toStringAsFixed(2),
+                            style: FixoTypography.labelMd(
+                              color: palette.primaryBrand,
+                            ).copyWith(fontWeight: FontWeight.bold),
+                          ),
+                          const SizedBox(width: 4),
+                          Text(
+                            '(${preferredPro!.reviewsCount} jobs)',
+                            style: FixoTypography.bodySm(
+                              color: palette.mutedText,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ] else ...[
+                      Text(
+                        isArabic
+                            ? 'لم يتم تعيين فني بعد'
+                            : 'No professional assigned yet',
+                        style: FixoTypography.labelMd(
+                          color: palette.mutedText,
+                        ).copyWith(fontWeight: FontWeight.w600),
+                      ),
+                    ],
                     const SizedBox(height: 2),
                     Text(
                       offering.localizedTitle(isArabic),
@@ -212,11 +214,15 @@ class SelectedServiceCard extends StatelessWidget {
                     ),
                     const SizedBox(height: 2),
                     Text(
-                      leadProName,
+                      preferredPro != null
+                          ? '${isArabic ? "الفني المسؤول: " : "Lead Pro: "}${preferredPro!.localizedName(isArabic)}'
+                          : (isArabic
+                              ? 'سيتم تعيين فني معتمد تلقائياً عند تأكيد الحجز'
+                              : 'Professional: Auto-assigned upon booking confirmation'),
                       style: FixoTypography.bodySm(
                         color: palette.mutedText,
                       ),
-                      maxLines: 1,
+                      maxLines: 2,
                       overflow: TextOverflow.ellipsis,
                     ),
                   ],
@@ -248,9 +254,13 @@ class SelectedServiceCard extends StatelessWidget {
                       const SizedBox(width: 6),
                       Expanded(
                         child: Text(
-                          isArabic
-                              ? 'فني معتمد ومفحوص الهوية'
-                              : 'Verified FIXO Master Pro',
+                          preferredPro != null
+                              ? (isArabic
+                                  ? 'فني معتمد ومفحوص الهوية'
+                                  : 'Verified FIXO Master Pro')
+                              : (isArabic
+                                  ? 'خدمة منزلية معتمدة'
+                                  : 'FIXO Certified Home Service'),
                           style: FixoTypography.labelMd(
                             color: FixoColors.secondary,
                           ).copyWith(fontWeight: FontWeight.w600),
@@ -293,12 +303,14 @@ class ServiceLocationCard extends StatelessWidget {
     required this.selectedAddress,
     required this.hasAddresses,
     required this.onChangeAddress,
+    this.onAddNewAddress,
     required this.isArabic,
   });
 
   final CustomerAddressModel? selectedAddress;
   final bool hasAddresses;
   final VoidCallback? onChangeAddress;
+  final VoidCallback? onAddNewAddress;
   final bool isArabic;
 
   @override
@@ -356,6 +368,23 @@ class ServiceLocationCard extends StatelessWidget {
                   ),
                   child: Text(
                     isArabic ? 'تغيير' : 'Change',
+                    style: FixoTypography.labelMd(
+                      color: FixoColors.secondary,
+                    ).copyWith(fontWeight: FontWeight.bold),
+                  ),
+                ),
+              ] else if (onAddNewAddress != null) ...[
+                const SizedBox(width: 8),
+                TextButton(
+                  key: const Key('add-address-header-btn'),
+                  onPressed: onAddNewAddress,
+                  style: TextButton.styleFrom(
+                    padding: EdgeInsets.zero,
+                    minimumSize: const Size(50, 30),
+                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                  ),
+                  child: Text(
+                    isArabic ? '+ إضافة' : '+ Add',
                     style: FixoTypography.labelMd(
                       color: FixoColors.secondary,
                     ).copyWith(fontWeight: FontWeight.bold),
@@ -473,38 +502,57 @@ class ServiceLocationCard extends StatelessWidget {
                   color: FixoColors.outline.withValues(alpha: 0.25),
                 ),
               ),
-              child: Row(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Icon(
-                    Icons.location_off_rounded,
-                    color: palette.mutedText,
-                    size: 28,
+                  Row(
+                    children: [
+                      Icon(
+                        Icons.location_off_rounded,
+                        color: palette.mutedText,
+                        size: 28,
+                      ),
+                      const SizedBox(width: FixoSpacing.sm),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              isArabic
+                                  ? 'لا يوجد عنوان محفوظ'
+                                  : 'No saved address found',
+                              style: FixoTypography.labelLg(
+                                color: palette.primaryBrand,
+                              ).copyWith(fontWeight: FontWeight.bold),
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              isArabic
+                                  ? 'يرجى تسجيل عنوان في حسابك لطلب الخدمة.'
+                                  : 'A delivery address is required to book a service.',
+                              style: FixoTypography.bodySm(
+                                color: palette.mutedText,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
                   ),
-                  const SizedBox(width: FixoSpacing.sm),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          isArabic
-                              ? 'لا يوجد عنوان محفوظ'
-                              : 'No saved address found',
-                          style: FixoTypography.labelLg(
-                            color: palette.primaryBrand,
-                          ).copyWith(fontWeight: FontWeight.bold),
+                  if (onAddNewAddress != null) ...[
+                    const SizedBox(height: FixoSpacing.sm),
+                    SizedBox(
+                      width: double.infinity,
+                      child: OutlinedButton.icon(
+                        key: const Key('add-first-address-btn'),
+                        onPressed: onAddNewAddress,
+                        icon: const Icon(Icons.add_location_alt_rounded, size: 18),
+                        label: Text(
+                          isArabic ? 'إضافة عنوان جديد' : 'Add New Address',
                         ),
-                        const SizedBox(height: 2),
-                        Text(
-                          isArabic
-                              ? 'يرجى تسجيل عنوان في حسابك لطلب الخدمة.'
-                              : 'A delivery address is required to book a service.',
-                          style: FixoTypography.bodySm(
-                            color: palette.mutedText,
-                          ),
-                        ),
-                      ],
+                      ),
                     ),
-                  ),
+                  ],
                 ],
               ),
             ),
@@ -1067,6 +1115,465 @@ class BookingFareBreakdownCard extends StatelessWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+/// Responsive Address Creation Modal / Bottom Sheet (Screen 04)
+class AddressCreationBottomSheet extends StatefulWidget {
+  const AddressCreationBottomSheet({
+    super.key,
+    required this.zones,
+    required this.isLoadingZones,
+    required this.isSubmitting,
+    this.errorMessage,
+    required this.onSave,
+    this.onRetryZones,
+    required this.isArabic,
+  });
+
+  final List<CoverageZoneModel> zones;
+  final bool isLoadingZones;
+  final bool isSubmitting;
+  final String? errorMessage;
+  final ValueChanged<CreateAddressRequest> onSave;
+  final VoidCallback? onRetryZones;
+  final bool isArabic;
+
+  @override
+  State<AddressCreationBottomSheet> createState() =>
+      _AddressCreationBottomSheetState();
+}
+
+class _AddressCreationBottomSheetState
+    extends State<AddressCreationBottomSheet> {
+  final _formKey = GlobalKey<FormState>();
+  late final TextEditingController _labelController;
+  late final TextEditingController _buildingController;
+  late final TextEditingController _districtController;
+  late final TextEditingController _gateNotesController;
+
+  String? _selectedZoneId;
+  bool _isDefault = false;
+  String? _localError;
+
+  @override
+  void initState() {
+    super.initState();
+    _labelController =
+        TextEditingController(text: widget.isArabic ? 'المنزل' : 'Home');
+    _buildingController = TextEditingController();
+    _districtController = TextEditingController();
+    _gateNotesController = TextEditingController();
+
+    if (widget.zones.isNotEmpty) {
+      _selectedZoneId = widget.zones.first.id;
+    }
+  }
+
+  @override
+  void didUpdateWidget(covariant AddressCreationBottomSheet oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (_selectedZoneId == null && widget.zones.isNotEmpty) {
+      setState(() {
+        _selectedZoneId = widget.zones.first.id;
+      });
+    }
+  }
+
+  @override
+  void dispose() {
+    _labelController.dispose();
+    _buildingController.dispose();
+    _districtController.dispose();
+    _gateNotesController.dispose();
+    super.dispose();
+  }
+
+  void _handleSubmit() {
+    setState(() => _localError = null);
+    if (!_formKey.currentState!.validate()) {
+      return;
+    }
+    if (_selectedZoneId == null || _selectedZoneId!.isEmpty) {
+      setState(() {
+        _localError = widget.isArabic
+            ? 'يرجى اختيار منطقة التغطية'
+            : 'Please select a valid coverage zone';
+      });
+      return;
+    }
+
+    final request = CreateAddressRequest(
+      zoneId: _selectedZoneId!,
+      label: _labelController.text.trim(),
+      buildingLine: _buildingController.text.trim(),
+      districtLine: _districtController.text.trim(),
+      gateNotes: _gateNotesController.text.trim().isNotEmpty
+          ? _gateNotesController.text.trim()
+          : null,
+      isDefault: _isDefault,
+    );
+
+    widget.onSave(request);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final palette = context.fixoPalette;
+    final displayError = _localError ?? widget.errorMessage;
+
+    return Directionality(
+      textDirection: widget.isArabic ? TextDirection.rtl : TextDirection.ltr,
+      child: Container(
+        decoration: BoxDecoration(
+          color: palette.cardSurface,
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+        ),
+        padding: EdgeInsets.only(
+          left: FixoSpacing.md,
+          right: FixoSpacing.md,
+          top: FixoSpacing.md,
+          bottom: MediaQuery.of(context).viewInsets.bottom + FixoSpacing.md,
+        ),
+        child: SingleChildScrollView(
+          child: Form(
+            key: _formKey,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Header
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Row(
+                      children: [
+                        Icon(
+                          Icons.add_location_alt_rounded,
+                          color: palette.primaryBrand,
+                          size: 22,
+                        ),
+                        const SizedBox(width: FixoSpacing.xs),
+                        Text(
+                          widget.isArabic ? 'إضافة عنوان جديد' : 'Add New Address',
+                          style: FixoTypography.headlineSm(
+                            color: palette.primaryBrand,
+                          ).copyWith(fontWeight: FontWeight.bold),
+                        ),
+                      ],
+                    ),
+                    IconButton(
+                      icon: Icon(Icons.close_rounded, color: palette.mutedText),
+                      onPressed: () => Navigator.of(context).pop(),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: FixoSpacing.sm),
+
+                // Error Banner if present
+                if (displayError != null) ...[
+                  Container(
+                    key: const Key('address-error-banner'),
+                    padding: const EdgeInsets.all(FixoSpacing.sm),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFFFEBEE),
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: const Color(0xFFE57373)),
+                    ),
+                    child: Row(
+                      children: [
+                        const Icon(
+                          Icons.error_outline_rounded,
+                          color: Color(0xFFC62828),
+                          size: 20,
+                        ),
+                        const SizedBox(width: FixoSpacing.xs),
+                        Expanded(
+                          child: Text(
+                            displayError,
+                            style: FixoTypography.bodySm(
+                              color: const Color(0xFFC62828),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: FixoSpacing.sm),
+                ],
+
+                // Label Input
+                Text(
+                  widget.isArabic
+                      ? 'اسم العنوان (مثال: المنزل، العمل)'
+                      : 'Address Label (e.g. Home, Work)',
+                  style: FixoTypography.labelMd(color: palette.primaryBrand)
+                      .copyWith(fontWeight: FontWeight.w600),
+                ),
+                const SizedBox(height: 4),
+                TextFormField(
+                  key: const Key('address-label-input'),
+                  controller: _labelController,
+                  validator: (val) {
+                    if (val == null || val.trim().isEmpty) {
+                      return widget.isArabic
+                          ? 'يرجى إدخال اسم العنوان'
+                          : 'Address label is required';
+                    }
+                    return null;
+                  },
+                  decoration: InputDecoration(
+                    hintText: widget.isArabic ? 'المنزل' : 'Home',
+                    filled: true,
+                    fillColor: palette.surfaceLow,
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(10),
+                      borderSide: BorderSide.none,
+                    ),
+                    contentPadding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 10,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: FixoSpacing.sm),
+
+                // Coverage Zone Dropdown
+                Text(
+                  widget.isArabic ? 'منطقة التغطية' : 'Coverage Zone',
+                  style: FixoTypography.labelMd(color: palette.primaryBrand)
+                      .copyWith(fontWeight: FontWeight.w600),
+                ),
+                const SizedBox(height: 4),
+                if (widget.isLoadingZones) ...[
+                  Container(
+                    height: 48,
+                    alignment: Alignment.center,
+                    decoration: BoxDecoration(
+                      color: palette.surfaceLow,
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: const SizedBox(
+                      width: 20,
+                      height: 20,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    ),
+                  ),
+                ] else if (widget.zones.isEmpty) ...[
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          widget.isArabic
+                              ? 'تعذر تحميل مناطق التغطية'
+                              : 'Could not load coverage zones',
+                          style: FixoTypography.bodySm(
+                            color: const Color(0xFFC62828),
+                          ),
+                        ),
+                      ),
+                      if (widget.onRetryZones != null)
+                        TextButton(
+                          key: const Key('retry-zones-btn'),
+                          onPressed: widget.onRetryZones,
+                          child: Text(
+                            widget.isArabic ? 'إعادة المحاولة' : 'Retry',
+                          ),
+                        ),
+                    ],
+                  ),
+                ] else ...[
+                  DropdownButtonFormField<String>(
+                    key: const Key('address-zone-dropdown'),
+                    initialValue: widget.zones.any((z) => z.id == _selectedZoneId)
+                        ? _selectedZoneId
+                        : widget.zones.first.id,
+                    items: widget.zones.map((zone) {
+                      return DropdownMenuItem<String>(
+                        value: zone.id,
+                        child: Text(
+                          zone.localizedName(widget.isArabic),
+                          style: FixoTypography.bodyMd(color: palette.inkText),
+                        ),
+                      );
+                    }).toList(),
+                    onChanged: (val) {
+                      if (val != null) {
+                        setState(() => _selectedZoneId = val);
+                      }
+                    },
+                    decoration: InputDecoration(
+                      filled: true,
+                      fillColor: palette.surfaceLow,
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(10),
+                        borderSide: BorderSide.none,
+                      ),
+                      contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 10,
+                      ),
+                    ),
+                  ),
+                ],
+                const SizedBox(height: FixoSpacing.sm),
+
+                // Building & Street Line
+                Text(
+                  widget.isArabic
+                      ? 'تفاصيل المبنى والشارع'
+                      : 'Building & Street Details',
+                  style: FixoTypography.labelMd(color: palette.primaryBrand)
+                      .copyWith(fontWeight: FontWeight.w600),
+                ),
+                const SizedBox(height: 4),
+                TextFormField(
+                  key: const Key('address-building-input'),
+                  controller: _buildingController,
+                  validator: (val) {
+                    if (val == null || val.trim().isEmpty) {
+                      return widget.isArabic
+                          ? 'يرجى إدخال تفاصيل المبنى'
+                          : 'Building details are required';
+                    }
+                    return null;
+                  },
+                  decoration: InputDecoration(
+                    hintText: widget.isArabic
+                        ? 'عمارة ١٤، شقة ٤ب، شارع التسعين'
+                        : 'Building 14, Apt 4B, 90th Street',
+                    filled: true,
+                    fillColor: palette.surfaceLow,
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(10),
+                      borderSide: BorderSide.none,
+                    ),
+                    contentPadding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 10,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: FixoSpacing.sm),
+
+                // District & Area Line
+                Text(
+                  widget.isArabic ? 'الحي / المنطقة' : 'District / Area',
+                  style: FixoTypography.labelMd(color: palette.primaryBrand)
+                      .copyWith(fontWeight: FontWeight.w600),
+                ),
+                const SizedBox(height: 4),
+                TextFormField(
+                  key: const Key('address-district-input'),
+                  controller: _districtController,
+                  validator: (val) {
+                    if (val == null || val.trim().isEmpty) {
+                      return widget.isArabic
+                          ? 'يرجى إدخال اسم المنطقة'
+                          : 'District details are required';
+                    }
+                    return null;
+                  },
+                  decoration: InputDecoration(
+                    hintText: widget.isArabic
+                        ? 'التجمع الخامس، القاهرة الجديدة'
+                        : '5th Settlement, New Cairo',
+                    filled: true,
+                    fillColor: palette.surfaceLow,
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(10),
+                      borderSide: BorderSide.none,
+                    ),
+                    contentPadding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 10,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: FixoSpacing.sm),
+
+                // Optional Gate Notes
+                Text(
+                  widget.isArabic
+                      ? 'ملاحظات البوابة أو الأمن (اختياري)'
+                      : 'Gate Notes / Security (Optional)',
+                  style: FixoTypography.labelMd(color: palette.primaryBrand)
+                      .copyWith(fontWeight: FontWeight.w600),
+                ),
+                const SizedBox(height: 4),
+                TextFormField(
+                  key: const Key('address-gate-notes-input'),
+                  controller: _gateNotesController,
+                  decoration: InputDecoration(
+                    hintText: widget.isArabic ? 'بوابة رقم ٣' : 'Gate 3',
+                    filled: true,
+                    fillColor: palette.surfaceLow,
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(10),
+                      borderSide: BorderSide.none,
+                    ),
+                    contentPadding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 10,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: FixoSpacing.xs),
+
+                // Default Switch
+                SwitchListTile.adaptive(
+                  key: const Key('address-default-switch'),
+                  contentPadding: EdgeInsets.zero,
+                  title: Text(
+                    widget.isArabic
+                        ? 'تعيين كعنوان افتراضي'
+                        : 'Set as default address',
+                    style: FixoTypography.bodyMd(color: palette.inkText),
+                  ),
+                  value: _isDefault,
+                  onChanged: (val) => setState(() => _isDefault = val),
+                  activeTrackColor: FixoColors.secondary,
+                ),
+                const SizedBox(height: FixoSpacing.sm),
+
+                // Save Button
+                SizedBox(
+                  width: double.infinity,
+                  height: 46,
+                  child: ElevatedButton(
+                    key: const Key('save-address-btn'),
+                    onPressed: widget.isSubmitting ? null : _handleSubmit,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: palette.primaryBrand,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                    ),
+                    child: widget.isSubmitting
+                        ? const SizedBox(
+                            width: 20,
+                            height: 20,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              valueColor:
+                                  AlwaysStoppedAnimation<Color>(Colors.white),
+                            ),
+                          )
+                        : Text(
+                            widget.isArabic
+                                ? 'حفظ واختيار العنوان'
+                                : 'Save & Select Address',
+                            style: FixoTypography.labelLg(color: Colors.white)
+                                .copyWith(fontWeight: FontWeight.bold),
+                          ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
       ),
     );
   }

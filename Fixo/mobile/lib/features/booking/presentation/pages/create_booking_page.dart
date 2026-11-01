@@ -32,25 +32,6 @@ class CreateBookingPage extends ConsumerStatefulWidget {
 class _CreateBookingPageState extends ConsumerState<CreateBookingPage> {
   late final TextEditingController _issueDescriptionController;
 
-  static const ServiceOfferModel _fallbackOffering = ServiceOfferModel(
-    id: 'off-summer-ac',
-    categoryId: 'cat-ac',
-    categorySlug: 'ac-maintenance',
-    slug: 'summer-ac-deep-clean-gas-refill',
-    titleEn: 'Split AC Deep Cleaning & Chemical Wash',
-    titleAr: 'غسيل تكييف سبليت عميق ومواد كيميائية',
-    descriptionEn: 'Complete coil flush, antibacterial mist, and pressure test.',
-    descriptionAr: 'تنظيف شامل للوحدة الداخلية وتعقيم الفلاتر واختبار ضغط الغاز.',
-    baseInspectionEgp: 150,
-    serviceFeeEgp: 250,
-    flatPriceEgp: 400,
-    estimatedDurationMins: 60,
-    isSeasonalPromo: true,
-    isBundle: false,
-    badgeEn: 'SEASONAL PEAK',
-    badgeAr: 'الأكثر طلباً',
-  );
-
   @override
   void initState() {
     super.initState();
@@ -61,6 +42,56 @@ class _CreateBookingPageState extends ConsumerState<CreateBookingPage> {
   void dispose() {
     _issueDescriptionController.dispose();
     super.dispose();
+  }
+
+  void _showCreateAddressSheet(BuildContext context) {
+    final isArabic = ref.read(appLocaleProvider).languageCode == 'ar';
+    final palette = context.fixoPalette;
+
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (sheetCtx) {
+        return Consumer(
+          builder: (ctx, refWatch, _) {
+            final state = refWatch.watch(createBookingControllerProvider);
+            final controller =
+                refWatch.read(createBookingControllerProvider.notifier);
+
+            return AddressCreationBottomSheet(
+              zones: state.coverageZones,
+              isLoadingZones: state.isLoadingZones,
+              isSubmitting: state.isCreatingAddress,
+              errorMessage: state.addressCreationError,
+              isArabic: isArabic,
+              onRetryZones: controller.loadCoverageZones,
+              onSave: (request) async {
+                final created = await controller.createAddress(request);
+                if (created != null && sheetCtx.mounted) {
+                  Navigator.of(sheetCtx).pop();
+                  if (context.mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        backgroundColor: palette.primaryBrand,
+                        content: Text(
+                          isArabic
+                              ? 'تم حفظ العنوان وتحديده بنجاح.'
+                              : 'Address saved and selected.',
+                          style: const TextStyle(color: Colors.white),
+                        ),
+                      ),
+                    );
+                  }
+                }
+              },
+            );
+          },
+        );
+      },
+    );
   }
 
   void _showAddressSelectionModal(
@@ -83,20 +114,30 @@ class _CreateBookingPageState extends ConsumerState<CreateBookingPage> {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(
-                isArabic ? 'اختر عنوان الخدمة' : 'Select Service Address',
-                style: FixoTypography.headlineSm(
-                  color: palette.primaryBrand,
-                ).copyWith(fontWeight: FontWeight.bold),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    isArabic ? 'اختر عنوان الخدمة' : 'Select Service Address',
+                    style: FixoTypography.headlineSm(
+                      color: palette.primaryBrand,
+                    ).copyWith(fontWeight: FontWeight.bold),
+                  ),
+                  IconButton(
+                    icon: Icon(Icons.close_rounded, color: palette.mutedText),
+                    onPressed: () => Navigator.of(ctx).pop(),
+                  ),
+                ],
               ),
-              const SizedBox(height: FixoSpacing.sm),
+              const SizedBox(height: FixoSpacing.xs),
               ...addresses.map((addr) {
                 final isSelected = addr.id == currentSelected?.id;
                 return ListTile(
                   contentPadding: EdgeInsets.zero,
                   leading: Icon(
                     Icons.location_on_rounded,
-                    color: isSelected ? palette.primaryBrand : palette.mutedText,
+                    color:
+                        isSelected ? palette.primaryBrand : palette.mutedText,
                   ),
                   title: Text(
                     addr.label,
@@ -109,7 +150,10 @@ class _CreateBookingPageState extends ConsumerState<CreateBookingPage> {
                     style: FixoTypography.bodySm(color: palette.mutedText),
                   ),
                   trailing: isSelected
-                      ? const Icon(Icons.check_circle_rounded, color: FixoColors.secondary)
+                      ? const Icon(
+                          Icons.check_circle_rounded,
+                          color: FixoColors.secondary,
+                        )
                       : null,
                   onTap: () {
                     ref
@@ -119,6 +163,25 @@ class _CreateBookingPageState extends ConsumerState<CreateBookingPage> {
                   },
                 );
               }),
+              const Divider(height: 24),
+              ListTile(
+                key: const Key('add-address-modal-btn'),
+                contentPadding: EdgeInsets.zero,
+                leading: const Icon(
+                  Icons.add_circle_outline_rounded,
+                  color: FixoColors.secondary,
+                ),
+                title: Text(
+                  isArabic ? '+ إضافة عنوان جديد' : '+ Add New Address',
+                  style: FixoTypography.labelLg(
+                    color: FixoColors.secondary,
+                  ).copyWith(fontWeight: FontWeight.bold),
+                ),
+                onTap: () {
+                  Navigator.of(ctx).pop();
+                  _showCreateAddressSheet(context);
+                },
+              ),
             ],
           ),
         );
@@ -133,7 +196,104 @@ class _CreateBookingPageState extends ConsumerState<CreateBookingPage> {
     final state = ref.watch(createBookingControllerProvider);
     final controller = ref.read(createBookingControllerProvider.notifier);
 
-    final offering = widget.initialOffering ?? _fallbackOffering;
+    // If no initial offering was supplied, show safe missing-selection state
+    if (widget.initialOffering == null) {
+      return Directionality(
+        textDirection: isArabic ? TextDirection.rtl : TextDirection.ltr,
+        child: Scaffold(
+          backgroundColor: palette.canvasBackground,
+          appBar: AppBar(
+            backgroundColor: palette.cardSurface.withValues(alpha: 0.9),
+            elevation: 0,
+            leading: IconButton(
+              icon: Icon(
+                Icons.arrow_back_rounded,
+                color: palette.primaryBrand,
+              ),
+              onPressed: () {
+                if (context.canPop()) {
+                  context.pop();
+                } else {
+                  context.go(AppRoutes.customerHome);
+                }
+              },
+            ),
+            titleSpacing: 0,
+            title: Row(
+              children: [
+                const FixoBrandMark(iconBoxSize: 26, showSubtitle: false),
+                const SizedBox(width: FixoSpacing.xs),
+                Expanded(
+                  child: Text(
+                    isArabic ? 'إنشاء حجز' : 'Create Booking',
+                    style: FixoTypography.headlineSm(
+                      color: palette.primaryBrand,
+                    ).copyWith(fontWeight: FontWeight.bold),
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          body: Center(
+            child: Padding(
+              padding: const EdgeInsets.all(FixoSpacing.xl),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    Icons.search_off_rounded,
+                    size: 64,
+                    color: palette.mutedText,
+                  ),
+                  const SizedBox(height: FixoSpacing.md),
+                  Text(
+                    isArabic ? 'لم يتم اختيار خدمة' : 'No service selected',
+                    style: FixoTypography.headlineSm(
+                      color: palette.primaryBrand,
+                    ).copyWith(fontWeight: FontWeight.bold),
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: FixoSpacing.xs),
+                  Text(
+                    isArabic
+                        ? 'يرجى اختيار خدمة من الصفحة الرئيسية للمتابعة وإنشاء الحجز.'
+                        : 'Please select a service offering from the home catalog to create a booking.',
+                    style: FixoTypography.bodyMd(color: palette.mutedText),
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: FixoSpacing.lg),
+                  ElevatedButton.icon(
+                    key: const Key('missing-offering-home-btn'),
+                    onPressed: () {
+                      if (context.canPop()) {
+                        context.pop();
+                      } else {
+                        context.go(AppRoutes.customerHome);
+                      }
+                    },
+                    icon: const Icon(Icons.arrow_back_rounded),
+                    label: Text(
+                      isArabic ? 'العودة للرئيسية' : 'Return to Customer Home',
+                    ),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: palette.primaryBrand,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: FixoSpacing.lg,
+                        vertical: FixoSpacing.sm,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      );
+    }
+
+    final offering = widget.initialOffering!;
     final preferredPro = widget.initialPreferredPro;
 
     return Directionality(
@@ -207,7 +367,7 @@ class _CreateBookingPageState extends ConsumerState<CreateBookingPage> {
                     BookingProgressHeader(isArabic: isArabic),
                     const SizedBox(height: FixoSpacing.sm),
 
-                    // Selected Service & Lead Provider Card
+                    // Selected Service & Provider Card
                     SelectedServiceCard(
                       offering: offering,
                       preferredPro: preferredPro,
@@ -220,7 +380,7 @@ class _CreateBookingPageState extends ConsumerState<CreateBookingPage> {
                       selectedAddress: state.selectedAddress,
                       hasAddresses: state.hasSavedAddresses,
                       isArabic: isArabic,
-                      onChangeAddress: state.addresses.length > 1
+                      onChangeAddress: state.hasSavedAddresses
                           ? () => _showAddressSelectionModal(
                                 context,
                                 state.addresses,
@@ -228,6 +388,7 @@ class _CreateBookingPageState extends ConsumerState<CreateBookingPage> {
                                 isArabic,
                               )
                           : null,
+                      onAddNewAddress: () => _showCreateAddressSheet(context),
                     ),
                     const SizedBox(height: FixoSpacing.sm),
 
@@ -278,7 +439,9 @@ class _CreateBookingPageState extends ConsumerState<CreateBookingPage> {
                                     const SizedBox(width: FixoSpacing.xs),
                                     Expanded(
                                       child: Text(
-                                        isArabic ? 'وصف المشكلة' : 'Issue Description',
+                                        isArabic
+                                            ? 'وصف المشكلة'
+                                            : 'Issue Description',
                                         style: FixoTypography.headlineSm(
                                           color: palette.primaryBrand,
                                         ).copyWith(fontWeight: FontWeight.bold),
@@ -458,107 +621,133 @@ class _CreateBookingPageState extends ConsumerState<CreateBookingPage> {
                     ),
                     const SizedBox(width: FixoSpacing.sm),
 
-                    // Primary Proceed to Payment Button
+                    // Primary Confirm Booking Draft Button
                     Expanded(
-                      child: SizedBox(
-                        height: 48,
-                        child: ElevatedButton(
-                          key: const Key('proceed-to-payment-btn'),
-                          onPressed: state.isSubmitting
-                              ? null
-                              : () async {
-                                  final scaffoldMessenger = ScaffoldMessenger.of(context);
-                                  final navigator = Navigator.of(context);
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          SizedBox(
+                            height: 48,
+                            child: ElevatedButton(
+                              key: const Key('confirm-booking-draft-btn'),
+                              onPressed: (state.isSubmitting ||
+                                      state.selectedAddress == null)
+                                  ? null
+                                  : () async {
+                                      final scaffoldMessenger =
+                                          ScaffoldMessenger.of(context);
+                                      final navigator = Navigator.of(context);
 
-                                  final success = await controller.submitBooking(
-                                    offering: offering,
-                                    preferredPro: preferredPro,
-                                  );
-                                  if (success) {
-                                    final booking = ref
-                                        .read(createBookingControllerProvider)
-                                        .successBooking;
-                                    final orderCode =
-                                        booking?.orderCode ?? 'FX-XXXX';
+                                      final success =
+                                          await controller.submitBooking(
+                                        offering: offering,
+                                        preferredPro: preferredPro,
+                                      );
+                                      if (success) {
+                                        final booking = ref
+                                            .read(
+                                                createBookingControllerProvider)
+                                            .successBooking;
+                                        final orderCode =
+                                            booking?.orderCode ?? 'FX-XXXX';
 
-                                    scaffoldMessenger.showSnackBar(
-                                      SnackBar(
-                                        backgroundColor: palette.primaryBrand,
-                                        content: Text(
-                                          isArabic
-                                              ? 'تم تسجيل طلب الحجز #$orderCode بنجاح (مسودة).'
-                                              : 'Booking #$orderCode created in DRAFT status.',
-                                          style: FixoTypography.bodySm(
-                                            color: Colors.white,
+                                        scaffoldMessenger.showSnackBar(
+                                          SnackBar(
+                                            backgroundColor:
+                                                palette.primaryBrand,
+                                            content: Text(
+                                              isArabic
+                                                  ? 'تم تسجيل طلب الحجز #$orderCode بنجاح (مسودة).'
+                                                  : 'Booking #$orderCode created in DRAFT status.',
+                                              style: FixoTypography.bodySm(
+                                                color: Colors.white,
+                                              ),
+                                            ),
+                                          ),
+                                        );
+
+                                        // Return to caller or pop
+                                        if (navigator.canPop()) {
+                                          navigator.pop(booking);
+                                        }
+                                      }
+                                    },
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: palette.primaryBrand,
+                                disabledBackgroundColor: palette.primaryBrand
+                                    .withValues(alpha: 0.35),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                elevation: 0,
+                                padding:
+                                    const EdgeInsets.symmetric(horizontal: 16),
+                              ),
+                              child: state.isSubmitting
+                                  ? const SizedBox(
+                                      width: 22,
+                                      height: 22,
+                                      child: CircularProgressIndicator(
+                                        strokeWidth: 2,
+                                        valueColor:
+                                            AlwaysStoppedAnimation<Color>(
+                                          Colors.white,
+                                        ),
+                                      ),
+                                    )
+                                  : Row(
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.spaceBetween,
+                                      children: [
+                                        Expanded(
+                                          child: Text(
+                                            isArabic
+                                                ? 'تأكيد مسودة الحجز'
+                                                : 'Confirm Booking Draft',
+                                            style: FixoTypography.labelLg(
+                                              color: Colors.white,
+                                            ).copyWith(
+                                                fontWeight: FontWeight.bold),
+                                            overflow: TextOverflow.ellipsis,
                                           ),
                                         ),
-                                      ),
-                                    );
-
-                                    // Return to caller or pop
-                                    if (navigator.canPop()) {
-                                      navigator.pop(booking);
-                                    }
-                                  }
-                                },
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: palette.primaryBrand,
-                            disabledBackgroundColor:
-                                palette.primaryBrand.withValues(alpha: 0.6),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            elevation: 0,
-                            padding: const EdgeInsets.symmetric(horizontal: 16),
-                          ),
-                          child: state.isSubmitting
-                              ? const SizedBox(
-                                  width: 22,
-                                  height: 22,
-                                  child: CircularProgressIndicator(
-                                    strokeWidth: 2,
-                                    valueColor: AlwaysStoppedAnimation<Color>(
-                                      Colors.white,
-                                    ),
-                                  ),
-                                )
-                              : Row(
-                                  mainAxisAlignment:
-                                      MainAxisAlignment.spaceBetween,
-                                  children: [
-                                    Expanded(
-                                      child: Text(
-                                        isArabic
-                                            ? 'المتابعة للدفع'
-                                            : 'Proceed to Payment',
-                                        style: FixoTypography.labelLg(
-                                          color: Colors.white,
-                                        ).copyWith(fontWeight: FontWeight.bold),
-                                        overflow: TextOverflow.ellipsis,
-                                      ),
-                                    ),
-                                    const SizedBox(width: 8),
-                                    Container(
-                                      padding: const EdgeInsets.symmetric(
-                                        horizontal: 8,
-                                        vertical: 3,
-                                      ),
-                                      decoration: BoxDecoration(
-                                        color: palette.limeAccent,
-                                        borderRadius: BorderRadius.circular(6),
-                                      ),
-                                      child: Text(
-                                        '${offering.flatPriceEgp} EGP',
-                                        style: FixoTypography.labelMd(
-                                          color: palette.primaryBrand,
-                                        ).copyWith(
-                                          fontWeight: FontWeight.w800,
+                                        const SizedBox(width: 8),
+                                        Container(
+                                          padding: const EdgeInsets.symmetric(
+                                            horizontal: 8,
+                                            vertical: 3,
+                                          ),
+                                          decoration: BoxDecoration(
+                                            color: palette.limeAccent,
+                                            borderRadius:
+                                                BorderRadius.circular(6),
+                                          ),
+                                          child: Text(
+                                            '${offering.flatPriceEgp} EGP',
+                                            style: FixoTypography.labelMd(
+                                              color: palette.primaryBrand,
+                                            ).copyWith(
+                                              fontWeight: FontWeight.w800,
+                                            ),
+                                          ),
                                         ),
-                                      ),
+                                      ],
                                     ),
-                                  ],
-                                ),
-                        ),
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            isArabic
+                                ? 'يتم إنشاء مسودة حجز. يتم تأكيد الفني والدفع في الخطوة التالية.'
+                                : 'Creates a booking draft. Pro & payment confirmed in next step.',
+                            style: FixoTypography.bodySm(
+                              color: palette.mutedText,
+                            ).copyWith(fontSize: 10),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            textAlign: TextAlign.center,
+                          ),
+                        ],
                       ),
                     ),
                   ],

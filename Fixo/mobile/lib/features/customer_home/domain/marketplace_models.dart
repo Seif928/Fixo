@@ -6,6 +6,7 @@ class CoverageZoneModel {
     required this.nameEn,
     required this.nameAr,
     required this.governorate,
+    this.isActive = true,
   });
 
   final String id;
@@ -13,6 +14,7 @@ class CoverageZoneModel {
   final String nameEn;
   final String nameAr;
   final String governorate;
+  final bool isActive;
 
   String localizedName(bool isArabic) => isArabic ? nameAr : nameEn;
 
@@ -23,6 +25,7 @@ class CoverageZoneModel {
       nameEn: json['nameEn'] as String? ?? 'Sheikh Zayed, Dist. 9',
       nameAr: json['nameAr'] as String? ?? 'الشيخ زايد، الحي التاسع',
       governorate: json['governorate'] as String? ?? 'Giza',
+      isActive: json['isActive'] as bool? ?? true,
     );
   }
 }

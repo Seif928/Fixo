@@ -17,6 +17,10 @@ class CreateBookingState {
     this.isSubmitting = false,
     this.errorMessage,
     this.successBooking,
+    this.isLoadingZones = false,
+    this.coverageZones = const [],
+    this.isCreatingAddress = false,
+    this.addressCreationError,
   });
 
   final bool isLoadingAddresses;
@@ -29,6 +33,10 @@ class CreateBookingState {
   final bool isSubmitting;
   final String? errorMessage;
   final BookingDetailModel? successBooking;
+  final bool isLoadingZones;
+  final List<CoverageZoneModel> coverageZones;
+  final bool isCreatingAddress;
+  final String? addressCreationError;
 
   bool get hasSavedAddresses => addresses.isNotEmpty;
 
@@ -43,7 +51,12 @@ class CreateBookingState {
     bool? isSubmitting,
     String? errorMessage,
     BookingDetailModel? successBooking,
+    bool? isLoadingZones,
+    List<CoverageZoneModel>? coverageZones,
+    bool? isCreatingAddress,
+    String? addressCreationError,
     bool clearError = false,
+    bool clearAddressCreationError = false,
     bool clearSelectedAddress = false,
   }) {
     return CreateBookingState(
@@ -59,6 +72,12 @@ class CreateBookingState {
       isSubmitting: isSubmitting ?? this.isSubmitting,
       errorMessage: clearError ? null : (errorMessage ?? this.errorMessage),
       successBooking: successBooking ?? this.successBooking,
+      isLoadingZones: isLoadingZones ?? this.isLoadingZones,
+      coverageZones: coverageZones ?? this.coverageZones,
+      isCreatingAddress: isCreatingAddress ?? this.isCreatingAddress,
+      addressCreationError: clearAddressCreationError
+          ? null
+          : (addressCreationError ?? this.addressCreationError),
     );
   }
 }
@@ -71,6 +90,7 @@ class CreateBookingController extends StateNotifier<CreateBookingState> {
           isLoadingAddresses: true,
         )) {
     loadAddresses();
+    loadCoverageZones();
   }
 
   final BookingRepository _repository;
@@ -105,6 +125,91 @@ class CreateBookingController extends StateNotifier<CreateBookingState> {
         clearSelectedAddress: true,
         errorMessage: 'Could not load saved addresses. Please retry.',
       );
+    }
+  }
+
+  /// Loads active coverage zones for the address creation dropdown.
+  Future<void> loadCoverageZones() async {
+    state = state.copyWith(isLoadingZones: true);
+    try {
+      final zones = await _repository.getCoverageZones();
+      state = state.copyWith(
+        isLoadingZones: false,
+        coverageZones: zones,
+      );
+    } catch (_) {
+      state = state.copyWith(
+        isLoadingZones: false,
+        coverageZones: const [],
+      );
+    }
+  }
+
+  /// Creates and selects a new delivery address via `POST /api/v1/users/me/addresses`.
+  Future<CustomerAddressModel?> createAddress(CreateAddressRequest request) async {
+    state = state.copyWith(
+      isCreatingAddress: true,
+      clearAddressCreationError: true,
+    );
+
+    try {
+      final created = await _repository.createAddress(request);
+
+      // Refresh address list atomically in memory
+      final updatedList = state.addresses.map((a) {
+        if (created.isDefault && a.isDefault) {
+          return CustomerAddressModel(
+            id: a.id,
+            userId: a.userId,
+            zoneId: a.zoneId,
+            label: a.label,
+            buildingLine: a.buildingLine,
+            districtLine: a.districtLine,
+            gateNotes: a.gateNotes,
+            zone: a.zone,
+            isDefault: false,
+          );
+        }
+        return a;
+      }).toList();
+
+      if (created.isDefault) {
+        updatedList.insert(0, created);
+      } else {
+        updatedList.add(created);
+      }
+
+      state = state.copyWith(
+        isCreatingAddress: false,
+        addresses: updatedList,
+        selectedAddress: created,
+        clearAddressCreationError: true,
+        clearError: true,
+      );
+
+      return created;
+    } on DioException catch (e) {
+      String message =
+          'Address creation failed. Please check inputs and retry.';
+      if (e.response?.data is Map) {
+        final serverMsg = (e.response?.data as Map)['message'];
+        if (serverMsg is String) {
+          message = serverMsg;
+        } else if (serverMsg is List && serverMsg.isNotEmpty) {
+          message = serverMsg.join(', ');
+        }
+      }
+      state = state.copyWith(
+        isCreatingAddress: false,
+        addressCreationError: message,
+      );
+      return null;
+    } catch (e) {
+      state = state.copyWith(
+        isCreatingAddress: false,
+        addressCreationError: e.toString(),
+      );
+      return null;
     }
   }
 

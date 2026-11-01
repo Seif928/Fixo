@@ -18,10 +18,30 @@ import 'package:flutter_test/flutter_test.dart';
 
 class FakeBookingRepository implements BookingRepository {
   bool shouldFailAddresses = false;
+  bool shouldFailZones = false;
+  bool shouldFailCreateAddress = false;
   bool shouldFailCreateBooking = false;
   String createBookingErrorMessage = 'Service category is currently inactive';
+  String createAddressErrorMessage = 'Coverage zone is invalid or inactive';
   List<CustomerAddressModel> fakeAddresses = [];
+  List<CoverageZoneModel> fakeZones = [
+    const CoverageZoneModel(
+      id: 'zone-new-cairo',
+      slug: 'new-cairo',
+      nameEn: 'New Cairo, 5th Settlement',
+      nameAr: 'القاهرة الجديدة، التجمع الخامس',
+      governorate: 'Cairo',
+    ),
+    const CoverageZoneModel(
+      id: 'zone-sheikh-zayed',
+      slug: 'sheikh-zayed',
+      nameEn: 'Sheikh Zayed City',
+      nameAr: 'مدينة الشيخ زايد',
+      governorate: 'Giza',
+    ),
+  ];
   CreateBookingRequest? lastCreatedRequest;
+  CreateAddressRequest? lastCreatedAddressRequest;
 
   @override
   Future<List<CustomerAddressModel>> getCustomerAddresses() async {
@@ -29,6 +49,42 @@ class FakeBookingRepository implements BookingRepository {
       throw Exception('Failed to load addresses from server');
     }
     return fakeAddresses;
+  }
+
+  @override
+  Future<List<CoverageZoneModel>> getCoverageZones() async {
+    if (shouldFailZones) {
+      throw Exception('Failed to load coverage zones');
+    }
+    return fakeZones;
+  }
+
+  @override
+  Future<CustomerAddressModel> createAddress(
+      CreateAddressRequest request) async {
+    lastCreatedAddressRequest = request;
+    if (shouldFailCreateAddress) {
+      throw DioException(
+        requestOptions: RequestOptions(path: '/users/me/addresses'),
+        response: Response(
+          requestOptions: RequestOptions(path: '/users/me/addresses'),
+          statusCode: 400,
+          data: {'message': createAddressErrorMessage},
+        ),
+      );
+    }
+    final created = CustomerAddressModel(
+      id: 'addr-created-99',
+      userId: 'cust-101',
+      zoneId: request.zoneId,
+      label: request.label,
+      buildingLine: request.buildingLine,
+      districtLine: request.districtLine,
+      gateNotes: request.gateNotes,
+      isDefault: request.isDefault,
+    );
+    fakeAddresses = [...fakeAddresses, created];
+    return created;
   }
 
   @override
@@ -285,7 +341,8 @@ void main() {
     titleEn: 'Split AC Deep Cleaning & Chemical Wash',
     titleAr: 'غسيل تكييف سبليت عميق ومواد كيميائية',
     descriptionEn: 'Complete coil flush, antibacterial mist, and pressure test.',
-    descriptionAr: 'تنظيف شامل للوحدة الداخلية وتعقيم الفلاتر واختبار ضغط الغاز.',
+    descriptionAr:
+        'تنظيف شامل للوحدة الداخلية وتعقيم الفلاتر واختبار ضغط الغاز.',
     baseInspectionEgp: 150,
     serviceFeeEgp: 250,
     flatPriceEgp: 400,
@@ -337,7 +394,8 @@ void main() {
         marketplaceRepositoryProvider.overrideWithValue(fakeMarketplaceRepo),
         secureTokenStorageProvider.overrideWithValue(tokenStorage),
         appLocaleProvider.overrideWith(() => FakeLocaleNotifier(locale)),
-        appThemeModeProvider.overrideWith(() => FakeThemeModeNotifier(themeMode)),
+        appThemeModeProvider
+            .overrideWith(() => FakeThemeModeNotifier(themeMode)),
       ],
       child: MaterialApp(
         debugShowCheckedModeBanner: false,
@@ -360,8 +418,12 @@ void main() {
     );
   }
 
-  group('Screen 04: Create Booking Page — Approved Stitch Design & Elements', () {
-    testWidgets('renders all approved Stitch Screen 04 sections and EGP fare breakdown', (tester) async {
+  group(
+      'Screen 04: Create Booking Page — Approved Stitch Design & Elements',
+      () {
+    testWidgets(
+        'renders all approved Stitch Screen 04 sections and truthful EGP fare breakdown',
+        (tester) async {
       tester.view.physicalSize = const Size(800, 2000);
       tester.view.devicePixelRatio = 1.0;
       addTearDown(tester.view.resetPhysicalSize);
@@ -377,7 +439,8 @@ void main() {
       expect(find.text('Step 1 of 2'), findsOneWidget);
 
       // 3. Selected Service Card
-      expect(find.text('Split AC Deep Cleaning & Chemical Wash'), findsOneWidget);
+      expect(
+          find.text('Split AC Deep Cleaning & Chemical Wash'), findsOneWidget);
       expect(find.text('Lead Pro: Eng. Hassan El-Sayed'), findsOneWidget);
       expect(find.text('4.95'), findsOneWidget);
       expect(find.text('Verified FIXO Master Pro'), findsOneWidget);
@@ -399,7 +462,8 @@ void main() {
 
       // 7. Issue Description
       expect(find.text('Issue Description'), findsOneWidget);
-      expect(find.byKey(const Key('booking-issue-description-input')), findsOneWidget);
+      expect(find.byKey(const Key('booking-issue-description-input')),
+          findsOneWidget);
 
       // 8. Fare Breakdown
       expect(find.text('Fare Breakdown'), findsOneWidget);
@@ -413,13 +477,15 @@ void main() {
       expect(find.text('Estimated Total'), findsOneWidget);
       expect(find.text('400'), findsOneWidget);
 
-      // 9. Sticky Bottom Action Bar
-      expect(find.text('Proceed to Payment'), findsOneWidget);
+      // 9. Sticky Bottom Action Bar with Truthful Copy
+      expect(find.text('Confirm Booking Draft'), findsOneWidget);
       expect(find.text('400 EGP'), findsOneWidget);
-      expect(find.byKey(const Key('proceed-to-payment-btn')), findsOneWidget);
+      expect(
+          find.byKey(const Key('confirm-booking-draft-btn')), findsOneWidget);
     });
 
-    testWidgets('allows interactive date and time window selection', (tester) async {
+    testWidgets('allows interactive date and time window selection',
+        (tester) async {
       tester.view.physicalSize = const Size(800, 2000);
       tester.view.devicePixelRatio = 1.0;
       addTearDown(tester.view.resetPhysicalSize);
@@ -442,8 +508,75 @@ void main() {
     });
   });
 
-  group('Screen 04: Address Ownership & Empty State Handling (Requirement 6)', () {
-    testWidgets('gracefully handles customers with zero saved addresses without fabricating addresses', (tester) async {
+  group('Screen 04: Neutral Pro & Missing Offering Safeguards', () {
+    testWidgets(
+        'displays neutral service info and auto-assignment notice when no preferred pro is specified',
+        (tester) async {
+      tester.view.physicalSize = const Size(800, 2000);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.resetPhysicalSize);
+
+      await tester.pumpWidget(
+        buildTestableApp(
+          home: const CreateBookingPage(
+            initialOffering: sampleOffering,
+            initialPreferredPro: null,
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      // Must show neutral professional state
+      expect(find.text('No professional assigned yet'), findsOneWidget);
+      expect(
+        find.text('Professional: Auto-assigned upon booking confirmation'),
+        findsOneWidget,
+      );
+      expect(find.text('FIXO Certified Home Service'), findsOneWidget);
+
+      // Must NOT display fabricated professional name or rating
+      expect(find.text('Eng. Hassan El-Sayed'), findsNothing);
+      expect(find.text('Lead Pro: Eng. Hassan El-Sayed'), findsNothing);
+      expect(find.text('4.95'), findsNothing);
+      expect(find.text('(142 jobs)'), findsNothing);
+    });
+
+    testWidgets(
+        'renders safe missing offering state with return button when initialOffering is null',
+        (tester) async {
+      tester.view.physicalSize = const Size(800, 2000);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.resetPhysicalSize);
+
+      await tester.pumpWidget(
+        buildTestableApp(
+          home: const CreateBookingPage(
+            initialOffering: null,
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      // Must show safe missing offering state
+      expect(find.text('No service selected'), findsOneWidget);
+      expect(
+        find.text(
+            'Please select a service offering from the home catalog to create a booking.'),
+        findsOneWidget,
+      );
+      expect(
+          find.byKey(const Key('missing-offering-home-btn')), findsOneWidget);
+
+      // Must NOT render booking draft action button
+      expect(find.byKey(const Key('confirm-booking-draft-btn')), findsNothing);
+    });
+  });
+
+  group('Screen 04: Address Ownership & Bottom Sheet Integration (Phase 3.3B)',
+      () {
+    testWidgets(
+        'disables confirm button when customer has no saved address and opens address creation sheet',
+        (tester) async {
       tester.view.physicalSize = const Size(800, 2000);
       tester.view.devicePixelRatio = 1.0;
       addTearDown(tester.view.resetPhysicalSize);
@@ -456,25 +589,131 @@ void main() {
 
       // Verify empty address state is presented
       expect(find.text('No saved address found'), findsOneWidget);
-      expect(find.text('A delivery address is required to book a service.'), findsOneWidget);
+      expect(find.text('A delivery address is required to book a service.'),
+          findsOneWidget);
       expect(find.text('Palm Hills Villa 14'), findsNothing);
 
-      // Tap Proceed to Payment
-      await tester.tap(find.byKey(const Key('proceed-to-payment-btn')));
+      // Confirm Booking Draft button must be disabled
+      final confirmBtn = tester.widget<ElevatedButton>(
+        find.byKey(const Key('confirm-booking-draft-btn')),
+      );
+      expect(confirmBtn.onPressed, isNull);
+
+      // Tap Add New Address button
+      await tester.tap(find.byKey(const Key('add-first-address-btn')));
       await tester.pumpAndSettle();
 
-      // Must display validation error and NOT call backend
-      expect(find.byKey(const Key('booking-error-banner')), findsOneWidget);
+      // Bottom sheet is displayed
+      expect(find.text('Add New Address'), findsWidgets);
+      expect(find.byKey(const Key('save-address-btn')), findsOneWidget);
+    });
+
+    testWidgets(
+        'creates new address from bottom sheet, persists via API, and selects it for booking',
+        (tester) async {
+      tester.view.physicalSize = const Size(800, 2000);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.resetPhysicalSize);
+
+      fakeBookingRepo.fakeAddresses = const [];
+
+      await tester.pumpWidget(buildTestableApp());
+      await tester.pumpAndSettle();
+
+      // Open bottom sheet
+      await tester.tap(find.byKey(const Key('add-first-address-btn')));
+      await tester.pumpAndSettle();
+
+      // Enter address fields
+      await tester.enterText(
+        find.byKey(const Key('address-label-input')),
+        'Work Office',
+      );
+      await tester.enterText(
+        find.byKey(const Key('address-building-input')),
+        'Building 88, Floor 4',
+      );
+      await tester.enterText(
+        find.byKey(const Key('address-district-input')),
+        '5th Settlement, New Cairo',
+      );
+      await tester.enterText(
+        find.byKey(const Key('address-gate-notes-input')),
+        'North Gate Security',
+      );
+      await tester.pumpAndSettle();
+
+      // Tap Save Address
+      await tester.tap(find.byKey(const Key('save-address-btn')));
+      await tester.pumpAndSettle();
+
+      // Check request to backend
+      expect(fakeBookingRepo.lastCreatedAddressRequest, isNotNull);
+      final addrReq = fakeBookingRepo.lastCreatedAddressRequest!;
+      expect(addrReq.label, 'Work Office');
+      expect(addrReq.buildingLine, 'Building 88, Floor 4');
+      expect(addrReq.districtLine, '5th Settlement, New Cairo');
+      expect(addrReq.gateNotes, 'North Gate Security');
+      expect(addrReq.zoneId, 'zone-new-cairo');
+
+      // Verify newly created address is selected on the main screen
+      expect(find.text('Work Office'), findsOneWidget);
+      expect(find.text('Building 88, Floor 4'), findsOneWidget);
+      expect(find.text('5th Settlement, New Cairo'), findsOneWidget);
+
+      // Confirm button is now enabled
+      final confirmBtn = tester.widget<ElevatedButton>(
+        find.byKey(const Key('confirm-booking-draft-btn')),
+      );
+      expect(confirmBtn.onPressed, isNotNull);
+    });
+
+    testWidgets('displays server error banner when address creation fails',
+        (tester) async {
+      tester.view.physicalSize = const Size(800, 2000);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.resetPhysicalSize);
+
+      fakeBookingRepo.fakeAddresses = const [];
+      fakeBookingRepo.shouldFailCreateAddress = true;
+      fakeBookingRepo.createAddressErrorMessage =
+          'Coverage zone is invalid or inactive';
+
+      await tester.pumpWidget(buildTestableApp());
+      await tester.pumpAndSettle();
+
+      // Open bottom sheet
+      await tester.tap(find.byKey(const Key('add-first-address-btn')));
+      await tester.pumpAndSettle();
+
+      // Fill in required fields
+      await tester.enterText(
+        find.byKey(const Key('address-building-input')),
+        'Building 10',
+      );
+      await tester.enterText(
+        find.byKey(const Key('address-district-input')),
+        'Zayed',
+      );
+      await tester.pumpAndSettle();
+
+      // Tap Save Address
+      await tester.tap(find.byKey(const Key('save-address-btn')));
+      await tester.pumpAndSettle();
+
+      // Error banner is displayed in bottom sheet
+      expect(find.byKey(const Key('address-error-banner')), findsOneWidget);
       expect(
-        find.text('A saved service delivery address is required to complete this booking.'),
+        find.text('Coverage zone is invalid or inactive'),
         findsOneWidget,
       );
-      expect(fakeBookingRepo.lastCreatedRequest, isNull);
     });
   });
 
-  group('Screen 04: Backend Persistence & Invariants (Requirement 4 & 5)', () {
-    testWidgets('submits booking draft to POST /api/v1/bookings and confirms persistence', (tester) async {
+  group('Screen 04: Backend Persistence & Invariants', () {
+    testWidgets(
+        'submits booking draft to POST /api/v1/bookings and confirms persistence',
+        (tester) async {
       tester.view.physicalSize = const Size(800, 2000);
       tester.view.devicePixelRatio = 1.0;
       addTearDown(tester.view.resetPhysicalSize);
@@ -489,8 +728,8 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      // Tap Proceed to Payment
-      await tester.tap(find.byKey(const Key('proceed-to-payment-btn')));
+      // Tap Confirm Booking Draft
+      await tester.tap(find.byKey(const Key('confirm-booking-draft-btn')));
       await tester.pumpAndSettle();
 
       // Verify request sent to fake backend repository
@@ -499,7 +738,8 @@ void main() {
       expect(req.offeringId, 'off-ac-clean');
       expect(req.addressId, 'addr-palm-hills-14');
       expect(req.preferredProId, 'pro-hassan-01');
-      expect(req.issueDescription, 'Living room unit is leaking and making buzzing noise.');
+      expect(req.issueDescription,
+          'Living room unit is leaking and making buzzing noise.');
       expect(req.timeWindow, 'AFTERNOON_13_16');
 
       // Verify success notification confirming DRAFT persistence
@@ -509,18 +749,21 @@ void main() {
       );
     });
 
-    testWidgets('displays server error banner when backend rejects booking creation', (tester) async {
+    testWidgets(
+        'displays server error banner when backend rejects booking creation',
+        (tester) async {
       tester.view.physicalSize = const Size(800, 2000);
       tester.view.devicePixelRatio = 1.0;
       addTearDown(tester.view.resetPhysicalSize);
 
       fakeBookingRepo.shouldFailCreateBooking = true;
-      fakeBookingRepo.createBookingErrorMessage = 'Scheduled date cannot be in the past.';
+      fakeBookingRepo.createBookingErrorMessage =
+          'Scheduled date cannot be in the past.';
 
       await tester.pumpWidget(buildTestableApp());
       await tester.pumpAndSettle();
 
-      await tester.tap(find.byKey(const Key('proceed-to-payment-btn')));
+      await tester.tap(find.byKey(const Key('confirm-booking-draft-btn')));
       await tester.pumpAndSettle();
 
       expect(find.byKey(const Key('booking-error-banner')), findsOneWidget);
@@ -532,7 +775,9 @@ void main() {
   });
 
   group('Customer Home -> Create Booking Navigation Integration', () {
-    testWidgets('tapping Book Now on Seasonal Promo navigates to CreateBookingPage', (tester) async {
+    testWidgets(
+        'tapping Book Now on Seasonal Promo navigates to CreateBookingPage',
+        (tester) async {
       tester.view.physicalSize = const Size(800, 2400);
       tester.view.devicePixelRatio = 1.0;
       addTearDown(tester.view.resetPhysicalSize);
@@ -573,7 +818,9 @@ void main() {
   });
 
   group('Screen 04: Viewport, RTL & Dark Mode Adaptability', () {
-    testWidgets('renders cleanly without overflow at 360dp, 390dp, and 412dp viewports', (tester) async {
+    testWidgets(
+        'renders cleanly without overflow at 360dp, 390dp, and 412dp viewports',
+        (tester) async {
       for (final width in [360.0, 390.0, 412.0]) {
         tester.view.physicalSize = Size(width, 1800);
         tester.view.devicePixelRatio = 1.0;
@@ -581,7 +828,8 @@ void main() {
         await tester.pumpWidget(buildTestableApp());
         await tester.pumpAndSettle();
 
-        expect(tester.takeException(), isNull, reason: 'Failed on viewport width $width');
+        expect(tester.takeException(), isNull,
+            reason: 'Failed on viewport width $width');
       }
       tester.view.resetPhysicalSize();
     });
@@ -605,7 +853,7 @@ void main() {
       expect(find.text('موقع تقديم الخدمة'), findsOneWidget);
       expect(find.text('الفترة الزمنية المفضلة'), findsOneWidget);
       expect(find.text('تفاصيل السعر'), findsOneWidget);
-      expect(find.text('المتابعة للدفع'), findsOneWidget);
+      expect(find.text('تأكيد مسودة الحجز'), findsOneWidget);
       expect(tester.takeException(), isNull);
     });
   });

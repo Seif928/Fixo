@@ -55,6 +55,41 @@ class CustomerAddressModel {
       };
 }
 
+/// Payload sent to `POST /api/v1/users/me/addresses` to persist a new customer address.
+/// Note: userId is derived exclusively by the backend from the authenticated JWT session.
+/// No GPS coordinates are fabricated.
+class CreateAddressRequest {
+  const CreateAddressRequest({
+    required this.zoneId,
+    required this.label,
+    required this.buildingLine,
+    required this.districtLine,
+    this.gateNotes,
+    this.isDefault = false,
+  });
+
+  final String zoneId;
+  final String label;
+  final String buildingLine;
+  final String districtLine;
+  final String? gateNotes;
+  final bool isDefault;
+
+  Map<String, dynamic> toJson() {
+    final map = <String, dynamic>{
+      'zoneId': zoneId,
+      'label': label.trim(),
+      'buildingLine': buildingLine.trim(),
+      'districtLine': districtLine.trim(),
+      'isDefault': isDefault,
+    };
+    if (gateNotes != null && gateNotes!.trim().isNotEmpty) {
+      map['gateNotes'] = gateNotes!.trim();
+    }
+    return map;
+  }
+}
+
 /// EGP pricing breakdown returned by the FIXO backend.
 class BookingPricingModel {
   const BookingPricingModel({

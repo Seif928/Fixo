@@ -1,9 +1,10 @@
 import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/network/dio_client.dart';
+import '../../customer_home/domain/marketplace_models.dart';
 import '../domain/booking_models.dart';
 
-/// Central repository for Customer Bookings and Address retrieval.
+/// Central repository for Customer Bookings and Address management.
 class BookingRepository {
   const BookingRepository(this._dio);
 
@@ -57,16 +58,51 @@ class BookingRepository {
     return BookingDetailModel.fromJson(data);
   }
 
-  /// Retrieves the authenticated customer's saved addresses via `GET /api/v1/users/me`.
-  Future<List<CustomerAddressModel>> getCustomerAddresses() async {
-    final response = await _dio.get('/users/me');
+  /// Persists a new customer delivery address via `POST /api/v1/users/me/addresses`.
+  Future<CustomerAddressModel> createAddress(CreateAddressRequest request) async {
+    final response = await _dio.post(
+      '/users/me/addresses',
+      data: request.toJson(),
+    );
     final data = response.data as Map<String, dynamic>;
-    final user = data['user'] as Map<String, dynamic>? ?? const {};
-    final rawAddresses = user['addresses'] as List<dynamic>? ?? const [];
+    final addressData = data['address'] as Map<String, dynamic>? ?? data;
+    return CustomerAddressModel.fromJson(addressData);
+  }
 
-    return rawAddresses
+  /// Retrieves the authenticated customer's saved addresses via `GET /api/v1/users/me/addresses`.
+  /// Falls back to `/users/me` for backwards compatibility.
+  Future<List<CustomerAddressModel>> getCustomerAddresses() async {
+    try {
+      final response = await _dio.get('/users/me/addresses');
+      final data = response.data as Map<String, dynamic>;
+      final rawList = data['addresses'] as List<dynamic>? ?? const [];
+      return rawList
+          .map((item) =>
+              CustomerAddressModel.fromJson(item as Map<String, dynamic>))
+          .toList();
+    } catch (_) {
+      // Fallback to GET /users/me
+      final response = await _dio.get('/users/me');
+      final data = response.data as Map<String, dynamic>;
+      final user = data['user'] as Map<String, dynamic>? ?? const {};
+      final rawAddresses = user['addresses'] as List<dynamic>? ?? const [];
+
+      return rawAddresses
+          .map((item) =>
+              CustomerAddressModel.fromJson(item as Map<String, dynamic>))
+          .toList();
+    }
+  }
+
+  /// Retrieves active coverage zones from `GET /api/v1/services/categories`.
+  Future<List<CoverageZoneModel>> getCoverageZones() async {
+    final response = await _dio.get('/services/categories');
+    final data = response.data as Map<String, dynamic>;
+    final rawZones = data['zones'] as List<dynamic>? ?? const [];
+    return rawZones
         .map((item) =>
-            CustomerAddressModel.fromJson(item as Map<String, dynamic>))
+            CoverageZoneModel.fromJson(item as Map<String, dynamic>))
+        .where((z) => z.isActive)
         .toList();
   }
 }
