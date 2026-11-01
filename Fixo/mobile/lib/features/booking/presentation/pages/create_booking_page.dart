@@ -611,8 +611,8 @@ class _CreateBookingPageState extends ConsumerState<CreateBookingPage> {
                             SnackBar(
                               content: Text(
                                 isArabic
-                                    ? 'تم حفظ الخدمة للمفضلة.'
-                                    : 'Service saved for later.',
+                                    ? 'ميزة حفظ الخدمات ستتوفر في تحديث قادم.'
+                                    : 'Saved services feature will be available in an upcoming update.',
                               ),
                             ),
                           );
@@ -656,6 +656,7 @@ class _CreateBookingPageState extends ConsumerState<CreateBookingPage> {
                                             backgroundColor:
                                                 palette.primaryBrand,
                                             content: Text(
+                                              key: const Key('booking-draft-success-snackbar-text'),
                                               isArabic
                                                   ? 'تم تسجيل طلب الحجز #$orderCode بنجاح (مسودة).'
                                                   : 'Booking #$orderCode created in DRAFT status.',
@@ -738,8 +739,8 @@ class _CreateBookingPageState extends ConsumerState<CreateBookingPage> {
                           const SizedBox(height: 4),
                           Text(
                             isArabic
-                                ? 'يتم إنشاء مسودة حجز. يتم تأكيد الفني والدفع في الخطوة التالية.'
-                                : 'Creates a booking draft. Pro & payment confirmed in next step.',
+                                ? 'يتم إنشاء مسودة حجز. سيتم إتاحة الدفع وتعيين الفني في المراحل التالية.'
+                                : 'Creates a booking draft. Payment and technician assignment follow in subsequent steps.',
                             style: FixoTypography.bodySm(
                               color: palette.mutedText,
                             ).copyWith(fontSize: 10),

@@ -217,8 +217,8 @@ class SelectedServiceCard extends StatelessWidget {
                       preferredPro != null
                           ? '${isArabic ? "الفني المسؤول: " : "Lead Pro: "}${preferredPro!.localizedName(isArabic)}'
                           : (isArabic
-                              ? 'سيتم تعيين فني معتمد تلقائياً عند تأكيد الحجز'
-                              : 'Professional: Auto-assigned upon booking confirmation'),
+                              ? 'الفني: لم يتم التعيين بعد'
+                              : 'Professional: Not yet assigned'),
                       style: FixoTypography.bodySm(
                         color: palette.mutedText,
                       ),
@@ -256,11 +256,11 @@ class SelectedServiceCard extends StatelessWidget {
                         child: Text(
                           preferredPro != null
                               ? (isArabic
-                                  ? 'فني معتمد ومفحوص الهوية'
-                                  : 'Verified FIXO Master Pro')
+                                  ? 'فني مسجل ومعتمد'
+                                  : 'Registered Pro')
                               : (isArabic
-                                  ? 'خدمة منزلية معتمدة'
-                                  : 'FIXO Certified Home Service'),
+                                  ? 'خدمة منزلية معلنة'
+                                  : 'Catalog Home Service'),
                           style: FixoTypography.labelMd(
                             color: FixoColors.secondary,
                           ).copyWith(fontWeight: FontWeight.w600),
@@ -281,7 +281,7 @@ class SelectedServiceCard extends StatelessWidget {
                     borderRadius: BorderRadius.circular(4),
                   ),
                   child: Text(
-                    isArabic ? 'ضمان فيكسو' : 'FIXO Assured',
+                    isArabic ? 'تسعير قياسي' : 'Standard Rate',
                     style: FixoTypography.labelMd(
                       color: palette.mutedText,
                     ),
@@ -967,7 +967,7 @@ class BookingFareBreakdownCard extends StatelessWidget {
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Text(
-                  isArabic ? 'تسعير معتمد' : 'FIXO Guarantee',
+                  isArabic ? 'تسعير قياسي' : 'Standard Rate',
                   style: FixoTypography.labelMd(
                     color: FixoColors.onSecondaryContainer,
                   ).copyWith(fontWeight: FontWeight.bold),

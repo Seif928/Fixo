@@ -443,8 +443,8 @@ void main() {
           find.text('Split AC Deep Cleaning & Chemical Wash'), findsOneWidget);
       expect(find.text('Lead Pro: Eng. Hassan El-Sayed'), findsOneWidget);
       expect(find.text('4.95'), findsOneWidget);
-      expect(find.text('Verified FIXO Master Pro'), findsOneWidget);
-      expect(find.text('FIXO Assured'), findsOneWidget);
+      expect(find.text('Registered Pro'), findsOneWidget);
+      expect(find.text('Standard Rate'), findsNWidgets(2));
 
       // 4. Service Location Card
       expect(find.text('Service Location'), findsOneWidget);
@@ -529,10 +529,10 @@ void main() {
       // Must show neutral professional state
       expect(find.text('No professional assigned yet'), findsOneWidget);
       expect(
-        find.text('Professional: Auto-assigned upon booking confirmation'),
+        find.text('Professional: Not yet assigned'),
         findsOneWidget,
       );
-      expect(find.text('FIXO Certified Home Service'), findsOneWidget);
+      expect(find.text('Catalog Home Service'), findsOneWidget);
 
       // Must NOT display fabricated professional name or rating
       expect(find.text('Eng. Hassan El-Sayed'), findsNothing);

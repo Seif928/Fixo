@@ -70,7 +70,9 @@ class BookingRepository {
   }
 
   /// Retrieves the authenticated customer's saved addresses via `GET /api/v1/users/me/addresses`.
-  /// Falls back to `/users/me` for backwards compatibility.
+  /// Only falls back to legacy `GET /users/me` if `/users/me/addresses` is not found (HTTP 404)
+  /// on older backend revisions. Preserves and propagates authentication failures (401/403),
+  /// server errors (500), and network connection errors without masking.
   Future<List<CustomerAddressModel>> getCustomerAddresses() async {
     try {
       final response = await _dio.get('/users/me/addresses');
@@ -80,17 +82,19 @@ class BookingRepository {
           .map((item) =>
               CustomerAddressModel.fromJson(item as Map<String, dynamic>))
           .toList();
-    } catch (_) {
-      // Fallback to GET /users/me
-      final response = await _dio.get('/users/me');
-      final data = response.data as Map<String, dynamic>;
-      final user = data['user'] as Map<String, dynamic>? ?? const {};
-      final rawAddresses = user['addresses'] as List<dynamic>? ?? const [];
+    } on DioException catch (e) {
+      if (e.response?.statusCode == 404) {
+        final response = await _dio.get('/users/me');
+        final data = response.data as Map<String, dynamic>;
+        final user = data['user'] as Map<String, dynamic>? ?? const {};
+        final rawAddresses = user['addresses'] as List<dynamic>? ?? const [];
 
-      return rawAddresses
-          .map((item) =>
-              CustomerAddressModel.fromJson(item as Map<String, dynamic>))
-          .toList();
+        return rawAddresses
+            .map((item) =>
+                CustomerAddressModel.fromJson(item as Map<String, dynamic>))
+            .toList();
+      }
+      rethrow;
     }
   }
 
