@@ -1,5 +1,6 @@
 import {
   assertCurrentDatabaseIsTest,
+  safeCleanupCatalogTestTables,
   safeCleanupTestDatabase,
   validateTestDatabaseTarget,
 } from './test-database-safety.util';
@@ -197,4 +198,44 @@ describe('Database Safety Validation (Fail-Closed)', () => {
       );
     });
   });
+
+  describe('safeCleanupCatalogTestTables', () => {
+    it('refuses to truncate when URL points to non-test target', async () => {
+      const mockPrisma = {
+        isDatabaseConnected: jest.fn().mockReturnValue(true),
+        $queryRaw: jest.fn(),
+        $executeRawUnsafe: jest.fn(),
+      };
+
+      await expect(
+        safeCleanupCatalogTestTables(mockPrisma as any, {
+          testDatabaseUrl:
+            'postgresql://fixo_user:pass@localhost:5432/fixo_dev',
+        }),
+      ).rejects.toThrow(/Refusing to target database "fixo_dev"/i);
+
+      expect(mockPrisma.$executeRawUnsafe).toHaveBeenCalledTimes(0);
+    });
+
+    it('safely truncates catalog tables only when all safety guards pass', async () => {
+      const mockPrisma = {
+        isDatabaseConnected: jest.fn().mockReturnValue(true),
+        $queryRaw: jest.fn().mockResolvedValue([{ current_database: 'fixo_test' }]),
+        $executeRawUnsafe: jest.fn().mockResolvedValue(1),
+      };
+
+      await safeCleanupCatalogTestTables(mockPrisma as any, {
+        testDatabaseUrl:
+          'postgresql://fixo_user:pass@localhost:5432/fixo_test',
+      });
+
+      expect(mockPrisma.$queryRaw).toHaveBeenCalledTimes(1);
+      expect(mockPrisma.$executeRawUnsafe).toHaveBeenCalledTimes(1);
+      expect(mockPrisma.$executeRawUnsafe).toHaveBeenCalledWith(
+        'TRUNCATE TABLE "ServiceOffering", "ServiceSubSkill", "ServiceCategory", "CoverageZone" CASCADE;',
+      );
+    });
+  });
 });
+
+

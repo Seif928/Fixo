@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -490,6 +491,44 @@ class _PhoneAuthPageState extends ConsumerState<PhoneAuthPage> {
                 ],
               ),
               const SizedBox(height: 14),
+
+              if (kDebugMode) ...[
+                Container(
+                  key: const Key('banner-demo-otp-hint'),
+                  margin: const EdgeInsets.only(bottom: 12),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 8,
+                  ),
+                  decoration: BoxDecoration(
+                    color: palette.surfaceLow,
+                    borderRadius: FixoRadius.borderRadiusSm,
+                    border: Border.all(
+                      color: palette.limeAccent.withValues(alpha: 0.6),
+                    ),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(
+                        Icons.key_rounded,
+                        size: 16,
+                        color: palette.primaryBrand,
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          isArabic
+                              ? 'رمز الدخول التجريبي: 482910'
+                              : 'Demo OTP Code: 482910',
+                          style: FixoTypography.labelMd(
+                            color: palette.primaryBrand,
+                          ).copyWith(fontWeight: FontWeight.w700),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
 
               // Accessible hidden text field for direct keyboard / test input
               SizedBox(

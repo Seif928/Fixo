@@ -121,3 +121,57 @@ export async function safeCleanupTestDatabase(
     'TRUNCATE TABLE "RefreshToken", "OtpChallenge", "User" CASCADE;',
   );
 }
+
+/**
+ * Performs fail-closed destructive cleanup of catalog test tables strictly inside
+ * the verified `fixo_test` database.
+ */
+export async function safeCleanupCatalogTestTables(
+  prisma: Pick<PrismaService, '$queryRaw' | '$executeRawUnsafe' | 'isDatabaseConnected'>,
+  options?: { testDatabaseUrl?: string },
+): Promise<void> {
+  const targetUrl =
+    options?.testDatabaseUrl ??
+    process.env.TEST_DATABASE_URL ??
+    process.env.DATABASE_URL;
+
+  validateTestDatabaseTarget(targetUrl);
+
+  if (!prisma.isDatabaseConnected()) {
+    return;
+  }
+
+  await assertCurrentDatabaseIsTest(prisma);
+
+  await prisma.$executeRawUnsafe(
+    'TRUNCATE TABLE "ServiceOffering", "ServiceSubSkill", "ServiceCategory", "CoverageZone" CASCADE;',
+  );
+}
+
+/**
+ * Performs fail-closed destructive cleanup of booking test tables strictly inside
+ * the verified `fixo_test` database.
+ */
+export async function safeCleanupBookingTestTables(
+  prisma: Pick<PrismaService, '$queryRaw' | '$executeRawUnsafe' | 'isDatabaseConnected'>,
+  options?: { testDatabaseUrl?: string },
+): Promise<void> {
+  const targetUrl =
+    options?.testDatabaseUrl ??
+    process.env.TEST_DATABASE_URL ??
+    process.env.DATABASE_URL;
+
+  validateTestDatabaseTarget(targetUrl);
+
+  if (!prisma.isDatabaseConnected()) {
+    return;
+  }
+
+  await assertCurrentDatabaseIsTest(prisma);
+
+  await prisma.$executeRawUnsafe(
+    'TRUNCATE TABLE "BookingStatusEvent", "Booking", "CustomerAddress", "ProProfile", "RefreshToken", "OtpChallenge", "User" CASCADE;',
+  );
+}
+
+

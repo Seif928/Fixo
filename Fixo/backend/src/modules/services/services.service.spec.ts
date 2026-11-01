@@ -3,6 +3,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { ProVerificationStatus } from '@prisma/client';
 import { InMemoryStoreService } from '../../prisma/in-memory-store.service';
 import { PrismaModule } from '../../prisma/prisma.module';
+import { PrismaService } from '../../prisma/prisma.service';
 import { ProfessionalsController } from './professionals.controller';
 import { ServicesController } from './services.controller';
 import { ServicesModule } from './services.module';
@@ -11,6 +12,7 @@ describe('ServicesController & ProfessionalsController (Phase 2 Marketplace API)
   let servicesController: ServicesController;
   let professionalsController: ProfessionalsController;
   let memoryStore: InMemoryStoreService;
+  let prisma: PrismaService;
 
   beforeEach(async () => {
     const moduleRef: TestingModule = await Test.createTestingModule({
@@ -20,6 +22,7 @@ describe('ServicesController & ProfessionalsController (Phase 2 Marketplace API)
     servicesController = moduleRef.get(ServicesController);
     professionalsController = moduleRef.get(ProfessionalsController);
     memoryStore = moduleRef.get(InMemoryStoreService);
+    prisma = moduleRef.get(PrismaService);
     memoryStore.resetToSeedState();
   });
 
@@ -224,6 +227,123 @@ describe('ServicesController & ProfessionalsController (Phase 2 Marketplace API)
         });
         expect(emptyResponse.items).toEqual([]);
         expect(emptyResponse.meta.total).toBe(0);
+      } finally {
+        process.env.ENABLE_DEMO_SEED = originalEnv;
+      }
+    });
+  });
+
+  describe('Database-Connected Catalog Isolation (Regression Tests)', () => {
+    let getCategoriesSpy: jest.SpyInstance;
+    let getZonesSpy: jest.SpyInstance;
+    let getOfferingsSpy: jest.SpyInstance;
+    let getProfessionalsSpy: jest.SpyInstance;
+
+    beforeEach(() => {
+      jest.spyOn(prisma, 'isDatabaseConnected').mockReturnValue(true);
+      jest.spyOn(prisma, 'getStorageMode').mockReturnValue('POSTGRESQL_PRISMA');
+
+      jest.spyOn(prisma.serviceCategory, 'findMany').mockResolvedValue([]);
+      jest.spyOn(prisma.coverageZone, 'findMany').mockResolvedValue([]);
+      jest.spyOn(prisma.serviceOffering, 'findMany').mockResolvedValue([]);
+      jest.spyOn(prisma.proProfile, 'findMany').mockResolvedValue([]);
+
+      getCategoriesSpy = jest.spyOn(memoryStore, 'getCategories');
+      getZonesSpy = jest.spyOn(memoryStore, 'getZones');
+      getOfferingsSpy = jest.spyOn(memoryStore, 'getOfferings');
+      getProfessionalsSpy = jest.spyOn(memoryStore, 'getProfessionals');
+    });
+
+    it('returns empty categories and zones exclusively from DB without reading demo data', async () => {
+      const result = await servicesController.listCategories();
+
+      expect(result.categories).toEqual([]);
+      expect(result.zones).toEqual([]);
+      expect(result.meta.total).toBe(0);
+      expect(result.meta.databaseConnected).toBe(true);
+      expect(result.meta.storageMode).toBe('POSTGRESQL_PRISMA');
+
+      expect(getCategoriesSpy).not.toHaveBeenCalled();
+      expect(getZonesSpy).not.toHaveBeenCalled();
+      expect(prisma.serviceCategory.findMany).toHaveBeenCalledTimes(1);
+      expect(prisma.coverageZone.findMany).toHaveBeenCalledTimes(1);
+    });
+
+    it('returns empty services list exclusively from DB without reading demo data', async () => {
+      const result = await servicesController.listServices({ page: 1, limit: 20 });
+
+      expect(result.items).toEqual([]);
+      expect(result.meta.total).toBe(0);
+      expect(result.meta.totalPages).toBe(1);
+      expect(result.meta.databaseConnected).toBe(true);
+      expect(result.meta.storageMode).toBe('POSTGRESQL_PRISMA');
+
+      expect(getOfferingsSpy).not.toHaveBeenCalled();
+      expect(prisma.serviceOffering.findMany).toHaveBeenCalledTimes(1);
+    });
+
+    it('throws NotFoundException on getServiceById when DB has no matching record without falling back to demo data', async () => {
+      await expect(
+        servicesController.getServiceById('off-ac-deep-clean'),
+      ).rejects.toThrow(NotFoundException);
+
+      expect(getOfferingsSpy).not.toHaveBeenCalled();
+      expect(prisma.serviceOffering.findMany).toHaveBeenCalledTimes(1);
+    });
+
+    it('returns empty professionals list exclusively from DB without reading demo data', async () => {
+      const result = await professionalsController.listProfessionals({ page: 1, limit: 20 });
+
+      expect(result.items).toEqual([]);
+      expect(result.meta.total).toBe(0);
+      expect(result.meta.totalPages).toBe(1);
+      expect(result.meta.databaseConnected).toBe(true);
+      expect(result.meta.storageMode).toBe('POSTGRESQL_PRISMA');
+
+      expect(getProfessionalsSpy).not.toHaveBeenCalled();
+      expect(prisma.proProfile.findMany).toHaveBeenCalledTimes(1);
+    });
+
+    it('never reads demo data when Prisma is connected, even when ENABLE_DEMO_SEED=true', async () => {
+      const originalEnv = process.env.ENABLE_DEMO_SEED;
+      try {
+        process.env.ENABLE_DEMO_SEED = 'true';
+
+        const catRes = await servicesController.listCategories();
+        expect(catRes.categories).toEqual([]);
+        expect(catRes.zones).toEqual([]);
+        expect(getCategoriesSpy).not.toHaveBeenCalled();
+
+        const servRes = await servicesController.listServices({ page: 1, limit: 10 });
+        expect(servRes.items).toEqual([]);
+        expect(getOfferingsSpy).not.toHaveBeenCalled();
+
+        const proRes = await professionalsController.listProfessionals({ page: 1, limit: 10 });
+        expect(proRes.items).toEqual([]);
+        expect(getProfessionalsSpy).not.toHaveBeenCalled();
+      } finally {
+        process.env.ENABLE_DEMO_SEED = originalEnv;
+      }
+    });
+
+    it('returns empty results when Prisma is connected and ENABLE_DEMO_SEED=false', async () => {
+      const originalEnv = process.env.ENABLE_DEMO_SEED;
+      try {
+        process.env.ENABLE_DEMO_SEED = 'false';
+
+        const catRes = await servicesController.listCategories();
+        expect(catRes.categories).toEqual([]);
+        expect(catRes.zones).toEqual([]);
+
+        const servRes = await servicesController.listServices({ page: 1, limit: 10 });
+        expect(servRes.items).toEqual([]);
+
+        const proRes = await professionalsController.listProfessionals({ page: 1, limit: 10 });
+        expect(proRes.items).toEqual([]);
+
+        expect(getCategoriesSpy).not.toHaveBeenCalled();
+        expect(getOfferingsSpy).not.toHaveBeenCalled();
+        expect(getProfessionalsSpy).not.toHaveBeenCalled();
       } finally {
         process.env.ENABLE_DEMO_SEED = originalEnv;
       }

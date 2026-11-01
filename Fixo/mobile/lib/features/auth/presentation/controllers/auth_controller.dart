@@ -5,15 +5,12 @@ import '../../data/auth_repository.dart';
 import '../../domain/auth_models.dart';
 
 /// Represents the two visual states of Screen 02 (`02 — Phone Auth & OTP`).
-enum PhoneAuthStep {
-  phoneInput,
-  otpCode,
-}
+enum PhoneAuthStep { phoneInput, otpCode }
 
 class AuthState {
   const AuthState({
     this.step = PhoneAuthStep.phoneInput,
-    this.phoneInput = '010 2345 6789',
+    this.phoneInput = '010 9593 0009',
     this.otpCode = '',
     this.challenge,
     this.resendCountdownSec = 0,
@@ -143,10 +140,7 @@ class AuthController extends Notifier<AuthState> {
       );
       return true;
     } on AuthApiException catch (error) {
-      state = state.copyWith(
-        isLoading: false,
-        errorMessage: error.message,
-      );
+      state = state.copyWith(isLoading: false, errorMessage: error.message);
       return false;
     } catch (_) {
       state = state.copyWith(
@@ -176,7 +170,8 @@ class AuthController extends Notifier<AuthState> {
       return false;
     }
 
-    if (state.otpCode.length != 6 || !RegExp(r'^\d{6}$').hasMatch(state.otpCode)) {
+    if (state.otpCode.length != 6 ||
+        !RegExp(r'^\d{6}$').hasMatch(state.otpCode)) {
       state = state.copyWith(
         errorMessage: isArabic
             ? 'يرجى إدخال رمز التحقق المكون من 6 أرقام كاملاً.'
@@ -219,10 +214,7 @@ class AuthController extends Notifier<AuthState> {
       );
       return true;
     } on AuthApiException catch (error) {
-      state = state.copyWith(
-        isLoading: false,
-        errorMessage: error.message,
-      );
+      state = state.copyWith(isLoading: false, errorMessage: error.message);
       return false;
     } catch (_) {
       state = state.copyWith(
@@ -264,4 +256,3 @@ class AuthController extends Notifier<AuthState> {
 final authControllerProvider = NotifierProvider<AuthController, AuthState>(
   AuthController.new,
 );
-

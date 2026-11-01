@@ -15,7 +15,10 @@
     "test:watch": "jest --watch",
     "test:cov": "jest --coverage",
     "prisma:validate": "prisma validate",
-    "prisma:generate": "prisma generate"
+    "prisma:generate": "prisma generate",
+    "start:supabase": "node --env-file=.env.supabase -r ts-node/register src/main.ts",
+    "seed:catalog": "ts-node src/prisma/seed-catalog.ts",
+    "seed:catalog:supabase": "node --env-file=.env.supabase -r ts-node/register src/prisma/seed-catalog.ts"
   },
   "dependencies": {
     "@nestjs/common": "^11.0.0",
@@ -62,4 +65,3 @@
     "testEnvironment": "node"
   }
 }
-

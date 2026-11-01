@@ -136,6 +136,7 @@ class FixoEgyptPhoneField extends StatelessWidget {
             const SizedBox(width: FixoSpacing.sm),
             Expanded(
               child: TextField(
+                key: const Key('input-egypt-phone'),
                 controller: controller,
                 keyboardType: TextInputType.phone,
                 onChanged: onChanged,

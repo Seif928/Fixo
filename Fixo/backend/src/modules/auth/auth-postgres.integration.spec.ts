@@ -5,8 +5,14 @@ import {
 } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
 import { UserRole } from '@prisma/client';
+import { InMemoryStoreService } from '../../prisma/in-memory-store.service';
 import { PrismaModule } from '../../prisma/prisma.module';
 import { PrismaService } from '../../prisma/prisma.service';
+import {
+  assertCurrentDatabaseIsTest,
+  safeCleanupTestDatabase,
+  validateTestDatabaseTarget,
+} from '../../prisma/test-database-safety.util';
 import { HealthController } from '../health/health.controller';
 import { HealthModule } from '../health/health.module';
 import { UsersController } from '../users/users.controller';
@@ -21,9 +27,11 @@ import { hashTokenSha256 } from './utils/jwt-token.util';
  * Real PostgreSQL Integration Test Suite.
  *
  * Runs strictly against an isolated PostgreSQL test database (`fixo_test`)
- * verifying real database connectivity, advisory locks, transactions,
- * single-use OTP constraints, refresh token rotation, replay revocation persistence,
- * rollback behavior, and readiness probes.
+ * verifying real database connectivity, fail-closed safety guards,
+ * advisory locks, transactional atomicity and rollback on replacement failure,
+ * single-use OTP constraints, concurrent OTP verification, concurrent refresh,
+ * replay racing with refresh rotation, multi-connection rate limiting,
+ * and database failure producing readiness HTTP 503.
  */
 describe('PostgreSQL Real Database Integration Suite (fixo_test)', () => {
   let moduleRef: TestingModule;
@@ -33,6 +41,7 @@ describe('PostgreSQL Real Database Integration Suite (fixo_test)', () => {
   let healthController: HealthController;
   let usersController: UsersController;
   let smsProvider: DevSmsProvider;
+  let originalTestDbUrl: string | undefined;
   let originalDbUrl: string | undefined;
   let originalForcePrisma: string | undefined;
   let originalInMemoryFallback: string | undefined;
@@ -49,14 +58,23 @@ describe('PostgreSQL Real Database Integration Suite (fixo_test)', () => {
   };
 
   beforeAll(async () => {
+    originalTestDbUrl = process.env.TEST_DATABASE_URL;
     originalDbUrl = process.env.DATABASE_URL;
     originalForcePrisma = process.env.FIXO_TEST_FORCE_PRISMA;
     originalInMemoryFallback = process.env.ALLOW_IN_MEMORY_FALLBACK;
 
-    // Direct tests to the dedicated test database
-    if (process.env.DATABASE_URL && process.env.DATABASE_URL.includes('/fixo_dev')) {
-      process.env.DATABASE_URL = process.env.DATABASE_URL.replace('/fixo_dev', '/fixo_test');
-    }
+    // Resolve dedicated TEST_DATABASE_URL
+    const resolvedTestDbUrl =
+      process.env.TEST_DATABASE_URL ??
+      (process.env.DATABASE_URL && process.env.DATABASE_URL.includes('/fixo_dev')
+        ? process.env.DATABASE_URL.replace('/fixo_dev', '/fixo_test')
+        : 'postgresql://fixo_user:fixo_dev_password@localhost:5432/fixo_test?schema=public');
+
+    // 1. Fail-closed safety validation: target MUST be local fixo_test on port 5432
+    validateTestDatabaseTarget(resolvedTestDbUrl);
+
+    process.env.TEST_DATABASE_URL = resolvedTestDbUrl;
+    process.env.DATABASE_URL = resolvedTestDbUrl;
     process.env.FIXO_TEST_FORCE_PRISMA = 'true';
     process.env.ALLOW_IN_MEMORY_FALLBACK = 'false';
 
@@ -78,16 +96,23 @@ describe('PostgreSQL Real Database Integration Suite (fixo_test)', () => {
     // Verify real PostgreSQL connection was established
     expect(prisma.isDatabaseConnected()).toBe(true);
     expect(prisma.getStorageMode()).toBe('POSTGRESQL_PRISMA');
+
+    // Fail-closed verification: runtime database must report fixo_test
+    const runtimeDb = await assertCurrentDatabaseIsTest(prisma);
+    expect(runtimeDb).toBe('fixo_test');
   });
 
   afterAll(async () => {
     if (prisma && prisma.isDatabaseConnected()) {
-      await prisma.$executeRawUnsafe(
-        'TRUNCATE TABLE "RefreshToken", "OtpChallenge", "User" CASCADE',
-      );
+      await safeCleanupTestDatabase(prisma);
     }
     if (moduleRef) {
       await moduleRef.close();
+    }
+    if (originalTestDbUrl !== undefined) {
+      process.env.TEST_DATABASE_URL = originalTestDbUrl;
+    } else {
+      delete process.env.TEST_DATABASE_URL;
     }
     if (originalDbUrl !== undefined) {
       process.env.DATABASE_URL = originalDbUrl;
@@ -107,13 +132,11 @@ describe('PostgreSQL Real Database Integration Suite (fixo_test)', () => {
   });
 
   beforeEach(async () => {
-    // Clean test tables in fixo_test before each test
-    await prisma.$executeRawUnsafe(
-      'TRUNCATE TABLE "RefreshToken", "OtpChallenge", "User" CASCADE',
-    );
+    // Fail-closed cleanup of test tables in verified fixo_test
+    await safeCleanupTestDatabase(prisma);
   });
 
-  describe('1. Real Database Readiness Probe', () => {
+  describe('1. Database Readiness & Database Failure Simulation', () => {
     it('executes a real-time live ping to PostgreSQL and returns ready with POSTGRESQL_PRISMA', async () => {
       const liveCheck = await prisma.checkReadiness();
       expect(liveCheck.ready).toBe(true);
@@ -123,6 +146,30 @@ describe('PostgreSQL Real Database Integration Suite (fixo_test)', () => {
       expect(readinessRes.status).toBe('ready');
       expect(readinessRes.database.ready).toBe(true);
       expect(readinessRes.database.storageMode).toBe('POSTGRESQL_PRISMA');
+    });
+
+    it('produces HTTP 503 SERVICE_UNAVAILABLE when database ping encounters a connection failure', async () => {
+      // Simulate database failure during live ping
+      const querySpy = jest
+        .spyOn(prisma, '$queryRaw')
+        .mockRejectedValueOnce(new Error('Simulated database connection failure'));
+
+      try {
+        await healthController.getReadiness();
+        fail('Expected getReadiness to throw HTTP 503');
+      } catch (err) {
+        expect(err).toBeInstanceOf(HttpException);
+        const httpErr = err as HttpException;
+        expect(httpErr.getStatus()).toBe(HttpStatus.SERVICE_UNAVAILABLE);
+
+        const resp = httpErr.getResponse() as any;
+        expect(resp.status).toBe('not_ready');
+        expect(resp.database.ready).toBe(false);
+        expect(resp.database.storageMode).toBe('POSTGRESQL_PRISMA');
+        expect(resp.database.reason).toBe('Database connection check failed');
+      } finally {
+        querySpy.mockRestore();
+      }
     });
   });
 
@@ -179,7 +226,44 @@ describe('PostgreSQL Real Database Integration Suite (fixo_test)', () => {
     });
   });
 
-  describe('3. Real PostgreSQL Concurrent OTP Requests (pg_advisory_xact_lock)', () => {
+  describe('3. Real PostgreSQL Concurrent Verification of the Same OTP', () => {
+    it('allows only ONE concurrent verification to succeed and rejects duplicate with HTTP 401', async () => {
+      const phone = '+201011112222';
+      const reqRes = await authController.requestOtp({ phone });
+      const code = smsProvider.getLastDispatchedCodeForPhone(phone)!;
+
+      // Two concurrent verification requests with the SAME valid code
+      const results = await Promise.allSettled([
+        authController.verifyOtp({ phone, code, challengeId: reqRes.challengeId }),
+        authController.verifyOtp({ phone, code, challengeId: reqRes.challengeId }),
+      ]);
+
+      const fulfilled = results.filter((r) => r.status === 'fulfilled');
+      const rejected = results.filter((r) => r.status === 'rejected');
+
+      // Exactly ONE must succeed; the racing request must be rejected
+      expect(fulfilled).toHaveLength(1);
+      expect(rejected).toHaveLength(1);
+
+      const err = (rejected[0] as PromiseRejectedResult).reason;
+      expect(err).toBeInstanceOf(UnauthorizedException);
+      expect(err.message).toContain('already been consumed');
+
+      // Check PostgreSQL: consumedAt is set once, exactly 1 User exists, exactly 1 token issued
+      const challenge = await prisma.otpChallenge.findUnique({
+        where: { id: reqRes.challengeId },
+      });
+      expect(challenge!.consumedAt).not.toBeNull();
+
+      const userCount = await prisma.user.count({ where: { phone } });
+      expect(userCount).toBe(1);
+
+      const tokenCount = await prisma.refreshToken.count();
+      expect(tokenCount).toBe(1);
+    });
+  });
+
+  describe('4. Real PostgreSQL Concurrent OTP Requests (pg_advisory_xact_lock)', () => {
     it('serializes simultaneous OTP requests for the same phone and enforces 45s cooldown atomically', async () => {
       const phone = '+201099998888';
 
@@ -211,7 +295,88 @@ describe('PostgreSQL Real Database Integration Suite (fixo_test)', () => {
     });
   });
 
-  describe('4. Real PostgreSQL Refresh Token Rotation', () => {
+  describe('5. Rate Limits Across Independent Service / Database Connections', () => {
+    it('enforces cooldown and 5-req/15min rate limits across independent connections sharing PostgreSQL', async () => {
+      const phone = '+201077778888';
+
+      // Setup a second independent connection to fixo_test
+      const secondaryPrisma = new PrismaService();
+      // Configure secondary connection explicitly to TEST_DATABASE_URL
+      process.env.FIXO_TEST_FORCE_PRISMA = 'true';
+      await secondaryPrisma.onModuleInit();
+      expect(secondaryPrisma.isDatabaseConnected()).toBe(true);
+
+      const secondarySms = new DevSmsProvider();
+      const secondaryAuthService = new AuthService(
+        secondaryPrisma,
+        new InMemoryStoreService(),
+        secondarySms,
+      );
+      secondaryAuthService.configureSecurity(validTestConfig);
+
+      try {
+        // Connection 1: First OTP Request
+        const res1 = await authService.requestOtp({ phone });
+        expect(res1.phone).toBe(phone);
+
+        // Connection 2: Immediate request from independent connection MUST hit active cooldown
+        await expect(
+          secondaryAuthService.requestOtp({ phone }),
+        ).rejects.toThrow(
+          expect.objectContaining({
+            status: HttpStatus.TOO_MANY_REQUESTS,
+            message: expect.stringContaining('Resend cooldown active'),
+          }),
+        );
+
+        // Fast-forward cooldown by updating createdAt in PostgreSQL
+        await prisma.$executeRawUnsafe(
+          'UPDATE "OtpChallenge" SET "createdAt" = NOW() - INTERVAL \'50 seconds\' WHERE phone = $1',
+          phone,
+        );
+
+        // Connection 2: Now succeeds after cooldown elapsed
+        const res2 = await secondaryAuthService.requestOtp({ phone });
+        expect(res2.phone).toBe(phone);
+
+        // Simulate reaching the 5-request limit by adding 3 more challenges in PostgreSQL
+        for (let i = 0; i < 3; i++) {
+          await prisma.otpChallenge.create({
+            data: {
+              phone,
+              codeHash: 'simulated-hash-' + i,
+              expiresAt: new Date(Date.now() + 300000),
+              createdAt: new Date(Date.now() - (60 + i * 10) * 1000),
+            },
+          });
+        }
+
+        // Total challenges for this phone in the last 15 mins is now 5
+        const currentCount = await prisma.otpChallenge.count({ where: { phone } });
+        expect(currentCount).toBe(5);
+
+        // Fast-forward latest challenge past cooldown
+        await prisma.$executeRawUnsafe(
+          'UPDATE "OtpChallenge" SET "createdAt" = NOW() - INTERVAL \'50 seconds\' WHERE id = $1',
+          res2.challengeId,
+        );
+
+        // Connection 2: Attempting 6th request MUST be rejected by distributed 15-minute rate limit
+        await expect(
+          secondaryAuthService.requestOtp({ phone }),
+        ).rejects.toThrow(
+          expect.objectContaining({
+            status: HttpStatus.TOO_MANY_REQUESTS,
+            message: expect.stringContaining('Too many OTP requests'),
+          }),
+        );
+      } finally {
+        await secondaryPrisma.onModuleDestroy();
+      }
+    });
+  });
+
+  describe('6. Real PostgreSQL Refresh Token Rotation', () => {
     it('claims old token and inserts replacement in the same transaction', async () => {
       const phone = '+201023456789';
       const reqRes = await authController.requestOtp({ phone });
@@ -251,9 +416,9 @@ describe('PostgreSQL Real Database Integration Suite (fixo_test)', () => {
     });
   });
 
-  describe('5. Real PostgreSQL Replay Revocation Persistence', () => {
-    it('commits family revocation to PostgreSQL on token replay before throwing UnauthorizedException', async () => {
-      const phone = '+201023456789';
+  describe('7. AuthService.refreshTokens Rollback Verification (Forced Replacement Persistence Failure)', () => {
+    it('rolls back token revocation when replacement persistence fails: old token remains active and no replacement persists', async () => {
+      const phone = '+201044443333';
       const reqRes = await authController.requestOtp({ phone });
       const code = smsProvider.getLastDispatchedCodeForPhone(phone)!;
       const initialAuth = await authController.verifyOtp({
@@ -262,72 +427,182 @@ describe('PostgreSQL Real Database Integration Suite (fixo_test)', () => {
         challengeId: reqRes.challengeId,
       });
 
-      // Legitimate user rotates token: initial is revoked, rotated is active
-      const rotatedAuth = await authController.refresh({
+      const initialHash = hashTokenSha256(initialAuth.refreshToken);
+      const initialDbToken = await prisma.refreshToken.findUnique({
+        where: { tokenHash: initialHash },
+      });
+      expect(initialDbToken).not.toBeNull();
+      expect(initialDbToken!.revokedAt).toBeNull();
+
+      // Intercept the interactive transaction: let old token claim execute, but force replacement persistence to fail
+      const originalTx = prisma.$transaction.bind(prisma);
+      const txSpy = jest
+        .spyOn(prisma, '$transaction')
+        .mockImplementation(async (callback: any, options: any) => {
+          return originalTx(async (tx: any) => {
+            const originalCreate = tx.refreshToken.create.bind(tx.refreshToken);
+            tx.refreshToken.create = jest.fn().mockImplementation(async () => {
+              throw new Error('FORCED DATABASE WRITE FAILURE: Simulated disk/constraint error on replacement create');
+            });
+            return callback(tx);
+          }, options);
+        });
+
+      // Call AuthService.refreshTokens: must fail because replacement creation throws inside transaction
+      await expect(
+        authService.refreshTokens({ refreshToken: initialAuth.refreshToken }),
+      ).rejects.toThrow('FORCED DATABASE WRITE FAILURE');
+
+      txSpy.mockRestore();
+
+      // CRITICAL VERIFICATION: In real PostgreSQL, verify that transaction rolled back cleanly!
+      // 1. The old token must STILL BE ACTIVE (revokedAt is null)
+      const oldTokenAfterRollback = await prisma.refreshToken.findUnique({
+        where: { tokenHash: initialHash },
+      });
+      expect(oldTokenAfterRollback).not.toBeNull();
+      expect(oldTokenAfterRollback!.revokedAt).toBeNull();
+
+      // 2. No replacement token was persisted in PostgreSQL
+      const allTokensForUser = await prisma.refreshToken.findMany({
+        where: { userId: initialAuth.user.id },
+      });
+      expect(allTokensForUser).toHaveLength(1);
+      expect(allTokensForUser[0].tokenHash).toBe(initialHash);
+
+      // 3. The old token remains fully usable: subsequent legitimate refresh succeeds!
+      const successfulRefresh = await authService.refreshTokens({
         refreshToken: initialAuth.refreshToken,
       });
+      expect(successfulRefresh.refreshToken).toBeDefined();
+      expect(successfulRefresh.refreshToken).not.toBe(initialAuth.refreshToken);
 
-      const rotatedHash = hashTokenSha256(rotatedAuth.refreshToken);
-      const rotatedDbBefore = await prisma.refreshToken.findUnique({
-        where: { tokenHash: rotatedHash },
+      // Now old token is revoked and new replacement is active
+      const finalOldToken = await prisma.refreshToken.findUnique({
+        where: { tokenHash: initialHash },
       });
-      expect(rotatedDbBefore!.revokedAt).toBeNull(); // Active before replay
+      expect(finalOldToken!.revokedAt).not.toBeNull();
+    });
+  });
 
-      // Attacker replays initial token (which is already revoked)
-      await expect(
-        authController.refresh({
-          refreshToken: initialAuth.refreshToken,
-        }),
-      ).rejects.toThrow(/replay attack detected/i);
-
-      // Verify that family revocation PERSISTED in PostgreSQL!
-      const rotatedDbAfter = await prisma.refreshToken.findUnique({
-        where: { tokenHash: rotatedHash },
+  describe('8. Real PostgreSQL Concurrent Refresh Using the Same Token', () => {
+    it('prevents duplicate token generation when two concurrent requests refresh with the exact same token', async () => {
+      const phone = '+201066665555';
+      const reqRes = await authController.requestOtp({ phone });
+      const code = smsProvider.getLastDispatchedCodeForPhone(phone)!;
+      const initialAuth = await authController.verifyOtp({
+        phone,
+        code,
+        challengeId: reqRes.challengeId,
       });
-      expect(rotatedDbAfter!.revokedAt).not.toBeNull(); // Confirmed revoked in real PostgreSQL!
 
-      // Legitimate user's active token is now terminated
+      // Concurrently execute two refresh requests using the identical active refresh token
+      const results = await Promise.allSettled([
+        authService.refreshTokens({ refreshToken: initialAuth.refreshToken }),
+        authService.refreshTokens({ refreshToken: initialAuth.refreshToken }),
+      ]);
+
+      const fulfilled = results.filter((r) => r.status === 'fulfilled');
+      const rejected = results.filter((r) => r.status === 'rejected');
+
+      // Both CANNOT succeed: at most 1 can succeed
+      expect(fulfilled.length).toBeLessThanOrEqual(1);
+
+      // At least one request was rejected
+      expect(rejected.length).toBeGreaterThanOrEqual(1);
+
+      for (const rej of rejected) {
+        const err = (rej as PromiseRejectedResult).reason;
+        // Either caught by replay detection or updateMany zero-claim check
+        expect(err).toBeInstanceOf(UnauthorizedException);
+      }
+
+      // Check PostgreSQL: Old token is revoked
+      const oldHash = hashTokenSha256(initialAuth.refreshToken);
+      const oldDbToken = await prisma.refreshToken.findUnique({
+        where: { tokenHash: oldHash },
+      });
+      expect(oldDbToken!.revokedAt).not.toBeNull();
+
+      // Verify that no duplicate active refresh tokens were created
+      const activeTokens = await prisma.refreshToken.findMany({
+        where: { userId: initialAuth.user.id, revokedAt: null },
+      });
+      // Active tokens must be at most 1 (or 0 if replay detection triggered family revocation)
+      expect(activeTokens.length).toBeLessThanOrEqual(1);
+    });
+  });
+
+  describe('9. Replay Racing with Refresh Rotation (Family Revocation Race)', () => {
+    it('terminates all user sessions when a revoked token replay races with legitimate refresh rotation', async () => {
+      const phone = '+201088889999';
+      const reqRes = await authController.requestOtp({ phone });
+      const code = smsProvider.getLastDispatchedCodeForPhone(phone)!;
+      const initialAuth = await authController.verifyOtp({
+        phone,
+        code,
+        challengeId: reqRes.challengeId,
+      });
+
+      // Legitimate rotation: TokenA -> TokenB
+      const rotatedAuth = await authService.refreshTokens({
+        refreshToken: initialAuth.refreshToken,
+      });
+      const tokenA = initialAuth.refreshToken;
+      const tokenB = rotatedAuth.refreshToken;
+
+      // TokenA is now revoked; TokenB is currently active
+      const tokenAHash = hashTokenSha256(tokenA);
+      const tokenAInDb = await prisma.refreshToken.findUnique({
+        where: { tokenHash: tokenAHash },
+      });
+      expect(tokenAInDb!.revokedAt).not.toBeNull();
+
+      // RACE CONDITION: Concurrently execute:
+      // 1. Legitimate user refreshing active TokenB
+      // 2. Malicious actor replaying already-revoked TokenA
+      const [legitResult, replayResult] = await Promise.allSettled([
+        authService.refreshTokens({ refreshToken: tokenB }),
+        authService.refreshTokens({ refreshToken: tokenA }),
+      ]);
+
+      // Replay request MUST be rejected with replay attack detection
+      expect(replayResult.status).toBe('rejected');
+      const replayErr = (replayResult as PromiseRejectedResult).reason;
+      expect(replayErr).toBeInstanceOf(UnauthorizedException);
+      expect(replayErr.message).toMatch(/replay attack detected/i);
+
+      // CRITICAL SECURITY ASSERTION:
+      // Because TokenA triggered replay detection and family revocation,
+      // ALL active tokens for this user must now be revoked in PostgreSQL!
+      const activeTokensInDb = await prisma.refreshToken.findMany({
+        where: { userId: initialAuth.user.id, revokedAt: null },
+      });
+      expect(activeTokensInDb).toHaveLength(0);
+
+      // Verify that any subsequent refresh attempt by either party is rejected
       await expect(
-        authController.refresh({
-          refreshToken: rotatedAuth.refreshToken,
-        }),
+        authService.refreshTokens({ refreshToken: tokenB }),
       ).rejects.toThrow(UnauthorizedException);
     });
   });
 
-  describe('6. Real PostgreSQL Transaction Rollback Verification', () => {
-    it('rolls back database modifications when a transaction encounters an error', async () => {
-      const user = await prisma.user.create({
-        data: {
-          phone: '+201055554444',
-          fullName: 'Rollback Test User',
-          role: UserRole.CUSTOMER,
-        },
-      });
+  describe('10. Fail-Closed Unsafe Database Target Rejection in Integration Context', () => {
+    it('refuses to perform destructive cleanup on any database other than fixo_test', async () => {
+      // Create mock PrismaService connected to fixo_dev
+      const mockPrisma = {
+        isDatabaseConnected: () => true,
+        $queryRaw: jest.fn().mockResolvedValue([{ current_database: 'fixo_dev' }]),
+        $executeRawUnsafe: jest.fn(),
+      };
 
-      const tokenHash = 'test-rollback-token-hash-123456789';
-      const expiresAt = new Date(Date.now() + 60000);
-
-      // Execute a transaction that attempts to insert a token and then throws an error
       await expect(
-        prisma.$transaction(async (tx) => {
-          await tx.refreshToken.create({
-            data: {
-              userId: user.id,
-              tokenHash,
-              expiresAt,
-            },
-          });
-          throw new Error('Simulated failure inside transaction');
+        safeCleanupTestDatabase(mockPrisma as any, {
+          testDatabaseUrl: 'postgresql://fixo_user:pass@localhost:5432/fixo_dev',
         }),
-      ).rejects.toThrow('Simulated failure inside transaction');
+      ).rejects.toThrow(/Refusing to target database "fixo_dev"/i);
 
-      // Verify that the token was NOT persisted in PostgreSQL due to ROLLBACK
-      const persistedToken = await prisma.refreshToken.findUnique({
-        where: { tokenHash },
-      });
-      expect(persistedToken).toBeNull();
+      expect(mockPrisma.$executeRawUnsafe).toHaveBeenCalledTimes(0);
     });
   });
 });
-

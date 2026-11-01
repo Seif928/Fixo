@@ -7,7 +7,7 @@ import {
   OnModuleInit,
   UnauthorizedException,
 } from '@nestjs/common';
-import { UserRole } from '@prisma/client';
+import { Prisma, UserRole } from '@prisma/client';
 import { randomInt } from 'crypto';
 import {
   InMemoryStoreService,
@@ -123,10 +123,10 @@ export class AuthService implements OnModuleInit {
   }
 
   private generateOtpCode(): string {
-    // Only permit deterministic OTP in automated unit tests with explicit env flag
+    // Permit deterministic demo OTP when explicitly enabled in non-production environments
     if (
       this.config?.allowTestFixedOtp &&
-      process.env.NODE_ENV === 'test'
+      !this.config.isProduction
     ) {
       return process.env.FIXO_DEV_OTP_CODE ?? '482910';
     }
@@ -401,54 +401,70 @@ export class AuthService implements OnModuleInit {
         | { status: 'REPLAY_DETECTED'; userId: string }
         | { status: 'INVALID_OR_EXPIRED' };
 
-      const txResult: RefreshTxResult = await this.prisma.$transaction(
-        async (tx) => {
-          // Step A: Atomically claim and revoke the old refresh token
-          const claimed = await tx.refreshToken.updateMany({
-            where: {
-              tokenHash: oldTokenHash,
-              revokedAt: null,
-              expiresAt: { gt: new Date() },
-            },
-            data: {
-              revokedAt: new Date(),
-            },
-          });
+      let txResult: RefreshTxResult;
+      try {
+        txResult = await this.prisma.$transaction(
+          async (tx) => {
+            // Advisory lock strictly serializes token refresh and replay detection per user across connections
+            await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${'fixo_refresh_lock:' + user.id}))`;
 
-          if (claimed.count === 1) {
-            // Step B: Persist replacement token inside the EXACT SAME transaction
-            await tx.refreshToken.create({
+            // Step A: Atomically claim and revoke the old refresh token
+            const claimed = await tx.refreshToken.updateMany({
+              where: {
+                tokenHash: oldTokenHash,
+                revokedAt: null,
+                expiresAt: { gt: new Date() },
+              },
               data: {
-                userId: user.id,
-                tokenHash: newTokenHash,
-                expiresAt: refreshExpiresAt,
+                revokedAt: new Date(),
               },
             });
-            return { status: 'SUCCESS' };
-          }
 
-          // Claim failed. Check for REPLAY ATTACK
-          const existing = await tx.refreshToken.findUnique({
-            where: { tokenHash: oldTokenHash },
-          });
+            if (claimed.count === 1) {
+              // Step B: Persist replacement token inside the EXACT SAME transaction
+              await tx.refreshToken.create({
+                data: {
+                  userId: user.id,
+                  tokenHash: newTokenHash,
+                  expiresAt: refreshExpiresAt,
+                },
+              });
+              return { status: 'SUCCESS' };
+            }
 
-          if (existing && existing.revokedAt !== null) {
-            // Replay Attack Detected: Trigger Family Revocation!
-            // CRITICAL: DO NOT throw inside transaction! Let this transaction COMMIT the revocations to disk!
-            await tx.refreshToken.updateMany({
-              where: { userId: existing.userId, revokedAt: null },
-              data: { revokedAt: new Date() },
+            // Claim failed. Check for REPLAY ATTACK
+            const existing = await tx.refreshToken.findUnique({
+              where: { tokenHash: oldTokenHash },
             });
-            return { status: 'REPLAY_DETECTED', userId: existing.userId };
-          }
 
-          return { status: 'INVALID_OR_EXPIRED' };
-        },
-        {
-          isolationLevel: 'Serializable',
-          timeout: 5000,
-        },
-      );
+            if (existing && existing.revokedAt !== null) {
+              // Replay Attack Detected: Trigger Family Revocation!
+              // CRITICAL: DO NOT throw inside transaction! Let this transaction COMMIT the revocations to disk!
+              await tx.refreshToken.updateMany({
+                where: { userId: existing.userId, revokedAt: null },
+                data: { revokedAt: new Date() },
+              });
+              return { status: 'REPLAY_DETECTED', userId: existing.userId };
+            }
+
+            return { status: 'INVALID_OR_EXPIRED' };
+          },
+          {
+            isolationLevel: 'ReadCommitted',
+            timeout: 5000,
+          },
+        );
+      } catch (error) {
+        if (
+          error instanceof Prisma.PrismaClientKnownRequestError &&
+          (error.code === 'P2034' || error.code === 'P2002')
+        ) {
+          throw new UnauthorizedException(
+            'Refresh token is invalid, expired, or already revoked.',
+          );
+        }
+        throw error;
+      }
 
       if (txResult.status === 'REPLAY_DETECTED') {
         this.logger.warn(

@@ -46,6 +46,8 @@ export class ServicesService {
     let zones: SeedCoverageZone[];
 
     if (this.prisma.isDatabaseConnected()) {
+      // Database-connected mode: Categories and zones come EXCLUSIVELY from PostgreSQL.
+      // Never substitute in-memory/demo data when connected.
       const [dbCategories, dbZones] = await Promise.all([
         this.prisma.serviceCategory.findMany({
           where: { isActive: true },
@@ -58,8 +60,17 @@ export class ServicesService {
       categories = dbCategories;
       zones = dbZones;
     } else {
-      categories = this.memoryStore.getCategories();
-      zones = this.memoryStore.getZones();
+      // Offline fallback: demo seed allowed only when not in production and ENABLE_DEMO_SEED !== 'false'
+      if (
+        process.env.NODE_ENV === 'production' ||
+        process.env.ENABLE_DEMO_SEED === 'false'
+      ) {
+        categories = [];
+        zones = [];
+      } else {
+        categories = this.memoryStore.getCategories();
+        zones = this.memoryStore.getZones();
+      }
     }
 
     return {
@@ -242,39 +253,49 @@ export class ServicesService {
 
   private async loadAllOfferings(): Promise<SeedServiceOffering[]> {
     if (this.prisma.isDatabaseConnected()) {
+      // Database-connected mode: Offerings come EXCLUSIVELY from PostgreSQL.
+      // Never substitute in-memory/demo data when connected.
       const rows = await this.prisma.serviceOffering.findMany({
         include: { category: true },
       });
-      if (rows.length > 0) {
-        return rows.map((row) => ({
-          id: row.id,
-          categoryId: row.categoryId,
-          categorySlug: row.category.slug,
-          slug: row.slug,
-          titleEn: row.titleEn,
-          titleAr: row.titleAr,
-          descriptionEn: row.descriptionEn,
-          descriptionAr: row.descriptionAr,
-          badgeEn: row.badgeEn,
-          badgeAr: row.badgeAr,
-          providerTagEn: row.providerTagEn,
-          providerTagAr: row.providerTagAr,
-          baseInspectionEgp: row.baseInspectionEgp,
-          serviceFeeEgp: row.serviceFeeEgp,
-          flatPriceEgp: row.flatPriceEgp ?? row.baseInspectionEgp + row.serviceFeeEgp,
-          estimatedDurationMins: row.estimatedDurationMins,
-          isSeasonalPromo: row.isSeasonalPromo,
-          isBundle: row.isBundle,
-        }));
-      }
+      return rows.map((row) => ({
+        id: row.id,
+        categoryId: row.categoryId,
+        categorySlug: row.category?.slug ?? '',
+        slug: row.slug,
+        titleEn: row.titleEn,
+        titleAr: row.titleAr,
+        descriptionEn: row.descriptionEn,
+        descriptionAr: row.descriptionAr,
+        badgeEn: row.badgeEn,
+        badgeAr: row.badgeAr,
+        providerTagEn: row.providerTagEn,
+        providerTagAr: row.providerTagAr,
+        baseInspectionEgp: row.baseInspectionEgp,
+        serviceFeeEgp: row.serviceFeeEgp,
+        flatPriceEgp: row.flatPriceEgp ?? row.baseInspectionEgp + row.serviceFeeEgp,
+        estimatedDurationMins: row.estimatedDurationMins,
+        isSeasonalPromo: row.isSeasonalPromo,
+        isBundle: row.isBundle,
+      }));
     }
+
+    if (
+      process.env.NODE_ENV === 'production' ||
+      process.env.ENABLE_DEMO_SEED === 'false'
+    ) {
+      return [];
+    }
+
     return this.memoryStore.getOfferings();
   }
 
   private async loadAllProfessionals(): Promise<PublicProfessionalDto[]> {
     if (this.prisma.isDatabaseConnected()) {
+      // Database-connected mode: Professionals come EXCLUSIVELY from PostgreSQL.
       // Security Invariant: Only APPROVED profiles appear in public discovery.
       // DRAFT, PENDING_REVIEW, ACTION_REQUIRED, SUSPENDED are strictly excluded.
+      // Returns genuine empty results when no approved pros exist in DB.
       const rows = await this.prisma.proProfile.findMany({
         where: {
           verificationStatus: ProVerificationStatus.APPROVED,
@@ -286,7 +307,6 @@ export class ServicesService {
         },
       });
 
-      // Security: Genuine empty results returned when no approved pros exist in DB
       return rows.map((row) => ({
         id: row.id,
         fullNameEn: row.user.fullName ?? 'Cairo Specialist',
@@ -313,7 +333,7 @@ export class ServicesService {
       }));
     }
 
-    // In-memory fallback: strictly prohibited from synthetic demo leaking in production
+    // In-memory fallback: strictly prohibited from synthetic demo leaking in production or when demo seed is false
     if (
       process.env.NODE_ENV === 'production' ||
       process.env.ENABLE_DEMO_SEED === 'false'

@@ -534,8 +534,15 @@ class _CustomerHomePageState extends ConsumerState<CustomerHomePage> {
     required FixoPaletteExtension palette,
   }) {
     final feed = homeState.feed!;
-    final seasonalPromo = feed.seasonalPromo;
-    final bundleOffer = feed.bundleOffer;
+    final selectedCategory = homeState.selectedCategorySlug;
+    final seasonalPromo = (selectedCategory == null ||
+            feed.seasonalPromo?.categorySlug == selectedCategory)
+        ? feed.seasonalPromo
+        : null;
+    final bundleOffer = (selectedCategory == null ||
+            feed.bundleOffer?.categorySlug == selectedCategory)
+        ? feed.bundleOffer
+        : null;
     final categories = homeState.filteredCategories;
     final professionals = homeState.filteredProfessionals;
 
@@ -669,30 +676,30 @@ class _CustomerHomePageState extends ConsumerState<CustomerHomePage> {
           ),
 
         // 4. Top Rated Cairo Professionals
-        if (professionals.isNotEmpty) ...[
-          Padding(
-            padding: const EdgeInsets.fromLTRB(
-              FixoSpacing.md,
-              24,
-              FixoSpacing.md,
-              12,
-            ),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        isArabic
-                            ? 'أفضل فنيي القاهرة تقييماً'
-                            : 'Top Rated Cairo Professionals',
-                        style: FixoTypography.headlineSm(
-                          color: palette.inkText,
-                        ).copyWith(fontWeight: FontWeight.w700),
-                      ),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(
+            FixoSpacing.md,
+            24,
+            FixoSpacing.md,
+            12,
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      isArabic
+                          ? 'أفضل فنيي القاهرة تقييماً'
+                          : 'Top Rated Cairo Professionals',
+                      style: FixoTypography.headlineSm(
+                        color: palette.inkText,
+                      ).copyWith(fontWeight: FontWeight.w700),
+                    ),
+                    if (professionals.isNotEmpty) ...[
                       const SizedBox(height: 2),
                       Text(
                         isArabic
@@ -701,8 +708,10 @@ class _CustomerHomePageState extends ConsumerState<CustomerHomePage> {
                         style: FixoTypography.bodySm(color: palette.mutedText),
                       ),
                     ],
-                  ),
+                  ],
                 ),
+              ),
+              if (professionals.isNotEmpty)
                 TextButton(
                   onPressed: homeNotifier.clearFilters,
                   child: Text(
@@ -712,9 +721,10 @@ class _CustomerHomePageState extends ConsumerState<CustomerHomePage> {
                     ).copyWith(fontWeight: FontWeight.w700),
                   ),
                 ),
-              ],
-            ),
+            ],
           ),
+        ),
+        if (professionals.isNotEmpty)
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: FixoSpacing.md),
             child: Column(
@@ -732,8 +742,36 @@ class _CustomerHomePageState extends ConsumerState<CustomerHomePage> {
                 ],
               ],
             ),
+          )
+        else
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: FixoSpacing.md),
+            child: FixoSurfaceCard(
+              key: const Key('empty-professionals-card'),
+              child: Padding(
+                padding: const EdgeInsets.all(FixoSpacing.md),
+                child: Row(
+                  children: [
+                    Icon(
+                      Icons.person_search_rounded,
+                      size: 28,
+                      color: palette.mutedText,
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Text(
+                        isArabic
+                            ? 'لا يوجد فنيون متاحون حاليًا.'
+                            : 'No professionals available yet.',
+                        style: FixoTypography.labelMd(color: palette.inkText)
+                            .copyWith(fontWeight: FontWeight.w700),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
           ),
-        ],
 
         // 5. Facility Concierge Banner
         Padding(

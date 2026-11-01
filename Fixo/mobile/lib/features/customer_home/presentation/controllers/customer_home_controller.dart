@@ -145,16 +145,9 @@ class CustomerHomeController extends Notifier<CustomerHomeState> {
     try {
       final repository = ref.read(marketplaceRepositoryProvider);
       final feed = await repository.fetchCustomerHomeFeed();
-      state = state.copyWith(
-        isLoading: false,
-        feed: feed,
-        clearError: true,
-      );
+      state = state.copyWith(isLoading: false, feed: feed, clearError: true);
     } on MarketplaceApiException catch (error) {
-      state = state.copyWith(
-        isLoading: false,
-        errorMessage: error.message,
-      );
+      state = state.copyWith(isLoading: false, errorMessage: error.message);
     } catch (_) {
       state = state.copyWith(
         isLoading: false,
@@ -205,4 +198,3 @@ final customerHomeControllerProvider =
     NotifierProvider<CustomerHomeController, CustomerHomeState>(
       CustomerHomeController.new,
     );
-
