@@ -8,6 +8,7 @@ import '../../features/booking/presentation/pages/create_booking_page.dart';
 import '../../features/customer_home/domain/marketplace_models.dart';
 import '../../features/customer_home/presentation/pages/customer_home_page.dart';
 import '../../features/onboarding/presentation/pages/onboarding_page.dart';
+import '../../features/payment/presentation/pages/checkout_page.dart';
 import 'app_routes.dart';
 
 /// Listenable bridge that notifies `GoRouter` whenever `authControllerProvider`
@@ -95,6 +96,14 @@ GoRouter createAppRouter({
             initialOffering: offering,
             initialPreferredPro: preferredPro,
           );
+        },
+      ),
+      GoRoute(
+        path: AppRoutes.checkout,
+        name: 'checkout',
+        builder: (context, state) {
+          final bookingId = state.pathParameters['bookingId'] ?? '';
+          return CheckoutPage(bookingId: bookingId);
         },
       ),
     ],

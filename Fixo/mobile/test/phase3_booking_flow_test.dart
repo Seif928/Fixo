@@ -126,6 +126,38 @@ class FakeBookingRepository implements BookingRepository {
   }
 
   @override
+  Future<BookingDetailModel> checkoutBooking(
+    String bookingId, {
+    String paymentMethod = 'CASH_ON_SERVICE',
+  }) async {
+    return BookingDetailModel(
+      id: bookingId,
+      orderCode: 'FX-8842',
+      customerId: 'cust-101',
+      offeringId: 'off-ac-clean',
+      addressId: 'addr-01',
+      status: 'PENDING_DISPATCH',
+      scheduledDate: '2026-11-05',
+      timeWindow: 'AFTERNOON_13_16',
+      pricing: const BookingPricingModel(
+        baseInspectionEgp: 150,
+        serviceFeeEgp: 250,
+        transportFeeEgp: 0,
+        totalEgp: 400,
+      ),
+      payment: PaymentRecordModel(
+        id: 'pay-001',
+        bookingId: bookingId,
+        method: paymentMethod,
+        status: 'PENDING',
+        amountEgp: 400,
+        createdAt: DateTime.now().toIso8601String(),
+      ),
+      createdAt: DateTime.now().toIso8601String(),
+    );
+  }
+
+  @override
   Future<List<BookingDetailModel>> getBookings({
     String? tab,
     String? status,

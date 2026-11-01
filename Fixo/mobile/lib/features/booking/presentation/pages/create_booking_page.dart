@@ -668,7 +668,18 @@ class _CreateBookingPageState extends ConsumerState<CreateBookingPage> {
                                         );
 
                                         // Return to caller or pop
-                                        if (navigator.canPop()) {
+                                        if (!context.mounted) return;
+                                        if (booking != null && booking.id.isNotEmpty) {
+                                          try {
+                                            context.go(
+                                              '/customer/bookings/${booking.id}/checkout',
+                                            );
+                                          } catch (_) {
+                                            if (navigator.canPop()) {
+                                              navigator.pop(booking);
+                                            }
+                                          }
+                                        } else if (navigator.canPop()) {
                                           navigator.pop(booking);
                                         }
                                       }

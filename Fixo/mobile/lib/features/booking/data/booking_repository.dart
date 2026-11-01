@@ -58,6 +58,20 @@ class BookingRepository {
     return BookingDetailModel.fromJson(data);
   }
 
+  /// Confirms checkout for a booking via `POST /api/v1/bookings/:bookingId/checkout`.
+  /// Submits `{"paymentMethod": "CASH_ON_SERVICE"}` for Cash on Service payment.
+  Future<BookingDetailModel> checkoutBooking(
+    String bookingId, {
+    String paymentMethod = 'CASH_ON_SERVICE',
+  }) async {
+    final response = await _dio.post(
+      '/bookings/$bookingId/checkout',
+      data: {'paymentMethod': paymentMethod},
+    );
+    final data = response.data as Map<String, dynamic>;
+    return BookingDetailModel.fromJson(data);
+  }
+
   /// Persists a new customer delivery address via `POST /api/v1/users/me/addresses`.
   Future<CustomerAddressModel> createAddress(CreateAddressRequest request) async {
     final response = await _dio.post(

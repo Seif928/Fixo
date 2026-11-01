@@ -116,11 +116,37 @@ class BookingPricingModel {
   final String currency;
 
   factory BookingPricingModel.fromJson(Map<String, dynamic> json) {
+    final baseInspection = (json['baseInspectionEgp'] as num?)?.toInt();
+    final serviceFee = (json['serviceFeeEgp'] as num?)?.toInt();
+    final transportFee = (json['transportFeeEgp'] as num?)?.toInt();
+    final total = (json['totalEgp'] as num?)?.toInt();
+
+    if (baseInspection == null || baseInspection < 0) {
+      throw const FormatException(
+        'Missing or invalid required price: baseInspectionEgp',
+      );
+    }
+    if (serviceFee == null || serviceFee < 0) {
+      throw const FormatException(
+        'Missing or invalid required price: serviceFeeEgp',
+      );
+    }
+    if (transportFee == null || transportFee < 0) {
+      throw const FormatException(
+        'Missing or invalid required price: transportFeeEgp',
+      );
+    }
+    if (total == null || total < 0) {
+      throw const FormatException(
+        'Missing or invalid required price: totalEgp',
+      );
+    }
+
     return BookingPricingModel(
-      baseInspectionEgp: (json['baseInspectionEgp'] as num?)?.toInt() ?? 150,
-      serviceFeeEgp: (json['serviceFeeEgp'] as num?)?.toInt() ?? 250,
-      transportFeeEgp: (json['transportFeeEgp'] as num?)?.toInt() ?? 0,
-      totalEgp: (json['totalEgp'] as num?)?.toInt() ?? 400,
+      baseInspectionEgp: baseInspection,
+      serviceFeeEgp: serviceFee,
+      transportFeeEgp: transportFee,
+      totalEgp: total,
       platformFeeEgp: (json['platformFeeEgp'] as num?)?.toInt(),
       netArtisanEgp: (json['netArtisanEgp'] as num?)?.toInt(),
       currency: json['currency'] as String? ?? 'EGP',
@@ -135,6 +161,57 @@ class BookingPricingModel {
         'platformFeeEgp': platformFeeEgp,
         'netArtisanEgp': netArtisanEgp,
         'currency': currency,
+      };
+}
+
+/// Details of an associated payment record.
+class PaymentRecordModel {
+  const PaymentRecordModel({
+    required this.id,
+    required this.bookingId,
+    required this.method,
+    required this.status,
+    required this.amountEgp,
+    this.tipEgp = 0,
+    this.externalReference,
+    this.paidAt,
+    required this.createdAt,
+  });
+
+  final String id;
+  final String bookingId;
+  final String method;
+  final String status;
+  final int amountEgp;
+  final int tipEgp;
+  final String? externalReference;
+  final String? paidAt;
+  final String createdAt;
+
+  factory PaymentRecordModel.fromJson(Map<String, dynamic> json) {
+    return PaymentRecordModel(
+      id: json['id'] as String? ?? '',
+      bookingId: json['bookingId'] as String? ?? '',
+      method: json['method'] as String? ?? 'CASH_ON_SERVICE',
+      status: json['status'] as String? ?? 'PENDING',
+      amountEgp: (json['amountEgp'] as num?)?.toInt() ?? 0,
+      tipEgp: (json['tipEgp'] as num?)?.toInt() ?? 0,
+      externalReference: json['externalReference'] as String?,
+      paidAt: json['paidAt'] as String?,
+      createdAt: json['createdAt'] as String? ?? '',
+    );
+  }
+
+  Map<String, dynamic> toJson() => {
+        'id': id,
+        'bookingId': bookingId,
+        'method': method,
+        'status': status,
+        'amountEgp': amountEgp,
+        'tipEgp': tipEgp,
+        'externalReference': externalReference,
+        'paidAt': paidAt,
+        'createdAt': createdAt,
       };
 }
 
@@ -157,6 +234,7 @@ class BookingDetailModel {
     this.offering = const {},
     this.address = const {},
     this.proProfile,
+    this.payment,
     this.statusEvents = const [],
     required this.createdAt,
   });
@@ -181,6 +259,7 @@ class BookingDetailModel {
   final Map<String, dynamic> offering;
   final Map<String, dynamic> address;
   final Map<String, dynamic>? proProfile;
+  final PaymentRecordModel? payment;
   final List<dynamic> statusEvents;
   final String createdAt;
 
@@ -200,13 +279,20 @@ class BookingDetailModel {
               ?.map((e) => e.toString())
               .toList() ??
           const [],
-      pricing: json['pricing'] != null
+      pricing: json['pricing'] is Map<String, dynamic>
           ? BookingPricingModel.fromJson(json['pricing'] as Map<String, dynamic>)
-          : BookingPricingModel.fromJson(json),
+          : (json['baseInspectionEgp'] != null
+              ? BookingPricingModel.fromJson(json)
+              : throw const FormatException(
+                  'Missing required pricing data in booking',
+                )),
       arrivalPinCode: json['arrivalPinCode'] as String?,
       offering: (json['offering'] as Map<String, dynamic>?) ?? const {},
       address: (json['address'] as Map<String, dynamic>?) ?? const {},
       proProfile: json['proProfile'] as Map<String, dynamic>?,
+      payment: json['payment'] != null
+          ? PaymentRecordModel.fromJson(json['payment'] as Map<String, dynamic>)
+          : null,
       statusEvents: (json['statusEvents'] as List<dynamic>?) ?? const [],
       createdAt: json['createdAt'] as String? ?? '',
     );
