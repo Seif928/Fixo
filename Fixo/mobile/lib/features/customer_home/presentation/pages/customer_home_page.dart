@@ -11,6 +11,7 @@ import '../../../../core/widgets/fixo_brand_mark.dart';
 import '../../../../core/widgets/fixo_buttons.dart';
 import '../../../../core/widgets/fixo_cards.dart';
 import '../../../auth/presentation/controllers/auth_controller.dart';
+import '../../domain/marketplace_models.dart';
 import '../controllers/customer_home_controller.dart';
 import '../widgets/customer_home_widgets.dart';
 
@@ -38,22 +39,17 @@ class _CustomerHomePageState extends ConsumerState<CustomerHomePage> {
     super.dispose();
   }
 
-  void _showBookingPreviewFeedback(BuildContext context, String itemTitle) {
-    final isArabic = ref.read(appLocaleProvider).languageCode == 'ar';
-    ScaffoldMessenger.of(context)
-      ..hideCurrentSnackBar()
-      ..showSnackBar(
-        SnackBar(
-          behavior: SnackBarBehavior.floating,
-          backgroundColor: FixoColors.primaryForest,
-          content: Text(
-            isArabic
-                ? 'تم اختيار: $itemTitle — سيتم ربط شاشة الحجز في المرحلة القادمة.'
-                : 'Selected: $itemTitle — Booking flow connects in Phase 3.',
-            style: FixoTypography.bodySm(color: Colors.white),
-          ),
-        ),
-      );
+  void _navigateToCreateBooking({
+    ServiceOfferModel? offering,
+    ProfessionalCardModel? preferredPro,
+  }) {
+    context.push(
+      AppRoutes.createBooking,
+      extra: <String, dynamic>{
+        'offering': ?offering,
+        'preferredPro': ?preferredPro,
+      },
+    );
   }
 
   @override
@@ -561,9 +557,8 @@ class _CustomerHomePageState extends ConsumerState<CustomerHomePage> {
             child: SeasonalPromoHeroCard(
               offer: seasonalPromo,
               isArabic: isArabic,
-              onBookNow: () => _showBookingPreviewFeedback(
-                context,
-                seasonalPromo.localizedTitle(isArabic),
+              onBookNow: () => _navigateToCreateBooking(
+                offering: seasonalPromo,
               ),
             ),
           ),
@@ -668,9 +663,8 @@ class _CustomerHomePageState extends ConsumerState<CustomerHomePage> {
             child: BundleSaveInspectionCard(
               offer: bundleOffer,
               isArabic: isArabic,
-              onTap: () => _showBookingPreviewFeedback(
-                context,
-                bundleOffer.localizedTitle(isArabic),
+              onTap: () => _navigateToCreateBooking(
+                offering: bundleOffer,
               ),
             ),
           ),
@@ -734,9 +728,8 @@ class _CustomerHomePageState extends ConsumerState<CustomerHomePage> {
                   RecommendedProCard(
                     professional: professionals[i],
                     isArabic: isArabic,
-                    onBookSlot: () => _showBookingPreviewFeedback(
-                      context,
-                      professionals[i].localizedName(isArabic),
+                    onBookSlot: () => _navigateToCreateBooking(
+                      preferredPro: professionals[i],
                     ),
                   ),
                 ],
@@ -783,10 +776,20 @@ class _CustomerHomePageState extends ConsumerState<CustomerHomePage> {
           ),
           child: ConciergeQuoteBanner(
             isArabic: isArabic,
-            onTap: () => _showBookingPreviewFeedback(
-              context,
-              isArabic ? 'عرض سعر مخصص' : 'Enterprise Facility Concierge',
-            ),
+            onTap: () {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  behavior: SnackBarBehavior.floating,
+                  backgroundColor: FixoColors.primaryForest,
+                  content: Text(
+                    isArabic
+                        ? 'فريق إدارة المرافق والشركات متاح على مدار الساعة.'
+                        : 'Enterprise facility concierge support is available 24/7.',
+                    style: FixoTypography.bodySm(color: Colors.white),
+                  ),
+                ),
+              );
+            },
           ),
         ),
 

@@ -47,6 +47,7 @@ export interface AuthenticatedUserProfile {
   preferredLocale: string;
   arrivalAlertsEnabled: boolean;
   rewardPoints: number;
+  addresses?: any[];
 }
 
 export interface OtpRequestResponse {

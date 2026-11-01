@@ -4,6 +4,8 @@ import 'package:go_router/go_router.dart';
 
 import '../../features/auth/presentation/controllers/auth_controller.dart';
 import '../../features/auth/presentation/pages/phone_auth_page.dart';
+import '../../features/booking/presentation/pages/create_booking_page.dart';
+import '../../features/customer_home/domain/marketplace_models.dart';
 import '../../features/customer_home/presentation/pages/customer_home_page.dart';
 import '../../features/onboarding/presentation/pages/onboarding_page.dart';
 import 'app_routes.dart';
@@ -80,6 +82,20 @@ GoRouter createAppRouter({
         path: AppRoutes.customerHome,
         name: 'customerHome',
         builder: (context, state) => const CustomerHomePage(),
+      ),
+      GoRoute(
+        path: AppRoutes.createBooking,
+        name: 'createBooking',
+        builder: (context, state) {
+          final extra = state.extra as Map<String, dynamic>?;
+          final offering = extra?['offering'] as ServiceOfferModel?;
+          final preferredPro =
+              extra?['preferredPro'] as ProfessionalCardModel?;
+          return CreateBookingPage(
+            initialOffering: offering,
+            initialPreferredPro: preferredPro,
+          );
+        },
       ),
     ],
   );

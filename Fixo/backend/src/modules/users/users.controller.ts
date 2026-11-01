@@ -44,8 +44,19 @@ export class UsersController {
     if (!profile) {
       throw new NotFoundException('Authenticated user profile not found.');
     }
+    const addresses = this.prisma.isDatabaseConnected()
+      ? await this.prisma.customerAddress.findMany({
+          where: { userId: currentUser.sub },
+          include: { zone: true },
+          orderBy: [{ isDefault: 'desc' }, { createdAt: 'desc' }],
+        })
+      : [];
+
     return {
-      user: profile,
+      user: {
+        ...profile,
+        addresses,
+      },
       storageMode: this.prisma.getStorageMode(),
     };
   }
