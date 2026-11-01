@@ -11,6 +11,7 @@ import { UserRole } from '@prisma/client';
 import { InMemoryStoreService } from '../../prisma/in-memory-store.service';
 import { PrismaModule } from '../../prisma/prisma.module';
 import { UsersController } from '../users/users.controller';
+import { UsersModule } from '../users/users.module';
 import { AuthController } from './auth.controller';
 import { AuthModule } from './auth.module';
 import { AuthService } from './auth.service';
@@ -30,7 +31,7 @@ describe('AuthModule & UsersController (Phase 2 Authentication)', () => {
 
   beforeEach(async () => {
     moduleRef = await Test.createTestingModule({
-      imports: [PrismaModule, AuthModule],
+      imports: [PrismaModule, AuthModule, UsersModule],
       controllers: [UsersController],
     }).compile();
 
