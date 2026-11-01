@@ -3,6 +3,126 @@ import 'dart:convert';
 import 'dart:io';
 import 'package:flutter_driver/flutter_driver.dart';
 
+void check(bool condition, String message) {
+  if (!condition) {
+    throw StateError('Verification check failed: $message');
+  }
+}
+
+Future<void> verifyPostgresBookingInvariants(
+  String bookingId, {
+  required String expectedOrderCode,
+  required String phase,
+}) async {
+  print('[$phase] Verifying PostgreSQL invariants in local fixo_test for booking $bookingId...');
+
+  final dbCheck = await Process.run(
+    'docker',
+    <String>[
+      'exec',
+      'fixo-postgres',
+      'psql',
+      '-U',
+      'fixo_user',
+      '-d',
+      'fixo_test',
+      '-t',
+      '-A',
+      '-c',
+      'SELECT current_database();',
+    ],
+  );
+  check(
+    dbCheck.exitCode == 0 && dbCheck.stdout.toString().trim() == 'fixo_test',
+    '[$phase] Target PostgreSQL database must be fixo_test, got: ${dbCheck.stdout} ${dbCheck.stderr}',
+  );
+
+  final safeId = bookingId.replaceAll("'", '');
+  final sql = '''
+SELECT json_build_object(
+  'bookingId', b.id,
+  'orderCode', b."orderCode",
+  'status', b.status::text,
+  'proProfileId', b."proProfileId",
+  'totalEgp', b."totalEgp",
+  'paymentCount', (SELECT COUNT(*)::int FROM "PaymentRecord" WHERE "bookingId" = b.id),
+  'pendingCashCount', (
+    SELECT COUNT(*)::int
+    FROM "PaymentRecord"
+    WHERE "bookingId" = b.id
+      AND method = 'CASH_ON_SERVICE'
+      AND status = 'PENDING'
+      AND "paidAt" IS NULL
+      AND "externalReference" IS NULL
+      AND "amountEgp" = b."totalEgp"
+  ),
+  'totalEventsCount', (SELECT COUNT(*)::int FROM "BookingStatusEvent" WHERE "bookingId" = b.id),
+  'draftToPendingDispatchCount', (
+    SELECT COUNT(*)::int
+    FROM "BookingStatusEvent"
+    WHERE "bookingId" = b.id
+      AND "fromStatus" = 'DRAFT'
+      AND "toStatus" = 'PENDING_DISPATCH'
+  )
+)::text
+FROM "Booking" b
+WHERE b.id = '$safeId';
+''';
+
+  final proc = await Process.start(
+    'docker',
+    <String>[
+      'exec',
+      '-i',
+      'fixo-postgres',
+      'psql',
+      '-U',
+      'fixo_user',
+      '-d',
+      'fixo_test',
+      '-t',
+      '-A',
+    ],
+  );
+  proc.stdin.writeln(sql);
+  await proc.stdin.close();
+
+  final stdoutStr = await proc.stdout.transform(utf8.decoder).join();
+  final stderrStr = await proc.stderr.transform(utf8.decoder).join();
+  final exitCode = await proc.exitCode;
+
+  check(
+    exitCode == 0,
+    '[$phase] psql query failed (exit $exitCode): $stderrStr',
+  );
+
+  final rawJson = stdoutStr.trim();
+  check(rawJson.isNotEmpty, '[$phase] Booking $bookingId not found in fixo_test');
+
+  final row = jsonDecode(rawJson) as Map<String, dynamic>;
+  print('[$phase] fixo_test DB snapshot: $row');
+
+  check(row['bookingId'] == bookingId, '[$phase] DB bookingId mismatch: ${row['bookingId']} != $bookingId');
+  check(row['orderCode'] == expectedOrderCode, '[$phase] DB orderCode mismatch: ${row['orderCode']} != $expectedOrderCode');
+  check(row['status'] == 'PENDING_DISPATCH', '[$phase] DB status must be PENDING_DISPATCH, got ${row['status']}');
+  check(row['proProfileId'] == null, '[$phase] DB proProfileId must be null, got ${row['proProfileId']}');
+  check(row['totalEgp'] == 350, '[$phase] DB totalEgp must be 350, got ${row['totalEgp']}');
+  check(row['paymentCount'] == 1, '[$phase] Expected exactly 1 PaymentRecord, got ${row['paymentCount']}');
+  check(
+    row['pendingCashCount'] == 1,
+    '[$phase] Expected exactly 1 PENDING CASH_ON_SERVICE PaymentRecord with paidAt null, got ${row['pendingCashCount']}',
+  );
+  check(
+    row['totalEventsCount'] == 2,
+    '[$phase] Expected exactly 2 BookingStatusEvent rows (NULL->DRAFT and DRAFT->PENDING_DISPATCH), got ${row['totalEventsCount']}',
+  );
+  check(
+    row['draftToPendingDispatchCount'] == 1,
+    '[$phase] Expected exactly 1 DRAFT -> PENDING_DISPATCH transition event, got ${row['draftToPendingDispatchCount']}',
+  );
+  print('--> [$phase] POSTGRESQL fixo_test INVARIANTS VERIFIED FOR BOOKING $bookingId!');
+}
+
 Future<void> safeScrollIntoView(
   FlutterDriver driver,
   SerializableFinder finder, {
@@ -318,6 +438,17 @@ void main() async {
     await driver.waitFor(find.text('Payment'), timeout: defaultTimeout);
     print('--> ARRIVED AT SCREEN 05 (PAYMENT / CHECKOUT)!');
 
+    final currentRoute = await driver.requestData('get_current_location');
+    print('Current GoRouter location on Screen 05: $currentRoute');
+    final routeMatch =
+        RegExp(r'^/customer/bookings/([^/]+)/checkout$').firstMatch(currentRoute);
+    check(
+      routeMatch != null && (routeMatch.group(1)?.isNotEmpty ?? false),
+      'Expected Screen 05 route /customer/bookings/:bookingId/checkout, got: $currentRoute',
+    );
+    final createdBookingId = routeMatch!.group(1)!;
+    print('--> CAPTURED EXACT CREATED BOOKING ID FROM RUN: $createdBookingId');
+
     // -------------------------------------------------------------------------
     // STEP 10: Screen 05 Checkout Summary UI & Cash Selection
     // -------------------------------------------------------------------------
@@ -408,6 +539,18 @@ void main() async {
       find.byValueKey('checkout-order-code-text'),
       timeout: defaultTimeout,
     );
+    final uiOrderCodeLabel = await driver.getText(
+      find.byValueKey('checkout-order-code-text'),
+      timeout: defaultTimeout,
+    );
+    check(
+      uiOrderCodeLabel.contains('#'),
+      'Displayed order code label must contain #, got: $uiOrderCodeLabel',
+    );
+    final uiOrderCode = uiOrderCodeLabel.split('#').last.trim();
+    check(uiOrderCode.isNotEmpty, 'Parsed order code must not be empty');
+    print('Captured UI Order Code: $uiOrderCode (label: "$uiOrderCodeLabel")');
+
     await driver.waitFor(
       find.byValueKey('checkout-return-home-btn'),
       timeout: defaultTimeout,
@@ -415,14 +558,12 @@ void main() async {
     print('--> SCREEN 05 CONFIRMATION VIEW DISPLAYED SUCCESSFULLY!');
 
     // -------------------------------------------------------------------------
-    // STEP 12: Out-of-Band Backend & Database Invariant Verification
+    // STEP 12: Out-of-Band Backend & Database Invariant Verification (Before Retry)
     // -------------------------------------------------------------------------
-    print('STEP 12: Verifying persisted data via backend HTTP APIs against port 3002...');
+    print('STEP 12: Verifying persisted data via backend HTTP APIs & PostgreSQL fixo_test...');
 
     final jwt = await driver.requestData('get_access_token');
-    if (jwt.isEmpty) {
-      throw Exception('Driver failed to retrieve authenticated JWT from running app');
-    }
+    check(jwt.isNotEmpty, 'Driver failed to retrieve authenticated JWT from running app');
     print('Retrieved customer JWT session from running app.');
 
     // 12A: GET /api/v1/users/me/addresses
@@ -431,101 +572,166 @@ void main() async {
     );
     addrReq.headers.set('Authorization', 'Bearer $jwt');
     final addrResp = await addrReq.close();
-    if (addrResp.statusCode != 200) {
-      throw Exception('GET /users/me/addresses failed with HTTP ${addrResp.statusCode}');
-    }
+    check(
+      addrResp.statusCode == 200,
+      'GET /users/me/addresses failed with HTTP ${addrResp.statusCode}',
+    );
     final addrData = jsonDecode(
       await addrResp.transform(utf8.decoder).join(),
     ) as Map<String, dynamic>;
     final addresses = addrData['addresses'] as List<dynamic>;
-    if (addresses.isEmpty) {
-      throw Exception('Expected at least 1 persisted address for customer');
-    }
-    final savedAddr = addresses.first as Map<String, dynamic>;
-    assert(savedAddr['label'] == 'Zayed Residence', 'Label mismatch');
-    assert(savedAddr['buildingLine'] == 'Building 14, Apt 4B', 'Building mismatch');
-    assert(savedAddr['districtLine'] == 'District 9, Sheikh Zayed', 'District mismatch');
-    assert(savedAddr['gateNotes'] == 'Gate 3, Intercom 402', 'Gate notes mismatch');
-    assert(savedAddr['isDefault'] == true, 'isDefault mismatch');
+    check(addresses.isNotEmpty, 'Expected at least 1 persisted address for customer');
+    final matchingAddresses = addresses
+        .whereType<Map<String, dynamic>>()
+        .where((a) => a['label'] == 'Zayed Residence' && a['buildingLine'] == 'Building 14, Apt 4B')
+        .toList();
+    check(matchingAddresses.isNotEmpty, 'Created address Zayed Residence not found in customer addresses');
+    final savedAddr = matchingAddresses.first;
+    check(savedAddr['districtLine'] == 'District 9, Sheikh Zayed', 'District mismatch');
+    check(savedAddr['gateNotes'] == 'Gate 3, Intercom 402', 'Gate notes mismatch');
+    check(savedAddr['isDefault'] == true, 'isDefault mismatch');
     print('--> PERSISTED CUSTOMER ADDRESS VERIFIED ON PORT 3002.');
 
-    // 12B: GET /api/v1/bookings
+    // 12B: GET /api/v1/bookings — find exact createdBookingId (never use bookings.first)
     final bookingsReq = await httpClient.getUrl(
       Uri.parse('$backendBaseUrl/bookings'),
     );
     bookingsReq.headers.set('Authorization', 'Bearer $jwt');
     final bookingsResp = await bookingsReq.close();
-    if (bookingsResp.statusCode != 200) {
-      throw Exception('GET /bookings failed with HTTP ${bookingsResp.statusCode}');
-    }
+    check(
+      bookingsResp.statusCode == 200,
+      'GET /bookings failed with HTTP ${bookingsResp.statusCode}',
+    );
     final bookingsData = jsonDecode(
       await bookingsResp.transform(utf8.decoder).join(),
     ) as Map<String, dynamic>;
     final bookings = bookingsData['bookings'] as List<dynamic>;
-    if (bookings.isEmpty) {
-      throw Exception('Expected at least 1 persisted booking for customer');
-    }
-    final latestBooking = bookings.first as Map<String, dynamic>;
-    final bookingId = latestBooking['id'] as String;
-    final orderCode = latestBooking['orderCode'] as String;
-    final status = latestBooking['status'] as String;
-
-    print('Booking state: ID=$bookingId, OrderCode=$orderCode, Status=$status');
-    assert(status == 'PENDING_DISPATCH', 'Status must be PENDING_DISPATCH');
-    print('--> BOOKING STATUS VERIFIED AS PENDING_DISPATCH!');
+    final matchingBookings = bookings
+        .whereType<Map<String, dynamic>>()
+        .where((b) => b['id'] == createdBookingId)
+        .toList();
+    check(
+      matchingBookings.length == 1,
+      'Expected exact created booking $createdBookingId in GET /bookings, found ${matchingBookings.length}',
+    );
+    final matchedBooking = matchingBookings.single;
+    check(matchedBooking['orderCode'] == uiOrderCode, 'Order code mismatch in GET /bookings');
+    check(matchedBooking['status'] == 'PENDING_DISPATCH', 'Status must be PENDING_DISPATCH in GET /bookings');
+    print('--> EXACT CREATED BOOKING ($createdBookingId / $uiOrderCode) VERIFIED AS PENDING_DISPATCH!');
 
     // 12C: GET /api/v1/bookings/:id & PaymentRecord verification
     final singleReq = await httpClient.getUrl(
-      Uri.parse('$backendBaseUrl/bookings/$bookingId'),
+      Uri.parse('$backendBaseUrl/bookings/$createdBookingId'),
     );
     singleReq.headers.set('Authorization', 'Bearer $jwt');
     final singleResp = await singleReq.close();
-    if (singleResp.statusCode != 200) {
-      throw Exception('GET /bookings/$bookingId failed with HTTP ${singleResp.statusCode}');
-    }
+    check(
+      singleResp.statusCode == 200,
+      'GET /bookings/$createdBookingId failed with HTTP ${singleResp.statusCode}',
+    );
     final singleData = jsonDecode(
       await singleResp.transform(utf8.decoder).join(),
     ) as Map<String, dynamic>;
 
-    assert(singleData['id'] == bookingId, 'Single booking ID mismatch');
-    assert(singleData['status'] == 'PENDING_DISPATCH', 'Status must be PENDING_DISPATCH');
+    check(singleData['id'] == createdBookingId, 'Single booking ID mismatch');
+    check(singleData['orderCode'] == uiOrderCode, 'Single booking orderCode mismatch');
+    check(singleData['status'] == 'PENDING_DISPATCH', 'Status must be PENDING_DISPATCH');
 
     final payment = singleData['payment'] as Map<String, dynamic>?;
-    if (payment == null) {
-      throw Exception('Expected payment record on checked-out booking');
-    }
+    check(payment != null, 'Expected payment record on checked-out booking');
     print('PaymentRecord details:');
-    print('  - Method: ${payment['method']} (Expected: CASH_ON_SERVICE)');
+    print('  - Method: ${payment!['method']} (Expected: CASH_ON_SERVICE)');
     print('  - Status: ${payment['status']} (Expected: PENDING)');
     print('  - PaidAt: ${payment['paidAt']} (Expected: null)');
     print('  - Amount: ${payment['amountEgp']} EGP (Expected: 350)');
 
-    assert(payment['method'] == 'CASH_ON_SERVICE', 'Payment method mismatch');
-    assert(payment['status'] == 'PENDING', 'Payment status mismatch');
-    assert(payment['paidAt'] == null, 'paidAt must be null for pending cash');
-    assert(payment['amountEgp'] == 350, 'amountEgp mismatch');
+    check(payment['method'] == 'CASH_ON_SERVICE', 'Payment method mismatch');
+    check(payment['status'] == 'PENDING', 'Payment status mismatch');
+    check(payment['paidAt'] == null, 'paidAt must be null for pending cash');
+    check(payment['amountEgp'] == 350, 'amountEgp mismatch');
     print('--> PAYMENT RECORD INVARIANTS VERIFIED!');
 
+    // 12D: Direct PostgreSQL fixo_test check BEFORE retry
+    await verifyPostgresBookingInvariants(
+      createdBookingId,
+      expectedOrderCode: uiOrderCode,
+      phase: 'BEFORE_RETRY',
+    );
+
     // -------------------------------------------------------------------------
-    // STEP 13: Idempotent Retry on POST /api/v1/bookings/:id/checkout
+    // STEP 13: Reopen Same Booking Through the App & Idempotent Retry
     // -------------------------------------------------------------------------
-    print('STEP 13: Verifying idempotent retry on POST /bookings/:id/checkout...');
+    print('STEP 13A: Returning to Customer Home and reopening booking $createdBookingId in the app...');
+    await safeScrollIntoView(
+      driver,
+      find.byValueKey('checkout-return-home-btn'),
+      timeout: defaultTimeout,
+    );
+    await driver.tap(
+      find.byValueKey('checkout-return-home-btn'),
+      timeout: defaultTimeout,
+    );
+    await driver.waitFor(find.text('FIXO'), timeout: defaultTimeout);
+    await driver.waitForAbsent(
+      find.byValueKey('checkout-confirmation-view'),
+      timeout: absentTimeout,
+    );
+    print('Returned to Customer Home; CheckoutPage unmounted.');
+
+    final goResp = await driver.requestData(
+      'go:/customer/bookings/$createdBookingId/checkout',
+    );
+    check(goResp == 'ok', 'Failed to navigate to /customer/bookings/$createdBookingId/checkout');
+
+    await driver.waitFor(
+      find.byValueKey('checkout-confirmation-view'),
+      timeout: defaultTimeout,
+    );
+    await driver.waitFor(
+      find.text('Booking Confirmed — Pending Dispatch'),
+      timeout: defaultTimeout,
+    );
+    final reopenedOrderCode = await driver.getText(
+      find.byValueKey('checkout-order-code-text'),
+      timeout: defaultTimeout,
+    );
+    check(
+      reopenedOrderCode == uiOrderCodeLabel,
+      'Reopened booking order code mismatch: $reopenedOrderCode != $uiOrderCodeLabel',
+    );
+    print('--> REOPENING SAME BOOKING ($createdBookingId) IN APP VERIFIED: shows existing confirmation ($reopenedOrderCode)!');
+
+    print('STEP 13B: Verifying idempotent retry on POST /bookings/$createdBookingId/checkout...');
     final retryReq = await httpClient.postUrl(
-      Uri.parse('$backendBaseUrl/bookings/$bookingId/checkout'),
+      Uri.parse('$backendBaseUrl/bookings/$createdBookingId/checkout'),
     );
     retryReq.headers.set('Authorization', 'Bearer $jwt');
     retryReq.headers.set('Content-Type', 'application/json');
     retryReq.write(jsonEncode({'paymentMethod': 'CASH_ON_SERVICE'}));
     final retryResp = await retryReq.close();
-    if (retryResp.statusCode != 200 && retryResp.statusCode != 201) {
-      throw Exception('Idempotent retry failed with HTTP ${retryResp.statusCode}');
-    }
+    check(
+      retryResp.statusCode == 200 || retryResp.statusCode == 201,
+      'Idempotent retry failed with HTTP ${retryResp.statusCode}',
+    );
     final retryData = jsonDecode(
       await retryResp.transform(utf8.decoder).join(),
     ) as Map<String, dynamic>;
-    assert(retryData['id'] == bookingId, 'ID changed on retry');
-    assert(retryData['status'] == 'PENDING_DISPATCH', 'Status changed on retry');
-    print('--> IDEMPOTENT RETRY VERIFIED: HTTP ${retryResp.statusCode}, status remains PENDING_DISPATCH.');
+    check(retryData['id'] == createdBookingId, 'ID changed on retry');
+    check(retryData['status'] == 'PENDING_DISPATCH', 'Status changed on retry');
+    final retryPayment = retryData['payment'] as Map<String, dynamic>?;
+    check(retryPayment != null, 'Payment record missing on retry response');
+    check(retryPayment!['id'] == payment['id'], 'PaymentRecord ID changed on retry (duplicate created)');
+    check(retryPayment['method'] == 'CASH_ON_SERVICE', 'Payment method changed on retry');
+    check(retryPayment['status'] == 'PENDING', 'Payment status changed on retry');
+    check(retryPayment['paidAt'] == null, 'paidAt must remain null on retry');
+    print('--> IDEMPOTENT RETRY HTTP RESPONSE VERIFIED: HTTP ${retryResp.statusCode}, same PaymentRecord ID ${payment['id']}.');
+
+    // 13C: Direct PostgreSQL fixo_test check AFTER retry
+    await verifyPostgresBookingInvariants(
+      createdBookingId,
+      expectedOrderCode: uiOrderCode,
+      phase: 'AFTER_RETRY',
+    );
 
     print('================================================================');
     print('ALL PHASE 4C REAL CUSTOMER BOOKING E2E VERIFICATIONS PASSED!');

@@ -3,6 +3,7 @@
 // Launches the normal FixoApp without router overrides or forced authentication.
 // Authentication is performed dynamically via the live development OTP flow.
 import 'package:fixo_mobile/app/app.dart';
+import 'package:fixo_mobile/app/router/app_router.dart';
 import 'package:fixo_mobile/core/storage/secure_token_storage.dart';
 import 'package:fixo_mobile/features/customer_home/presentation/controllers/customer_home_controller.dart';
 import 'package:flutter/material.dart';
@@ -25,6 +26,19 @@ void main() {
             .read(secureTokenStorageProvider)
             .readAccessToken();
         return token ?? '';
+      }
+      if (message == 'get_current_location') {
+        return container
+            .read(appRouterProvider)
+            .routeInformationProvider
+            .value
+            .uri
+            .path;
+      }
+      if (message != null && message.startsWith('go:')) {
+        final targetRoute = message.substring(3);
+        container.read(appRouterProvider).go(targetRoute);
+        return 'ok';
       }
       return 'unknown';
     },
