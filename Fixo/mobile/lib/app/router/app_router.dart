@@ -1,8 +1,11 @@
 import 'package:flutter/foundation.dart';
+import 'package:flutter/widgets.dart';
+import '../../core/motion/fixo_motion.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../features/auth/presentation/controllers/auth_controller.dart';
+import '../../features/auth/presentation/controllers/account_entry_controller.dart';
 import '../../features/auth/presentation/pages/phone_auth_page.dart';
 import '../../features/auth/presentation/pages/email_auth_page.dart';
 import '../../features/auth/presentation/pages/phone_password_page.dart';
@@ -17,6 +20,7 @@ import '../../features/customer_home/presentation/pages/customer_home_page.dart'
 import '../../features/onboarding/presentation/pages/onboarding_page.dart';
 import '../../features/payment/presentation/pages/checkout_page.dart';
 import '../../features/pro/presentation/pages/incoming_job_page.dart';
+import '../../features/pro/presentation/pages/pro_account_entry_page.dart';
 import '../../features/pro/presentation/pages/pro_dashboard_page.dart';
 import '../../features/pro/presentation/pages/pro_signup_page.dart';
 import '../../features/pro/presentation/pages/pro_skills_page.dart';
@@ -46,9 +50,12 @@ final appRouterProvider = Provider<GoRouter>((ref) {
 
   return createAppRouter(
     initialLocation: ref.read(authControllerProvider).isAuthenticated
-        ? AppRoutes.customerHome
+        ? (ref.read(professionalEntryProvider)
+              ? AppRoutes.proEntry
+              : AppRoutes.customerHome)
         : AppRoutes.onboarding,
     refreshListenable: refreshNotifier,
+    professionalIntent: () => ref.read(professionalEntryProvider),
     isAuthenticated: () => ref.read(authControllerProvider).isAuthenticated,
     requiresProfileSetup: () =>
         ref.read(authControllerProvider).session?.user.requiresProfileSetup ==
@@ -61,6 +68,7 @@ GoRouter createAppRouter({
   Listenable? refreshListenable,
   bool Function()? isAuthenticated,
   bool Function()? requiresProfileSetup,
+  bool Function()? professionalIntent,
 }) {
   return GoRouter(
     initialLocation: initialLocation,
@@ -71,25 +79,37 @@ GoRouter createAppRouter({
       }
       final authed = isAuthenticated();
       final path = state.uri.path;
+      final wantsPro =
+          professionalIntent?.call() == true ||
+          state.uri.queryParameters['account'] == 'pro' ||
+          path.startsWith('/pro');
+      final authPath =
+          '${AppRoutes.phoneAuth}${wantsPro ? '?account=pro' : ''}';
       final setupRequired = authed && requiresProfileSetup?.call() == true;
       if (setupRequired && path != AppRoutes.phoneAuth) {
-        return AppRoutes.phoneAuth;
+        return authPath;
       }
 
       // Protect customer and pro routes when unauthenticated
-      if (!authed && (path.startsWith('/customer') || path.startsWith('/pro'))) {
-        return AppRoutes.phoneAuth;
+      if (!authed &&
+          (path.startsWith('/customer') || path.startsWith('/pro'))) {
+        return authPath;
       }
 
       // Redirect authenticated users away from the login screen to Customer Home
       if (authed && !setupRequired && path == AppRoutes.phoneAuth) {
-        return AppRoutes.customerHome;
+        return wantsPro ? AppRoutes.proEntry : AppRoutes.customerHome;
       }
 
       return null;
     },
     routes: <RouteBase>[
-      GoRoute(
+      _motionRoute(
+        path: AppRoutes.proEntry,
+        name: 'proEntry',
+        builder: (_, _) => const ProAccountEntryPage(),
+      ),
+      _motionRoute(
         path: AppRoutes.myOrders,
         name: 'myOrders',
         builder: (_, state) {
@@ -97,12 +117,12 @@ GoRouter createAppRouter({
           return OrdersPage(key: ValueKey(chats), showChats: chats);
         },
       ),
-      GoRoute(
+      _motionRoute(
         path: AppRoutes.customerProfile,
         name: 'customerProfile',
         builder: (_, _) => const ProfilePage(),
       ),
-      GoRoute(
+      _motionRoute(
         path: AppRoutes.customerChat,
         name: 'customerChat',
         builder: (context, state) => ChatPage(
@@ -110,12 +130,12 @@ GoRouter createAppRouter({
           bookingId: state.pathParameters['orderId']!,
         ),
       ),
-      GoRoute(
+      _motionRoute(
         path: AppRoutes.onboarding,
         name: 'onboarding',
         builder: (context, state) => const OnboardingPage(),
       ),
-      GoRoute(
+      _motionRoute(
         path: AppRoutes.phoneAuth,
         name: 'phoneAuth',
         builder: (context, state) {
@@ -126,15 +146,19 @@ GoRouter createAppRouter({
               state.uri.queryParameters['method'] == 'dev-otp') {
             return const PhoneAuthPage();
           }
-          return const PhonePasswordPage();
+          return PhonePasswordPage(
+            professional: state.uri.queryParameters['account'] == 'pro'
+                ? true
+                : null,
+          );
         },
       ),
-      GoRoute(
+      _motionRoute(
         path: AppRoutes.customerHome,
         name: 'customerHome',
         builder: (context, state) => const CustomerHomePage(),
       ),
-      GoRoute(
+      _motionRoute(
         path: AppRoutes.createBooking,
         name: 'createBooking',
         builder: (context, state) {
@@ -147,7 +171,7 @@ GoRouter createAppRouter({
           );
         },
       ),
-      GoRoute(
+      _motionRoute(
         path: AppRoutes.checkout,
         name: 'checkout',
         builder: (context, state) {
@@ -155,7 +179,7 @@ GoRouter createAppRouter({
           return CheckoutPage(bookingId: bookingId);
         },
       ),
-      GoRoute(
+      _motionRoute(
         path: AppRoutes.orderTracking,
         name: 'orderTracking',
         builder: (context, state) {
@@ -163,7 +187,7 @@ GoRouter createAppRouter({
           return OrderTrackingPage(orderId: orderId);
         },
       ),
-      GoRoute(
+      _motionRoute(
         path: AppRoutes.rateReview,
         name: 'rateReview',
         builder: (context, state) {
@@ -171,32 +195,32 @@ GoRouter createAppRouter({
           return ReviewPage(orderId: orderId);
         },
       ),
-      GoRoute(
+      _motionRoute(
         path: AppRoutes.proSignUp,
         name: 'proSignUp',
         builder: (context, state) => const ProSignUpPage(),
       ),
-      GoRoute(
+      _motionRoute(
         path: AppRoutes.proSkills,
         name: 'proSkills',
         builder: (context, state) => const ProSkillsPage(),
       ),
-      GoRoute(
+      _motionRoute(
         path: AppRoutes.proVerificationDocs,
         name: 'proVerificationDocs',
         builder: (context, state) => const ProVerificationDocsPage(),
       ),
-      GoRoute(
+      _motionRoute(
         path: AppRoutes.proVerificationStatus,
         name: 'proVerificationStatus',
         builder: (context, state) => const ProVerificationStatusPage(),
       ),
-      GoRoute(
+      _motionRoute(
         path: AppRoutes.proDashboard,
         name: 'proDashboard',
         builder: (context, state) => const ProDashboardPage(),
       ),
-      GoRoute(
+      _motionRoute(
         path: AppRoutes.incomingJobRequest,
         name: 'incomingJobRequest',
         builder: (context, state) {
@@ -207,3 +231,35 @@ GoRouter createAppRouter({
     ],
   );
 }
+
+GoRoute _motionRoute({
+  required String path,
+  required String name,
+  required Widget Function(BuildContext, GoRouterState) builder,
+}) => GoRoute(
+  path: path,
+  name: name,
+  pageBuilder: (context, state) => CustomTransitionPage<void>(
+    key: state.pageKey,
+    name: state.name,
+    restorationId: state.pageKey.value,
+    transitionDuration: FixoMotion.reduced(context)
+        ? Duration.zero
+        : FixoMotion.page,
+    reverseTransitionDuration: FixoMotion.reduced(context)
+        ? Duration.zero
+        : FixoMotion.page,
+    child: builder(context, state),
+    transitionsBuilder: (context, animation, secondaryAnimation, child) =>
+        FixoPageMotion(
+          animation: animation,
+          slide: !const [
+            AppRoutes.customerHome,
+            AppRoutes.myOrders,
+            AppRoutes.customerProfile,
+            AppRoutes.proDashboard,
+          ].contains(path),
+          child: child,
+        ),
+  ),
+);

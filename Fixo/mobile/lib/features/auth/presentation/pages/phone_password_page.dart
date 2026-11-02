@@ -12,10 +12,12 @@ import '../../../../core/widgets/fixo_cards.dart';
 import '../../data/email_access_service.dart';
 import '../../domain/auth_models.dart';
 import '../controllers/auth_controller.dart';
+import '../controllers/account_entry_controller.dart';
 
 /// Screen 02: Google first registration, phone/password for subsequent sign-in.
 class PhonePasswordPage extends ConsumerStatefulWidget {
-  const PhonePasswordPage({super.key});
+  const PhonePasswordPage({super.key, this.professional});
+  final bool? professional;
   @override
   ConsumerState<PhonePasswordPage> createState() => _PhonePasswordPageState();
 }
@@ -27,6 +29,25 @@ class _PhonePasswordPageState extends ConsumerState<PhonePasswordPage> {
   bool _busy = false, _obscure = true;
   String? _error;
   bool get _ar => ref.read(appLocaleProvider).languageCode == 'ar';
+
+  bool get _professional =>
+      widget.professional ?? ref.read(professionalEntryProvider);
+  String get _destination =>
+      _professional ? AppRoutes.proEntry : AppRoutes.customerHome;
+
+  @override
+  void initState() {
+    super.initState();
+    if (widget.professional != null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          ref
+              .read(professionalEntryProvider.notifier)
+              .selectProfessional(widget.professional!);
+        }
+      });
+    }
+  }
 
   @override
   void dispose() {
@@ -83,8 +104,8 @@ class _PhonePasswordPageState extends ConsumerState<PhonePasswordPage> {
     _confirm.clear();
     context.go(
       session.user.requiresProfileSetup
-          ? AppRoutes.phoneAuth
-          : AppRoutes.customerHome,
+          ? '${AppRoutes.phoneAuth}${_professional ? '?account=pro' : ''}'
+          : _destination,
     );
   }
 
@@ -142,6 +163,8 @@ class _PhonePasswordPageState extends ConsumerState<PhonePasswordPage> {
   Widget build(BuildContext context) {
     final session = ref.watch(authControllerProvider).session;
     final setup = session?.user.requiresProfileSetup == true;
+    final bool professional =
+        widget.professional ?? ref.watch<bool>(professionalEntryProvider);
     final locale = ref.watch(appLocaleProvider);
     final ar = locale.languageCode == 'ar';
     final palette = context.fixoPalette;
@@ -226,6 +249,10 @@ class _PhonePasswordPageState extends ConsumerState<PhonePasswordPage> {
                           ? (ar
                                 ? 'أكمل حسابك مرة واحدة'
                                 : 'Complete your account once')
+                          : professional
+                          ? (ar
+                                ? 'أهلاً بيك في FIXO للفنيين'
+                                : 'Welcome to FIXO Pro')
                           : (ar ? 'مرحباً بك في FIXO' : 'Welcome to FIXO'),
                       style: FixoTypography.headlineLgMobile(
                         color: palette.deepForest,
@@ -485,7 +512,7 @@ class _PhonePasswordPageState extends ConsumerState<PhonePasswordPage> {
                                             )
                                             .acceptUpdatedProfile(user);
                                         if (context.mounted) {
-                                          context.go(AppRoutes.customerHome);
+                                          context.go(_destination);
                                         }
                                       } else {
                                         await _accept(

@@ -1187,101 +1187,118 @@ export class ProService {
     bookingId: string,
     dto: ProAdvanceJobStatusDto,
   ) {
-    const profile = await this.prisma.proProfile.findUnique({
-      where: { userId },
-    });
-
-    if (!profile) {
-      throw new NotFoundException('Professional profile was not found.');
-    }
-
-    if (profile.verificationStatus !== ProVerificationStatus.APPROVED) {
-      throw new ForbiddenException(
-        'Only APPROVED professionals can update assigned job status.',
-      );
-    }
-
-    const booking = await this.prisma.booking.findUnique({
-      where: { id: bookingId },
-      include: { payment: true },
-    });
-
-    if (!booking) {
-      throw new NotFoundException(`Booking "${bookingId}" was not found.`);
-    }
-
-    if (booking.proProfileId !== profile.id) {
-      throw new ForbiddenException(
-        'You are not the assigned professional for this booking.',
-      );
-    }
-
-    const expectedFromStatus: Record<
-      ProAdvanceJobStatusDto['toStatus'],
-      BookingStatus
-    > = {
-      PRO_EN_ROUTE: BookingStatus.CONFIRMED,
-      ARRIVED: BookingStatus.PRO_EN_ROUTE,
-      IN_PROGRESS: BookingStatus.ARRIVED,
-      COMPLETED: BookingStatus.IN_PROGRESS,
-    };
-
-    const requiredCurrent = expectedFromStatus[dto.toStatus];
-    if (booking.status !== requiredCurrent) {
-      throw new BadRequestException(
-        `Invalid status transition from "${booking.status}" to "${dto.toStatus}". Expected current status "${requiredCurrent}".`,
-      );
-    }
-
-    // Arrival PIN verification with bounded attempts (max 5) when transitioning ARRIVED -> IN_PROGRESS
-    if (dto.toStatus === BookingStatus.IN_PROGRESS) {
-      const failedAttempts = await this.prisma.bookingStatusEvent.count({
-        where: {
-          bookingId: booking.id,
-          note: INTERNAL_FAILED_PIN_EVENT_NOTE,
-        },
+    const result = await this.prisma.$transaction(async (tx) => {
+      // Serialize with other transitions and customer cancellation before reading state.
+      if (this.prisma.isDatabaseConnected()) {
+        await tx.$queryRaw`SELECT id FROM "Booking" WHERE id = ${bookingId} FOR UPDATE`;
+      }
+      const profile = await tx.proProfile.findUnique({
+        where: { userId },
       });
 
-      if (failedAttempts >= MAX_ARRIVAL_PIN_ATTEMPTS) {
+      if (!profile) {
+        throw new NotFoundException('Professional profile was not found.');
+      }
+
+      if (profile.verificationStatus !== ProVerificationStatus.APPROVED) {
         throw new ForbiddenException(
-          `Maximum arrival PIN verification attempts (${MAX_ARRIVAL_PIN_ATTEMPTS}) exceeded for this booking.`,
+          'Only APPROVED professionals can update assigned job status.',
         );
       }
 
-      if (
-        !dto.arrivalPinCode ||
-        dto.arrivalPinCode.trim() !== booking.arrivalPinCode
-      ) {
-        await this.prisma.bookingStatusEvent.create({
-          data: {
+      const booking = await tx.booking.findUnique({
+        where: { id: bookingId },
+        include: {
+          offering: { include: { category: true } },
+          address: { include: { zone: true } },
+          customer: { select: { id: true, fullName: true, phone: true } },
+          payment: true,
+        },
+      });
+
+      if (!booking) {
+        throw new NotFoundException(`Booking "${bookingId}" was not found.`);
+      }
+
+      if (booking.proProfileId !== profile.id) {
+        throw new ForbiddenException(
+          'You are not the assigned professional for this booking.',
+        );
+      }
+
+      const expectedFromStatus: Record<
+        ProAdvanceJobStatusDto['toStatus'],
+        BookingStatus
+      > = {
+        PRO_EN_ROUTE: BookingStatus.CONFIRMED,
+        ARRIVED: BookingStatus.PRO_EN_ROUTE,
+        IN_PROGRESS: BookingStatus.ARRIVED,
+        COMPLETED: BookingStatus.IN_PROGRESS,
+      };
+
+      if (booking.status === dto.toStatus) {
+        return { updated: booking, changed: false, pinError: null };
+      }
+
+      const requiredCurrent = expectedFromStatus[dto.toStatus];
+      if (booking.status !== requiredCurrent) {
+        throw new BadRequestException(
+          `Invalid status transition from "${booking.status}" to "${dto.toStatus}". Expected current status "${requiredCurrent}".`,
+        );
+      }
+
+      // Arrival PIN verification with bounded attempts (max 5) when transitioning ARRIVED -> IN_PROGRESS
+      if (dto.toStatus === BookingStatus.IN_PROGRESS) {
+        const failedAttempts = await tx.bookingStatusEvent.count({
+          where: {
             bookingId: booking.id,
-            fromStatus: BookingStatus.ARRIVED,
-            toStatus: BookingStatus.ARRIVED,
-            actorUserId: userId,
             note: INTERNAL_FAILED_PIN_EVENT_NOTE,
           },
         });
 
-        const remainingAttempts = Math.max(
-          0,
-          MAX_ARRIVAL_PIN_ATTEMPTS - (failedAttempts + 1),
-        );
-        throw new BadRequestException(
-          `Invalid 4-digit Arrival PIN code. ${remainingAttempts} attempt(s) remaining.`,
-        );
+        if (failedAttempts >= MAX_ARRIVAL_PIN_ATTEMPTS) {
+          throw new ForbiddenException(
+            `Maximum arrival PIN verification attempts (${MAX_ARRIVAL_PIN_ATTEMPTS}) exceeded for this booking.`,
+          );
+        }
+
+        if (
+          !dto.arrivalPinCode ||
+          dto.arrivalPinCode.trim() !== booking.arrivalPinCode
+        ) {
+          await tx.bookingStatusEvent.create({
+            data: {
+              bookingId: booking.id,
+              fromStatus: BookingStatus.ARRIVED,
+              toStatus: BookingStatus.ARRIVED,
+              actorUserId: userId,
+              note: INTERNAL_FAILED_PIN_EVENT_NOTE,
+            },
+          });
+
+          const remainingAttempts = Math.max(
+            0,
+            MAX_ARRIVAL_PIN_ATTEMPTS - (failedAttempts + 1),
+          );
+          // Commit the failed attempt; throwing inside the transaction would roll it back.
+          return {
+            updated: null, changed: false,
+            pinError: new BadRequestException(
+              `Invalid 4-digit Arrival PIN code. ${remainingAttempts} attempt(s) remaining.`,
+            ),
+          };
+        }
       }
-    }
 
-    const now = new Date();
-    const defaultNotes: Record<ProAdvanceJobStatusDto['toStatus'], string> = {
-      PRO_EN_ROUTE: 'Professional departed toward customer location',
-      ARRIVED: 'Professional arrived at customer address',
-      IN_PROGRESS: 'Customer 4-digit Arrival PIN verified — service started',
-      COMPLETED: 'Service completed and cash settlement confirmed',
-    };
+      const now = new Date();
+      const defaultNotes: Record<ProAdvanceJobStatusDto['toStatus'], string> = {
+        PRO_EN_ROUTE: 'Professional departed toward customer location',
+        ARRIVED: 'Professional arrived at customer address',
+        IN_PROGRESS: 'Customer 4-digit Arrival PIN verified — service started',
+        COMPLETED: 'Service completed and cash settlement confirmed',
+      };
 
-    const updated = await this.prisma.$transaction(async (tx) => {
-      const nextBooking = await tx.booking.update({
+      await tx.booking.update({
         where: { id: booking.id },
         data: {
           status: dto.toStatus as BookingStatus,
@@ -1330,13 +1347,23 @@ export class ProService {
         },
       });
 
-      return nextBooking;
+      const updated = await tx.booking.findUniqueOrThrow({
+        where: { id: booking.id },
+        include: {
+          offering: { include: { category: true } },
+          address: { include: { zone: true } },
+          customer: { select: { id: true, fullName: true, phone: true } },
+          payment: true,
+        },
+      });
+      return { updated, changed: true, pinError: null };
     });
 
-    if (this.pushService) {
+    if (result.pinError) throw result.pinError;
+    const updated = result.updated!;
+    if (result.changed && this.pushService) {
       await this.pushService.notify(updated.customerId, updated.id);
     }
-
     return this.mapProJobSummary(updated);
   }
 

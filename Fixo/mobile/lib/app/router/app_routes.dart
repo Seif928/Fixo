@@ -21,6 +21,8 @@ abstract final class AppRoutes {
       '/customer/profile'; // 10_profile_notifications
 
   // Professional Flow (11–16)
+  static const String proEntry =
+      '/pro'; // Resolve the authenticated dossier stage.
   static const String proSignUp =
       '/pro/onboarding/signup'; // 11_pro_sign_up_details
   static const String proSkills =

@@ -58,11 +58,8 @@ describe('Pro Workflows PostgreSQL Real Database Integration Suite (fixo_test)',
   let customerAddress: any;
 
   beforeAll(async () => {
-    testDbUrl =
-      process.env.TEST_DATABASE_URL ??
-      'postgresql://fixo_user:fixo_dev_password@localhost:5432/fixo_test?schema=public';
-
-    validateTestDatabaseTarget(testDbUrl);
+    validateTestDatabaseTarget(process.env.TEST_DATABASE_URL);
+    testDbUrl = process.env.TEST_DATABASE_URL!;
 
     process.env.TEST_DATABASE_URL = testDbUrl;
     process.env.DATABASE_URL = testDbUrl;
@@ -450,13 +447,20 @@ describe('Pro Workflows PostgreSQL Real Database Integration Suite (fixo_test)',
       expect(inProgress.status).toBe(BookingStatus.IN_PROGRESS);
 
       // 5. IN_PROGRESS -> COMPLETED (marks CASH_ON_SERVICE PaymentRecord PAID and updates earnings)
-      const completed = await proService.advanceBookingStatus(
-        proApplicantUser.id,
-        bookingId,
-        { toStatus: 'COMPLETED' },
+      const completions = await Promise.all(
+        Array.from({ length: 3 }, () =>
+          proService.advanceBookingStatus(proApplicantUser.id, bookingId, {
+            toStatus: 'COMPLETED',
+          }),
+        ),
       );
+      const completed = completions[0];
+      expect(completions.every((result) => result.status === BookingStatus.COMPLETED)).toBe(true);
       expect(completed.status).toBe(BookingStatus.COMPLETED);
       expect(completed.completedAt).not.toBeNull();
+      expect(await prisma.bookingStatusEvent.count({
+        where: { bookingId, toStatus: BookingStatus.COMPLETED },
+      })).toBe(1);
 
       const dbPayment = await prisma.paymentRecord.findUnique({
         where: { bookingId },
@@ -497,14 +501,18 @@ describe('Pro Workflows PostgreSQL Real Database Integration Suite (fixo_test)',
       });
 
       const wrongPin = bk.arrivalPinCode === '1111' ? '2222' : '1111';
-      for (let i = 0; i < 5; i++) {
-        await expect(
+      const attempts = await Promise.allSettled(
+        Array.from({ length: 8 }, () =>
           proService.advanceBookingStatus(proApplicantUser.id, bk.id, {
             toStatus: 'IN_PROGRESS',
             arrivalPinCode: wrongPin,
           }),
-        ).rejects.toThrow(BadRequestException);
-      }
+        ),
+      );
+      expect(attempts.every((attempt) => attempt.status === 'rejected')).toBe(true);
+      expect(await prisma.bookingStatusEvent.count({
+        where: { bookingId: bk.id, fromStatus: BookingStatus.ARRIVED, toStatus: BookingStatus.ARRIVED },
+      })).toBe(5);
 
       // 6th attempt even with the CORRECT PIN must be blocked with ForbiddenException
       await expect(

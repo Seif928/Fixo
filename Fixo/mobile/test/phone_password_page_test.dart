@@ -8,6 +8,8 @@ import 'package:fixo_mobile/core/theme/fixo_theme.dart';
 import 'package:fixo_mobile/features/auth/data/email_access_service.dart';
 import 'package:fixo_mobile/features/auth/domain/auth_models.dart';
 import 'package:fixo_mobile/features/auth/presentation/pages/phone_password_page.dart';
+import 'package:fixo_mobile/core/l10n/app_locale_controller.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 const completeUser = AuthUser(
   id: 'test-user',
@@ -71,7 +73,9 @@ class FakePhoneAccess extends EmailAccessService {
 
 void main() {
   late FakePhoneAccess access;
-  Future<void> pump(WidgetTester tester) async {
+  Future<void> pump(WidgetTester tester, {bool professional = false}) async {
+    SharedPreferences.setMockInitialValues({'fixo.entry.pro': professional});
+    final preferences = await SharedPreferences.getInstance();
     access = FakePhoneAccess();
     final router = GoRouter(
       initialLocation: '/auth/phone',
@@ -84,12 +88,17 @@ void main() {
           path: '/customer/home',
           builder: (_, _) => const Scaffold(body: Text('Signed in')),
         ),
+        GoRoute(
+          path: '/pro',
+          builder: (_, _) => const Scaffold(body: Text('Professional entry')),
+        ),
       ],
     );
     addTearDown(router.dispose);
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
+          appPreferencesProvider.overrideWithValue(preferences),
           emailAccessProvider.overrideWithValue(access),
           secureTokenStorageProvider.overrideWithValue(MemoryTokenStorage()),
         ],
@@ -101,6 +110,35 @@ void main() {
     );
     await tester.pumpAndSettle();
   }
+
+  testWidgets(
+    'professional login goes to professional onboarding without granting a role',
+    (tester) async {
+      await pump(tester, professional: true);
+      expect(find.text('Welcome to FIXO Pro'), findsOneWidget);
+      await tester.enterText(
+        find.byKey(const Key('phone-password-number')),
+        '01023456789',
+      );
+      await tester.enterText(
+        find.byKey(const Key('phone-password-secret')),
+        'test-password',
+      );
+      final submit = find.byKey(const Key('phone-password-submit'));
+      await tester.ensureVisible(submit);
+      await tester.tap(submit);
+      await tester.pumpAndSettle();
+      expect(find.text('Professional entry'), findsOneWidget);
+      expect(find.text('Signed in'), findsNothing);
+      final container = ProviderScope.containerOf(
+        tester.element(find.text('Professional entry')),
+      );
+      expect(
+        (await container.read(secureTokenStorageProvider).readTokens())?.role,
+        'CUSTOMER',
+      );
+    },
+  );
 
   testWidgets('returning user signs in with phone/password and no OTP step', (
     tester,
@@ -157,45 +195,50 @@ void main() {
       findsOneWidget,
     );
   });
-  testWidgets(
-    'Google first use requires name, phone and matching password before home',
-    (tester) async {
-      await pump(tester);
-      await tester.ensureVisible(find.byKey(const Key('first-use-google')));
-      await tester.tap(find.byKey(const Key('first-use-google')));
-      await tester.pumpAndSettle();
-      expect(find.text('Signed in'), findsNothing);
-      expect(find.byKey(const Key('first-profile-name')), findsOneWidget);
-      await tester.enterText(
-        find.byKey(const Key('first-profile-name')),
-        'Test Person',
-      );
-      await tester.enterText(
-        find.byKey(const Key('phone-password-number')),
-        '01023456789',
-      );
-      await tester.enterText(
-        find.byKey(const Key('phone-password-secret')),
-        'long-test-password',
-      );
-      await tester.enterText(
-        find.byKey(const Key('first-profile-confirm')),
-        'mismatch',
-      );
-      final submit = find.byKey(const Key('phone-password-submit'));
-      await tester.ensureVisible(submit);
-      await tester.tap(submit);
-      await tester.pumpAndSettle();
-      expect(access.setups, 0);
-      await tester.enterText(
-        find.byKey(const Key('first-profile-confirm')),
-        'long-test-password',
-      );
-      await tester.ensureVisible(submit);
-      await tester.tap(submit);
-      await tester.pumpAndSettle();
-      expect(access.setups, 1);
-      expect(find.text('Signed in'), findsOneWidget);
-    },
-  );
+  for (final professional in [false, true]) {
+    testWidgets(
+      'Google first use requires complete profile before ${professional ? "professional" : "customer"} entry',
+      (tester) async {
+        await pump(tester, professional: professional);
+        await tester.ensureVisible(find.byKey(const Key('first-use-google')));
+        await tester.tap(find.byKey(const Key('first-use-google')));
+        await tester.pumpAndSettle();
+        expect(find.text('Signed in'), findsNothing);
+        expect(find.byKey(const Key('first-profile-name')), findsOneWidget);
+        await tester.enterText(
+          find.byKey(const Key('first-profile-name')),
+          'Test Person',
+        );
+        await tester.enterText(
+          find.byKey(const Key('phone-password-number')),
+          '01023456789',
+        );
+        await tester.enterText(
+          find.byKey(const Key('phone-password-secret')),
+          'long-test-password',
+        );
+        await tester.enterText(
+          find.byKey(const Key('first-profile-confirm')),
+          'mismatch',
+        );
+        final submit = find.byKey(const Key('phone-password-submit'));
+        await tester.ensureVisible(submit);
+        await tester.tap(submit);
+        await tester.pumpAndSettle();
+        expect(access.setups, 0);
+        await tester.enterText(
+          find.byKey(const Key('first-profile-confirm')),
+          'long-test-password',
+        );
+        await tester.ensureVisible(submit);
+        await tester.tap(submit);
+        await tester.pumpAndSettle();
+        expect(access.setups, 1);
+        expect(
+          find.text(professional ? 'Professional entry' : 'Signed in'),
+          findsOneWidget,
+        );
+      },
+    );
+  }
 }

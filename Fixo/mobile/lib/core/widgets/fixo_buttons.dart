@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../theme/fixo_colors.dart';
+import '../motion/fixo_motion.dart';
 import '../theme/fixo_spacing.dart';
 import '../theme/fixo_typography.dart';
 
@@ -29,92 +30,96 @@ class FixoPrimaryButton extends StatelessWidget {
   Widget build(BuildContext context) {
     final palette = context.fixoPalette;
 
-    return Semantics(
-      button: true,
+    return FixoPressFeedback(
       enabled: onPressed != null && !isLoading,
-      label: label,
-      child: Material(
-        color: palette.primaryBrand,
-        borderRadius: FixoRadius.borderRadiusSm,
-        elevation: 0,
-        child: InkWell(
-          onTap: isLoading ? null : onPressed,
+      builder: (onHighlightChanged) => Semantics(
+        button: true,
+        enabled: onPressed != null && !isLoading,
+        label: label,
+        child: Material(
+          color: palette.primaryBrand,
           borderRadius: FixoRadius.borderRadiusSm,
-          splashColor: palette.secondaryForest.withValues(alpha: 0.4),
-          highlightColor: palette.secondaryForest.withValues(alpha: 0.25),
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(
-              minHeight: FixoSpacing.minTouchTarget,
-              minWidth: double.infinity,
-            ),
-            child: Padding(
-              padding: const EdgeInsets.symmetric(
-                horizontal: 20,
-                vertical: FixoSpacing.sm,
+          elevation: 0,
+          child: InkWell(
+            onHighlightChanged: onHighlightChanged,
+            onTap: isLoading ? null : onPressed,
+            borderRadius: FixoRadius.borderRadiusSm,
+            splashColor: palette.secondaryForest.withValues(alpha: 0.4),
+            highlightColor: palette.secondaryForest.withValues(alpha: 0.25),
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(
+                minHeight: FixoSpacing.minTouchTarget,
+                minWidth: double.infinity,
               ),
-              child: isLoading
-                  ? const Center(
-                      child: SizedBox(
-                        width: 20,
-                        height: 20,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2.2,
-                          color: FixoColors.limeAccent,
+              child: Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 20,
+                  vertical: FixoSpacing.sm,
+                ),
+                child: isLoading
+                    ? const Center(
+                        child: SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2.2,
+                            color: FixoColors.limeAccent,
+                          ),
                         ),
+                      )
+                    : showCircularLimeBadge
+                    ? Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Expanded(
+                            child: Text(
+                              label,
+                              style: FixoTypography.labelLg(
+                                color: Colors.white,
+                              ).copyWith(fontWeight: FontWeight.w700),
+                            ),
+                          ),
+                          const SizedBox(width: FixoSpacing.sm),
+                          Container(
+                            width: 32,
+                            height: 32,
+                            decoration: BoxDecoration(
+                              color: palette.limeAccent,
+                              shape: BoxShape.circle,
+                            ),
+                            alignment: Alignment.center,
+                            child: Icon(
+                              trailingIcon ?? Icons.arrow_forward_rounded,
+                              size: 19,
+                              color: palette.primaryBrand,
+                            ),
+                          ),
+                        ],
+                      )
+                    : Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          if (leadingIcon != null) ...[
+                            Icon(leadingIcon, size: 18, color: Colors.white),
+                            const SizedBox(width: FixoSpacing.sm),
+                          ],
+                          Flexible(
+                            child: Text(
+                              label,
+                              textAlign: TextAlign.center,
+                              style: FixoTypography.labelLg(
+                                color: Colors.white,
+                              ).copyWith(fontWeight: FontWeight.w700),
+                            ),
+                          ),
+                          if (trailingIcon != null) ...[
+                            const SizedBox(width: FixoSpacing.sm),
+                            Icon(trailingIcon, size: 18, color: Colors.white),
+                          ],
+                        ],
                       ),
-                    )
-                  : showCircularLimeBadge
-                  ? Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Expanded(
-                          child: Text(
-                            label,
-                            style: FixoTypography.labelLg(
-                              color: Colors.white,
-                            ).copyWith(fontWeight: FontWeight.w700),
-                          ),
-                        ),
-                        const SizedBox(width: FixoSpacing.sm),
-                        Container(
-                          width: 32,
-                          height: 32,
-                          decoration: BoxDecoration(
-                            color: palette.limeAccent,
-                            shape: BoxShape.circle,
-                          ),
-                          alignment: Alignment.center,
-                          child: Icon(
-                            trailingIcon ?? Icons.arrow_forward_rounded,
-                            size: 19,
-                            color: palette.primaryBrand,
-                          ),
-                        ),
-                      ],
-                    )
-                  : Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        if (leadingIcon != null) ...[
-                          Icon(leadingIcon, size: 18, color: Colors.white),
-                          const SizedBox(width: FixoSpacing.sm),
-                        ],
-                        Flexible(
-                          child: Text(
-                            label,
-                            textAlign: TextAlign.center,
-                            style: FixoTypography.labelLg(
-                              color: Colors.white,
-                            ).copyWith(fontWeight: FontWeight.w700),
-                          ),
-                        ),
-                        if (trailingIcon != null) ...[
-                          const SizedBox(width: FixoSpacing.sm),
-                          Icon(trailingIcon, size: 18, color: Colors.white),
-                        ],
-                      ],
-                    ),
+              ),
             ),
           ),
         ),
@@ -142,47 +147,51 @@ class FixoAccentButton extends StatelessWidget {
   Widget build(BuildContext context) {
     final palette = context.fixoPalette;
 
-    return Semantics(
-      button: true,
+    return FixoPressFeedback(
       enabled: onPressed != null,
-      label: label,
-      child: Material(
-        color: palette.limeAccent,
-        borderRadius: FixoRadius.borderRadiusSm,
-        child: InkWell(
-          onTap: onPressed,
+      builder: (onHighlightChanged) => Semantics(
+        button: true,
+        enabled: onPressed != null,
+        label: label,
+        child: Material(
+          color: palette.limeAccent,
           borderRadius: FixoRadius.borderRadiusSm,
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(
-              minHeight: FixoSpacing.minTouchTarget,
-              minWidth: double.infinity,
-            ),
-            child: Padding(
-              padding: const EdgeInsets.symmetric(
-                horizontal: FixoSpacing.md,
-                vertical: FixoSpacing.sm,
+          child: InkWell(
+            onHighlightChanged: onHighlightChanged,
+            onTap: onPressed,
+            borderRadius: FixoRadius.borderRadiusSm,
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(
+                minHeight: FixoSpacing.minTouchTarget,
+                minWidth: double.infinity,
               ),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  if (leadingIcon != null) ...[
-                    Icon(leadingIcon, size: 20, color: palette.primaryBrand),
-                    const SizedBox(width: FixoSpacing.sm),
-                  ],
-                  Flexible(
-                    child: Text(
-                      label,
-                      textAlign: TextAlign.center,
-                      style: FixoTypography.labelLg(
-                        color: palette.primaryBrand,
-                      ).copyWith(fontWeight: FontWeight.w700),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: FixoSpacing.md,
+                  vertical: FixoSpacing.sm,
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    if (leadingIcon != null) ...[
+                      Icon(leadingIcon, size: 20, color: palette.primaryBrand),
+                      const SizedBox(width: FixoSpacing.sm),
+                    ],
+                    Flexible(
+                      child: Text(
+                        label,
+                        textAlign: TextAlign.center,
+                        style: FixoTypography.labelLg(
+                          color: palette.primaryBrand,
+                        ).copyWith(fontWeight: FontWeight.w700),
+                      ),
                     ),
-                  ),
-                  if (trailingIcon != null) ...[
-                    const SizedBox(width: FixoSpacing.sm),
-                    Icon(trailingIcon, size: 20, color: palette.primaryBrand),
+                    if (trailingIcon != null) ...[
+                      const SizedBox(width: FixoSpacing.sm),
+                      Icon(trailingIcon, size: 20, color: palette.primaryBrand),
+                    ],
                   ],
-                ],
+                ),
               ),
             ),
           ),
@@ -209,51 +218,55 @@ class FixoSecondaryButton extends StatelessWidget {
   Widget build(BuildContext context) {
     final palette = context.fixoPalette;
 
-    return Semantics(
-      button: true,
+    return FixoPressFeedback(
       enabled: onPressed != null,
-      label: label,
-      child: Container(
-        decoration: BoxDecoration(
-          color: palette.cardSurface,
-          borderRadius: FixoRadius.borderRadiusSm,
-          border: Border.all(color: palette.subtleBorder, width: 1),
-          boxShadow: FixoShadows.level1CardResting,
-        ),
-        child: Material(
-          color: Colors.transparent,
-          borderRadius: FixoRadius.borderRadiusSm,
-          child: InkWell(
-            onTap: onPressed,
+      builder: (onHighlightChanged) => Semantics(
+        button: true,
+        enabled: onPressed != null,
+        label: label,
+        child: Container(
+          decoration: BoxDecoration(
+            color: palette.cardSurface,
             borderRadius: FixoRadius.borderRadiusSm,
-            splashColor: palette.surfaceContainer,
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(
-                minHeight: FixoSpacing.minTouchTarget,
-                minWidth: double.infinity,
-              ),
-              child: Padding(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 20,
-                  vertical: FixoSpacing.sm,
+            border: Border.all(color: palette.subtleBorder, width: 1),
+            boxShadow: FixoShadows.level1CardResting,
+          ),
+          child: Material(
+            color: Colors.transparent,
+            borderRadius: FixoRadius.borderRadiusSm,
+            child: InkWell(
+              onHighlightChanged: onHighlightChanged,
+              onTap: onPressed,
+              borderRadius: FixoRadius.borderRadiusSm,
+              splashColor: palette.surfaceContainer,
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(
+                  minHeight: FixoSpacing.minTouchTarget,
+                  minWidth: double.infinity,
                 ),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    if (leadingIcon != null) ...[
-                      Icon(leadingIcon, size: 18, color: palette.deepForest),
-                      const SizedBox(width: FixoSpacing.sm),
-                    ],
-                    Flexible(
-                      child: Text(
-                        label,
-                        textAlign: TextAlign.center,
-                        style: FixoTypography.labelLg(
-                          color: palette.deepForest,
-                        ).copyWith(fontWeight: FontWeight.w600),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 20,
+                    vertical: FixoSpacing.sm,
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      if (leadingIcon != null) ...[
+                        Icon(leadingIcon, size: 18, color: palette.deepForest),
+                        const SizedBox(width: FixoSpacing.sm),
+                      ],
+                      Flexible(
+                        child: Text(
+                          label,
+                          textAlign: TextAlign.center,
+                          style: FixoTypography.labelLg(
+                            color: palette.deepForest,
+                          ).copyWith(fontWeight: FontWeight.w600),
+                        ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
               ),
             ),

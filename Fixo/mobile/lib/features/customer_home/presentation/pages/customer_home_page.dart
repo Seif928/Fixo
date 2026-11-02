@@ -790,34 +790,6 @@ class _CustomerHomePageState extends ConsumerState<CustomerHomePage> {
             },
           ),
         ),
-
-        // 6. Subtle Session / Sign-out Bar when authenticated
-        if (ref.watch(authControllerProvider).isAuthenticated)
-          Padding(
-            padding: const EdgeInsets.fromLTRB(
-              FixoSpacing.md,
-              16,
-              FixoSpacing.md,
-              0,
-            ),
-            child: Align(
-              alignment: Alignment.center,
-              child: TextButton.icon(
-                key: const Key('btn-home-sign-out'),
-                onPressed: () async {
-                  await ref.read(authControllerProvider.notifier).logout();
-                  if (context.mounted) {
-                    context.go(AppRoutes.phoneAuth);
-                  }
-                },
-                icon: const Icon(Icons.logout_rounded, size: 16),
-                label: Text(
-                  isArabic ? 'تسجيل الخروج' : 'Sign Out',
-                  style: FixoTypography.labelMd(color: palette.mutedText),
-                ),
-              ),
-            ),
-          ),
       ],
     );
   }

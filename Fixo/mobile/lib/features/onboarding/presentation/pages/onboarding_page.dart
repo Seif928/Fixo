@@ -3,7 +3,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../app/router/app_routes.dart';
+import '../../../auth/presentation/controllers/account_entry_controller.dart';
 import '../../../../core/l10n/app_locale_controller.dart';
+import '../../../../core/motion/fixo_motion.dart';
 import '../../../../core/theme/fixo_colors.dart';
 import '../../../../core/theme/fixo_spacing.dart';
 import '../../../../core/theme/fixo_typography.dart';
@@ -61,8 +63,18 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage> {
     ),
   ];
 
-  void _navigateToPhoneAuth({required String intent}) {
-    context.push('${AppRoutes.phoneAuth}?intent=$intent');
+  Future<void> _navigateToPhoneAuth({
+    required String intent,
+    bool professional = false,
+  }) async {
+    await ref
+        .read(professionalEntryProvider.notifier)
+        .selectProfessional(professional);
+    if (mounted) {
+      context.push(
+        '${AppRoutes.phoneAuth}?intent=$intent&account=${professional ? 'pro' : 'customer'}',
+      );
+    }
   }
 
   @override
@@ -156,7 +168,9 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage> {
                   const SizedBox(height: FixoSpacing.sm),
 
                   // 2. Hero Visual Showcase
-                  CairoInteriorHeroCard(isArabic: isArabic),
+                  FixoEntrance(
+                    child: CairoInteriorHeroCard(isArabic: isArabic),
+                  ),
                   const SizedBox(height: FixoSpacing.lg),
 
                   // 3. Editorial Headline & Copy
@@ -184,7 +198,7 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage> {
                     isArabic
                         ? 'تصفح خدمات المنزل، واختار عنوانك وميعادك، وراجع تفاصيل السعر بالجنيه المصري قبل تأكيد الحجز.'
                         : 'Explore home services, choose your address and time, '
-                            'and review EGP pricing before confirming your booking.',
+                              'and review EGP pricing before confirming your booking.',
                     style: FixoTypography.bodyMd(
                       color: palette.mutedText,
                       locale: locale,
@@ -199,9 +213,7 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage> {
                     children: [
                       FixoTrustPillarChip(
                         icon: Icons.home_repair_service_outlined,
-                        label: isArabic
-                            ? 'خدمات المنزل'
-                            : 'Home Services',
+                        label: isArabic ? 'خدمات المنزل' : 'Home Services',
                       ),
                       FixoTrustPillarChip(
                         icon: Icons.payments_outlined,
@@ -279,8 +291,11 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage> {
                                       vertical: 4,
                                     ),
                                     child: AnimatedContainer(
-                                      duration: const Duration(
-                                        milliseconds: 200,
+                                      duration: Duration(
+                                        milliseconds:
+                                            FixoMotion.reduced(context)
+                                            ? 0
+                                            : 180,
                                       ),
                                       height: 8,
                                       decoration: BoxDecoration(
@@ -316,6 +331,19 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage> {
                         ? 'لدي حساب بالفعل'
                         : 'I already have an account',
                     onPressed: () => _navigateToPhoneAuth(intent: 'signin'),
+                  ),
+                  const SizedBox(height: 20),
+
+                  FixoSecondaryButton(
+                    key: const Key('btn-professional-entry'),
+                    label: isArabic
+                        ? 'فني؟ سجل أو ادخل لحساب الشغل'
+                        : 'Technician? Join or sign in to FIXO Pro',
+                    leadingIcon: Icons.handyman_outlined,
+                    onPressed: () => _navigateToPhoneAuth(
+                      intent: 'signup',
+                      professional: true,
+                    ),
                   ),
                   const SizedBox(height: 20),
 

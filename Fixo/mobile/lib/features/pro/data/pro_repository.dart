@@ -22,7 +22,26 @@ class ProRepository {
     try {
       final response = await _dio.get('/pro/me');
       final data = response.data as Map<String, dynamic>;
-      return ProProfileModel.fromJson(data);
+      if (!data.containsKey('profile')) {
+        throw const FormatException('Professional profile is unavailable.');
+      }
+      if (data['profile'] == null) return null;
+      final profile = data['profile'];
+      if (profile is! Map<String, dynamic> ||
+          profile['id'] is! String ||
+          (profile['id'] as String).isEmpty ||
+          profile['userId'] is! String ||
+          (profile['userId'] as String).isEmpty ||
+          !const [
+            'DRAFT',
+            'PENDING_REVIEW',
+            'APPROVED',
+            'ACTION_REQUIRED',
+            'SUSPENDED',
+          ].contains(profile['verificationStatus'])) {
+        throw const FormatException('Professional profile is unavailable.');
+      }
+      return ProProfileModel.fromJson(profile);
     } on DioException catch (e) {
       if (e.response?.statusCode == 404) return null;
       rethrow;
@@ -155,7 +174,10 @@ class ProRepository {
   }
 
   /// Declines an incoming job offer (`POST /api/v1/pro/job-offers/:id/decline`).
-  Future<JobOfferModel> declineJobOffer(String offerId, {String? reason}) async {
+  Future<JobOfferModel> declineJobOffer(
+    String offerId, {
+    String? reason,
+  }) async {
     final response = await _dio.post(
       '/pro/job-offers/$offerId/decline',
       data: {
@@ -191,4 +213,3 @@ final proRepositoryProvider = Provider<ProRepository>((ref) {
   final dio = ref.watch(dioClientProvider);
   return ProRepository(dio);
 });
-

@@ -49,9 +49,12 @@ class FixoBrandMark extends StatelessWidget {
             children: [
               Text(
                 'FIXO',
+                textDirection: TextDirection.ltr,
+                locale: const Locale('en'),
                 style: FixoTypography.headlineSm(color: palette.deepForest)
                     .copyWith(
                       fontWeight: FontWeight.w800,
+                      fontVariations: const [FontVariation('wght', 800)],
                       height: 1.0,
                       letterSpacing: -0.4,
                     ),
