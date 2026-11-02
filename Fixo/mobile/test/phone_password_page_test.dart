@@ -19,19 +19,33 @@ const completeUser = AuthUser(
 class FakePhoneAccess extends EmailAccessService {
   FakePhoneAccess() : super(Dio());
   int logins = 0, setups = 0;
+  int? googleFailureStatus;
   String? savedPhone;
   @override
-  Future<AuthSession?> signInWithGoogle() async => const AuthSession(
-    accessToken: 'test-access',
-    refreshToken: 'test-refresh',
-    user: AuthUser(
-      id: 'test-user',
-      phone: '',
-      fullName: '',
-      role: 'CUSTOMER',
-      requiresProfileSetup: true,
-    ),
-  );
+  Future<AuthSession?> signInWithGoogle() async {
+    if (googleFailureStatus != null) {
+      final request = RequestOptions(path: '/auth/firebase/session');
+      throw DioException(
+        requestOptions: request,
+        response: Response(
+          requestOptions: request,
+          statusCode: googleFailureStatus,
+        ),
+      );
+    }
+    return const AuthSession(
+      accessToken: 'test-access',
+      refreshToken: 'test-refresh',
+      user: AuthUser(
+        id: 'test-user',
+        phone: '',
+        fullName: '',
+        role: 'CUSTOMER',
+        requiresProfileSetup: true,
+      ),
+    );
+  }
+
   @override
   Future<AuthSession> signInWithPhone(String phone, String password) async {
     logins++;
@@ -109,6 +123,39 @@ void main() {
     expect(access.logins, 1);
     expect(access.savedPhone, '+201023456789');
     expect(find.text('Signed in'), findsOneWidget);
+  });
+  testWidgets('Google verification failures never accuse the phone or password', (
+    tester,
+  ) async {
+    await pump(tester);
+    access.googleFailureStatus = 401;
+    final google = find.byKey(const Key('first-use-google'));
+    await tester.ensureVisible(google);
+    await tester.tap(google);
+    await tester.pumpAndSettle();
+    expect(find.text('Invalid phone or password.'), findsNothing);
+    expect(
+      find.text(
+        'Your sign-in could not be verified. Continue with Google and try again.',
+      ),
+      findsOneWidget,
+    );
+  });
+  testWidgets('Google account conflicts do not describe a phone conflict', (
+    tester,
+  ) async {
+    await pump(tester);
+    access.googleFailureStatus = 409;
+    final google = find.byKey(const Key('first-use-google'));
+    await tester.ensureVisible(google);
+    await tester.tap(google);
+    await tester.pumpAndSettle();
+    expect(
+      find.text(
+        'This Google email already uses another sign-in method. Use the original account to continue.',
+      ),
+      findsOneWidget,
+    );
   });
   testWidgets(
     'Google first use requires name, phone and matching password before home',

@@ -55,3 +55,13 @@ Configure server variables from backend/.env.example with independent secrets. L
 Build Web using `flutter build web --release --dart-define=FIXO_API_BASE_URL=https://fixo-api.vercel.app/api/v1`. Copy `mobile/vercel.static.json` to `mobile/build/web/vercel.json` and the locally linked `.vercel/project.json` into `build/web/.vercel/project.json`, then run `vercel deploy --prod --yes` from `build/web`. Deploying source mobile/ as a guessed framework is not the static-artifact deployment used here.
 
 Brand icons reuse the existing Material `handyman_rounded` glyph from FixoBrandMark. Re-export with `python tool/generate_brand_icons.py <Flutter SDK>/bin/cache/artifacts/material_fonts/materialicons-regular.otf` (Pillow required). The font is supplied/licensed by the Flutter SDK; no new remote logo service is used.
+
+## Google sign-in on Vercel: runtime compatibility fix
+
+The reported cloud-only Google failure reached `/auth/firebase/session` but was rejected before first-profile setup. Safe server diagnostics confirmed matching Firebase audience/issuer and `ERR_REQUIRE_ESM`. The actual Firebase Admin 14 -> jwks-rsa 4 -> jose 6 dependency chain failed under the CommonJS loader; a real-SDK subprocess test reproduced the same failure with `--no-experimental-require-module`. See the [upstream Firebase issue](https://github.com/firebase/firebase-admin-node/issues/3181).
+
+Firebase Admin is deliberately pinned to the official 13.10.0 release, whose dependency chain supports this loader. Keep this pin until a newer version passes `firebase-runtime.spec.ts` and the cloud sign-in check. Signature, issuer, audience and expiry verification still use the SDK's `verifyIdToken`; no unsigned token, emulator or fabricated identity fallback was added. Diagnostics record only safe error codes and match booleans, never tokens, provider messages, email or user IDs.
+
+Client errors now distinguish a rejected Google/session exchange from an incorrect phone/password and distinguish Google account conflicts from phone conflicts. The intended flow remains Google -> name/phone/password once -> Home; later login uses phone/password without SMS.
+
+Post-fix validation: backend lint/build and 230 tests/25 suites passed; Flutter analyze and 272 tests passed with 2 opt-in live suites skipped; the integrated Web build passed. Gemini's visual QA commit is 2082e65 and remains preserved. Real completion of the first-profile form and device notification delivery still require the user's runtime interaction. Existing npm audit findings in the Nest/Multer/Prisma dependency chains are outside this targeted Firebase compatibility fix; Firebase is not among the reported high-severity dependencies.

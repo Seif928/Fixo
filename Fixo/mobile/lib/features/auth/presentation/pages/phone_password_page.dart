@@ -46,20 +46,29 @@ class _PhonePasswordPageState extends ConsumerState<PhonePasswordPage> {
       await action();
     } catch (error) {
       if (!mounted) return;
-      setState(
-        () =>
-            _error = error is DioException && error.response?.statusCode == 401
+      String message;
+      if (error is DioException && error.response?.statusCode == 401) {
+        message = error.requestOptions.path == '/auth/phone-password'
             ? (_ar
                   ? 'رقم الهاتف أو كلمة المرور غير صحيحين.'
                   : 'Invalid phone or password.')
-            : error is DioException && error.response?.statusCode == 409
-            ? (_ar
-                  ? 'تعذّر استخدام هذا الرقم لهذا الحساب. جرّب رقمك الآخر أو حسابك الأصلي.'
-                  : 'This phone cannot be used for this account. Use your other number or original account.')
             : (_ar
-                  ? 'تعذّر إكمال الطلب. تحقق من الاتصال وحاول مرة أخرى.'
-                  : 'Could not complete the request. Check your connection and retry.'),
-      );
+                  ? 'تعذّر التحقق من تسجيل الدخول. تابع بحساب جوجل وحاول مرة أخرى.'
+                  : 'Your sign-in could not be verified. Continue with Google and try again.');
+      } else if (error is DioException && error.response?.statusCode == 409) {
+        message = error.requestOptions.path == '/auth/firebase/session'
+            ? (_ar
+                  ? 'البريد ده مرتبط بطريقة دخول تانية. استخدم حسابك الأصلي للمتابعة.'
+                  : 'This Google email already uses another sign-in method. Use the original account to continue.')
+            : (_ar
+                  ? 'تعذّر استخدام هذا الرقم لهذا الحساب. جرّب رقمك الآخر أو حسابك الأصلي.'
+                  : 'This phone cannot be used for this account. Use your other number or original account.');
+      } else {
+        message = _ar
+            ? 'تعذّر إكمال الطلب. تحقق من الاتصال وحاول مرة أخرى.'
+            : 'Could not complete the request. Check your connection and retry.';
+      }
+      setState(() => _error = message);
     } finally {
       if (mounted) setState(() => _busy = false);
     }
