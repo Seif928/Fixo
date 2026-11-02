@@ -5,6 +5,8 @@ import {
   Injectable,
   NotFoundException,
   Optional,
+  Logger,
+  ServiceUnavailableException,
 } from '@nestjs/common';
 import {
   BookingStatus,
@@ -26,9 +28,11 @@ import {
 import { PrismaService } from '../../prisma/prisma.service';
 import { INTERNAL_FAILED_PIN_EVENT_NOTE } from '../bookings/bookings.service';
 import {
-  signPrivateUploadAccessToken,
   validatePrivateUploadPayload,
 } from '../bookings/private-upload.util';
+import { createHash, randomUUID } from 'crypto';
+import { PrivateStorageService } from '../media/private-storage.service';
+const sharp: typeof import('sharp').default = require('sharp');
 import { PushService } from '../communications/push.service';
 import {
   ProAdvanceJobStatusDto,
@@ -53,7 +57,10 @@ export class ProService {
   constructor(
     private readonly prisma: PrismaService,
     @Optional() private readonly pushService?: PushService,
+    @Optional() private readonly privateStorage?: PrivateStorageService,
   ) {}
+
+  private readonly logger = new Logger(ProService.name);
 
   private readonly proProfileInclude = {
     user: {
@@ -149,60 +156,63 @@ export class ProService {
       );
     }
 
-    const zone = await this.prisma.coverageZone.findUnique({
-      where: { id: dto.primaryZoneId },
-    });
-
-    if (!zone || !zone.isActive) {
-      throw new NotFoundException(
-        `Active coverage zone "${dto.primaryZoneId}" was not found.`,
-      );
-    }
-
-    if (dto.fullName?.trim()) {
-      await this.prisma.user.update({
-        where: { id: userId },
-        data: { fullName: dto.fullName.trim() },
+    return this.prisma.$transaction(async (tx) => {
+      if (this.prisma.isDatabaseConnected()) {
+        await tx.$queryRaw`SELECT id FROM "ProProfile" WHERE "userId" = ${userId} FOR UPDATE`;
+      }
+      const existing = await tx.proProfile.findUnique({
+        where: { userId },
       });
-    }
+      if (existing) this.assertDossierEditable(existing.verificationStatus);
+      const zone = await tx.coverageZone.findUnique({
+        where: { id: dto.primaryZoneId },
+      });
 
-    const existing = await this.prisma.proProfile.findUnique({
-      where: { userId },
+      if (!zone || !zone.isActive) {
+        throw new NotFoundException(
+          `Active coverage zone "${dto.primaryZoneId}" was not found.`,
+        );
+      }
+
+      if (dto.fullName?.trim()) {
+        await tx.user.update({
+          where: { id: userId },
+          data: { fullName: dto.fullName.trim() },
+        });
+      }
+
+
+      const dossierCode =
+        existing?.dossierCode ?? (await this.generateUniqueDossierCode());
+
+      const profile = existing
+        ? await tx.proProfile.update({ where: { userId }, data: {
+          nationalIdSynthetic: dto.nationalIdSynthetic.trim(),
+          primaryZoneId: zone.id,
+          transportMode: dto.transportMode,
+          vehicleDescription: dto.vehicleDescription?.trim() || null,
+          vehiclePlateAr: dto.vehiclePlateAr?.trim() || null,
+          zonesLabelEn: existing?.zonesLabelEn || zone.nameEn,
+          zonesLabelAr: existing?.zonesLabelAr || zone.nameAr,
+        }, include: this.proProfileInclude })
+        : await tx.proProfile.create({ data: {
+          userId,
+          dossierCode,
+          nationalIdSynthetic: dto.nationalIdSynthetic.trim(),
+          primaryZoneId: zone.id,
+          transportMode: dto.transportMode,
+          vehicleDescription: dto.vehicleDescription?.trim() || null,
+          vehiclePlateAr: dto.vehiclePlateAr?.trim() || null,
+          zonesLabelEn: zone.nameEn,
+          zonesLabelAr: zone.nameAr,
+          verificationStatus: ProVerificationStatus.DRAFT,
+          coverageZones: {
+            connect: [{ id: zone.id }],
+          },
+        }, include: this.proProfileInclude });
+
+      return this.mapProProfile(profile);
     });
-
-    const dossierCode =
-      existing?.dossierCode ?? (await this.generateUniqueDossierCode());
-
-    const profile = await this.prisma.proProfile.upsert({
-      where: { userId },
-      update: {
-        nationalIdSynthetic: dto.nationalIdSynthetic.trim(),
-        primaryZoneId: zone.id,
-        transportMode: dto.transportMode,
-        vehicleDescription: dto.vehicleDescription?.trim() || null,
-        vehiclePlateAr: dto.vehiclePlateAr?.trim() || null,
-        zonesLabelEn: existing?.zonesLabelEn || zone.nameEn,
-        zonesLabelAr: existing?.zonesLabelAr || zone.nameAr,
-      },
-      create: {
-        userId,
-        dossierCode,
-        nationalIdSynthetic: dto.nationalIdSynthetic.trim(),
-        primaryZoneId: zone.id,
-        transportMode: dto.transportMode,
-        vehicleDescription: dto.vehicleDescription?.trim() || null,
-        vehiclePlateAr: dto.vehiclePlateAr?.trim() || null,
-        zonesLabelEn: zone.nameEn,
-        zonesLabelAr: zone.nameAr,
-        verificationStatus: ProVerificationStatus.DRAFT,
-        coverageZones: {
-          connect: [{ id: zone.id }],
-        },
-      },
-      include: this.proProfileInclude,
-    });
-
-    return this.mapProProfile(profile);
   }
 
   /**
@@ -210,90 +220,97 @@ export class ProService {
    * Coverage Zones, Rate Card & Toolkit Commitment (`PUT /pro/onboarding/skills`).
    */
   async updateSkillsAndCoverage(userId: string, dto: ProSkillsUpdateDto) {
-    const existing = await this.prisma.proProfile.findUnique({
-      where: { userId },
-    });
-
-    if (!existing) {
-      throw new BadRequestException(
-        'Please complete Step 1 (Personal & Transport Details) before configuring skills.',
-      );
-    }
-
-    if (!dto.toolkitCommitmentConfirmed) {
-      throw new BadRequestException(
-        'You must confirm ownership of a professional toolkit and safety gear.',
-      );
-    }
-
-    const category = await this.prisma.serviceCategory.findUnique({
-      where: { id: dto.primaryCategoryId },
-    });
-
-    if (!category || !category.isActive) {
-      throw new NotFoundException(
-        `Active service category "${dto.primaryCategoryId}" was not found.`,
-      );
-    }
-
-    const uniqueZoneIds = Array.from(new Set(dto.coverageZoneIds));
-    const zones = await this.prisma.coverageZone.findMany({
-      where: { id: { in: uniqueZoneIds }, isActive: true },
-    });
-
-    if (zones.length !== uniqueZoneIds.length) {
-      throw new BadRequestException(
-        'One or more selected coverage zones are invalid or inactive.',
-      );
-    }
-
-    await this.ensureSubSkillsSeeded();
-
-    const uniqueSubSkillIds = Array.from(new Set(dto.subSkillIds ?? []));
-    if (uniqueSubSkillIds.length > 0) {
-      const validSubSkills = await this.prisma.serviceSubSkill.findMany({
-        where: {
-          id: { in: uniqueSubSkillIds },
-          categoryId: category.id,
-        },
+    return this.prisma.$transaction(async (tx) => {
+      if (this.prisma.isDatabaseConnected()) {
+        await tx.$queryRaw`SELECT id FROM "ProProfile" WHERE "userId" = ${userId} FOR UPDATE`;
+      }
+      const existing = await tx.proProfile.findUnique({
+        where: { userId },
       });
 
-      if (validSubSkills.length !== uniqueSubSkillIds.length) {
+      if (!existing) {
         throw new BadRequestException(
-          'One or more selected sub-skills do not belong to the chosen primary category.',
+          'Please complete Step 1 (Personal & Transport Details) before configuring skills.',
         );
       }
-    }
 
-    const zonesLabelEn = zones.map((z) => z.nameEn).join(' • ');
-    const zonesLabelAr = zones.map((z) => z.nameAr).join(' • ');
+      this.assertDossierEditable(existing.verificationStatus);
 
-    const updated = await this.prisma.proProfile.update({
-      where: { userId },
-      data: {
-        primaryCategoryId: category.id,
-        experienceTier: dto.experienceTier,
-        acceptsStandardRateCard: dto.acceptsStandardRateCard,
-        toolkitCommitmentConfirmed: dto.toolkitCommitmentConfirmed,
-        specialtyEn:
-          dto.specialtyEn?.trim() || `${category.nameEn} Specialist`,
-        specialtyAr:
-          dto.specialtyAr?.trim() || `أخصائي ${category.nameAr}`,
-        estimatedPriceEgp:
-          dto.estimatedPriceEgp ?? category.startingPriceEgp ?? 250,
-        zonesLabelEn,
-        zonesLabelAr,
-        coverageZones: {
-          set: uniqueZoneIds.map((id) => ({ id })),
+      if (!dto.toolkitCommitmentConfirmed) {
+        throw new BadRequestException(
+          'You must confirm ownership of a professional toolkit and safety gear.',
+        );
+      }
+
+      const category = await tx.serviceCategory.findUnique({
+        where: { id: dto.primaryCategoryId },
+      });
+
+      if (!category || !category.isActive) {
+        throw new NotFoundException(
+          `Active service category "${dto.primaryCategoryId}" was not found.`,
+        );
+      }
+
+      const uniqueZoneIds = Array.from(new Set(dto.coverageZoneIds));
+      const zones = await tx.coverageZone.findMany({
+        where: { id: { in: uniqueZoneIds }, isActive: true },
+      });
+
+      if (zones.length !== uniqueZoneIds.length) {
+        throw new BadRequestException(
+          'One or more selected coverage zones are invalid or inactive.',
+        );
+      }
+
+      await this.ensureSubSkillsSeeded();
+
+      const uniqueSubSkillIds = Array.from(new Set(dto.subSkillIds ?? []));
+      if (uniqueSubSkillIds.length > 0) {
+        const validSubSkills = await tx.serviceSubSkill.findMany({
+          where: {
+            id: { in: uniqueSubSkillIds },
+            categoryId: category.id,
+          },
+        });
+
+        if (validSubSkills.length !== uniqueSubSkillIds.length) {
+          throw new BadRequestException(
+            'One or more selected sub-skills do not belong to the chosen primary category.',
+          );
+        }
+      }
+
+      const zonesLabelEn = zones.map((z) => z.nameEn).join(' • ');
+      const zonesLabelAr = zones.map((z) => z.nameAr).join(' • ');
+
+      const updated = await tx.proProfile.update({
+        where: { userId },
+        data: {
+          primaryCategoryId: category.id,
+          experienceTier: dto.experienceTier,
+          acceptsStandardRateCard: dto.acceptsStandardRateCard,
+          toolkitCommitmentConfirmed: dto.toolkitCommitmentConfirmed,
+          specialtyEn:
+            dto.specialtyEn?.trim() || `${category.nameEn} Specialist`,
+          specialtyAr:
+            dto.specialtyAr?.trim() || `أخصائي ${category.nameAr}`,
+          estimatedPriceEgp:
+            dto.estimatedPriceEgp ?? category.startingPriceEgp ?? 250,
+          zonesLabelEn,
+          zonesLabelAr,
+          coverageZones: {
+            set: uniqueZoneIds.map((id) => ({ id })),
+          },
+          subSkills: {
+            set: uniqueSubSkillIds.map((id) => ({ id })),
+          },
         },
-        subSkills: {
-          set: uniqueSubSkillIds.map((id) => ({ id })),
-        },
-      },
-      include: this.proProfileInclude,
+        include: this.proProfileInclude,
+      });
+
+      return this.mapProProfile(updated);
     });
-
-    return this.mapProProfile(updated);
   }
 
   /**
@@ -302,114 +319,83 @@ export class ProService {
    * Stores document privately in `storageKey` so it is never publicly enumerable.
    */
   async uploadVerificationDocument(userId: string, dto: ProDocumentUploadDto) {
-    const profile = await this.prisma.proProfile.findUnique({
-      where: { userId },
-    });
+    if (!this.privateStorage) throw new ServiceUnavailableException('Private document storage is unavailable.');
+    const profile = await this.prisma.proProfile.findUnique({ where: { userId } });
+    if (!profile) throw new BadRequestException('Complete personal details before uploading documents.');
+    this.assertDossierEditable(profile.verificationStatus);
+    const validated = validatePrivateUploadPayload({ purpose: 'PRO_DOCUMENT', fileName: dto.fileName, mimeType: dto.mimeType, contentBase64: dto.contentBase64 });
+    let bytes: Buffer;
+    try {
+      const image = sharp(Buffer.from(validated.normalizedBase64, 'base64'), { limitInputPixels: 20_000_000, failOn: 'warning' });
+      const metadata = await image.metadata();
+      if (!['jpeg', 'png', 'webp'].includes(metadata.format ?? '') || (metadata.pages ?? 1) !== 1) throw new Error('Unsupported');
+      bytes = await image.rotate().resize({ width: 1600, height: 1600, fit: 'inside', withoutEnlargement: true }).webp({ quality: 88 }).toBuffer();
+    } catch { throw new BadRequestException('Choose a readable JPEG, PNG or WebP document photo.'); }
+    const key = `documents/${profile.id}/${randomUUID()}.webp`;
+    const hash = createHash('sha256').update(bytes).digest('hex');
+    await this.privateStorage.put(key, bytes, 'image/webp');
+    let result: { doc: any; oldKey: string | null };
+    try {
+      result = await this.prisma.$transaction(async (tx) => {
+        if (this.prisma.isDatabaseConnected()) {
+          await tx.$queryRaw`SELECT id FROM "ProProfile" WHERE id = ${profile.id} FOR UPDATE`;
+        }
+        const current = await tx.proProfile.findUnique({ where: { id: profile.id } });
+        if (!current) throw new NotFoundException('Professional profile was not found.');
+        this.assertDossierEditable(current.verificationStatus);
+        const existing = await tx.proVerificationDocument.findFirst({ where: { proProfileId: profile.id, docType: dto.docType } });
+        const data = { storageKey: `obj::${hash}::image/webp::${key}`, fileName: `${dto.docType.toLowerCase()}.webp`, fileSizeBytes: bytes.length, status: DocumentStatus.PENDING, reviewerComment: null, uploadedAt: new Date() };
+        const doc = existing
+          ? await tx.proVerificationDocument.update({ where: { id: existing.id }, data })
+          : await tx.proVerificationDocument.create({ data: { ...data, proProfileId: profile.id, docType: dto.docType } });
+        return { doc, oldKey: existing?.storageKey?.startsWith('obj::') ? existing.storageKey.split('::')[3] : null };
+      });
+    } catch (error) { await this.cleanupDocumentObject(key); throw error; }
+    if (result.oldKey) await this.cleanupDocumentObject(result.oldKey);
+    return this.mapDocumentSummary(result.doc);
+  }
 
-    if (!profile) {
-      throw new BadRequestException(
-        'Please complete Step 1 (Personal Details) before uploading verification documents.',
-      );
+  private assertDossierEditable(status: ProVerificationStatus) {
+    if (status !== ProVerificationStatus.DRAFT && status !== ProVerificationStatus.ACTION_REQUIRED) {
+      throw new ForbiddenException('Documents can be changed while drafting or when a reviewer requests corrections.');
     }
+  }
 
-    const validated = validatePrivateUploadPayload({
-      purpose: 'PRO_DOCUMENT',
-      fileName: dto.fileName,
-      mimeType: dto.mimeType,
-      contentBase64: dto.contentBase64,
-    });
-
-    const privateStoragePayload = `prvdoc::${validated.sha256}::${validated.mimeType}::${validated.normalizedBase64}`;
-
-    const existingDoc = await this.prisma.proVerificationDocument.findFirst({
-      where: {
-        proProfileId: profile.id,
-        docType: dto.docType,
-      },
-    });
-
-    const savedDoc = existingDoc
-      ? await this.prisma.proVerificationDocument.update({
-          where: { id: existingDoc.id },
-          data: {
-            storageKey: privateStoragePayload,
-            fileName: validated.fileName,
-            fileSizeBytes: validated.fileSizeBytes,
-            status: DocumentStatus.PENDING,
-            reviewerComment: null,
-            uploadedAt: new Date(),
-          },
-        })
-      : await this.prisma.proVerificationDocument.create({
-          data: {
-            proProfileId: profile.id,
-            docType: dto.docType,
-            storageKey: privateStoragePayload,
-            fileName: validated.fileName,
-            fileSizeBytes: validated.fileSizeBytes,
-            status: DocumentStatus.PENDING,
-          },
-        });
-
-    return this.mapDocumentSummary(savedDoc);
+  private async cleanupDocumentObject(key: string) {
+    try { await this.privateStorage!.remove(key); }
+    catch { this.logger.warn('Private document cleanup needs retry.'); }
   }
 
   /**
    * Generates a short-lived authenticated access payload for a private verification document.
    * Strictly restricted to the owning user or an ADMIN reviewer.
    */
-  async getVerificationDocumentAccess(
-    userId: string,
-    docId: string,
-    isAdmin = false,
-  ) {
+  private async authorizedDocument(userId: string, docId: string, isAdmin: boolean) {
     const doc = await this.prisma.proVerificationDocument.findUnique({
-      where: { id: docId },
-      include: {
-        proProfile: {
-          select: { userId: true },
-        },
-      },
+      where: { id: docId }, include: { proProfile: { select: { id: true, userId: true } } },
     });
+    if (!doc) throw new NotFoundException('Verification document was not found.');
+    if (!isAdmin && doc.proProfile.userId !== userId) throw new ForbiddenException('This private document belongs to another account.');
+    return doc;
+  }
 
-    if (!doc) {
-      throw new NotFoundException(
-        `Verification document "${docId}" was not found.`,
-      );
+  async getVerificationDocumentAccess(userId: string, docId: string, isAdmin = false) {
+    const doc = await this.authorizedDocument(userId, docId, isAdmin);
+    return { ...this.mapDocumentSummary(doc), downloadPath: `/api/v1/pro/onboarding/documents/${encodeURIComponent(doc.id)}/content` };
+  }
+
+  async getVerificationDocumentContent(userId: string, docId: string, isAdmin = false) {
+    const doc = await this.authorizedDocument(userId, docId, isAdmin);
+    const parts = doc.storageKey.split('::');
+    if (parts[0] === 'obj' && parts[3]?.startsWith(`documents/${doc.proProfileId}/`)) {
+      if (!this.privateStorage) throw new ServiceUnavailableException('Private document storage is unavailable.');
+      return { bytes: await this.privateStorage.get(parts[3]), mimeType: parts[2] };
     }
-
-    if (!isAdmin && doc.proProfile.userId !== userId) {
-      throw new ForbiddenException(
-        'You do not have permission to access this private verification document.',
-      );
+    // Existing private development records remain available only through ownership checks.
+    if (parts[0] === 'prvdoc' && ['image/jpeg', 'image/png', 'image/webp', 'application/pdf'].includes(parts[2])) {
+      return { bytes: Buffer.from(parts[3] ?? '', 'base64'), mimeType: parts[2] };
     }
-
-    let sha256 = 'unknown';
-    let mimeType = 'image/png';
-    let base64Content = '';
-    if (doc.storageKey && doc.storageKey.startsWith('prvdoc::')) {
-      const parts = doc.storageKey.split('::');
-      sha256 = parts[1] || 'unknown';
-      mimeType = parts[2] || 'image/png';
-      base64Content = parts[3] || '';
-    }
-
-    const signed = signPrivateUploadAccessToken({
-      ownerUserId: doc.proProfile.userId,
-      purpose: 'PRO_DOCUMENT',
-      sha256,
-      mimeType: mimeType as any,
-      fileName: doc.fileName,
-    });
-
-    return {
-      ...this.mapDocumentSummary(doc),
-      accessToken: signed.token,
-      expiresAt: signed.expiresAt,
-      privateDataUri: base64Content
-        ? `data:${mimeType};base64,${base64Content}`
-        : null,
-    };
+    throw new NotFoundException('Private document content was not found.');
   }
 
   /**
@@ -418,61 +404,66 @@ export class ProService {
    * `verificationStatus` from `DRAFT` / `ACTION_REQUIRED` to `PENDING_REVIEW`.
    */
   async submitForVerification(userId: string) {
-    const profile = await this.prisma.proProfile.findUnique({
-      where: { userId },
-      include: this.proProfileInclude,
+    await this.prisma.$transaction(async (tx) => {
+      if (this.prisma.isDatabaseConnected()) {
+        await tx.$queryRaw`SELECT id FROM "ProProfile" WHERE "userId" = ${userId} FOR UPDATE`;
+      }
+      const profile = await tx.proProfile.findUnique({
+        where: { userId },
+        include: this.proProfileInclude,
+      });
+
+      if (!profile) {
+        throw new BadRequestException(
+          'Professional profile has not been started yet.',
+        );
+      }
+
+      if (!profile.nationalIdSynthetic || !profile.primaryZoneId) {
+        throw new BadRequestException(
+          'Step 1 (Personal & Transport Details) is incomplete.',
+        );
+      }
+
+      if (
+        !profile.primaryCategoryId ||
+        profile.coverageZones.length === 0 ||
+        !profile.toolkitCommitmentConfirmed
+      ) {
+        throw new BadRequestException(
+          'Step 2 (Services, Skills & Coverage Zones) is incomplete.',
+        );
+      }
+
+      const uploadedDocTypes = new Set(profile.documents.filter((d) => d.status !== DocumentStatus.REJECTED && (d.storageKey.startsWith('obj::') || d.storageKey.startsWith('prvdoc::'))).map((d) => d.docType));
+      const missingDocs = REQUIRED_PRO_DOC_TYPES.filter(
+        (reqType) => !uploadedDocTypes.has(reqType),
+      );
+
+      if (missingDocs.length > 0) {
+        throw new BadRequestException(
+          `Missing required verification documents: ${missingDocs.join(', ')}.`,
+        );
+      }
+
+      if (profile.verificationStatus === ProVerificationStatus.APPROVED) {
+        return;
+      }
+
+      if (profile.verificationStatus === ProVerificationStatus.SUSPENDED) {
+        throw new ForbiddenException(
+          'Suspended professional profiles cannot be resubmitted without administrator intervention.',
+        );
+      }
+
+      await tx.proProfile.update({
+        where: { id: profile.id },
+        data: {
+          verificationStatus: ProVerificationStatus.PENDING_REVIEW,
+        },
+      });
+
     });
-
-    if (!profile) {
-      throw new BadRequestException(
-        'Professional profile has not been started yet.',
-      );
-    }
-
-    if (!profile.nationalIdSynthetic || !profile.primaryZoneId) {
-      throw new BadRequestException(
-        'Step 1 (Personal & Transport Details) is incomplete.',
-      );
-    }
-
-    if (
-      !profile.primaryCategoryId ||
-      profile.coverageZones.length === 0 ||
-      !profile.toolkitCommitmentConfirmed
-    ) {
-      throw new BadRequestException(
-        'Step 2 (Services, Skills & Coverage Zones) is incomplete.',
-      );
-    }
-
-    const uploadedDocTypes = new Set(profile.documents.map((d) => d.docType));
-    const missingDocs = REQUIRED_PRO_DOC_TYPES.filter(
-      (reqType) => !uploadedDocTypes.has(reqType),
-    );
-
-    if (missingDocs.length > 0) {
-      throw new BadRequestException(
-        `Missing required verification documents: ${missingDocs.join(', ')}.`,
-      );
-    }
-
-    if (profile.verificationStatus === ProVerificationStatus.APPROVED) {
-      return this.getVerificationStatus(userId);
-    }
-
-    if (profile.verificationStatus === ProVerificationStatus.SUSPENDED) {
-      throw new ForbiddenException(
-        'Suspended professional profiles cannot be resubmitted without administrator intervention.',
-      );
-    }
-
-    await this.prisma.proProfile.update({
-      where: { id: profile.id },
-      data: {
-        verificationStatus: ProVerificationStatus.PENDING_REVIEW,
-      },
-    });
-
     return this.getVerificationStatus(userId);
   }
 
@@ -516,7 +507,7 @@ export class ProService {
       },
       {
         key: 'DOCUMENT_UPLOAD',
-        titleEn: 'Synthetic Identity & Record Specimens',
+        titleEn: 'Identity & Criminal Record Documents',
         titleAr: 'رفع نماذج الهوية والفيش الجنائي',
         subtitleEn: mapped.step3Complete
           ? `${profile.documents.length} private document(s) uploaded`
@@ -607,18 +598,29 @@ export class ProService {
       );
     }
 
-    const profile = await this.prisma.proProfile.findUnique({
-      where: { id: proProfileId },
-      include: { documents: true },
-    });
-
-    if (!profile) {
-      throw new NotFoundException(
-        `Professional profile "${proProfileId}" was not found.`,
-      );
-    }
-
     const updated = await this.prisma.$transaction(async (tx) => {
+      if (this.prisma.isDatabaseConnected()) {
+        await tx.$queryRaw`SELECT id FROM "ProProfile" WHERE id = ${proProfileId} FOR UPDATE`;
+      }
+      const profile = await tx.proProfile.findUnique({
+        where: { id: proProfileId }, include: { documents: true },
+      });
+      if (!profile) throw new NotFoundException('Professional profile was not found.');
+      if (dto.status === 'APPROVED') {
+        if (profile.verificationStatus !== ProVerificationStatus.PENDING_REVIEW &&
+            profile.verificationStatus !== ProVerificationStatus.APPROVED) {
+          throw new BadRequestException('Only a submitted dossier can be approved.');
+        }
+        const missing = REQUIRED_PRO_DOC_TYPES.filter((type) =>
+          !profile.documents.some((doc) => doc.docType === type &&
+            Boolean(doc.storageKey) && doc.status !== DocumentStatus.REJECTED));
+        if (missing.length) throw new BadRequestException('All three required private documents must be uploaded before approval.');
+        if (dto.documentDecisions?.some((decision) =>
+            REQUIRED_PRO_DOC_TYPES.includes(decision.docType) && decision.status === 'REJECTED')) {
+          throw new BadRequestException('A dossier with rejected required documents cannot be approved.');
+        }
+      }
+
       if (dto.documentDecisions && dto.documentDecisions.length > 0) {
         for (const decision of dto.documentDecisions) {
           await tx.proVerificationDocument.updateMany({
@@ -1517,7 +1519,7 @@ export class ProService {
   private mapDocumentSummary(doc: any) {
     let mimeType = 'image/png';
     const hasPrivateContent = Boolean(
-      doc.storageKey && doc.storageKey.startsWith('prvdoc::'),
+      doc.storageKey && (doc.storageKey.startsWith('obj::') || doc.storageKey.startsWith('prvdoc::')),
     );
     if (hasPrivateContent) {
       const parts = doc.storageKey.split('::');

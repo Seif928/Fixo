@@ -95,6 +95,25 @@ describe('ProService (Unit Tests)', () => {
     ).rejects.toThrow(ForbiddenException);
   });
 
+  it('cannot approve a dossier that lacks the three required documents', async () => {
+    const profile = { id: 'pro-1', userId: 'user-1', documents: [], coverageZones: [], verificationStatus: ProVerificationStatus.PENDING_REVIEW };
+    prismaMock.proProfile.findUnique.mockResolvedValue(profile);
+    prismaMock.proProfile.update.mockResolvedValue({ ...profile, verificationStatus: ProVerificationStatus.APPROVED });
+    await expect(service.adminReviewProProfile('reviewer-1', UserRole.ADMIN, 'pro-1', { status: 'APPROVED' }))
+      .rejects.toThrow(BadRequestException);
+    expect(prismaMock.proProfile.update).not.toHaveBeenCalled();
+  });
+
+  it('locks reviewed identity fields until a reviewer requests corrections', async () => {
+    prismaMock.coverageZone.findUnique.mockResolvedValue({ id: 'zone-1', isActive: true });
+    prismaMock.proProfile.findUnique.mockResolvedValue({ id: 'pro-1', userId: 'user-1', verificationStatus: ProVerificationStatus.APPROVED });
+    await expect(service.upsertPersonalDetails('user-1', {
+      fullName: 'Changed name', nationalIdSynthetic: '12345678901234', primaryZoneId: 'zone-1', transportMode: TransportMode.MOTORCYCLE,
+    })).rejects.toThrow(ForbiddenException);
+    expect(prismaMock.user.update).not.toHaveBeenCalled();
+    expect(prismaMock.proProfile.upsert).not.toHaveBeenCalled();
+  });
+
   it('rejects availability toggle when ProProfile is not APPROVED', async () => {
     prismaMock.proProfile.findUnique.mockResolvedValue({
       id: 'pro-1',

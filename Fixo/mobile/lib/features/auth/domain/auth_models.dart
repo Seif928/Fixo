@@ -66,6 +66,8 @@ class AuthUser {
     this.preferredLocale = 'en',
     this.rewardPoints = 0,
     this.requiresProfileSetup = false,
+    this.hasAvatar = false,
+    this.avatarVersion,
   });
 
   final String id;
@@ -76,6 +78,21 @@ class AuthUser {
   final String preferredLocale;
   final int rewardPoints;
   final bool requiresProfileSetup;
+  final bool hasAvatar;
+  final String? avatarVersion;
+
+  AuthUser withAvatar(String version) => AuthUser(
+    id: id,
+    phone: phone,
+    fullName: fullName,
+    role: role,
+    email: email,
+    preferredLocale: preferredLocale,
+    rewardPoints: rewardPoints,
+    requiresProfileSetup: requiresProfileSetup,
+    hasAvatar: true,
+    avatarVersion: version,
+  );
 
   factory AuthUser.fromJson(Map<String, dynamic> json) {
     if (json['id'] is! String ||
@@ -94,6 +111,8 @@ class AuthUser {
       preferredLocale: json['preferredLocale'] as String? ?? 'en',
       rewardPoints: (json['rewardPoints'] as num?)?.toInt() ?? 0,
       requiresProfileSetup: json['requiresProfileSetup'] == true,
+      hasAvatar: json['hasAvatar'] == true,
+      avatarVersion: json['avatarVersion'] as String?,
     );
   }
 }

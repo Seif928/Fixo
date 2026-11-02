@@ -51,16 +51,24 @@ class _ProVerificationDocsPageState
     } catch (e) {
       if (!mounted) return;
       setState(() {
-        _errorMessage = e.toString();
+        _errorMessage = ref.read(appLocaleProvider).languageCode == 'ar'
+            ? 'تعذر إتمام الطلب. راجع اتصالك وحاول مرة تانية.'
+            : 'Could not complete the request. Please retry.';
         _loading = false;
       });
     }
   }
 
   bool get _hasAllRequired =>
-      _uploadedDocs.containsKey('NATIONAL_ID_FRONT') &&
-      _uploadedDocs.containsKey('NATIONAL_ID_BACK') &&
-      _uploadedDocs.containsKey('CRIMINAL_RECORD_CERT');
+      const [
+        'NATIONAL_ID_FRONT',
+        'NATIONAL_ID_BACK',
+        'CRIMINAL_RECORD_CERT',
+      ].every(
+        (type) =>
+            _uploadedDocs[type]?.hasPrivateContent == true &&
+            _uploadedDocs[type]?.status != 'REJECTED',
+      );
 
   Future<void> _pickAndUpload(
     String docType,
@@ -68,20 +76,28 @@ class _ProVerificationDocsPageState
     String titleAr,
     bool ar,
   ) async {
+    if (_uploadingDocType != null || _submitting) return;
+    setState(() {
+      _uploadingDocType = docType;
+      _errorMessage = null;
+    });
     final picked = await PrivateMediaPickerSheet.show(
       context,
       isArabic: ar,
       titleEn: titleEn,
       titleAr: titleAr,
       rationaleEn:
-          'Identity and criminal verification documents are securely encrypted and evaluated exclusively by authorized FIXO reviewers.',
+          'Upload clear photos of the front and back of your ID and your criminal record certificate. Only you and authorized FIXO reviewers can access them.',
       rationaleAr:
           'مستندات التحقق القومي والجنائي مشفرة بالكامل وخاصة، وتراجع حصرياً من قِبل لجان التوثيق المعتمدة في فيكسو.',
       defaultFilePrefix: 'pro_${docType.toLowerCase()}',
-      isSyntheticIdentitySpecimen: true,
     );
 
-    if (picked == null || !mounted) return;
+    if (!mounted) return;
+    if (picked == null) {
+      setState(() => _uploadingDocType = null);
+      return;
+    }
 
     setState(() {
       _uploadingDocType = docType;
@@ -105,7 +121,9 @@ class _ProVerificationDocsPageState
     } catch (e) {
       if (!mounted) return;
       setState(() {
-        _errorMessage = e.toString();
+        _errorMessage = ref.read(appLocaleProvider).languageCode == 'ar'
+            ? 'تعذر إتمام الطلب. راجع اتصالك وحاول مرة تانية.'
+            : 'Could not complete the request. Please retry.';
         _uploadingDocType = null;
       });
     }
@@ -127,7 +145,9 @@ class _ProVerificationDocsPageState
     } catch (e) {
       if (!mounted) return;
       setState(() {
-        _errorMessage = e.toString();
+        _errorMessage = ref.read(appLocaleProvider).languageCode == 'ar'
+            ? 'تعذر إتمام الطلب. راجع اتصالك وحاول مرة تانية.'
+            : 'Could not complete the request. Please retry.';
         _submitting = false;
       });
     }
@@ -223,7 +243,9 @@ class _ProVerificationDocsPageState
 
                         if (_errorMessage != null)
                           Container(
-                            margin: const EdgeInsets.only(bottom: FixoSpacing.md),
+                            margin: const EdgeInsets.only(
+                              bottom: FixoSpacing.md,
+                            ),
                             padding: const EdgeInsets.all(FixoSpacing.sm),
                             decoration: BoxDecoration(
                               color: FixoColors.errorContainer,
@@ -244,7 +266,9 @@ class _ProVerificationDocsPageState
                             color: FixoColors.secondaryContainer,
                             borderRadius: FixoRadius.borderRadiusLg,
                             border: Border.all(
-                              color: FixoColors.primaryForest.withValues(alpha: 0.2),
+                              color: FixoColors.primaryForest.withValues(
+                                alpha: 0.2,
+                              ),
                             ),
                           ),
                           child: Row(
@@ -260,7 +284,9 @@ class _ProVerificationDocsPageState
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
                                     Text(
-                                      ar ? 'حماية مشددة للمستندات' : 'Encrypted Document Privacy',
+                                      ar
+                                          ? 'حماية مشددة للمستندات'
+                                          : 'Private Documents',
                                       style: FixoTypography.labelMd(
                                         color: FixoColors.primaryForest,
                                       ).copyWith(fontWeight: FontWeight.w800),
@@ -269,7 +295,7 @@ class _ProVerificationDocsPageState
                                     Text(
                                       ar
                                           ? 'مستنداتك الشخصية مشفرة ولا تظهر لأي عميل أو جهة خارجية وتستخدم للتحقق القانوني فقط.'
-                                          : 'Your documents are securely encrypted, never displayed to customers, and used strictly for identity vetting.',
+                                          : 'Only you and authorized FIXO reviewers can open these files. Your application is reviewed manually.',
                                       style: FixoTypography.bodySm(
                                         color: FixoColors.deepestForest,
                                       ),
@@ -287,8 +313,10 @@ class _ProVerificationDocsPageState
                           docType: 'NATIONAL_ID_FRONT',
                           titleEn: 'National ID (Front Face)',
                           titleAr: 'بطاقة الرقم القومي (الوجه الأمامي)',
-                          descEn: 'Clear photo showing full name, photo, and 14 digits',
-                          descAr: 'صورة واضحة توضح الاسم والصورة والرقم القومي كاملاً',
+                          descEn:
+                              'Clear photo showing full name, photo, and 14 digits',
+                          descAr:
+                              'صورة واضحة توضح الاسم والصورة والرقم القومي كاملاً',
                           isRequired: true,
                           ar: ar,
                         ),
@@ -298,8 +326,10 @@ class _ProVerificationDocsPageState
                           docType: 'NATIONAL_ID_BACK',
                           titleEn: 'National ID (Back Face)',
                           titleAr: 'بطاقة الرقم القومي (الوجه الخلفي)',
-                          descEn: 'Clear photo showing address, occupation, and serial',
-                          descAr: 'صورة واضحة توضح العنوان والمهنة والرقم التسلسلي',
+                          descEn:
+                              'Clear photo showing address, occupation, and serial',
+                          descAr:
+                              'صورة واضحة توضح العنوان والمهنة والرقم التسلسلي',
                           isRequired: true,
                           ar: ar,
                         ),
@@ -309,8 +339,10 @@ class _ProVerificationDocsPageState
                           docType: 'CRIMINAL_RECORD_CERT',
                           titleEn: 'Criminal Record Certificate (Fesh)',
                           titleAr: 'صحيفة الحالة الجنائية (فيش وتشبيه)',
-                          descEn: 'Recent criminal record check issued within the last 3 months',
-                          descAr: 'صحيفة حالة جنائية حديثة موجهة لفيكسو أو بدون سوابق',
+                          descEn:
+                              'A clear, complete photo of your criminal record certificate',
+                          descAr:
+                              'صحيفة حالة جنائية حديثة موجهة لفيكسو أو بدون سوابق',
                           isRequired: true,
                           ar: ar,
                         ),
@@ -320,9 +352,12 @@ class _ProVerificationDocsPageState
                         _docCard(
                           docType: 'SYNDICATE_LICENSE',
                           titleEn: 'Trade License or Syndicate Card (Optional)',
-                          titleAr: 'كارنيه النقابة أو شهادة قياس المهارة (اختياري)',
-                          descEn: 'Trade qualification certificate, union card or vocational diploma',
-                          descAr: 'شهادة قياس مستوى المهارة أو كارنيه النقابة الحرفية إن وجد',
+                          titleAr:
+                              'كارنيه النقابة أو شهادة قياس المهارة (اختياري)',
+                          descEn:
+                              'Trade qualification certificate, union card or vocational diploma',
+                          descAr:
+                              'شهادة قياس مستوى المهارة أو كارنيه النقابة الحرفية إن وجد',
                           isRequired: false,
                           ar: ar,
                         ),
@@ -351,7 +386,9 @@ class _ProVerificationDocsPageState
                                   height: 20,
                                   child: CircularProgressIndicator(
                                     strokeWidth: 2,
-                                    valueColor: AlwaysStoppedAnimation(Colors.white),
+                                    valueColor: AlwaysStoppedAnimation(
+                                      Colors.white,
+                                    ),
                                   ),
                                 )
                               : const Icon(Icons.send_rounded),
@@ -360,7 +397,9 @@ class _ProVerificationDocsPageState
                                 ? 'إرسال الملف للمراجعة والاعتماد'
                                 : 'Submit Dossier for Verification',
                             style: FixoTypography.labelLg(
-                              color: _hasAllRequired ? Colors.white : palette.mutedText,
+                              color: _hasAllRequired
+                                  ? Colors.white
+                                  : palette.mutedText,
                             ).copyWith(fontWeight: FontWeight.bold),
                           ),
                         ),
@@ -384,7 +423,7 @@ class _ProVerificationDocsPageState
   }) {
     final palette = context.fixoPalette;
     final doc = _uploadedDocs[docType];
-    final isUploaded = doc != null;
+    final isUploaded = doc?.hasPrivateContent == true;
     final isUploading = _uploadingDocType == docType;
 
     return FixoSurfaceCard(
@@ -471,15 +510,21 @@ class _ProVerificationDocsPageState
                   Row(
                     children: [
                       Icon(
-                        Icons.verified_rounded,
+                        doc!.status == 'VERIFIED'
+                            ? Icons.verified_rounded
+                            : Icons.check_circle_outline,
                         size: 14,
                         color: FixoColors.secondary,
                       ),
                       const SizedBox(width: 4),
                       Text(
                         ar
-                            ? 'تم رفع المستند (${doc.fileName})'
-                            : 'Uploaded (${doc.fileName})',
+                            ? (doc.status == 'REJECTED'
+                                  ? 'مطلوب صورة جديدة'
+                                  : 'تم رفع الصورة')
+                            : (doc.status == 'REJECTED'
+                                  ? 'New photo needed'
+                                  : 'Photo uploaded'),
                         style: FixoTypography.bodySm(
                           color: FixoColors.primaryForest,
                         ).copyWith(fontWeight: FontWeight.w700),
@@ -490,24 +535,28 @@ class _ProVerificationDocsPageState
                 const SizedBox(height: 10),
                 OutlinedButton.icon(
                   style: OutlinedButton.styleFrom(
-                    minimumSize: const Size(0, 36),
+                    minimumSize: const Size(0, 48),
                     padding: const EdgeInsets.symmetric(horizontal: 12),
                     shape: RoundedRectangleBorder(
                       borderRadius: FixoRadius.borderRadiusMd,
                     ),
                   ),
-                  onPressed: isUploading
+                  onPressed: (_uploadingDocType != null || _submitting)
                       ? null
                       : () => _pickAndUpload(docType, titleEn, titleAr, ar),
                   icon: Icon(
-                    isUploaded ? Icons.refresh_rounded : Icons.camera_alt_outlined,
+                    isUploaded
+                        ? Icons.refresh_rounded
+                        : Icons.camera_alt_outlined,
                     size: 16,
                   ),
                   label: Text(
                     isUploaded
                         ? (ar ? 'استبدال المستند' : 'Replace document')
                         : (ar ? 'رفع المستند / عينة' : 'Upload document'),
-                    style: FixoTypography.labelSm().copyWith(fontWeight: FontWeight.w700),
+                    style: FixoTypography.labelSm().copyWith(
+                      fontWeight: FontWeight.w700,
+                    ),
                   ),
                 ),
               ],

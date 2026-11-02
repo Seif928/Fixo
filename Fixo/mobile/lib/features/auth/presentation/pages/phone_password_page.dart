@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -13,6 +14,8 @@ import '../../data/email_access_service.dart';
 import '../../domain/auth_models.dart';
 import '../controllers/auth_controller.dart';
 import '../controllers/account_entry_controller.dart';
+import '../../../../core/uploads/private_media_picker_sheet.dart';
+import '../../../profile/data/avatar_repository.dart';
 
 /// Screen 02: Google first registration, phone/password for subsequent sign-in.
 class PhonePasswordPage extends ConsumerStatefulWidget {
@@ -28,6 +31,7 @@ class _PhonePasswordPageState extends ConsumerState<PhonePasswordPage> {
   final _password = TextEditingController(), _confirm = TextEditingController();
   bool _busy = false, _obscure = true;
   String? _error;
+  PickedPrivateMedia? _photo;
   bool get _ar => ref.read(appLocaleProvider).languageCode == 'ar';
 
   bool get _professional =>
@@ -109,6 +113,21 @@ class _PhonePasswordPageState extends ConsumerState<PhonePasswordPage> {
     );
   }
 
+  Future<void> _pickPhoto() async {
+    final selected = await PrivateMediaPickerSheet.show(
+      context,
+      isArabic: _ar,
+      titleEn: 'Profile photo',
+      titleAr: 'صورة الحساب',
+      rationaleEn:
+          'Choose a photo for your FIXO profile. You can change it later.',
+      rationaleAr:
+          'اختار صورة لحسابك على FIXO. تقدر تغيرها من البروفايل بعدين.',
+      defaultFilePrefix: 'avatar',
+    );
+    if (mounted && selected != null) setState(() => _photo = selected);
+  }
+
   Future<void> _recover() async {
     final email = TextEditingController();
     final address = await showDialog<String>(
@@ -161,6 +180,14 @@ class _PhonePasswordPageState extends ConsumerState<PhonePasswordPage> {
 
   @override
   Widget build(BuildContext context) {
+    ref.listen(authControllerProvider, (previous, next) {
+      if (previous?.session?.user.id != next.session?.user.id) {
+        _photo = null;
+        for (final controller in [_name, _phone, _password, _confirm]) {
+          controller.clear();
+        }
+      }
+    });
     final session = ref.watch(authControllerProvider).session;
     final setup = session?.user.requiresProfileSetup == true;
     final bool professional =
@@ -362,6 +389,50 @@ class _PhonePasswordPageState extends ConsumerState<PhonePasswordPage> {
                         crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [
                           if (setup) ...[
+                            Align(
+                              alignment: AlignmentDirectional.centerStart,
+                              child: Column(
+                                children: [
+                                  if (_photo != null)
+                                    ClipOval(
+                                      child: Image.memory(
+                                        base64Decode(_photo!.contentBase64),
+                                        width: 72,
+                                        height: 72,
+                                        fit: BoxFit.cover,
+                                        errorBuilder: (_, _, _) => const Icon(
+                                          Icons.person_outline,
+                                          size: 64,
+                                        ),
+                                      ),
+                                    ),
+                                  OutlinedButton.icon(
+                                    key: const Key('first-profile-photo'),
+                                    onPressed: _busy ? null : _pickPhoto,
+                                    icon: const Icon(
+                                      Icons.add_a_photo_outlined,
+                                    ),
+                                    label: Text(
+                                      ar
+                                          ? 'صورة الحساب (اختياري)'
+                                          : 'Add photo (optional)',
+                                    ),
+                                  ),
+                                  if (_photo != null)
+                                    TextButton(
+                                      onPressed: _busy
+                                          ? null
+                                          : () => setState(() => _photo = null),
+                                      child: Text(
+                                        ar
+                                            ? 'إزالة الاختيار'
+                                            : 'Remove selection',
+                                      ),
+                                    ),
+                                ],
+                              ),
+                            ),
+                            const SizedBox(height: 12),
                             TextFormField(
                               key: const Key('first-profile-name'),
                               controller: _name,
@@ -500,18 +571,42 @@ class _PhonePasswordPageState extends ConsumerState<PhonePasswordPage> {
                                             _phone.text,
                                           )!;
                                       if (setup) {
-                                        final user = await access
+                                        var user = await access
                                             .completePhoneProfile(
                                               _name.text,
                                               phone,
                                               _password.text,
                                             );
+                                        bool photoFailed = false;
+                                        if (_photo != null) {
+                                          try {
+                                            final version = await ref
+                                                .read(avatarRepositoryProvider)
+                                                .upload(_photo!);
+                                            user = user.withAvatar(version);
+                                          } catch (_) {
+                                            photoFailed = true;
+                                          }
+                                        }
                                         await ref
                                             .read(
                                               authControllerProvider.notifier,
                                             )
                                             .acceptUpdatedProfile(user);
                                         if (context.mounted) {
+                                          if (photoFailed) {
+                                            ScaffoldMessenger.of(
+                                              context,
+                                            ).showSnackBar(
+                                              SnackBar(
+                                                content: Text(
+                                                  ar
+                                                      ? 'حسابك جاهز. تقدر تضيف صورتك بعدين من البروفايل.'
+                                                      : 'Your account is ready. Add your photo later from Profile.',
+                                                ),
+                                              ),
+                                            );
+                                          }
                                           context.go(_destination);
                                         }
                                       } else {

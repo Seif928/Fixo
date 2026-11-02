@@ -1,5 +1,8 @@
 import { NotFoundException } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
+import { Reflector } from '@nestjs/core';
+import { ExecutionContext } from '@nestjs/common';
+import { RolesGuard } from '../auth/guards/roles.guard';
 import { UserRole } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import { AuthService } from '../auth/auth.service';
@@ -9,6 +12,16 @@ import { UsersController } from './users.controller';
 import { UsersService } from './users.service';
 
 describe('UsersController (Unit Tests)', () => {
+  it('lets a verified professional manage their own customer addresses', () => {
+    const guard = new RolesGuard(new Reflector());
+    for (const handler of [UsersController.prototype.createAddress, UsersController.prototype.getAddresses]) {
+      const context = {
+        getClass: () => UsersController, getHandler: () => handler,
+        switchToHttp: () => ({ getRequest: () => ({ user: { role: UserRole.PRO } }) }),
+      } as unknown as ExecutionContext;
+      expect(guard.canActivate(context)).toBe(true);
+    }
+  });
   let controller: UsersController;
   let authServiceMock: Partial<Record<keyof AuthService, jest.Mock>>;
   let usersServiceMock: Partial<Record<keyof UsersService, jest.Mock>>;

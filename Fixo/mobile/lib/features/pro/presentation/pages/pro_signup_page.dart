@@ -283,7 +283,7 @@ class _ProSignUpPageState extends ConsumerState<ProSignUpPage> {
                                     counterText: '',
                                     helperText: ar
                                         ? 'رقم تجريبي مكون من ١٤ رقم للتحقق والاختبار'
-                                        : '14-digit synthetic National ID for verification',
+                                        : '14-digit National ID matching your uploaded photos',
                                   ),
                                   validator: (v) {
                                     if (v == null || !RegExp(r'^\d{14}$').hasMatch(v.trim())) {

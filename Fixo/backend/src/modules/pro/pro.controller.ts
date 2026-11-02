@@ -4,6 +4,8 @@ import {
   Get,
   HttpCode,
   HttpStatus,
+  Header,
+  StreamableFile,
   Param,
   Patch,
   Post,
@@ -88,7 +90,7 @@ export class ProController {
   @HttpCode(HttpStatus.CREATED)
   @ApiOperation({
     summary:
-      'Step 3 of 4: Upload private synthetic verification document specimen (Screen 13)',
+      'Step 3 of 4: Upload private verification document photo (Screen 13)',
   })
   async uploadDocument(
     @CurrentUser() user: FixoJwtPayload,
@@ -101,7 +103,7 @@ export class ProController {
   @ApiParam({ name: 'docId', description: 'Verification Document UUID' })
   @ApiOperation({
     summary:
-      'Get short-lived signed access to a private verification document (restricted to owner or ADMIN)',
+      'Get authenticated access to a private verification document (restricted to owner or ADMIN)',
   })
   async getDocumentAccess(
     @CurrentUser() user: FixoJwtPayload,
@@ -113,6 +115,14 @@ export class ProController {
       docId,
       isAdmin,
     );
+  }
+
+  @Get('onboarding/documents/:docId/content')
+  @Header('Cache-Control', 'private, no-store')
+  @Header('X-Content-Type-Options', 'nosniff')
+  async getDocumentContent(@CurrentUser() user: FixoJwtPayload, @Param('docId') docId: string) {
+    const content = await this.proService.getVerificationDocumentContent(user.sub, docId, user.role === UserRole.ADMIN);
+    return new StreamableFile(content.bytes, { type: content.mimeType, disposition: 'attachment; filename="verification-document"' });
   }
 
   @Post('onboarding/submit')

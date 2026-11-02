@@ -20,17 +20,25 @@ class ProCatalogOptionsModel {
     final cats = (json['categories'] as List<dynamic>? ?? const [])
         .map((e) => ServiceCategoryModel.fromJson(e as Map<String, dynamic>))
         .toList();
-    final subs = (json['subSkills'] as List<dynamic>? ?? const [])
+    final nestedSkills = (json['categories'] as List<dynamic>? ?? const [])
+        .expand<dynamic>(
+          (category) =>
+              (category as Map<String, dynamic>)['subSkills']
+                  as List<dynamic>? ??
+              const [],
+        )
+        .toList();
+    final subs = (json['subSkills'] as List<dynamic>? ?? nestedSkills)
         .map((e) => ProSubSkillModel.fromJson(e as Map<String, dynamic>))
         .toList();
     final zns = (json['zones'] as List<dynamic>? ?? const [])
         .map((e) => CoverageZoneModel.fromJson(e as Map<String, dynamic>))
         .toList();
     final trans = (json['transportModes'] as List<dynamic>? ?? const [])
-        .map((e) => ProOptionItemModel.fromJson(e as Map<String, dynamic>))
+        .map((e) => ProOptionItemModel.fromWire(e))
         .toList();
     final exp = (json['experienceTiers'] as List<dynamic>? ?? const [])
-        .map((e) => ProOptionItemModel.fromJson(e as Map<String, dynamic>))
+        .map((e) => ProOptionItemModel.fromWire(e))
         .toList();
 
     return ProCatalogOptionsModel(
@@ -85,6 +93,26 @@ class ProOptionItemModel {
   final String? descAr;
 
   String localizedLabel(bool isArabic) => isArabic ? labelAr : labelEn;
+
+  factory ProOptionItemModel.fromWire(dynamic value) {
+    if (value is Map<String, dynamic>) {
+      return ProOptionItemModel.fromJson(value);
+    }
+    const labels = <String, (String, String)>{
+      'MOTORCYCLE': ('Motorcycle', 'موتوسيكل'),
+      'WORK_VAN': ('Work van', 'عربية شغل'),
+      'METRO_BUS': ('Public transport', 'مواصلات عامة'),
+      'JUNIOR_1_2Y': ('1–2 years', '١–٢ سنة'),
+      'SKILLED_3_5Y': ('3–5 years', '٣–٥ سنين'),
+      'SENIOR_6_8Y': ('6–8 years', '٦–٨ سنين'),
+      'MASTER_8_PLUS_Y': ('More than 8 years', 'أكتر من ٨ سنين'),
+    };
+    final pair = labels[value];
+    if (value is! String || pair == null) {
+      throw const FormatException('Unsupported professional option.');
+    }
+    return ProOptionItemModel(key: value, labelEn: pair.$1, labelAr: pair.$2);
+  }
 
   factory ProOptionItemModel.fromJson(Map<String, dynamic> json) {
     return ProOptionItemModel(
@@ -163,9 +191,11 @@ class ProProfileModel {
     return ProProfileModel(
       id: json['id'] as String? ?? '',
       userId: json['userId'] as String? ?? '',
-      fullName: json['fullName'] as String? ??
+      fullName:
+          json['fullName'] as String? ??
           (json['user'] is Map ? json['user']['fullName'] as String? : null),
-      phone: json['phone'] as String? ??
+      phone:
+          json['phone'] as String? ??
           (json['user'] is Map ? json['user']['phone'] as String? : null),
       nationalIdSynthetic: json['nationalIdSynthetic'] as String?,
       primaryZoneId: json['primaryZoneId'] as String?,
@@ -179,13 +209,11 @@ class ProProfileModel {
       acceptsStandardRateCard: json['acceptsStandardRateCard'] as bool? ?? true,
       toolkitCommitmentConfirmed:
           json['toolkitCommitmentConfirmed'] as bool? ?? false,
-      verificationStatus:
-          json['verificationStatus'] as String? ?? 'DRAFT',
+      verificationStatus: json['verificationStatus'] as String? ?? 'DRAFT',
       isOnline: json['isOnline'] as bool? ?? false,
       ratingAvg: (json['ratingAvg'] as num?)?.toDouble() ?? 5.0,
       reviewsCount: (json['reviewsCount'] as num?)?.toInt() ?? 0,
-      completedJobsCount:
-          (json['completedJobsCount'] as num?)?.toInt() ?? 0,
+      completedJobsCount: (json['completedJobsCount'] as num?)?.toInt() ?? 0,
       specialtyEn: json['specialtyEn'] as String?,
       specialtyAr: json['specialtyAr'] as String?,
       estimatedPriceEgp: (json['estimatedPriceEgp'] as num?)?.toInt(),
@@ -203,6 +231,7 @@ class ProDocumentModel {
     required this.mimeType,
     required this.status,
     this.rejectionReason,
+    this.hasPrivateContent = false,
     required this.createdAt,
   });
 
@@ -213,6 +242,7 @@ class ProDocumentModel {
   final String mimeType;
   final String status;
   final String? rejectionReason;
+  final bool hasPrivateContent;
   final String createdAt;
 
   factory ProDocumentModel.fromJson(Map<String, dynamic> json) {
@@ -223,9 +253,12 @@ class ProDocumentModel {
       fileSizeBytes: (json['fileSizeBytes'] as num?)?.toInt() ?? 0,
       mimeType: json['mimeType'] as String? ?? 'image/png',
       status: json['status'] as String? ?? 'PENDING',
-      rejectionReason: json['reviewerComment'] as String? ??
+      hasPrivateContent: json['hasPrivateContent'] == true,
+      rejectionReason:
+          json['reviewerComment'] as String? ??
           json['rejectionReason'] as String?,
-      createdAt: json['createdAt'] as String? ?? '',
+      createdAt:
+          json['uploadedAt'] as String? ?? json['createdAt'] as String? ?? '',
     );
   }
 }
@@ -256,9 +289,11 @@ class ProVerificationMilestoneModel {
       stepNumber: (json['stepNumber'] as num?)?.toInt() ?? 1,
       titleEn: json['titleEn'] as String? ?? '',
       titleAr: json['titleAr'] as String? ?? '',
-      descEn: json['descEn'] as String? ?? '',
-      descAr: json['descAr'] as String? ?? '',
-      status: json['status'] as String? ?? 'UPCOMING',
+      descEn: json['subtitleEn'] as String? ?? json['descEn'] as String? ?? '',
+      descAr: json['subtitleAr'] as String? ?? json['descAr'] as String? ?? '',
+      status: json['state'] == 'COMPLETED'
+          ? 'DONE'
+          : json['state'] as String? ?? json['status'] as String? ?? 'UPCOMING',
     );
   }
 }
@@ -290,21 +325,39 @@ class ProVerificationStatusModel {
   bool get isActionRequired => status == 'ACTION_REQUIRED';
 
   factory ProVerificationStatusModel.fromJson(Map<String, dynamic> json) {
+    final profile = json['profile'] as Map<String, dynamic>?;
+    final status = json['verificationStatus'];
+    if (profile == null ||
+        !const [
+          'DRAFT',
+          'PENDING_REVIEW',
+          'APPROVED',
+          'ACTION_REQUIRED',
+          'SUSPENDED',
+        ].contains(status)) {
+      throw const FormatException('Verification status is unavailable.');
+    }
     final mls = (json['milestones'] as List<dynamic>? ?? const [])
-        .map((m) =>
-            ProVerificationMilestoneModel.fromJson(m as Map<String, dynamic>))
+        .asMap()
+        .entries
+        .map(
+          (entry) => ProVerificationMilestoneModel.fromJson({
+            ...Map<String, dynamic>.from(entry.value as Map),
+            'stepNumber': entry.key + 1,
+          }),
+        )
         .toList();
-    final docs = (json['documents'] as List<dynamic>? ?? const [])
+    final docs = (profile['documents'] as List<dynamic>? ?? const [])
         .map((d) => ProDocumentModel.fromJson(d as Map<String, dynamic>))
         .toList();
 
     return ProVerificationStatusModel(
-      status: json['status'] as String? ?? 'DRAFT',
+      status: status as String,
       dossierCode: json['dossierCode'] as String? ?? '',
       submittedAt: json['submittedAt'] as String?,
       reviewerNote: json['reviewerNote'] as String?,
       reviewedAt: json['reviewedAt'] as String?,
-      isComplete: json['isComplete'] as bool? ?? false,
+      isComplete: status == 'APPROVED',
       milestones: mls,
       documents: docs,
     );
@@ -327,10 +380,13 @@ class ProDashboardDailyEarningsModel {
 
   factory ProDashboardDailyEarningsModel.fromJson(Map<String, dynamic> json) {
     return ProDashboardDailyEarningsModel(
-      dayKey: json['dayKey'] as String? ?? '',
+      dayKey: json['date'] as String? ?? json['dayKey'] as String? ?? '',
       dayLabelEn: json['dayLabelEn'] as String? ?? '',
       dayLabelAr: json['dayLabelAr'] as String? ?? '',
-      netEgp: (json['netEgp'] as num?)?.toInt() ?? 0,
+      netEgp:
+          (json['netEarningsEgp'] as num?)?.toInt() ??
+          (json['netEgp'] as num?)?.toInt() ??
+          0,
     );
   }
 }
@@ -394,41 +450,53 @@ class JobOfferModel {
 
     return JobOfferModel(
       id: json['id'] as String? ?? '',
-      bookingId: json['bookingId'] as String? ?? (booking['id'] as String? ?? ''),
-      orderCode: json['orderCode'] as String? ??
+      bookingId:
+          json['bookingId'] as String? ?? (booking['id'] as String? ?? ''),
+      orderCode:
+          json['orderCode'] as String? ??
           (booking['orderCode'] as String? ?? ''),
       status: json['status'] as String? ?? 'OFFERED',
       expiresAt: json['expiresAt'] as String? ?? '',
       remainingSeconds: (json['remainingSeconds'] as num?)?.toInt() ?? 0,
-      serviceTitleEn: json['serviceTitleEn'] as String? ??
+      serviceTitleEn:
+          json['serviceTitleEn'] as String? ??
           (offering['titleEn'] as String? ?? 'Service Request'),
-      serviceTitleAr: json['serviceTitleAr'] as String? ??
+      serviceTitleAr:
+          json['serviceTitleAr'] as String? ??
           (offering['titleAr'] as String? ?? 'طلب خدمة'),
-      categoryNameEn: json['categoryNameEn'] as String? ??
-          (cat['nameEn'] as String? ?? ''),
-      categoryNameAr: json['categoryNameAr'] as String? ??
-          (cat['nameAr'] as String? ?? ''),
-      customerName: json['customerName'] as String? ??
+      categoryNameEn:
+          json['categoryNameEn'] as String? ?? (cat['nameEn'] as String? ?? ''),
+      categoryNameAr:
+          json['categoryNameAr'] as String? ?? (cat['nameAr'] as String? ?? ''),
+      customerName:
+          json['customerName'] as String? ??
           (customer['fullName'] as String? ?? 'FIXO Customer'),
-      customerPhoneMasked: json['customerPhoneMasked'] as String? ??
-          (customer['phone'] as String? ?? '010****'),
-      districtLine: json['districtLine'] as String? ??
+      customerPhoneMasked:
+          json['customerPhoneMasked'] as String? ??
+          (customer['phone'] as String? ?? ''),
+      districtLine:
+          json['districtLine'] as String? ??
           (addr['districtLine'] as String? ?? ''),
-      zoneNameEn: json['zoneNameEn'] as String? ??
-          (zone['nameEn'] as String? ?? ''),
-      zoneNameAr: json['zoneNameAr'] as String? ??
-          (zone['nameAr'] as String? ?? ''),
-      scheduledDate: json['scheduledDate'] as String? ??
+      zoneNameEn:
+          json['zoneNameEn'] as String? ?? (zone['nameEn'] as String? ?? ''),
+      zoneNameAr:
+          json['zoneNameAr'] as String? ?? (zone['nameAr'] as String? ?? ''),
+      scheduledDate:
+          json['scheduledDate'] as String? ??
           (booking['scheduledDate'] as String? ?? ''),
-      timeWindow: json['timeWindow'] as String? ??
+      timeWindow:
+          json['timeWindow'] as String? ??
           (booking['timeWindow'] as String? ?? ''),
-      grossEgp: (json['grossEgp'] as num?)?.toInt() ??
+      grossEgp:
+          (json['grossEgp'] as num?)?.toInt() ??
           (pricing['totalEgp'] as num?)?.toInt() ??
           0,
-      platformFeeEgp: (json['platformFeeEgp'] as num?)?.toInt() ??
+      platformFeeEgp:
+          (json['platformFeeEgp'] as num?)?.toInt() ??
           (pricing['platformFeeEgp'] as num?)?.toInt() ??
           0,
-      netArtisanEgp: (json['netArtisanEgp'] as num?)?.toInt() ??
+      netArtisanEgp:
+          (json['netArtisanEgp'] as num?)?.toInt() ??
           (pricing['netArtisanEgp'] as num?)?.toInt() ??
           0,
     );
@@ -474,23 +542,51 @@ class ProScheduledJobModel {
   final bool hasArrivalPin;
 
   factory ProScheduledJobModel.fromJson(Map<String, dynamic> json) {
+    final offering = json['offering'] as Map<String, dynamic>? ?? const {};
+    final customer = json['customer'] as Map<String, dynamic>? ?? const {};
+    final address = json['address'] as Map<String, dynamic>? ?? const {};
+    final zone = address['zone'] as Map<String, dynamic>? ?? const {};
+    final pricing = json['pricing'] as Map<String, dynamic>? ?? const {};
     return ProScheduledJobModel(
       bookingId: json['bookingId'] as String? ?? json['id'] as String? ?? '',
       orderCode: json['orderCode'] as String? ?? '',
       status: json['status'] as String? ?? 'CONFIRMED',
-      serviceTitleEn: json['serviceTitleEn'] as String? ?? 'Service',
-      serviceTitleAr: json['serviceTitleAr'] as String? ?? 'خدمة',
-      customerName: json['customerName'] as String? ?? 'Customer',
+      serviceTitleEn:
+          json['serviceTitleEn'] as String? ??
+          offering['titleEn'] as String? ??
+          'Service',
+      serviceTitleAr:
+          json['serviceTitleAr'] as String? ??
+          offering['titleAr'] as String? ??
+          'خدمة',
+      customerName:
+          json['customerName'] as String? ??
+          customer['fullName'] as String? ??
+          'Customer',
       customerPhoneMasked: json['customerPhoneMasked'] as String? ?? '',
-      addressLine: json['addressLine'] as String? ?? '',
-      districtLine: json['districtLine'] as String? ?? '',
-      zoneNameEn: json['zoneNameEn'] as String? ?? '',
-      zoneNameAr: json['zoneNameAr'] as String? ?? '',
+      addressLine:
+          json['addressLine'] as String? ??
+          address['buildingLine'] as String? ??
+          '',
+      districtLine:
+          json['districtLine'] as String? ??
+          address['districtLine'] as String? ??
+          '',
+      zoneNameEn:
+          json['zoneNameEn'] as String? ?? zone['nameEn'] as String? ?? '',
+      zoneNameAr:
+          json['zoneNameAr'] as String? ?? zone['nameAr'] as String? ?? '',
       timeWindow: json['timeWindow'] as String? ?? '',
       scheduledDate: json['scheduledDate'] as String? ?? '',
-      totalEgp: (json['totalEgp'] as num?)?.toInt() ?? 0,
-      netArtisanEgp: (json['netArtisanEgp'] as num?)?.toInt() ?? 0,
-      hasArrivalPin: json['hasArrivalPin'] as bool? ?? false,
+      totalEgp:
+          (pricing['totalEgp'] as num?)?.toInt() ??
+          (json['totalEgp'] as num?)?.toInt() ??
+          0,
+      netArtisanEgp:
+          (pricing['netArtisanEgp'] as num?)?.toInt() ??
+          (json['netArtisanEgp'] as num?)?.toInt() ??
+          0,
+      hasArrivalPin: json['status'] == 'ARRIVED',
     );
   }
 }
@@ -520,28 +616,36 @@ class ProDashboardModel {
   final List<ProScheduledJobModel> todaySchedule;
 
   factory ProDashboardModel.fromJson(Map<String, dynamic> json) {
-    final daily = (json['dailyTrajectory'] as List<dynamic>? ?? const [])
-        .map((d) => ProDashboardDailyEarningsModel.fromJson(
-            d as Map<String, dynamic>))
+    final profile = json['profile'] as Map<String, dynamic>?;
+    final earnings = json['earningsSummary'] as Map<String, dynamic>?;
+    if (profile == null || earnings == null) {
+      throw const FormatException('Dashboard is unavailable.');
+    }
+    final daily = (json['weeklyTrajectory'] as List<dynamic>? ?? const [])
+        .map(
+          (d) => ProDashboardDailyEarningsModel.fromJson(
+            d as Map<String, dynamic>,
+          ),
+        )
         .toList();
     final offers = (json['activeOffers'] as List<dynamic>? ?? const [])
         .map((o) => JobOfferModel.fromJson(o as Map<String, dynamic>))
         .toList();
-    final sched = (json['todaySchedule'] as List<dynamic>? ?? const [])
+    final sched = (json['activeJobs'] as List<dynamic>? ?? const [])
         .map((s) => ProScheduledJobModel.fromJson(s as Map<String, dynamic>))
         .toList();
 
     return ProDashboardModel(
-      isOnline: json['isOnline'] as bool? ?? false,
-      todayEarningsEgp: (json['todayEarningsEgp'] as num?)?.toInt() ?? 0,
-      weekEarningsEgp: (json['weekEarningsEgp'] as num?)?.toInt() ?? 0,
-      completedJobsCount: (json['completedJobsCount'] as num?)?.toInt() ?? 0,
-      ratingAvg: (json['ratingAvg'] as num?)?.toDouble() ?? 5.0,
-      reviewsCount: (json['reviewsCount'] as num?)?.toInt() ?? 0,
+      isOnline: profile['isOnline'] as bool? ?? false,
+      todayEarningsEgp: (earnings['todayNetEarningsEgp'] as num?)?.toInt() ?? 0,
+      weekEarningsEgp: (earnings['weeklyNetEarningsEgp'] as num?)?.toInt() ?? 0,
+      completedJobsCount:
+          (earnings['totalCompletedJobsCount'] as num?)?.toInt() ?? 0,
+      ratingAvg: (earnings['ratingAvg'] as num?)?.toDouble() ?? 5.0,
+      reviewsCount: (earnings['reviewsCount'] as num?)?.toInt() ?? 0,
       dailyTrajectory: daily,
       activeOffers: offers,
       todaySchedule: sched,
     );
   }
 }
-

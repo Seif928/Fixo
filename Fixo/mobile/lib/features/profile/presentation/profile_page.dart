@@ -14,6 +14,9 @@ import '../../../core/widgets/fixo_cards.dart';
 import '../../auth/presentation/controllers/auth_controller.dart';
 import '../../chat/presentation/notification_sheet.dart';
 import '../../customer_home/presentation/widgets/customer_home_widgets.dart';
+import '../../../core/uploads/private_media_picker_sheet.dart';
+import '../data/avatar_repository.dart';
+import 'profile_avatar.dart';
 
 /// Screen 10: live Stitch profile/alerts cards, with persisted real preferences.
 class ProfilePage extends ConsumerStatefulWidget {
@@ -69,6 +72,30 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
       useSafeArea: true,
       builder: (_) => const NotificationSheet(),
     );
+  }
+
+  Future<void> _editPhoto() async {
+    final selected = await PrivateMediaPickerSheet.show(
+      context,
+      isArabic: _ar,
+      titleEn: 'Change profile photo',
+      titleAr: 'تغيير صورة الحساب',
+      rationaleEn:
+          'Choose a new profile photo. Your current photo stays until the upload succeeds.',
+      rationaleAr: 'اختار صورة جديدة. الصورة الحالية هتفضل لحد ما الرفع ينجح.',
+      defaultFilePrefix: 'avatar',
+    );
+    if (selected == null || !mounted) return;
+    final userId = ref.read(authControllerProvider).session?.user.id;
+    await _save(() async {
+      final version = await ref.read(avatarRepositoryProvider).upload(selected);
+      if (!mounted) return;
+      final currentUser = ref.read(authControllerProvider).session?.user;
+      if (userId != null && currentUser?.id == userId) {
+        await ref.read(authControllerProvider.notifier).acceptUpdatedProfile(currentUser!.withAvatar(version));
+      }
+      if (mounted) setState(() => _profile = _load());
+    });
   }
 
   @override
@@ -185,7 +212,23 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
                           Row(
                             crossAxisAlignment: CrossAxisAlignment.center,
                             children: [
-                              FixoArtisanAvatar(identifier: fullName, size: 64),
+                              SizedBox(width: 88, height: 88, child: Stack(
+                                children: [
+                                  PositionedDirectional(start: 0, top: 0, child: ProfileAvatar(
+                                    userId: user['id'] as String? ?? '',
+                                    hasAvatar: user['hasAvatar'] == true,
+                                    version: user['avatarVersion'] as String?,
+                                    size: 80,
+                                  )),
+                                  PositionedDirectional(end: 0, bottom: 0, child: IconButton.filled(
+                                    key: const Key('profile-change-photo'),
+                                    onPressed: _saving ? null : _editPhoto,
+                                    tooltip: ar ? 'تغيير الصورة' : 'Change photo',
+                                    style: IconButton.styleFrom(minimumSize: const Size(48, 48), backgroundColor: palette.primaryBrand, foregroundColor: palette.limeAccent),
+                                    icon: const Icon(Icons.photo_camera_outlined, size: 21),
+                                  )),
+                                ],
+                              )),
                               const SizedBox(width: FixoSpacing.md),
                               Expanded(
                                 child: Column(
@@ -340,11 +383,11 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
                                   Text(
                                     isPro
                                         ? (ar
-                                            ? 'لوحة تحكم الفني والحجوزات المسندة'
-                                            : 'Pro partner dashboard & assigned jobs')
+                                              ? 'لوحة تحكم الفني والحجوزات المسندة'
+                                              : 'Pro partner dashboard & assigned jobs')
                                         : (ar
-                                            ? 'هل أنت فني أو حرفي خدمات منزلية؟'
-                                            : 'Are you a home services technician or artisan?'),
+                                              ? 'هل أنت فني أو حرفي خدمات منزلية؟'
+                                              : 'Are you a home services technician or artisan?'),
                                     style: textTheme.titleSmall?.copyWith(
                                       color: Colors.white,
                                       fontWeight: FontWeight.w800,
@@ -360,8 +403,7 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
                                       color: Colors.white.withValues(
                                         alpha: 0.16,
                                       ),
-                                      borderRadius:
-                                          FixoRadius.borderRadiusPill,
+                                      borderRadius: FixoRadius.borderRadiusPill,
                                     ),
                                     child: Row(
                                       mainAxisSize: MainAxisSize.min,
@@ -369,16 +411,15 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
                                         Text(
                                           isPro
                                               ? (ar
-                                                  ? 'فتح لوحة الفني'
-                                                  : 'Open Pro Dashboard')
+                                                    ? 'فتح لوحة الفني'
+                                                    : 'Open Pro Dashboard')
                                               : (ar
-                                                  ? 'تسجيل كشريك فني'
-                                                  : 'Apply as Pro Partner'),
-                                          style: textTheme.labelSmall
-                                              ?.copyWith(
-                                                color: Colors.white,
-                                                fontWeight: FontWeight.w700,
-                                              ),
+                                                    ? 'تسجيل كشريك فني'
+                                                    : 'Apply as Pro Partner'),
+                                          style: textTheme.labelSmall?.copyWith(
+                                            color: Colors.white,
+                                            fontWeight: FontWeight.w700,
+                                          ),
                                         ),
                                         const SizedBox(width: 4),
                                         Icon(

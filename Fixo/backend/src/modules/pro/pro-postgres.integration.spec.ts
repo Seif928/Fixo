@@ -33,13 +33,13 @@ import { BookingsModule } from '../bookings/bookings.module';
 import { BookingsService } from '../bookings/bookings.service';
 import { ProModule } from './pro.module';
 import { ProService } from './pro.service';
+import { PrivateStorageService } from '../media/private-storage.service';
+const sharp: typeof import('sharp').default = require('sharp');
 
 dotenv.config({ path: path.resolve(__dirname, '../../../.env') });
 
 // Minimal valid PNG binary header for synthetic specimen tests
-const VALID_PNG_BASE64 = Buffer.from([
-  0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0x00, 0x00, 0x00, 0x0d,
-]).toString('base64');
+let VALID_PNG_BASE64: string;
 
 describe('Pro Workflows PostgreSQL Real Database Integration Suite (fixo_test)', () => {
   let moduleRef: TestingModule;
@@ -56,8 +56,10 @@ describe('Pro Workflows PostgreSQL Real Database Integration Suite (fixo_test)',
   let categoryAc: any;
   let offeringAc: any;
   let customerAddress: any;
+  const privateObjects = new Map<string, Buffer>();
 
   beforeAll(async () => {
+    VALID_PNG_BASE64 = (await sharp({ create: { width: 32, height: 32, channels: 3, background: '#173f35' } }).png().toBuffer()).toString('base64');
     validateTestDatabaseTarget(process.env.TEST_DATABASE_URL);
     testDbUrl = process.env.TEST_DATABASE_URL!;
 
@@ -68,6 +70,10 @@ describe('Pro Workflows PostgreSQL Real Database Integration Suite (fixo_test)',
 
     moduleRef = await Test.createTestingModule({
       imports: [PrismaModule, AuthModule, BookingsModule, ProModule],
+    }).overrideProvider(PrivateStorageService).useValue({
+      put: async (key: string, bytes: Buffer) => { privateObjects.set(key, bytes); return key; },
+      get: async (key: string) => privateObjects.get(key),
+      remove: async (key: string) => { privateObjects.delete(key); },
     }).compile();
 
     await moduleRef.init();
@@ -254,8 +260,11 @@ describe('Pro Workflows PostgreSQL Real Database Integration Suite (fixo_test)',
         uploadedDocId,
         false,
       );
-      expect(ownerAccess.accessToken).toBeDefined();
-      expect(ownerAccess.privateDataUri).toContain('data:image/png;base64,');
+      expect(ownerAccess.downloadPath).toBe(`/api/v1/pro/onboarding/documents/${uploadedDocId}/content`);
+      expect(JSON.stringify(ownerAccess)).not.toContain('base64');
+      const stored = await prisma.proVerificationDocument.findUniqueOrThrow({ where: { id: uploadedDocId } });
+      expect(stored.storageKey).toMatch(/^obj::[a-f0-9]+::image\/webp::documents\//);
+      expect(privateObjects.size).toBe(3);
 
       // Submit for review -> transitions DRAFT -> PENDING_REVIEW
       const submittedStatus = await proService.submitForVerification(

@@ -411,7 +411,7 @@ class _IncomingJobPageState extends ConsumerState<IncomingJobPage> {
                           ),
                           const SizedBox(height: FixoSpacing.md),
 
-                          // Guaranteed Payout Card
+                          // Cash service net breakdown
                           FixoSurfaceCard(
                             padding: const EdgeInsets.all(FixoSpacing.md),
                             borderRadius: FixoRadius.borderRadiusLg,
@@ -461,7 +461,7 @@ class _IncomingJobPageState extends ConsumerState<IncomingJobPage> {
                                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                   children: [
                                     Text(
-                                      ar ? 'صافي أرباح الفني المضمونة' : 'Net Guaranteed Payout',
+                                      ar ? 'الصافي بعد رسوم المنصة' : 'Net after platform fee',
                                       style: FixoTypography.headlineSm(
                                         color: FixoColors.primaryForest,
                                       ).copyWith(fontWeight: FontWeight.w800),

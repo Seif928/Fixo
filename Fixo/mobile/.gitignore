@@ -45,3 +45,6 @@ app.*.map.json
 /android/app/release
 .vercel
 .env*
+
+# Generated golden mismatch diagnostics
+/test/failures/

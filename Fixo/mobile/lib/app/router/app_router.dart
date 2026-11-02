@@ -79,10 +79,8 @@ GoRouter createAppRouter({
       }
       final authed = isAuthenticated();
       final path = state.uri.path;
-      final wantsPro =
-          professionalIntent?.call() == true ||
-          state.uri.queryParameters['account'] == 'pro' ||
-          path.startsWith('/pro');
+      final account = state.uri.queryParameters['account'];
+      final wantsPro = account == 'pro' || (account != 'customer' && (professionalIntent?.call() == true || path.startsWith('/pro')));
       final authPath =
           '${AppRoutes.phoneAuth}${wantsPro ? '?account=pro' : ''}';
       final setupRequired = authed && requiresProfileSetup?.call() == true;
@@ -147,9 +145,11 @@ GoRouter createAppRouter({
             return const PhoneAuthPage();
           }
           return PhonePasswordPage(
-            professional: state.uri.queryParameters['account'] == 'pro'
-                ? true
-                : null,
+            professional: switch (state.uri.queryParameters['account']) {
+              'pro' => true,
+              'customer' => false,
+              _ => null,
+            },
           );
         },
       ),

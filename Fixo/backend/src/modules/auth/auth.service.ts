@@ -49,6 +49,8 @@ export interface AuthenticatedUserProfile {
   rewardPoints: number;
   addresses?: any[];
   requiresProfileSetup?: boolean;
+  hasAvatar?: boolean;
+  avatarVersion?: string;
 }
 
 export interface OtpRequestResponse {
@@ -734,6 +736,9 @@ export class AuthService implements OnModuleInit {
       return {
         id: user.id,
         requiresProfileSetup: Boolean(user.firebaseUid && (!user.phone || !user.fullName?.trim())),
+        ...(user.avatarUrl?.startsWith(`avatars/${user.id}/`)
+          ? { hasAvatar: true, avatarVersion: user.avatarUrl.split('/').pop()!.replace('.webp', '') }
+          : {}),
         phone: user.phone ?? '',
         fullName: user.fullName,
         email: user.email,

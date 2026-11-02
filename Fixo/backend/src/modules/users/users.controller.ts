@@ -69,7 +69,7 @@ export class UsersController {
   @Post('me/addresses')
   @HttpCode(HttpStatus.CREATED)
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(UserRole.CUSTOMER, UserRole.ADMIN)
+  @Roles(UserRole.CUSTOMER, UserRole.PRO, UserRole.ADMIN)
   @ApiOperation({
     summary: 'Create a new delivery address for the authenticated customer',
   })
@@ -100,7 +100,7 @@ export class UsersController {
 
   @Get('me/addresses')
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(UserRole.CUSTOMER, UserRole.ADMIN)
+  @Roles(UserRole.CUSTOMER, UserRole.PRO, UserRole.ADMIN)
   @ApiOperation({
     summary: 'List all saved addresses for the authenticated customer',
   })

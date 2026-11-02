@@ -10,6 +10,9 @@ import 'package:fixo_mobile/features/auth/domain/auth_models.dart';
 import 'package:fixo_mobile/features/auth/presentation/pages/phone_password_page.dart';
 import 'package:fixo_mobile/core/l10n/app_locale_controller.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:fixo_mobile/core/uploads/device_media_picker.dart';
+import 'package:fixo_mobile/features/profile/data/avatar_repository.dart';
+import 'package:image_picker/image_picker.dart';
 
 const completeUser = AuthUser(
   id: 'test-user',
@@ -71,12 +74,42 @@ class FakePhoneAccess extends EmailAccessService {
   }
 }
 
+class _PhotoPicker extends DeviceMediaPicker {
+  @override
+  bool get supportsCamera => false;
+  @override
+  Future<PickedPrivateMedia?> pick(
+    ImageSource source,
+  ) async => const PickedPrivateMedia(
+    fileName: 'photo.png',
+    mimeType: 'image/png',
+    contentBase64:
+        'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+sDj8AAAAASUVORK5CYII=',
+    sourceLabelEn: 'Photo library',
+    sourceLabelAr: 'الصور',
+  );
+}
+
+class _Avatars extends AvatarRepository {
+  _Avatars() : super(Dio());
+  int uploads = 0;
+  bool fail = false;
+  @override
+  Future<String> upload(PickedPrivateMedia photo) async {
+    uploads++;
+    if (fail) throw StateError('Storage unavailable');
+    return 'photo-version';
+  }
+}
+
 void main() {
   late FakePhoneAccess access;
+  late _Avatars avatars;
   Future<void> pump(WidgetTester tester, {bool professional = false}) async {
     SharedPreferences.setMockInitialValues({'fixo.entry.pro': professional});
     final preferences = await SharedPreferences.getInstance();
     access = FakePhoneAccess();
+    avatars = _Avatars();
     final router = GoRouter(
       initialLocation: '/auth/phone',
       routes: [
@@ -100,6 +133,8 @@ void main() {
         overrides: [
           appPreferencesProvider.overrideWithValue(preferences),
           emailAccessProvider.overrideWithValue(access),
+          avatarRepositoryProvider.overrideWithValue(avatars),
+          deviceMediaPickerProvider.overrideWithValue(_PhotoPicker()),
           secureTokenStorageProvider.overrideWithValue(MemoryTokenStorage()),
         ],
         child: MaterialApp.router(
@@ -241,4 +276,49 @@ void main() {
       },
     );
   }
+
+  testWidgets(
+    'photo failure preserves completed Google profile and allows sign-in',
+    (tester) async {
+      await pump(tester);
+      await tester.ensureVisible(find.byKey(const Key('first-use-google')));
+      await tester.tap(find.byKey(const Key('first-use-google')));
+      await tester.pumpAndSettle();
+      final photo = find.byKey(const Key('first-profile-photo'));
+      await tester.ensureVisible(photo);
+      await tester.tap(photo);
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const Key('pick-gallery-btn')));
+      await tester.pumpAndSettle();
+      avatars.fail = true;
+      await tester.enterText(
+        find.byKey(const Key('first-profile-name')),
+        'Test Person',
+      );
+      await tester.enterText(
+        find.byKey(const Key('phone-password-number')),
+        '01023456789',
+      );
+      await tester.enterText(
+        find.byKey(const Key('phone-password-secret')),
+        'test-password',
+      );
+      await tester.enterText(
+        find.byKey(const Key('first-profile-confirm')),
+        'test-password',
+      );
+      await tester.ensureVisible(
+        find.byKey(const Key('phone-password-submit')),
+      );
+      await tester.tap(find.byKey(const Key('phone-password-submit')));
+      await tester.pumpAndSettle();
+      expect(avatars.uploads, 1);
+      expect(access.setups, 1);
+      expect(find.text('Signed in'), findsOneWidget);
+      expect(
+        find.text('Your account is ready. Add your photo later from Profile.'),
+        findsOneWidget,
+      );
+    },
+  );
 }

@@ -175,8 +175,8 @@ export class ProDocumentUploadDto {
   docType: DocumentType;
 
   @ApiProperty({
-    description: 'Original specimen file name',
-    example: 'synthetic-national-id-front.png',
+    description: 'Photo file name',
+    example: 'document.png',
   })
   @IsNotEmpty()
   @IsString()
@@ -184,19 +184,20 @@ export class ProDocumentUploadDto {
   fileName: string;
 
   @ApiProperty({
-    description: 'Document MIME type (image/jpeg, image/png, image/webp, application/pdf)',
-    enum: ['image/jpeg', 'image/png', 'image/webp', 'application/pdf'],
+    description: 'Document MIME type (image/jpeg, image/png, image/webp)',
+    enum: ['image/jpeg', 'image/png', 'image/webp'],
     example: 'image/png',
   })
   @IsNotEmpty()
-  @IsIn(['image/jpeg', 'image/png', 'image/webp', 'application/pdf'])
-  mimeType: 'image/jpeg' | 'image/png' | 'image/webp' | 'application/pdf';
+  @IsIn(['image/jpeg', 'image/png', 'image/webp'])
+  mimeType: 'image/jpeg' | 'image/png' | 'image/webp';
 
   @ApiProperty({
-    description: 'Base64-encoded document specimen (max 2 MB decoded)',
+    description: 'Base64-encoded document photo (max 2 MB decoded)',
   })
   @IsNotEmpty()
   @IsString()
+  @MaxLength(2796204)
   contentBase64: string;
 }
 
