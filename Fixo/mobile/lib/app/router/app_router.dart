@@ -16,6 +16,12 @@ import '../../features/customer_home/domain/marketplace_models.dart';
 import '../../features/customer_home/presentation/pages/customer_home_page.dart';
 import '../../features/onboarding/presentation/pages/onboarding_page.dart';
 import '../../features/payment/presentation/pages/checkout_page.dart';
+import '../../features/pro/presentation/pages/incoming_job_page.dart';
+import '../../features/pro/presentation/pages/pro_dashboard_page.dart';
+import '../../features/pro/presentation/pages/pro_signup_page.dart';
+import '../../features/pro/presentation/pages/pro_skills_page.dart';
+import '../../features/pro/presentation/pages/pro_verification_docs_page.dart';
+import '../../features/pro/presentation/pages/pro_verification_status_page.dart';
 import 'app_routes.dart';
 
 /// Listenable bridge that notifies `GoRouter` whenever `authControllerProvider`
@@ -70,8 +76,8 @@ GoRouter createAppRouter({
         return AppRoutes.phoneAuth;
       }
 
-      // Protect customer routes when unauthenticated
-      if (!authed && path.startsWith('/customer')) {
+      // Protect customer and pro routes when unauthenticated
+      if (!authed && (path.startsWith('/customer') || path.startsWith('/pro'))) {
         return AppRoutes.phoneAuth;
       }
 
@@ -163,6 +169,39 @@ GoRouter createAppRouter({
         builder: (context, state) {
           final orderId = state.pathParameters['orderId'] ?? '';
           return ReviewPage(orderId: orderId);
+        },
+      ),
+      GoRoute(
+        path: AppRoutes.proSignUp,
+        name: 'proSignUp',
+        builder: (context, state) => const ProSignUpPage(),
+      ),
+      GoRoute(
+        path: AppRoutes.proSkills,
+        name: 'proSkills',
+        builder: (context, state) => const ProSkillsPage(),
+      ),
+      GoRoute(
+        path: AppRoutes.proVerificationDocs,
+        name: 'proVerificationDocs',
+        builder: (context, state) => const ProVerificationDocsPage(),
+      ),
+      GoRoute(
+        path: AppRoutes.proVerificationStatus,
+        name: 'proVerificationStatus',
+        builder: (context, state) => const ProVerificationStatusPage(),
+      ),
+      GoRoute(
+        path: AppRoutes.proDashboard,
+        name: 'proDashboard',
+        builder: (context, state) => const ProDashboardPage(),
+      ),
+      GoRoute(
+        path: AppRoutes.incomingJobRequest,
+        name: 'incomingJobRequest',
+        builder: (context, state) {
+          final jobId = state.pathParameters['jobId'] ?? '';
+          return IncomingJobPage(jobOfferId: jobId);
         },
       ),
     ],

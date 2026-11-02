@@ -46,13 +46,18 @@ abstract final class FixoTypography {
   );
 
   /// Headline Large (32px / 40px, w700)
-  static TextStyle headlineLg({Color? color, Locale? locale}) => TextStyle(
+  static TextStyle headlineLg({
+    Color? color,
+    Locale? locale,
+    bool tabularFigures = false,
+  }) => TextStyle(
     fontFamily: fontFamilyForLocale(locale),
     fontFamilyFallback: fallbackFonts,
     fontSize: 32,
     height: 40 / 32,
     fontWeight: FontWeight.w700,
     letterSpacing: -0.64,
+    fontFeatures: tabularFigures ? const [FontFeature.tabularFigures()] : null,
     color: color ?? FixoColors.deepestForest,
   );
 
