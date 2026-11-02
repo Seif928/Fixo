@@ -31,7 +31,7 @@ import { INTERNAL_FAILED_PIN_EVENT_NOTE } from '../bookings/bookings.service';
 import { validatePrivateUploadPayload } from '../bookings/private-upload.util';
 import { createHash, randomUUID } from 'crypto';
 import { PrivateStorageService } from '../media/private-storage.service';
-const sharp: typeof import('sharp').default = require('sharp');
+import { normalizePrivatePhoto } from '../media/normalize-private-photo';
 import { PushService } from '../communications/push.service';
 import { addressCoverageWhere } from '../services/coverage-policy';
 import { ensureDispatchOffer, jobOfferDetailsInclude } from './dispatch-offers';
@@ -340,33 +340,11 @@ export class ProService {
       mimeType: dto.mimeType,
       contentBase64: dto.contentBase64,
     });
-    let bytes: Buffer;
-    try {
-      const image = sharp(Buffer.from(validated.normalizedBase64, 'base64'), {
-        limitInputPixels: 20_000_000,
-        failOn: 'warning',
-      });
-      const metadata = await image.metadata();
-      if (
-        !['jpeg', 'png', 'webp'].includes(metadata.format ?? '') ||
-        (metadata.pages ?? 1) !== 1
-      )
-        throw new Error('Unsupported');
-      bytes = await image
-        .rotate()
-        .resize({
-          width: 1600,
-          height: 1600,
-          fit: 'inside',
-          withoutEnlargement: true,
-        })
-        .webp({ quality: 88 })
-        .toBuffer();
-    } catch {
-      throw new BadRequestException(
-        'Choose a readable JPEG, PNG or WebP document photo.',
-      );
-    }
+    const bytes = await normalizePrivatePhoto(
+      Buffer.from(validated.normalizedBase64, 'base64'),
+      dto.mimeType,
+      'document',
+    );
     const key = `documents/${profile.id}/${randomUUID()}.webp`;
     const hash = createHash('sha256').update(bytes).digest('hex');
     await this.privateStorage.put(key, bytes, 'image/webp');

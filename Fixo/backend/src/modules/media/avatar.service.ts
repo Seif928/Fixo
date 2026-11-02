@@ -1,31 +1,29 @@
-import { BadRequestException, Injectable, Logger, NotFoundException } from '@nestjs/common';
+import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { randomUUID } from 'crypto';
-// Sharp's CJS runtime is callable; its conditional declarations expose default.
-const sharp: typeof import('sharp').default = require('sharp');
+import { normalizePrivatePhoto } from './normalize-private-photo';
 import { PrismaService } from '../../prisma/prisma.service';
 import { PrivateStorageService } from './private-storage.service';
 
-export interface AvatarUpload { buffer: Buffer; mimetype: string; size: number }
+export interface AvatarUpload {
+  buffer: Buffer;
+  mimetype: string;
+  size: number;
+}
 
 @Injectable()
 export class AvatarService {
   private readonly logger = new Logger(AvatarService.name);
-  constructor(private readonly prisma: PrismaService, private readonly storage: PrivateStorageService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly storage: PrivateStorageService,
+  ) {}
 
   async save(userId: string, file: AvatarUpload) {
-    if (!file?.buffer?.length || file.buffer.length > 2 * 1024 * 1024 ||
-        !['image/jpeg', 'image/png', 'image/webp'].includes(file.mimetype)) {
-      throw new BadRequestException('Choose a JPEG, PNG or WebP image up to 2 MB.');
-    }
-    let bytes: Buffer;
-    try {
-      const image = sharp(file.buffer, { limitInputPixels: 20_000_000, failOn: 'warning' });
-      const metadata = await image.metadata();
-      if (!['jpeg', 'png', 'webp'].includes(metadata.format ?? '') || (metadata.pages ?? 1) !== 1) throw new Error('Unsupported');
-      bytes = await image.rotate().resize(256, 256, { fit: 'cover' }).webp({ quality: 82 }).toBuffer();
-    } catch {
-      throw new BadRequestException('The image could not be read. Choose another photo.');
-    }
+    const bytes = await normalizePrivatePhoto(
+      file?.buffer,
+      file?.mimetype,
+      'avatar',
+    );
     const key = `avatars/${userId}/${randomUUID()}.webp`;
     await this.storage.put(key, bytes, 'image/webp');
     let oldKey: string | null;
@@ -36,15 +34,22 @@ export class AvatarService {
         }
         const user = await tx.user.findUnique({ where: { id: userId } });
         if (!user) throw new NotFoundException('Account was not found.');
-        await tx.user.update({ where: { id: userId }, data: { avatarUrl: key } });
+        await tx.user.update({
+          where: { id: userId },
+          data: { avatarUrl: key },
+        });
         return user.avatarUrl;
       });
     } catch (error) {
       await this.removeOrphan(key);
       throw error;
     }
-    if (oldKey?.startsWith(`avatars/${userId}/`)) await this.removeOrphan(oldKey);
-    return { hasAvatar: true, avatarVersion: key.split('/').pop()!.replace('.webp', '') };
+    if (oldKey?.startsWith(`avatars/${userId}/`))
+      await this.removeOrphan(oldKey);
+    return {
+      hasAvatar: true,
+      avatarVersion: key.split('/').pop()!.replace('.webp', ''),
+    };
   }
 
   async read(userId: string): Promise<Buffer> {
@@ -56,7 +61,10 @@ export class AvatarService {
   }
 
   private async removeOrphan(key: string) {
-    try { await this.storage.remove(key); }
-    catch { this.logger.warn('Private avatar cleanup needs retry.'); }
+    try {
+      await this.storage.remove(key);
+    } catch {
+      this.logger.warn('Private avatar cleanup needs retry.');
+    }
   }
 }
