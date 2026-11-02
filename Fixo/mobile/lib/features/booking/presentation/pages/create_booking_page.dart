@@ -1,3 +1,4 @@
+import '../../../customer_home/presentation/controllers/customer_home_controller.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -64,7 +65,9 @@ class _CreateBookingPageState extends ConsumerState<CreateBookingPage> {
 
     setState(() => _isUploadingPhoto = true);
     try {
-      final res = await ref.read(bookingRepositoryProvider).uploadPrivateMedia(
+      final res = await ref
+          .read(bookingRepositoryProvider)
+          .uploadPrivateMedia(
             purpose: 'BOOKING_ISSUE',
             fileName: picked.fileName,
             mimeType: picked.mimeType,
@@ -110,8 +113,12 @@ class _CreateBookingPageState extends ConsumerState<CreateBookingPage> {
 
             return AddressMapWrapper(
               isArabic: isArabic,
-              builder: (point) => AddressCreationBottomSheet(
+              builder: (point, clearPoint) => AddressCreationBottomSheet(
+                onAreaChanged: clearPoint,
                 zones: state.coverageZones,
+                initialArea: refWatch
+                    .read(customerHomeControllerProvider)
+                    .selectedArea,
                 isLoadingZones: state.isLoadingZones,
                 isSubmitting: state.isCreatingAddress,
                 errorMessage: state.addressCreationError,
@@ -416,306 +423,322 @@ class _CreateBookingPageState extends ConsumerState<CreateBookingPage> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         // Step Progress Header
-                    BookingProgressHeader(isArabic: isArabic),
-                    const SizedBox(height: FixoSpacing.sm),
+                        BookingProgressHeader(isArabic: isArabic),
+                        const SizedBox(height: FixoSpacing.sm),
 
-                    // Selected Service & Provider Card
-                    SelectedServiceCard(
-                      offering: offering,
-                      preferredPro: preferredPro,
-                      isArabic: isArabic,
-                    ),
-                    const SizedBox(height: FixoSpacing.sm),
+                        // Selected Service & Provider Card
+                        SelectedServiceCard(
+                          offering: offering,
+                          preferredPro: preferredPro,
+                          isArabic: isArabic,
+                        ),
+                        const SizedBox(height: FixoSpacing.sm),
 
-                    // Service Location Card with Map Preview
-                    ServiceLocationCard(
-                      selectedAddress: state.selectedAddress,
-                      hasAddresses: state.hasSavedAddresses,
-                      isArabic: isArabic,
-                      onChangeAddress: state.hasSavedAddresses
-                          ? () => _showAddressSelectionModal(
-                              context,
-                              state.addresses,
-                              state.selectedAddress,
-                              isArabic,
-                            )
-                          : null,
-                      onAddNewAddress: () => _showCreateAddressSheet(context),
-                    ),
-                    const SizedBox(height: FixoSpacing.sm),
+                        // Service Location Card with Map Preview
+                        ServiceLocationCard(
+                          selectedAddress: state.selectedAddress,
+                          hasAddresses: state.hasSavedAddresses,
+                          isArabic: isArabic,
+                          onChangeAddress: state.hasSavedAddresses
+                              ? () => _showAddressSelectionModal(
+                                  context,
+                                  state.addresses,
+                                  state.selectedAddress,
+                                  isArabic,
+                                )
+                              : null,
+                          onAddNewAddress: () =>
+                              _showCreateAddressSheet(context),
+                        ),
+                        const SizedBox(height: FixoSpacing.sm),
 
-                    // Date Picker Group
-                    BookingDateSelector(
-                      selectedDate: state.selectedDate,
-                      onSelectDate: controller.selectDate,
-                      isArabic: isArabic,
-                    ),
-                    const SizedBox(height: FixoSpacing.sm),
+                        // Date Picker Group
+                        BookingDateSelector(
+                          selectedDate: state.selectedDate,
+                          onSelectDate: controller.selectDate,
+                          isArabic: isArabic,
+                        ),
+                        const SizedBox(height: FixoSpacing.sm),
 
-                    // Preferred Time Window Group
-                    BookingTimeWindowSelector(
-                      selectedWindow: state.selectedTimeWindow,
-                      onSelectWindow: controller.selectTimeWindow,
-                      isArabic: isArabic,
-                    ),
-                    const SizedBox(height: FixoSpacing.sm),
+                        // Preferred Time Window Group
+                        BookingTimeWindowSelector(
+                          selectedWindow: state.selectedTimeWindow,
+                          onSelectWindow: controller.selectTimeWindow,
+                          isArabic: isArabic,
+                        ),
+                        const SizedBox(height: FixoSpacing.sm),
 
-                    // Issue Description Card
-                    Container(
-                      padding: const EdgeInsets.all(FixoSpacing.md),
-                      decoration: BoxDecoration(
-                        color: palette.cardSurface,
-                        borderRadius: FixoRadius.borderRadiusLg,
-                        border: Border.all(color: palette.subtleBorder),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withValues(alpha: 0.04),
-                            blurRadius: 8,
-                            offset: const Offset(0, 2),
-                          ),
-                        ],
-                      ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              Expanded(
-                                child: Row(
-                                  children: [
-                                    Icon(
-                                      Icons.edit_note_rounded,
-                                      color: palette.deepForest,
-                                      size: 20,
-                                    ),
-                                    const SizedBox(width: FixoSpacing.xs),
-                                    Expanded(
-                                      child: Text(
-                                        isArabic
-                                            ? 'وصف المشكلة'
-                                            : 'Issue Description',
-                                        style: FixoTypography.headlineSm(
-                                          color: palette.deepForest,
-                                        ).copyWith(fontWeight: FontWeight.bold),
-                                        overflow: TextOverflow.ellipsis,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                              const SizedBox(width: 8),
-                              Text(
-                                isArabic ? 'اختياري' : 'Optional',
-                                style: FixoTypography.labelMd(
-                                  color: palette.mutedText,
-                                ),
+                        // Issue Description Card
+                        Container(
+                          padding: const EdgeInsets.all(FixoSpacing.md),
+                          decoration: BoxDecoration(
+                            color: palette.cardSurface,
+                            borderRadius: FixoRadius.borderRadiusLg,
+                            border: Border.all(color: palette.subtleBorder),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withValues(alpha: 0.04),
+                                blurRadius: 8,
+                                offset: const Offset(0, 2),
                               ),
                             ],
                           ),
-                          const SizedBox(height: FixoSpacing.xs),
-                          TextField(
-                            key: const Key('booking-issue-description-input'),
-                            controller: _issueDescriptionController,
-                            maxLines: 3,
-                            onChanged: controller.setIssueDescription,
-                            style: FixoTypography.bodyMd(
-                              color: palette.inkText,
-                            ),
-                            decoration: InputDecoration(
-                              hintText: isArabic
-                                  ? 'صف الأعطال (تسريب مياه، صوت غير معتاد، توقف التبريد)...'
-                                  : 'Describe symptoms (leaks, noise, odors)...',
-                              hintStyle: FixoTypography.bodyMd(
-                                color: palette.mutedText.withValues(alpha: 0.7),
-                              ),
-                              filled: true,
-                              fillColor: palette.surfaceLow,
-                              border: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(10),
-                                borderSide: BorderSide.none,
-                              ),
-                              contentPadding: const EdgeInsets.all(12),
-                            ),
-                          ),
-                          const SizedBox(height: FixoSpacing.sm),
-                          Text(
-                            isArabic
-                                ? 'صور توضيحية للعطل (تساعد الفني في تجهيز المعدات)'
-                                : 'Photos of Issue (Helps pro prep equipment)',
-                            style: FixoTypography.labelMd(
-                              color: palette.deepForest,
-                            ).copyWith(fontWeight: FontWeight.w600),
-                          ),
-                          const SizedBox(height: 8),
-                          Wrap(
-                            spacing: 8,
-                            runSpacing: 8,
-                            crossAxisAlignment: WrapCrossAlignment.center,
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              InkWell(
-                                onTap: _isUploadingPhoto
-                                    ? null
-                                    : () => _pickAndUploadPhoto(isArabic),
-                                borderRadius: BorderRadius.circular(10),
-                                child: Container(
-                                  constraints: const BoxConstraints(
-                                    minWidth: 68,
-                                    minHeight: 64,
-                                  ),
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 10,
-                                    vertical: 8,
-                                  ),
-                                  decoration: BoxDecoration(
-                                    color: palette.surfaceLow,
-                                    borderRadius: BorderRadius.circular(10),
-                                    border: Border.all(
-                                      color: FixoColors.primaryForest
-                                          .withValues(alpha: 0.3),
-                                      width: 1.5,
-                                    ),
-                                  ),
-                                  child: Column(
-                                    mainAxisSize: MainAxisSize.min,
-                                    mainAxisAlignment: MainAxisAlignment.center,
-                                    children: [
-                                      if (_isUploadingPhoto)
-                                        const SizedBox(
-                                          width: 18,
-                                          height: 18,
-                                          child: CircularProgressIndicator(
-                                            strokeWidth: 2,
-                                            valueColor: AlwaysStoppedAnimation(
-                                              FixoColors.primaryForest,
-                                            ),
-                                          ),
-                                        )
-                                      else
+                              Row(
+                                mainAxisAlignment:
+                                    MainAxisAlignment.spaceBetween,
+                                children: [
+                                  Expanded(
+                                    child: Row(
+                                      children: [
                                         Icon(
-                                          Icons.add_a_photo_outlined,
+                                          Icons.edit_note_rounded,
+                                          color: palette.deepForest,
                                           size: 20,
-                                          color: FixoColors.primaryForest,
                                         ),
-                                      const SizedBox(height: 2),
-                                      Text(
-                                        isArabic ? '+ صورة' : '+ Add',
-                                        style: FixoTypography.bodySm(
-                                          color: FixoColors.primaryForest,
-                                        ).copyWith(
-                                          fontSize: 10,
-                                          fontWeight: FontWeight.w700,
+                                        const SizedBox(width: FixoSpacing.xs),
+                                        Expanded(
+                                          child: Text(
+                                            isArabic
+                                                ? 'وصف المشكلة'
+                                                : 'Issue Description',
+                                            style:
+                                                FixoTypography.headlineSm(
+                                                  color: palette.deepForest,
+                                                ).copyWith(
+                                                  fontWeight: FontWeight.bold,
+                                                ),
+                                            overflow: TextOverflow.ellipsis,
+                                          ),
                                         ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              ),
-                              ...state.issuePhotoUrls.map((url) {
-                                return Container(
-                                  height: 64,
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 10,
-                                    vertical: 8,
-                                  ),
-                                  decoration: BoxDecoration(
-                                    color: palette.surfaceLow,
-                                    borderRadius: BorderRadius.circular(10),
-                                    border: Border.all(
-                                      color: palette.subtleBorder,
+                                      ],
                                     ),
                                   ),
-                                  child: Row(
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: [
-                                      Icon(
-                                        Icons.image_rounded,
-                                        size: 24,
-                                        color: palette.deepForest,
-                                      ),
-                                      const SizedBox(width: 6),
-                                      Text(
-                                        isArabic ? 'صورة مرفقة' : 'Attached',
-                                        style: FixoTypography.labelMd(
-                                          color: palette.deepForest,
-                                        ).copyWith(
-                                          fontWeight: FontWeight.w600,
-                                        ),
-                                      ),
-                                      const SizedBox(width: 4),
-                                      IconButton(
-                                        icon: const Icon(
-                                          Icons.close_rounded,
-                                          size: 16,
-                                          color: FixoColors.error,
-                                        ),
-                                        padding: EdgeInsets.zero,
-                                        constraints: const BoxConstraints(),
-                                        onPressed: () => ref
-                                            .read(
-                                              createBookingControllerProvider
-                                                  .notifier,
-                                            )
-                                            .removePhotoUrl(url),
-                                      ),
-                                    ],
+                                  const SizedBox(width: 8),
+                                  Text(
+                                    isArabic ? 'اختياري' : 'Optional',
+                                    style: FixoTypography.labelMd(
+                                      color: palette.mutedText,
+                                    ),
                                   ),
-                                );
-                              }),
-                            ],
-                          ),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(height: FixoSpacing.sm),
-
-                    // Fare Breakdown
-                    BookingFareBreakdownCard(
-                      offering: offering,
-                      isArabic: isArabic,
-                    ),
-
-                    // Error Message Notice
-                    if (state.errorMessage != null) ...[
-                      const SizedBox(height: FixoSpacing.sm),
-                      Container(
-                        key: const Key('booking-error-banner'),
-                        padding: const EdgeInsets.all(FixoSpacing.sm),
-                        decoration: BoxDecoration(
-                          color: colorScheme.errorContainer,
-                          borderRadius: BorderRadius.circular(8),
-                          border: Border.all(
-                            color: colorScheme.error.withValues(alpha: 0.4),
-                          ),
-                        ),
-                        child: Row(
-                          children: [
-                            Icon(
-                              Icons.error_outline_rounded,
-                              color: colorScheme.onErrorContainer,
-                              size: 20,
-                            ),
-                            const SizedBox(width: FixoSpacing.xs),
-                            Expanded(
-                              child: Text(
-                                state.errorMessage!,
-                                style: FixoTypography.bodySm(
-                                  color: colorScheme.onErrorContainer,
+                                ],
+                              ),
+                              const SizedBox(height: FixoSpacing.xs),
+                              TextField(
+                                key: const Key(
+                                  'booking-issue-description-input',
+                                ),
+                                controller: _issueDescriptionController,
+                                maxLines: 3,
+                                onChanged: controller.setIssueDescription,
+                                style: FixoTypography.bodyMd(
+                                  color: palette.inkText,
+                                ),
+                                decoration: InputDecoration(
+                                  hintText: isArabic
+                                      ? 'صف الأعطال (تسريب مياه، صوت غير معتاد، توقف التبريد)...'
+                                      : 'Describe symptoms (leaks, noise, odors)...',
+                                  hintStyle: FixoTypography.bodyMd(
+                                    color: palette.mutedText.withValues(
+                                      alpha: 0.7,
+                                    ),
+                                  ),
+                                  filled: true,
+                                  fillColor: palette.surfaceLow,
+                                  border: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(10),
+                                    borderSide: BorderSide.none,
+                                  ),
+                                  contentPadding: const EdgeInsets.all(12),
                                 ),
                               ),
-                            ),
-                          ],
+                              const SizedBox(height: FixoSpacing.sm),
+                              Text(
+                                isArabic
+                                    ? 'صور توضيحية للعطل (تساعد الفني في تجهيز المعدات)'
+                                    : 'Photos of Issue (Helps pro prep equipment)',
+                                style: FixoTypography.labelMd(
+                                  color: palette.deepForest,
+                                ).copyWith(fontWeight: FontWeight.w600),
+                              ),
+                              const SizedBox(height: 8),
+                              Wrap(
+                                spacing: 8,
+                                runSpacing: 8,
+                                crossAxisAlignment: WrapCrossAlignment.center,
+                                children: [
+                                  InkWell(
+                                    onTap: _isUploadingPhoto
+                                        ? null
+                                        : () => _pickAndUploadPhoto(isArabic),
+                                    borderRadius: BorderRadius.circular(10),
+                                    child: Container(
+                                      constraints: const BoxConstraints(
+                                        minWidth: 68,
+                                        minHeight: 64,
+                                      ),
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 10,
+                                        vertical: 8,
+                                      ),
+                                      decoration: BoxDecoration(
+                                        color: palette.surfaceLow,
+                                        borderRadius: BorderRadius.circular(10),
+                                        border: Border.all(
+                                          color: FixoColors.primaryForest
+                                              .withValues(alpha: 0.3),
+                                          width: 1.5,
+                                        ),
+                                      ),
+                                      child: Column(
+                                        mainAxisSize: MainAxisSize.min,
+                                        mainAxisAlignment:
+                                            MainAxisAlignment.center,
+                                        children: [
+                                          if (_isUploadingPhoto)
+                                            const SizedBox(
+                                              width: 18,
+                                              height: 18,
+                                              child: CircularProgressIndicator(
+                                                strokeWidth: 2,
+                                                valueColor:
+                                                    AlwaysStoppedAnimation(
+                                                      FixoColors.primaryForest,
+                                                    ),
+                                              ),
+                                            )
+                                          else
+                                            Icon(
+                                              Icons.add_a_photo_outlined,
+                                              size: 20,
+                                              color: FixoColors.primaryForest,
+                                            ),
+                                          const SizedBox(height: 2),
+                                          Text(
+                                            isArabic ? '+ صورة' : '+ Add',
+                                            style:
+                                                FixoTypography.bodySm(
+                                                  color:
+                                                      FixoColors.primaryForest,
+                                                ).copyWith(
+                                                  fontSize: 10,
+                                                  fontWeight: FontWeight.w700,
+                                                ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ),
+                                  ...state.issuePhotoUrls.map((url) {
+                                    return Container(
+                                      height: 64,
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 10,
+                                        vertical: 8,
+                                      ),
+                                      decoration: BoxDecoration(
+                                        color: palette.surfaceLow,
+                                        borderRadius: BorderRadius.circular(10),
+                                        border: Border.all(
+                                          color: palette.subtleBorder,
+                                        ),
+                                      ),
+                                      child: Row(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          Icon(
+                                            Icons.image_rounded,
+                                            size: 24,
+                                            color: palette.deepForest,
+                                          ),
+                                          const SizedBox(width: 6),
+                                          Text(
+                                            isArabic
+                                                ? 'صورة مرفقة'
+                                                : 'Attached',
+                                            style:
+                                                FixoTypography.labelMd(
+                                                  color: palette.deepForest,
+                                                ).copyWith(
+                                                  fontWeight: FontWeight.w600,
+                                                ),
+                                          ),
+                                          const SizedBox(width: 4),
+                                          IconButton(
+                                            icon: const Icon(
+                                              Icons.close_rounded,
+                                              size: 16,
+                                              color: FixoColors.error,
+                                            ),
+                                            padding: EdgeInsets.zero,
+                                            constraints: const BoxConstraints(),
+                                            onPressed: () => ref
+                                                .read(
+                                                  createBookingControllerProvider
+                                                      .notifier,
+                                                )
+                                                .removePhotoUrl(url),
+                                          ),
+                                        ],
+                                      ),
+                                    );
+                                  }),
+                                ],
+                              ),
+                            ],
+                          ),
                         ),
-                      ),
-                    ],
+                        const SizedBox(height: FixoSpacing.sm),
 
-                    const SizedBox(height: 24),
-                  ],
+                        // Fare Breakdown
+                        BookingFareBreakdownCard(
+                          offering: offering,
+                          isArabic: isArabic,
+                        ),
+
+                        // Error Message Notice
+                        if (state.errorMessage != null) ...[
+                          const SizedBox(height: FixoSpacing.sm),
+                          Container(
+                            key: const Key('booking-error-banner'),
+                            padding: const EdgeInsets.all(FixoSpacing.sm),
+                            decoration: BoxDecoration(
+                              color: colorScheme.errorContainer,
+                              borderRadius: BorderRadius.circular(8),
+                              border: Border.all(
+                                color: colorScheme.error.withValues(alpha: 0.4),
+                              ),
+                            ),
+                            child: Row(
+                              children: [
+                                Icon(
+                                  Icons.error_outline_rounded,
+                                  color: colorScheme.onErrorContainer,
+                                  size: 20,
+                                ),
+                                const SizedBox(width: FixoSpacing.xs),
+                                Expanded(
+                                  child: Text(
+                                    state.errorMessage!,
+                                    style: FixoTypography.bodySm(
+                                      color: colorScheme.onErrorContainer,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+
+                        const SizedBox(height: 24),
+                      ],
+                    ),
+                  ),
                 ),
               ),
             ),
-          ),
-        ),
 
             // Sticky Bottom CTA Bar
             Container(
@@ -742,194 +765,199 @@ class _CreateBookingPageState extends ConsumerState<CreateBookingPage> {
                     child: Row(
                       children: [
                         // Bookmark icon button
-                    Container(
-                      width: 48,
-                      height: 48,
-                      decoration: BoxDecoration(
-                        color: palette.surfaceContainer,
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: IconButton(
-                        icon: Icon(
-                          Icons.bookmark_border_rounded,
-                          color: palette.mutedText,
-                        ),
-                        onPressed: () {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
-                              content: Text(
-                                isArabic
-                                    ? 'ميزة حفظ الخدمات ستتوفر في تحديث قادم.'
-                                    : 'Saved services feature will be available in an upcoming update.',
-                              ),
+                        Container(
+                          width: 48,
+                          height: 48,
+                          decoration: BoxDecoration(
+                            color: palette.surfaceContainer,
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: IconButton(
+                            icon: Icon(
+                              Icons.bookmark_border_rounded,
+                              color: palette.mutedText,
                             ),
-                          );
-                        },
-                      ),
-                    ),
-                    const SizedBox(width: FixoSpacing.sm),
+                            onPressed: () {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: Text(
+                                    isArabic
+                                        ? 'ميزة حفظ الخدمات ستتوفر في تحديث قادم.'
+                                        : 'Saved services feature will be available in an upcoming update.',
+                                  ),
+                                ),
+                              );
+                            },
+                          ),
+                        ),
+                        const SizedBox(width: FixoSpacing.sm),
 
-                    // Primary Confirm Booking Draft Button
-                    Expanded(
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          SizedBox(
-                            height: 48,
-                            child: ElevatedButton(
-                              key: const Key('confirm-booking-draft-btn'),
-                              onPressed:
-                                  (state.isSubmitting ||
-                                      state.selectedAddress == null)
-                                  ? null
-                                  : () async {
-                                      final scaffoldMessenger =
-                                          ScaffoldMessenger.of(context);
-                                      final navigator = Navigator.of(context);
-
-                                      final success = await controller
-                                          .submitBooking(
-                                            offering: offering,
-                                            preferredPro: preferredPro,
+                        // Primary Confirm Booking Draft Button
+                        Expanded(
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              SizedBox(
+                                height: 48,
+                                child: ElevatedButton(
+                                  key: const Key('confirm-booking-draft-btn'),
+                                  onPressed:
+                                      (state.isSubmitting ||
+                                          state.selectedAddress == null)
+                                      ? null
+                                      : () async {
+                                          final scaffoldMessenger =
+                                              ScaffoldMessenger.of(context);
+                                          final navigator = Navigator.of(
+                                            context,
                                           );
-                                      if (success) {
-                                        final booking = ref
-                                            .read(
-                                              createBookingControllerProvider,
-                                            )
-                                            .successBooking;
-                                        final orderCode =
-                                            booking?.orderCode ?? 'FX-XXXX';
 
-                                        scaffoldMessenger.showSnackBar(
-                                          SnackBar(
-                                            backgroundColor:
-                                                palette.primaryBrand,
-                                            content: Text(
-                                              key: const Key(
-                                                'booking-draft-success-snackbar-text',
-                                              ),
-                                              isArabic
-                                                  ? 'تم تسجيل طلب الحجز #$orderCode بنجاح (مسودة).'
-                                                  : 'Booking #$orderCode created in DRAFT status.',
-                                              style: FixoTypography.bodySm(
-                                                color: Colors.white,
-                                              ),
-                                            ),
-                                          ),
-                                        );
+                                          final success = await controller
+                                              .submitBooking(
+                                                offering: offering,
+                                                preferredPro: preferredPro,
+                                              );
+                                          if (success) {
+                                            final booking = ref
+                                                .read(
+                                                  createBookingControllerProvider,
+                                                )
+                                                .successBooking;
+                                            final orderCode =
+                                                booking?.orderCode ?? 'FX-XXXX';
 
-                                        // Return to caller or pop
-                                        if (!context.mounted) return;
-                                        if (booking != null &&
-                                            booking.id.isNotEmpty) {
-                                          try {
-                                            context.go(
-                                              '/customer/bookings/${booking.id}/checkout',
+                                            scaffoldMessenger.showSnackBar(
+                                              SnackBar(
+                                                backgroundColor:
+                                                    palette.primaryBrand,
+                                                content: Text(
+                                                  key: const Key(
+                                                    'booking-draft-success-snackbar-text',
+                                                  ),
+                                                  isArabic
+                                                      ? 'تم تسجيل طلب الحجز #$orderCode بنجاح (مسودة).'
+                                                      : 'Booking #$orderCode created in DRAFT status.',
+                                                  style: FixoTypography.bodySm(
+                                                    color: Colors.white,
+                                                  ),
+                                                ),
+                                              ),
                                             );
-                                          } catch (_) {
-                                            if (navigator.canPop()) {
+
+                                            // Return to caller or pop
+                                            if (!context.mounted) return;
+                                            if (booking != null &&
+                                                booking.id.isNotEmpty) {
+                                              try {
+                                                context.go(
+                                                  '/customer/bookings/${booking.id}/checkout',
+                                                );
+                                              } catch (_) {
+                                                if (navigator.canPop()) {
+                                                  navigator.pop(booking);
+                                                }
+                                              }
+                                            } else if (navigator.canPop()) {
                                               navigator.pop(booking);
                                             }
                                           }
-                                        } else if (navigator.canPop()) {
-                                          navigator.pop(booking);
-                                        }
-                                      }
-                                    },
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: palette.primaryBrand,
-                                disabledBackgroundColor: palette.primaryBrand
-                                    .withValues(alpha: 0.35),
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(12),
-                                ),
-                                elevation: 0,
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 16,
+                                        },
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: palette.primaryBrand,
+                                    disabledBackgroundColor: palette
+                                        .primaryBrand
+                                        .withValues(alpha: 0.35),
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(12),
+                                    ),
+                                    elevation: 0,
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 16,
+                                    ),
+                                  ),
+                                  child: state.isSubmitting
+                                      ? const SizedBox(
+                                          width: 22,
+                                          height: 22,
+                                          child: CircularProgressIndicator(
+                                            strokeWidth: 2,
+                                            valueColor:
+                                                AlwaysStoppedAnimation<Color>(
+                                                  Colors.white,
+                                                ),
+                                          ),
+                                        )
+                                      : Row(
+                                          mainAxisAlignment:
+                                              MainAxisAlignment.spaceBetween,
+                                          children: [
+                                            Expanded(
+                                              child: Text(
+                                                isArabic
+                                                    ? 'تأكيد مسودة الحجز'
+                                                    : 'Confirm Booking Draft',
+                                                style:
+                                                    FixoTypography.labelLg(
+                                                      color: Colors.white,
+                                                    ).copyWith(
+                                                      fontWeight:
+                                                          FontWeight.bold,
+                                                    ),
+                                                overflow: TextOverflow.ellipsis,
+                                              ),
+                                            ),
+                                            const SizedBox(width: 8),
+                                            Container(
+                                              padding:
+                                                  const EdgeInsets.symmetric(
+                                                    horizontal: 8,
+                                                    vertical: 3,
+                                                  ),
+                                              decoration: BoxDecoration(
+                                                color: palette.limeAccent,
+                                                borderRadius:
+                                                    BorderRadius.circular(6),
+                                              ),
+                                              child: Text(
+                                                '${offering.flatPriceEgp} EGP',
+                                                style:
+                                                    FixoTypography.labelMd(
+                                                      color: FixoColors
+                                                          .onTertiaryFixed,
+                                                    ).copyWith(
+                                                      fontWeight:
+                                                          FontWeight.w800,
+                                                    ),
+                                              ),
+                                            ),
+                                          ],
+                                        ),
                                 ),
                               ),
-                              child: state.isSubmitting
-                                  ? const SizedBox(
-                                      width: 22,
-                                      height: 22,
-                                      child: CircularProgressIndicator(
-                                        strokeWidth: 2,
-                                        valueColor:
-                                            AlwaysStoppedAnimation<Color>(
-                                              Colors.white,
-                                            ),
-                                      ),
-                                    )
-                                  : Row(
-                                      mainAxisAlignment:
-                                          MainAxisAlignment.spaceBetween,
-                                      children: [
-                                        Expanded(
-                                          child: Text(
-                                            isArabic
-                                                ? 'تأكيد مسودة الحجز'
-                                                : 'Confirm Booking Draft',
-                                            style:
-                                                FixoTypography.labelLg(
-                                                  color: Colors.white,
-                                                ).copyWith(
-                                                  fontWeight: FontWeight.bold,
-                                                ),
-                                            overflow: TextOverflow.ellipsis,
-                                          ),
-                                        ),
-                                        const SizedBox(width: 8),
-                                        Container(
-                                          padding: const EdgeInsets.symmetric(
-                                            horizontal: 8,
-                                            vertical: 3,
-                                          ),
-                                          decoration: BoxDecoration(
-                                            color: palette.limeAccent,
-                                            borderRadius: BorderRadius.circular(
-                                              6,
-                                            ),
-                                          ),
-                                          child: Text(
-                                            '${offering.flatPriceEgp} EGP',
-                                            style:
-                                                FixoTypography.labelMd(
-                                                  color: FixoColors
-                                                      .onTertiaryFixed,
-                                                ).copyWith(
-                                                  fontWeight: FontWeight.w800,
-                                                ),
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                            ),
+                              const SizedBox(height: 4),
+                              Text(
+                                isArabic
+                                    ? 'يتم إنشاء مسودة حجز. سيتم إتاحة الدفع وتعيين الفني في المراحل التالية.'
+                                    : 'Creates a booking draft. Payment and technician assignment follow in subsequent steps.',
+                                style: FixoTypography.bodySm(
+                                  color: palette.mutedText,
+                                ).copyWith(fontSize: 10),
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
+                                textAlign: TextAlign.center,
+                              ),
+                            ],
                           ),
-                          const SizedBox(height: 4),
-                          Text(
-                            isArabic
-                                ? 'يتم إنشاء مسودة حجز. سيتم إتاحة الدفع وتعيين الفني في المراحل التالية.'
-                                : 'Creates a booking draft. Payment and technician assignment follow in subsequent steps.',
-                            style: FixoTypography.bodySm(
-                              color: palette.mutedText,
-                            ).copyWith(fontSize: 10),
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
-                            textAlign: TextAlign.center,
-                          ),
-                        ],
-                      ),
+                        ),
+                      ],
                     ),
-                  ],
+                  ),
                 ),
               ),
             ),
-          ),
+          ],
         ),
-      ],
-    ),
-  ),
-);
+      ),
+    );
   }
 }

@@ -65,12 +65,15 @@ class AuthController extends Notifier<AuthState> {
   int _sessionEpoch = 0;
   bool _disposed = false;
   Future<void>? _restoring;
+  Completer<void>? _localLogout;
 
   @override
   AuthState build() {
     ref.listen(sessionExpiredProvider, (_, _) {
+      if (_localLogout != null) return;
       _sessionEpoch++;
       _countdownTimer?.cancel();
+      ref.read(activeSessionOwnerProvider.notifier).state = null;
       state = const AuthState();
       unawaited(ref.read(devicePushProvider).invalidateLocalSession());
     });
@@ -207,23 +210,7 @@ class AuthController extends Notifier<AuthState> {
         challengeId: state.challenge?.challengeId,
       );
 
-      final tokenStorage = ref.read(secureTokenStorageProvider);
-      await tokenStorage.saveTokens(
-        StoredAuthTokens(
-          accessToken: session.accessToken,
-          refreshToken: session.refreshToken,
-          userId: session.user.id,
-          phone: session.user.phone,
-          role: session.user.role,
-        ),
-      );
-
-      _countdownTimer?.cancel();
-      state = state.copyWith(
-        isLoading: false,
-        session: session,
-        clearError: true,
-      );
+      await acceptVerifiedSession(session);
       return true;
     } on AuthApiException catch (error) {
       state = state.copyWith(isLoading: false, errorMessage: error.message);
@@ -240,26 +227,43 @@ class AuthController extends Notifier<AuthState> {
   }
 
   Future<void> logout() async {
+    if (_localLogout != null) {
+      await _localLogout!.future;
+      return;
+    }
+    final localDone = Completer<void>();
+    _localLogout = localDone;
     _sessionEpoch++;
     final tokenStorage = ref.read(secureTokenStorageProvider);
     final repository = ref.read(authRepositoryProvider);
     final email = ref.read(emailAccessProvider);
+    final userId = state.session?.user.id;
+    final userEmail = state.session?.user.email;
+    String? tokenToRevoke;
     try {
-      await ref.read(devicePushProvider).disable();
-    } catch (_) {
-      /* Local sign-out must remain possible offline. */
-    }
-    _countdownTimer?.cancel();
-    state = const AuthState();
-    try {
-      // Unregistering push may have refreshed an expired access token.
-      final refreshToken = await tokenStorage.readRefreshToken();
-      if (refreshToken != null && refreshToken.isNotEmpty) {
-        await repository.logout(refreshToken: refreshToken);
+      try {
+        await ref.read(devicePushProvider).disable();
+      } catch (_) {
+        /* Sign-out works offline. */
       }
+      final latest = await tokenStorage.readTokens();
+      if (latest != null && (userId == null || latest.userId == userId)) {
+        tokenToRevoke = latest.refreshToken;
+        await tokenStorage.replaceTokensIfCurrent(latest, null);
+      }
+      await email.signOutIfCurrent(userEmail);
     } finally {
-      await tokenStorage.clearTokens();
-      await email.signOut();
+      _countdownTimer?.cancel();
+      if (!_disposed) {
+        ref.read(activeSessionOwnerProvider.notifier).state = null;
+        state = const AuthState();
+      }
+      _localLogout = null;
+      localDone.complete();
+    }
+    // Nothing after the local transition may clear tokens or sign out a newer identity.
+    if (tokenToRevoke != null && tokenToRevoke.isNotEmpty) {
+      await repository.logout(refreshToken: tokenToRevoke);
     }
   }
 
@@ -270,61 +274,102 @@ class AuthController extends Notifier<AuthState> {
 
   Future<void> _restoreSession(int epoch) async {
     final storage = ref.read(secureTokenStorageProvider);
+    StoredAuthTokens? restoringTokens;
     try {
       final tokens = await storage.readTokens();
       if (tokens == null || tokens.refreshToken.isEmpty) return;
+      restoringTokens = tokens;
       final session = await ref
           .read(authRepositoryProvider)
           .refreshSession(refreshToken: tokens.refreshToken);
       if (_disposed || epoch != _sessionEpoch) return;
       if (session.user.id != tokens.userId) {
-        await storage.clearTokens();
+        await storage.replaceTokensIfCurrent(tokens, null);
         return;
       }
-      await acceptVerifiedSession(session);
+      final replaced = await storage.replaceTokensIfCurrent(
+        tokens,
+        _storedSession(session),
+      );
+      if (!replaced || _disposed || epoch != _sessionEpoch) return;
+      _sessionEpoch++;
+      _publishSession(session);
     } on AuthApiException catch (error) {
       if (!_disposed &&
           epoch == _sessionEpoch &&
           [400, 401, 403].contains(error.statusCode)) {
-        await storage.clearTokens();
+        await storage.replaceTokensIfCurrent(restoringTokens, null);
       }
     } on FormatException {
-      if (!_disposed && epoch == _sessionEpoch) await storage.clearTokens();
+      if (!_disposed && epoch == _sessionEpoch) {
+        await storage.replaceTokensIfCurrent(restoringTokens, null);
+      }
     } catch (_) {
       // Offline or unavailable secure storage: show sign-in, never a fake session.
     }
   }
 
   Future<void> acceptVerifiedSession(AuthSession session) async {
-    _sessionEpoch++;
+    if (_disposed || _localLogout != null) {
+      throw StateError('Sign-out is still completing.');
+    }
+    final epoch = ++_sessionEpoch;
     await ref
         .read(secureTokenStorageProvider)
-        .saveTokens(
-          StoredAuthTokens(
-            accessToken: session.accessToken,
-            refreshToken: session.refreshToken,
-            userId: session.user.id,
-            phone: session.user.phone,
-            role: session.user.role,
-          ),
-        );
+        .saveTokens(_storedSession(session));
+    if (_disposed || epoch != _sessionEpoch) {
+      throw StateError('The account changed before sign-in completed.');
+    }
+    _publishSession(session);
+    if (_restoring == null) unawaited(ref.read(devicePushProvider).resume());
+  }
+
+  StoredAuthTokens _storedSession(AuthSession session) => StoredAuthTokens(
+    accessToken: session.accessToken,
+    refreshToken: session.refreshToken,
+    userId: session.user.id,
+    phone: session.user.phone,
+    role: session.user.role,
+  );
+
+  void _publishSession(AuthSession session) {
     _countdownTimer?.cancel();
+    ref.read(activeSessionOwnerProvider.notifier).state = session.user.id;
     state = state.copyWith(
       isLoading: false,
       session: session,
       clearError: true,
     );
-    if (_restoring == null) unawaited(ref.read(devicePushProvider).resume());
   }
 
   /// Profile requests may rotate tokens; never replace them with a stale pair.
   Future<void> acceptUpdatedProfile(AuthUser user) async {
+    final epoch = ++_sessionEpoch;
     final tokens = await ref.read(secureTokenStorageProvider).readTokens();
-    if (tokens == null || tokens.userId != user.id) {
+    if (_disposed ||
+        _localLogout != null ||
+        epoch != _sessionEpoch ||
+        tokens == null ||
+        tokens.userId != user.id ||
+        state.session?.user.id != user.id) {
       throw const FormatException('The account session has ended.');
     }
-    await acceptVerifiedSession(
-      AuthSession(
+    final updated = StoredAuthTokens(
+      accessToken: tokens.accessToken,
+      refreshToken: tokens.refreshToken,
+      userId: user.id,
+      phone: user.phone,
+      role: user.role,
+    );
+    if (!await ref
+            .read(secureTokenStorageProvider)
+            .replaceTokensIfCurrent(tokens, updated) ||
+        _disposed ||
+        epoch != _sessionEpoch) {
+      throw const FormatException('The account session has changed.');
+    }
+    state = state.copyWith(
+      session: AuthSession(
         accessToken: tokens.accessToken,
         refreshToken: tokens.refreshToken,
         user: user,

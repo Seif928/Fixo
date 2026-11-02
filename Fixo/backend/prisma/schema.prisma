@@ -5,6 +5,19 @@ generator client {
   provider = "prisma-client-js"
 }
 
+model GeoLookupCache {
+  key       String   @id
+  result    Json
+  expiresAt DateTime
+
+  @@index([expiresAt])
+}
+
+model GeoRequestGate {
+  key           String   @id
+  nextAllowedAt DateTime
+}
+
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
@@ -92,26 +105,26 @@ enum JobOfferStatus {
 }
 
 model User {
-  id                   String            @id @default(uuid())
-  phone                String?           @unique
-  firebaseUid          String?           @unique
+  id                   String   @id @default(uuid())
+  phone                String?  @unique
+  firebaseUid          String?  @unique
   fullName             String?
-  email                String?           @unique
+  email                String?  @unique
   avatarUrl            String?
-  role                 UserRole          @default(CUSTOMER)
-  preferredLocale      String            @default("en")
-  arrivalAlertsEnabled Boolean           @default(true)
-  rewardPoints         Int               @default(0)
-  createdAt            DateTime          @default(now())
-  updatedAt            DateTime          @updatedAt
+  role                 UserRole @default(CUSTOMER)
+  preferredLocale      String   @default("en")
+  arrivalAlertsEnabled Boolean  @default(true)
+  rewardPoints         Int      @default(0)
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
 
-  proProfile           ProProfile?
-  addresses            CustomerAddress[]
-  bookings             Booking[]         @relation("CustomerBookings")
-  refreshTokens        RefreshToken[]
-  sentMessages         ChatMessage[]
-  reviews              Review[]
-  pushDevices          PushDevice[]
+  proProfile    ProProfile?
+  addresses     CustomerAddress[]
+  bookings      Booking[]         @relation("CustomerBookings")
+  refreshTokens RefreshToken[]
+  sentMessages  ChatMessage[]
+  reviews       Review[]
+  pushDevices   PushDevice[]
 }
 
 model PushDevice {
@@ -147,16 +160,16 @@ model RefreshToken {
   revokedAt DateTime?
   createdAt DateTime  @default(now())
 
-  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 model CoverageZone {
-  id          String            @id @default(uuid())
-  slug        String            @unique
+  id          String  @id @default(uuid())
+  slug        String  @unique
   nameEn      String
   nameAr      String
   governorate String
-  isActive    Boolean           @default(true)
+  isActive    Boolean @default(true)
 
   addresses   CustomerAddress[]
   primaryPros ProProfile[]      @relation("PrimaryZonePros")
@@ -164,7 +177,7 @@ model CoverageZone {
 }
 
 model CustomerAddress {
-  id           String       @id @default(uuid())
+  id           String   @id @default(uuid())
   userId       String
   zoneId       String
   label        String
@@ -173,46 +186,46 @@ model CustomerAddress {
   gateNotes    String?
   latitude     Float?
   longitude    Float?
-  isDefault    Boolean      @default(false)
-  createdAt    DateTime     @default(now())
+  isDefault    Boolean  @default(false)
+  createdAt    DateTime @default(now())
 
-  user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
-  zone         CoverageZone @relation(fields: [zoneId], references: [id])
-  bookings     Booking[]
+  user     User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  zone     CoverageZone @relation(fields: [zoneId], references: [id])
+  bookings Booking[]
 }
 
 model ServiceCategory {
-  id               String            @id @default(uuid())
-  slug             String            @unique
+  id               String  @id @default(uuid())
+  slug             String  @unique
   nameEn           String
   nameAr           String
   subtitleEn       String
   subtitleAr       String
   iconName         String
   startingPriceEgp Int
-  sortOrder        Int               @default(0)
-  isActive         Boolean           @default(true)
+  sortOrder        Int     @default(0)
+  isActive         Boolean @default(true)
 
-  subSkills        ServiceSubSkill[]
-  offerings        ServiceOffering[]
-  primaryPros      ProProfile[]
+  subSkills   ServiceSubSkill[]
+  offerings   ServiceOffering[]
+  primaryPros ProProfile[]
 }
 
 model ServiceSubSkill {
-  id         String          @id @default(uuid())
+  id         String @id @default(uuid())
   categoryId String
-  slug       String          @unique
+  slug       String @unique
   nameEn     String
   nameAr     String
 
-  category   ServiceCategory @relation(fields: [categoryId], references: [id], onDelete: Cascade)
-  pros       ProProfile[]    @relation("ProSubSkills")
+  category ServiceCategory @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  pros     ProProfile[]    @relation("ProSubSkills")
 }
 
 model ServiceOffering {
-  id                    String          @id @default(uuid())
+  id                    String  @id @default(uuid())
   categoryId            String
-  slug                  String          @unique
+  slug                  String  @unique
   titleEn               String
   titleAr               String
   descriptionEn         String
@@ -224,18 +237,18 @@ model ServiceOffering {
   baseInspectionEgp     Int
   serviceFeeEgp         Int
   flatPriceEgp          Int?
-  estimatedDurationMins Int             @default(60)
-  isSeasonalPromo       Boolean         @default(false)
-  isBundle              Boolean         @default(false)
+  estimatedDurationMins Int     @default(60)
+  isSeasonalPromo       Boolean @default(false)
+  isBundle              Boolean @default(false)
 
-  category              ServiceCategory @relation(fields: [categoryId], references: [id])
-  bookings              Booking[]
+  category ServiceCategory @relation(fields: [categoryId], references: [id])
+  bookings Booking[]
 }
 
 model ProProfile {
-  id                         String                    @id @default(uuid())
-  userId                     String                    @unique
-  dossierCode                String                    @unique
+  id                         String                @id @default(uuid())
+  userId                     String                @unique
+  dossierCode                String                @unique
   nationalIdSynthetic        String
   primaryCategoryId          String?
   primaryZoneId              String?
@@ -245,32 +258,32 @@ model ProProfile {
   zonesLabelAr               String?
   badgeEn                    String?
   badgeAr                    String?
-  estimatedPriceEgp          Int                       @default(250)
-  reviewsCount               Int                       @default(0)
-  transportMode              TransportMode             @default(MOTORCYCLE)
-  experienceTier             ExperienceTier            @default(MASTER_8_PLUS_Y)
-  acceptsStandardRateCard    Boolean                   @default(true)
-  toolkitCommitmentConfirmed Boolean                   @default(false)
-  verificationStatus         ProVerificationStatus     @default(DRAFT)
+  estimatedPriceEgp          Int                   @default(250)
+  reviewsCount               Int                   @default(0)
+  transportMode              TransportMode         @default(MOTORCYCLE)
+  experienceTier             ExperienceTier        @default(MASTER_8_PLUS_Y)
+  acceptsStandardRateCard    Boolean               @default(true)
+  toolkitCommitmentConfirmed Boolean               @default(false)
+  verificationStatus         ProVerificationStatus @default(DRAFT)
   reviewerNote               String?
-  isOnline                   Boolean                   @default(false)
+  isOnline                   Boolean               @default(false)
   vehicleDescription         String?
   vehiclePlateAr             String?
-  ratingAvg                  Float                     @default(5.0)
-  completedJobsCount         Int                       @default(0)
-  acceptanceRatePct          Int                       @default(100)
-  createdAt                  DateTime                  @default(now())
-  updatedAt                  DateTime                  @updatedAt
+  ratingAvg                  Float                 @default(0)
+  completedJobsCount         Int                   @default(0)
+  acceptanceRatePct          Int                   @default(100)
+  createdAt                  DateTime              @default(now())
+  updatedAt                  DateTime              @updatedAt
 
-  user                       User                      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  primaryCategory            ServiceCategory?          @relation(fields: [primaryCategoryId], references: [id])
-  primaryZone                CoverageZone?             @relation("PrimaryZonePros", fields: [primaryZoneId], references: [id])
-  coverageZones              CoverageZone[]            @relation("ProCoverageZones")
-  subSkills                  ServiceSubSkill[]         @relation("ProSubSkills")
-  documents                  ProVerificationDocument[]
-  bookings                   Booking[]
-  jobOffers                  JobOffer[]
-  reviews                    Review[]
+  user            User                      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  primaryCategory ServiceCategory?          @relation(fields: [primaryCategoryId], references: [id])
+  primaryZone     CoverageZone?             @relation("PrimaryZonePros", fields: [primaryZoneId], references: [id])
+  coverageZones   CoverageZone[]            @relation("ProCoverageZones")
+  subSkills       ServiceSubSkill[]         @relation("ProSubSkills")
+  documents       ProVerificationDocument[]
+  bookings        Booking[]
+  jobOffers       JobOffer[]
+  reviews         Review[]
 }
 
 model ProVerificationDocument {
@@ -284,54 +297,54 @@ model ProVerificationDocument {
   reviewerComment String?
   uploadedAt      DateTime       @default(now())
 
-  proProfile      ProProfile     @relation(fields: [proProfileId], references: [id], onDelete: Cascade)
+  proProfile ProProfile @relation(fields: [proProfileId], references: [id], onDelete: Cascade)
 }
 
 model Booking {
-  id                 String               @id @default(uuid())
-  orderCode          String               @unique
+  id                 String        @id @default(uuid())
+  orderCode          String        @unique
   customerId         String
   proProfileId       String?
   offeringId         String
   addressId          String
-  status             BookingStatus        @default(DRAFT)
+  status             BookingStatus @default(DRAFT)
   scheduledDate      DateTime
   timeWindow         TimeWindow
   issueDescription   String?
   issuePhotoUrls     String[]
   baseInspectionEgp  Int
   serviceFeeEgp      Int
-  transportFeeEgp    Int                  @default(0)
+  transportFeeEgp    Int           @default(0)
   totalEgp           Int
   platformFeeEgp     Int
   netArtisanEgp      Int
   arrivalPinCode     String
   cancellationReason String?
-  createdAt          DateTime             @default(now())
-  updatedAt          DateTime             @updatedAt
+  createdAt          DateTime      @default(now())
+  updatedAt          DateTime      @updatedAt
   completedAt        DateTime?
 
-  customer           User                 @relation("CustomerBookings", fields: [customerId], references: [id])
-  proProfile         ProProfile?          @relation(fields: [proProfileId], references: [id])
-  offering           ServiceOffering      @relation(fields: [offeringId], references: [id])
-  address            CustomerAddress      @relation(fields: [addressId], references: [id])
-  statusEvents       BookingStatusEvent[]
-  jobOffers          JobOffer[]
-  payment            PaymentRecord?
-  messages           ChatMessage[]
-  review             Review?
+  customer     User                 @relation("CustomerBookings", fields: [customerId], references: [id])
+  proProfile   ProProfile?          @relation(fields: [proProfileId], references: [id])
+  offering     ServiceOffering      @relation(fields: [offeringId], references: [id])
+  address      CustomerAddress      @relation(fields: [addressId], references: [id])
+  statusEvents BookingStatusEvent[]
+  jobOffers    JobOffer[]
+  payment      PaymentRecord?
+  messages     ChatMessage[]
+  review       Review?
 }
 
 model BookingStatusEvent {
-  id          String        @id @default(uuid())
+  id          String         @id @default(uuid())
   bookingId   String
   fromStatus  BookingStatus?
   toStatus    BookingStatus
   actorUserId String?
   note        String?
-  createdAt   DateTime      @default(now())
+  createdAt   DateTime       @default(now())
 
-  booking     Booking       @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  booking Booking @relation(fields: [bookingId], references: [id], onDelete: Cascade)
 }
 
 model JobOffer {
@@ -344,8 +357,11 @@ model JobOffer {
   respondedAt   DateTime?
   createdAt     DateTime       @default(now())
 
-  booking       Booking        @relation(fields: [bookingId], references: [id], onDelete: Cascade)
-  proProfile    ProProfile     @relation(fields: [proProfileId], references: [id], onDelete: Cascade)
+  booking    Booking    @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  proProfile ProProfile @relation(fields: [proProfileId], references: [id], onDelete: Cascade)
+
+  @@index([proProfileId, status, expiresAt])
+  @@index([bookingId, proProfileId, createdAt])
 }
 
 model PaymentRecord {
@@ -359,7 +375,7 @@ model PaymentRecord {
   paidAt            DateTime?
   createdAt         DateTime          @default(now())
 
-  booking           Booking           @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  booking Booking @relation(fields: [bookingId], references: [id], onDelete: Cascade)
 }
 
 model ChatMessage {
@@ -372,24 +388,23 @@ model ChatMessage {
   readAt            DateTime?
   createdAt         DateTime  @default(now())
 
-  booking           Booking   @relation(fields: [bookingId], references: [id], onDelete: Cascade)
-  sender            User      @relation(fields: [senderUserId], references: [id])
+  booking Booking @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  sender  User    @relation(fields: [senderUserId], references: [id])
 }
 
 model Review {
-  id           String     @id @default(uuid())
-  bookingId    String     @unique
+  id           String   @id @default(uuid())
+  bookingId    String   @unique
   customerId   String
   proProfileId String
   rating       Int
   tags         String[]
   comment      String?
   photoUrls    String[]
-  tipAmountEgp Int        @default(0)
-  createdAt    DateTime   @default(now())
+  tipAmountEgp Int      @default(0)
+  createdAt    DateTime @default(now())
 
-  booking      Booking    @relation(fields: [bookingId], references: [id], onDelete: Cascade)
-  customer     User       @relation(fields: [customerId], references: [id])
-  proProfile   ProProfile @relation(fields: [proProfileId], references: [id])
+  booking    Booking    @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  customer   User       @relation(fields: [customerId], references: [id])
+  proProfile ProProfile @relation(fields: [proProfileId], references: [id])
 }
-

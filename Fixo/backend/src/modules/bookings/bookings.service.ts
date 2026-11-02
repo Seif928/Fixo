@@ -30,6 +30,8 @@ import { CancelBookingDto } from './dto/cancel-booking.dto';
 import { CheckoutBookingDto } from './dto/checkout-booking.dto';
 import { CreateBookingDto } from './dto/create-booking.dto';
 import { CreateReviewDto } from './dto/create-review.dto';
+import { professionalCoverageWhere } from '../services/coverage-policy';
+import { ensureDispatchOffer } from '../pro/dispatch-offers';
 import { PrivateUploadDto } from './dto/private-upload.dto';
 import {
   signPrivateUploadAccessToken,
@@ -263,7 +265,9 @@ export class BookingsService {
     ]);
 
     return {
-      bookings: bookings.map((b) => this.mapBookingDetail(b, customerId, false)),
+      bookings: bookings.map((b) =>
+        this.mapBookingDetail(b, customerId, false),
+      ),
       total,
       limit,
       offset,
@@ -286,7 +290,9 @@ export class BookingsService {
     });
 
     if (!booking) {
-      throw new NotFoundException(`Booking with ID "${bookingId}" was not found.`);
+      throw new NotFoundException(
+        `Booking with ID "${bookingId}" was not found.`,
+      );
     }
 
     const isAssignedPro = booking.proProfile?.user?.id === userId;
@@ -329,7 +335,9 @@ export class BookingsService {
     });
 
     if (!initialBooking) {
-      throw new NotFoundException(`Booking with ID "${bookingId}" was not found.`);
+      throw new NotFoundException(
+        `Booking with ID "${bookingId}" was not found.`,
+      );
     }
 
     if (!isAdmin && initialBooking.customerId !== userId) {
@@ -369,7 +377,9 @@ export class BookingsService {
       });
 
       if (!lockedBooking) {
-        throw new NotFoundException(`Booking with ID "${bookingId}" was not found.`);
+        throw new NotFoundException(
+          `Booking with ID "${bookingId}" was not found.`,
+        );
       }
 
       // Re-check idempotency after acquiring lock (handles concurrent double-taps)
@@ -446,7 +456,9 @@ export class BookingsService {
     });
 
     if (!booking) {
-      throw new NotFoundException(`Booking with ID "${bookingId}" was not found.`);
+      throw new NotFoundException(
+        `Booking with ID "${bookingId}" was not found.`,
+      );
     }
 
     const isAssignedPro = booking.proProfile?.user?.id === userId;
@@ -495,11 +507,15 @@ export class BookingsService {
     });
 
     if (!existing) {
-      throw new NotFoundException(`Booking with ID "${bookingId}" was not found.`);
+      throw new NotFoundException(
+        `Booking with ID "${bookingId}" was not found.`,
+      );
     }
 
     if (!isAdmin && existing.customerId !== userId) {
-      throw new ForbiddenException('You do not have access to cancel this booking.');
+      throw new ForbiddenException(
+        'You do not have access to cancel this booking.',
+      );
     }
 
     if (existing.status === BookingStatus.CANCELLED) {
@@ -531,7 +547,9 @@ export class BookingsService {
       });
 
       if (!locked) {
-        throw new NotFoundException(`Booking with ID "${bookingId}" was not found.`);
+        throw new NotFoundException(
+          `Booking with ID "${bookingId}" was not found.`,
+        );
       }
 
       if (locked.status === BookingStatus.CANCELLED) {
@@ -606,16 +624,19 @@ export class BookingsService {
     });
 
     if (!booking) {
-      throw new NotFoundException(`Booking with ID "${bookingId}" was not found.`);
+      throw new NotFoundException(
+        `Booking with ID "${bookingId}" was not found.`,
+      );
     }
 
     const isAssignedPro = booking.proProfile?.user?.id === userId;
     if (!isAdmin && booking.customerId !== userId && !isAssignedPro) {
-      throw new ForbiddenException('You do not have access to this booking receipt.');
+      throw new ForbiddenException(
+        'You do not have access to this booking receipt.',
+      );
     }
 
-    const tipEgp =
-      booking.payment?.tipEgp ?? booking.review?.tipAmountEgp ?? 0;
+    const tipEgp = booking.payment?.tipEgp ?? booking.review?.tipAmountEgp ?? 0;
 
     const lineItems: BookingReceiptLineItem[] = [
       {
@@ -628,7 +649,10 @@ export class BookingsService {
         key: 'SERVICE_FEE',
         labelEn: booking.offering.titleEn,
         labelAr: booking.offering.titleAr,
-        amountEgp: booking.totalEgp - booking.baseInspectionEgp - booking.transportFeeEgp,
+        amountEgp:
+          booking.totalEgp -
+          booking.baseInspectionEgp -
+          booking.transportFeeEgp,
       },
     ];
 
@@ -715,12 +739,16 @@ export class BookingsService {
     });
 
     if (!booking) {
-      throw new NotFoundException(`Booking with ID "${bookingId}" was not found.`);
+      throw new NotFoundException(
+        `Booking with ID "${bookingId}" was not found.`,
+      );
     }
 
     const isAssignedPro = booking.proProfile?.userId === userId;
     if (!isAdmin && booking.customerId !== userId && !isAssignedPro) {
-      throw new ForbiddenException('You do not have access to this booking review.');
+      throw new ForbiddenException(
+        'You do not have access to this booking review.',
+      );
     }
 
     if (!booking.review) {
@@ -751,7 +779,9 @@ export class BookingsService {
     });
 
     if (!initialBooking) {
-      throw new NotFoundException(`Booking with ID "${bookingId}" was not found.`);
+      throw new NotFoundException(
+        `Booking with ID "${bookingId}" was not found.`,
+      );
     }
 
     if (initialBooking.customerId !== customerId) {
@@ -778,7 +808,6 @@ export class BookingsService {
       );
     }
 
-    const proProfileId = initialBooking.proProfileId;
     const tipAmountEgp = dto.tipAmountEgp ?? 0;
 
     const createdReview = await this.prisma.$transaction(async (tx) => {
@@ -791,6 +820,28 @@ export class BookingsService {
         `;
       }
 
+      const lockedBooking = await tx.booking.findUnique({
+        where: { id: bookingId },
+        include: { payment: true },
+      });
+      if (!lockedBooking || lockedBooking.customerId !== customerId) {
+        throw new ForbiddenException(
+          'Only the booking customer can submit this review.',
+        );
+      }
+      if (
+        lockedBooking.status !== BookingStatus.COMPLETED ||
+        !lockedBooking.proProfileId
+      ) {
+        throw new BadRequestException(
+          'A completed booking with an assigned professional is required.',
+        );
+      }
+      const proProfileId = lockedBooking.proProfileId;
+      if (this.prisma.isDatabaseConnected()) {
+        // Different bookings share this aggregate: serialize before insert/read, not only the final update.
+        await tx.$queryRaw`SELECT id FROM "ProProfile" WHERE id = ${proProfileId} FOR UPDATE`;
+      }
       const existingReview = await tx.review.findUnique({
         where: { bookingId },
       });
@@ -814,9 +865,13 @@ export class BookingsService {
         },
       });
 
-      if (tipAmountEgp > 0 && initialBooking.payment && tx.paymentRecord?.update) {
+      if (
+        tipAmountEgp > 0 &&
+        lockedBooking.payment &&
+        tx.paymentRecord?.update
+      ) {
         await tx.paymentRecord.update({
-          where: { id: initialBooking.payment.id },
+          where: { id: lockedBooking.payment.id },
           data: { tipEgp: tipAmountEgp },
         });
       }
@@ -869,7 +924,9 @@ export class BookingsService {
         include: { proProfile: { select: { userId: true } } },
       });
       if (!booking) {
-        throw new NotFoundException(`Booking with ID "${dto.bookingId}" was not found.`);
+        throw new NotFoundException(
+          `Booking with ID "${dto.bookingId}" was not found.`,
+        );
       }
       const isParticipant =
         booking.customerId === userId || booking.proProfile?.userId === userId;
@@ -933,7 +990,7 @@ export class BookingsService {
         where: { id: bookingId },
         include: {
           offering: true,
-          address: true,
+          address: { include: { zone: true } },
         },
       });
 
@@ -941,51 +998,41 @@ export class BookingsService {
         return;
       }
 
+      const eligibility = {
+        verificationStatus: ProVerificationStatus.APPROVED,
+        isOnline: true,
+        userId: { not: booking.customerId },
+        primaryCategoryId: booking.offering.categoryId,
+        ...professionalCoverageWhere(booking.address.zone),
+      };
+      // Preference affects order only; it never bypasses category, coverage or approval.
+      const preferred = preferredProId
+        ? await this.prisma.proProfile.findFirst({
+            where: { ...eligibility, id: preferredProId },
+          })
+        : null;
       const eligiblePros = await this.prisma.proProfile.findMany({
         where: {
-          verificationStatus: ProVerificationStatus.APPROVED,
-          isOnline: true,
-          userId: { not: booking.customerId },
-          OR: [
-            ...(preferredProId ? [{ id: preferredProId }] : []),
-            {
-              primaryCategoryId: booking.offering.categoryId,
-              OR: [
-                { primaryZoneId: booking.address.zoneId },
-                { coverageZones: { some: { id: booking.address.zoneId } } },
-              ],
-            },
-          ],
+          ...eligibility,
+          ...(preferred ? { id: { not: preferred.id } } : {}),
         },
-        take: 5,
+        orderBy: { id: 'asc' },
+        take: preferred ? 4 : 5,
       });
+      if (preferred) eligiblePros.unshift(preferred);
 
       if (!eligiblePros.length) {
         return;
       }
 
-      const expiresAt = new Date(Date.now() + 5 * 60 * 1000); // 5 minutes
       for (const pro of eligiblePros) {
-        const existingOffer = await this.prisma.jobOffer.findFirst({
-          where: {
-            bookingId: booking.id,
-            proProfileId: pro.id,
-          },
-        });
-
-        if (!existingOffer) {
-          await this.prisma.jobOffer.create({
-            data: {
-              bookingId: booking.id,
-              proProfileId: pro.id,
-              status: JobOfferStatus.PENDING,
-              expiresAt,
-            },
-          });
-
-          if (this.pushService) {
-            await this.pushService.notify(pro.userId, booking.id);
-          }
+        const result = await ensureDispatchOffer(
+          this.prisma,
+          booking.id,
+          pro.id,
+        );
+        if (result?.created && this.pushService) {
+          await this.pushService.notify(result.userId, booking.id);
         }
       }
     } catch {

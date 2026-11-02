@@ -18,6 +18,7 @@ import 'package:fixo_mobile/features/pro/presentation/pages/pro_verification_sta
 
 class FakeProRepository implements ProRepository {
   bool isOnline = true;
+  int reviewsCount = 38;
   String currentStatus = 'APPROVED';
   int acceptCallCount = 0;
   int declineCallCount = 0;
@@ -85,19 +86,35 @@ class FakeProRepository implements ProRepository {
         ),
       ],
       transportModes: [
-        ProOptionItemModel(key: 'MOTORCYCLE', labelEn: 'Motorcycle', labelAr: 'دراجة نارية'),
-        ProOptionItemModel(key: 'WORK_VAN', labelEn: 'Work Van', labelAr: 'سيارة عمل'),
-        ProOptionItemModel(key: 'METRO_BUS', labelEn: 'Metro / Bus', labelAr: 'مترو / حافلة'),
+        ProOptionItemModel(
+          key: 'MOTORCYCLE',
+          labelEn: 'Motorcycle',
+          labelAr: 'دراجة نارية',
+        ),
+        ProOptionItemModel(
+          key: 'WORK_VAN',
+          labelEn: 'Work Van',
+          labelAr: 'سيارة عمل',
+        ),
+        ProOptionItemModel(
+          key: 'METRO_BUS',
+          labelEn: 'Metro / Bus',
+          labelAr: 'مترو / حافلة',
+        ),
       ],
       experienceTiers: [
-        ProOptionItemModel(key: 'SKILLED_3_5Y', labelEn: '3-5 Years', labelAr: '٣-٥ سنوات'),
+        ProOptionItemModel(
+          key: 'SKILLED_3_5Y',
+          labelEn: '3-5 Years',
+          labelAr: '٣-٥ سنوات',
+        ),
       ],
     );
   }
 
   @override
   Future<ProProfileModel?> getMyProfile() async {
-    return const ProProfileModel(
+    return ProProfileModel(
       id: 'pro-101',
       userId: 'usr-101',
       fullName: 'Hassan El-Naggar',
@@ -113,7 +130,7 @@ class FakeProRepository implements ProRepository {
       verificationStatus: 'APPROVED',
       isOnline: true,
       ratingAvg: 4.9,
-      reviewsCount: 38,
+      reviewsCount: reviewsCount,
       completedJobsCount: 42,
     );
   }
@@ -277,15 +294,50 @@ class FakeProRepository implements ProRepository {
       weekEarningsEgp: 4250,
       completedJobsCount: 14,
       ratingAvg: 4.9,
-      reviewsCount: 38,
+      reviewsCount: reviewsCount,
       dailyTrajectory: const [
-        ProDashboardDailyEarningsModel(dayKey: 'SAT', dayLabelEn: 'Sat', dayLabelAr: 'سبت', netEgp: 650),
-        ProDashboardDailyEarningsModel(dayKey: 'SUN', dayLabelEn: 'Sun', dayLabelAr: 'أحد', netEgp: 720),
-        ProDashboardDailyEarningsModel(dayKey: 'MON', dayLabelEn: 'Mon', dayLabelAr: 'إثنين', netEgp: 780),
-        ProDashboardDailyEarningsModel(dayKey: 'TUE', dayLabelEn: 'Tue', dayLabelAr: 'ثلاثاء', netEgp: 0),
-        ProDashboardDailyEarningsModel(dayKey: 'WED', dayLabelEn: 'Wed', dayLabelAr: 'أربعاء', netEgp: 0),
-        ProDashboardDailyEarningsModel(dayKey: 'THU', dayLabelEn: 'Thu', dayLabelAr: 'خميس', netEgp: 0),
-        ProDashboardDailyEarningsModel(dayKey: 'FRI', dayLabelEn: 'Fri', dayLabelAr: 'جمعة', netEgp: 0),
+        ProDashboardDailyEarningsModel(
+          dayKey: 'SAT',
+          dayLabelEn: 'Sat',
+          dayLabelAr: 'سبت',
+          netEgp: 650,
+        ),
+        ProDashboardDailyEarningsModel(
+          dayKey: 'SUN',
+          dayLabelEn: 'Sun',
+          dayLabelAr: 'أحد',
+          netEgp: 720,
+        ),
+        ProDashboardDailyEarningsModel(
+          dayKey: 'MON',
+          dayLabelEn: 'Mon',
+          dayLabelAr: 'إثنين',
+          netEgp: 780,
+        ),
+        ProDashboardDailyEarningsModel(
+          dayKey: 'TUE',
+          dayLabelEn: 'Tue',
+          dayLabelAr: 'ثلاثاء',
+          netEgp: 0,
+        ),
+        ProDashboardDailyEarningsModel(
+          dayKey: 'WED',
+          dayLabelEn: 'Wed',
+          dayLabelAr: 'أربعاء',
+          netEgp: 0,
+        ),
+        ProDashboardDailyEarningsModel(
+          dayKey: 'THU',
+          dayLabelEn: 'Thu',
+          dayLabelAr: 'خميس',
+          netEgp: 0,
+        ),
+        ProDashboardDailyEarningsModel(
+          dayKey: 'FRI',
+          dayLabelEn: 'Fri',
+          dayLabelAr: 'جمعة',
+          netEgp: 0,
+        ),
       ],
       activeOffers: const [
         JobOfferModel(
@@ -367,7 +419,10 @@ class FakeProRepository implements ProRepository {
   }
 
   @override
-  Future<JobOfferModel> declineJobOffer(String offerId, {String? reason}) async {
+  Future<JobOfferModel> declineJobOffer(
+    String offerId, {
+    String? reason,
+  }) async {
     declineCallCount++;
     lastDeclinedReason = reason;
     return getJobOfferById(offerId);
@@ -448,156 +503,181 @@ void main() {
   });
 
   group('Professional Flow Screens (11–16) Verification', () {
-    testWidgets('Screen 11: ProSignUpPage renders form inputs and validates 14-digit National ID', (tester) async {
-      await tester.binding.setSurfaceSize(const Size(390, 844));
-      await tester.pumpWidget(
-        buildTestableScreen(
-          screen: const ProSignUpPage(),
-          fakeRepo: fakeRepo,
-        ),
-      );
-      await tester.pumpAndSettle();
-
-      expect(find.text('FIXO Pro Onboarding'), findsOneWidget);
-      expect(find.text('Step 1 of 4'), findsOneWidget);
-      expect(find.text('National ID (14 digits)'), findsOneWidget);
-      expect(find.text('Primary Coverage Zone'), findsOneWidget);
-      expect(find.text('Motorcycle'), findsOneWidget);
-
-      // Tap submit and verify 14-digit validation
-      final submitBtn = find.text('Continue to Skills & Coverage');
-      expect(submitBtn, findsOneWidget);
-    });
-
-    testWidgets('Screen 12: ProSkillsPage renders trade category chips and rate card switch', (tester) async {
-      await tester.binding.setSurfaceSize(const Size(390, 844));
-      await tester.pumpWidget(
-        buildTestableScreen(
-          screen: const ProSkillsPage(),
-          fakeRepo: fakeRepo,
-        ),
-      );
-      await tester.pumpAndSettle();
-
-      expect(find.text('Trade Skills & Coverage'), findsOneWidget);
-      expect(find.text('Step 2 of 4'), findsOneWidget);
-      expect(find.text('Primary Trade Specialty'), findsOneWidget);
-      expect(find.text('Plumbing & Sanitary'), findsOneWidget);
-      expect(find.text('Accept FIXO Standard Rate Card'), findsOneWidget);
-      expect(find.text('Continue to Document Upload'), findsOneWidget);
-    });
-
-    testWidgets('Screen 13: ProVerificationDocsPage lists 3 required document cards and upload buttons', (tester) async {
-      await tester.binding.setSurfaceSize(const Size(390, 844));
-      await tester.pumpWidget(
-        buildTestableScreen(
-          screen: const ProVerificationDocsPage(),
-          fakeRepo: fakeRepo,
-        ),
-      );
-      await tester.pumpAndSettle();
-
-      expect(find.text('ID & Licenses Verification'), findsOneWidget);
-      expect(find.text('Step 3 of 4'), findsOneWidget);
-      expect(find.text('National ID (Front Face)'), findsOneWidget);
-      expect(find.text('National ID (Back Face)'), findsOneWidget);
-      expect(find.text('Criminal Record Certificate (Fesh)'), findsOneWidget);
-      expect(find.text('Trade License or Syndicate Card (Optional)'), findsOneWidget);
-    });
-
-    testWidgets('Screen 14: ProVerificationStatusPage displays APPROVED badge and 4 milestones in Arabic RTL', (tester) async {
-      await tester.binding.setSurfaceSize(const Size(390, 844));
-      await tester.pumpWidget(
-        buildTestableScreen(
-          screen: const ProVerificationStatusPage(),
-          fakeRepo: fakeRepo,
-          locale: const Locale('ar'),
-        ),
-      );
-      await tester.pumpAndSettle();
-
-      expect(find.text('حالة اعتماد الفني'), findsOneWidget);
-      expect(find.text('معتمد ومفعل'), findsOneWidget);
-      expect(find.text('مراحل التحقق والاعتماد'), findsOneWidget);
-      expect(find.text('الانتقال إلى لوحة الفني'), findsOneWidget);
-    });
-
-    testWidgets('Screen 15: ProDashboardPage displays net earnings, weekly trajectory, and arrival PIN verification', (tester) async {
-      await tester.binding.setSurfaceSize(const Size(390, 844));
-      await tester.pumpWidget(
-        buildTestableScreen(
-          screen: const ProDashboardPage(),
-          fakeRepo: fakeRepo,
-        ),
-      );
-      await tester.pumpAndSettle();
-
-      expect(find.text('FIXO Pro Dashboard'), findsOneWidget);
-      expect(find.text("Today's Net Earnings"), findsOneWidget);
-      expect(find.text('780'), findsAtLeast(1));
-      expect(find.text('Weekly Total'), findsOneWidget);
-      expect(find.text('4250 EGP'), findsOneWidget);
-      expect(find.text('7-Day Net Trajectory'), findsOneWidget);
-      expect(find.text("Today's Schedule"), findsOneWidget);
-
-      // Verify arrival PIN action
-      expect(find.text('Enter Arrival PIN'), findsOneWidget);
-    });
-
-    testWidgets('Screen 16: IncomingJobPage displays countdown, customer summary, gross/net breakdown, and accept button', (tester) async {
-      await tester.binding.setSurfaceSize(const Size(390, 844));
-      await tester.pumpWidget(
-        buildTestableScreen(
-          screen: const IncomingJobPage(jobOfferId: 'offer-8899'),
-          fakeRepo: fakeRepo,
-        ),
-      );
-      await tester.pump();
-      await tester.pump(const Duration(milliseconds: 200));
-
-      expect(find.text('Incoming Job Request'), findsOneWidget);
-      expect(find.text('#FX-8899'), findsOneWidget);
-      expect(find.text('AC Deep Wash'), findsOneWidget);
-      expect(find.text('Artisan Earnings Breakdown'), findsOneWidget);
-      expect(find.text('400 EGP'), findsOneWidget); // Gross
-      expect(find.text('- 60 EGP'), findsOneWidget); // 15% platform fee
-      expect(find.text('340 EGP'), findsOneWidget); // Net guaranteed
-
-      // Tap Accept
-      final acceptBtn = find.text('Accept Job Offer');
-      expect(acceptBtn, findsOneWidget);
-      await tester.tap(acceptBtn);
-      await tester.pump();
-      expect(fakeRepo.acceptCallCount, equals(1));
-
-      // Clean teardown so timer doesn't linger
-      await tester.pumpWidget(const SizedBox());
-    });
-
-    testWidgets('Responsive Matrix: Screen 15 ProDashboard renders across 360dp, 390dp, 412dp viewports with 1.35x text scale in Arabic and Dark Theme', (tester) async {
-      final viewports = [
-        const Size(360, 640),
-        const Size(390, 844),
-        const Size(412, 915),
-      ];
-
-      for (final size in viewports) {
-        await tester.binding.setSurfaceSize(size);
+    testWidgets(
+      'Screen 11: ProSignUpPage renders form inputs and validates 14-digit National ID',
+      (tester) async {
+        await tester.binding.setSurfaceSize(const Size(390, 844));
         await tester.pumpWidget(
           buildTestableScreen(
-            screen: const ProDashboardPage(),
+            screen: const ProSignUpPage(),
             fakeRepo: fakeRepo,
-            locale: const Locale('ar'),
-            themeMode: ThemeMode.dark,
-            textScale: 1.35,
           ),
         );
         await tester.pumpAndSettle();
 
-        expect(find.text('لوحة الفني'), findsOneWidget);
-        expect(find.text('صافي أرباح اليوم'), findsOneWidget);
-        expect(tester.takeException(), isNull);
-      }
-    });
+        expect(find.text('FIXO Pro Onboarding'), findsOneWidget);
+        expect(find.text('Step 1 of 4'), findsOneWidget);
+        expect(find.text('National ID (14 digits)'), findsOneWidget);
+        expect(find.text('Primary Coverage Zone'), findsOneWidget);
+        expect(find.text('Motorcycle'), findsOneWidget);
+
+        // Tap submit and verify 14-digit validation
+        final submitBtn = find.text('Continue to Skills & Coverage');
+        expect(submitBtn, findsOneWidget);
+      },
+    );
+
+    testWidgets(
+      'Screen 12: ProSkillsPage renders trade category chips and rate card switch',
+      (tester) async {
+        await tester.binding.setSurfaceSize(const Size(390, 844));
+        await tester.pumpWidget(
+          buildTestableScreen(
+            screen: const ProSkillsPage(),
+            fakeRepo: fakeRepo,
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        expect(find.text('Trade Skills & Coverage'), findsOneWidget);
+        expect(find.text('Step 2 of 4'), findsOneWidget);
+        expect(find.text('Primary Trade Specialty'), findsOneWidget);
+        expect(find.text('Plumbing & Sanitary'), findsOneWidget);
+        expect(find.text('Accept FIXO Standard Rate Card'), findsOneWidget);
+        expect(find.text('Continue to Document Upload'), findsOneWidget);
+      },
+    );
+
+    testWidgets(
+      'Screen 13: ProVerificationDocsPage lists 3 required document cards and upload buttons',
+      (tester) async {
+        await tester.binding.setSurfaceSize(const Size(390, 844));
+        await tester.pumpWidget(
+          buildTestableScreen(
+            screen: const ProVerificationDocsPage(),
+            fakeRepo: fakeRepo,
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        expect(find.text('ID & Licenses Verification'), findsOneWidget);
+        expect(find.text('Step 3 of 4'), findsOneWidget);
+        expect(find.text('National ID (Front Face)'), findsOneWidget);
+        expect(find.text('National ID (Back Face)'), findsOneWidget);
+        expect(find.text('Criminal Record Certificate (Fesh)'), findsOneWidget);
+        expect(
+          find.text('Trade License or Syndicate Card (Optional)'),
+          findsOneWidget,
+        );
+      },
+    );
+
+    testWidgets(
+      'Screen 14: ProVerificationStatusPage displays APPROVED badge and 4 milestones in Arabic RTL',
+      (tester) async {
+        await tester.binding.setSurfaceSize(const Size(390, 844));
+        await tester.pumpWidget(
+          buildTestableScreen(
+            screen: const ProVerificationStatusPage(),
+            fakeRepo: fakeRepo,
+            locale: const Locale('ar'),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        expect(find.text('حالة اعتماد الفني'), findsOneWidget);
+        expect(find.text('معتمد ومفعل'), findsOneWidget);
+        expect(find.text('مراحل التحقق والاعتماد'), findsOneWidget);
+        expect(find.text('الانتقال إلى لوحة الفني'), findsOneWidget);
+      },
+    );
+
+    testWidgets(
+      'Screen 15: ProDashboardPage displays net earnings, weekly trajectory, and arrival PIN verification',
+      (tester) async {
+        await tester.binding.setSurfaceSize(const Size(390, 844));
+        await tester.pumpWidget(
+          buildTestableScreen(
+            screen: const ProDashboardPage(),
+            fakeRepo: fakeRepo,
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        expect(find.text('FIXO Pro Dashboard'), findsOneWidget);
+        expect(find.text("Today's Net Earnings"), findsOneWidget);
+        expect(find.text('780'), findsAtLeast(1));
+        expect(find.text('Weekly Total'), findsOneWidget);
+        expect(find.text('4250 EGP'), findsOneWidget);
+        expect(find.text('7-Day Net Trajectory'), findsOneWidget);
+        expect(find.text("Today's Schedule"), findsOneWidget);
+
+        // Verify arrival PIN action
+        expect(find.text('Enter Arrival PIN'), findsOneWidget);
+      },
+    );
+
+    testWidgets(
+      'Screen 16: IncomingJobPage displays countdown, customer summary, gross/net breakdown, and accept button',
+      (tester) async {
+        await tester.binding.setSurfaceSize(const Size(390, 844));
+        await tester.pumpWidget(
+          buildTestableScreen(
+            screen: const IncomingJobPage(jobOfferId: 'offer-8899'),
+            fakeRepo: fakeRepo,
+          ),
+        );
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 200));
+
+        expect(find.text('Incoming Job Request'), findsOneWidget);
+        expect(find.text('#FX-8899'), findsOneWidget);
+        expect(find.text('AC Deep Wash'), findsOneWidget);
+        expect(find.text('Artisan Earnings Breakdown'), findsOneWidget);
+        expect(find.text('400 EGP'), findsOneWidget); // Gross
+        expect(find.text('- 60 EGP'), findsOneWidget); // 15% platform fee
+        expect(find.text('340 EGP'), findsOneWidget); // Net guaranteed
+
+        // Tap Accept
+        final acceptBtn = find.text('Accept Job Offer');
+        expect(acceptBtn, findsOneWidget);
+        await tester.tap(acceptBtn);
+        await tester.pump();
+        expect(fakeRepo.acceptCallCount, equals(1));
+
+        // Clean teardown so timer doesn't linger
+        await tester.pumpWidget(const SizedBox());
+      },
+    );
+
+    testWidgets(
+      'Responsive Matrix: Screen 15 ProDashboard renders across 360dp, 390dp, 412dp viewports with 1.35x text scale in Arabic and Dark Theme',
+      (tester) async {
+        fakeRepo.reviewsCount = 0;
+        final viewports = [
+          const Size(360, 640),
+          const Size(390, 844),
+          const Size(412, 915),
+        ];
+
+        for (final size in viewports) {
+          await tester.binding.setSurfaceSize(size);
+          await tester.pumpWidget(
+            buildTestableScreen(
+              screen: const ProDashboardPage(),
+              fakeRepo: fakeRepo,
+              locale: const Locale('ar'),
+              themeMode: ThemeMode.dark,
+              textScale: 1.35,
+            ),
+          );
+          await tester.pumpAndSettle();
+
+          expect(find.text('لوحة الفني'), findsOneWidget);
+          expect(find.text('صافي أرباح اليوم'), findsOneWidget);
+          expect(tester.takeException(), isNull);
+        }
+      },
+    );
   });
 }

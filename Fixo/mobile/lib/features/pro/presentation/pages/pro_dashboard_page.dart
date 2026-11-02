@@ -100,11 +100,18 @@ class _ProDashboardPageState extends ConsumerState<ProDashboardPage> {
               ),
               title: Row(
                 children: [
-                  const Icon(Icons.pin_rounded, color: FixoColors.primaryForest),
+                  const Icon(
+                    Icons.pin_rounded,
+                    color: FixoColors.primaryForest,
+                  ),
                   const SizedBox(width: 8),
                   Text(
-                    ar ? 'كود بدء الخدمة (٤ أرقام)' : 'Artisan Arrival PIN (4 digits)',
-                    style: FixoTypography.headlineSm().copyWith(fontWeight: FontWeight.bold),
+                    ar
+                        ? 'كود بدء الخدمة (٤ أرقام)'
+                        : 'Artisan Arrival PIN (4 digits)',
+                    style: FixoTypography.headlineSm().copyWith(
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
                 ],
               ),
@@ -265,7 +272,9 @@ class _ProDashboardPageState extends ConsumerState<ProDashboardPage> {
                       children: [
                         if (_errorMessage != null)
                           Container(
-                            margin: const EdgeInsets.only(bottom: FixoSpacing.md),
+                            margin: const EdgeInsets.only(
+                              bottom: FixoSpacing.md,
+                            ),
                             padding: const EdgeInsets.all(FixoSpacing.sm),
                             decoration: BoxDecoration(
                               color: FixoColors.errorContainer,
@@ -284,7 +293,9 @@ class _ProDashboardPageState extends ConsumerState<ProDashboardPage> {
                           if (dashboard.activeOffers.isNotEmpty) ...[
                             ...dashboard.activeOffers.map((offer) {
                               return Container(
-                                margin: const EdgeInsets.only(bottom: FixoSpacing.md),
+                                margin: const EdgeInsets.only(
+                                  bottom: FixoSpacing.md,
+                                ),
                                 padding: const EdgeInsets.all(FixoSpacing.md),
                                 decoration: BoxDecoration(
                                   gradient: const LinearGradient(
@@ -312,13 +323,17 @@ class _ProDashboardPageState extends ConsumerState<ProDashboardPage> {
                                                 FixoRadius.borderRadiusPill,
                                           ),
                                           child: Text(
-                                            ar ? 'طلب خدمة جديد!' : 'NEW JOB OFFER!',
-                                            style: FixoTypography.labelSm(
-                                              color: FixoColors.deepestForest,
-                                            ).copyWith(
-                                              fontSize: 10,
-                                              fontWeight: FontWeight.w800,
-                                            ),
+                                            ar
+                                                ? 'طلب خدمة جديد!'
+                                                : 'NEW JOB OFFER!',
+                                            style:
+                                                FixoTypography.labelSm(
+                                                  color:
+                                                      FixoColors.deepestForest,
+                                                ).copyWith(
+                                                  fontSize: 10,
+                                                  fontWeight: FontWeight.w800,
+                                                ),
                                           ),
                                         ),
                                         const Spacer(),
@@ -330,16 +345,21 @@ class _ProDashboardPageState extends ConsumerState<ProDashboardPage> {
                                         const SizedBox(width: 4),
                                         Text(
                                           '${offer.remainingSeconds}s',
-                                          style: FixoTypography.labelMd(
-                                            color: FixoColors.limeAccent,
-                                            tabularFigures: true,
-                                          ).copyWith(fontWeight: FontWeight.bold),
+                                          style:
+                                              FixoTypography.labelMd(
+                                                color: FixoColors.limeAccent,
+                                                tabularFigures: true,
+                                              ).copyWith(
+                                                fontWeight: FontWeight.bold,
+                                              ),
                                         ),
                                       ],
                                     ),
                                     const SizedBox(height: 8),
                                     Text(
-                                      ar ? offer.serviceTitleAr : offer.serviceTitleEn,
+                                      ar
+                                          ? offer.serviceTitleAr
+                                          : offer.serviceTitleEn,
                                       style: FixoTypography.headlineSm(
                                         color: Colors.white,
                                       ).copyWith(fontWeight: FontWeight.bold),
@@ -348,7 +368,9 @@ class _ProDashboardPageState extends ConsumerState<ProDashboardPage> {
                                     Text(
                                       '${offer.districtLine} • ${ar ? offer.zoneNameAr : offer.zoneNameEn}',
                                       style: FixoTypography.bodySm(
-                                        color: Colors.white.withValues(alpha: 0.8),
+                                        color: Colors.white.withValues(
+                                          alpha: 0.8,
+                                        ),
                                       ),
                                     ),
                                     const SizedBox(height: 10),
@@ -361,9 +383,12 @@ class _ProDashboardPageState extends ConsumerState<ProDashboardPage> {
                                       children: [
                                         Text(
                                           '${offer.netArtisanEgp} ${ar ? 'ج.م صافي أرباحك' : 'EGP Net payout'}',
-                                          style: FixoTypography.labelLg(
-                                            color: FixoColors.limeAccent,
-                                          ).copyWith(fontWeight: FontWeight.w800),
+                                          style:
+                                              FixoTypography.labelLg(
+                                                color: FixoColors.limeAccent,
+                                              ).copyWith(
+                                                fontWeight: FontWeight.w800,
+                                              ),
                                         ),
                                         FilledButton.icon(
                                           style: FilledButton.styleFrom(
@@ -379,7 +404,10 @@ class _ProDashboardPageState extends ConsumerState<ProDashboardPage> {
                                           ),
                                           onPressed: () => context.push(
                                             AppRoutes.incomingJobRequest
-                                                .replaceFirst(':jobId', offer.id),
+                                                .replaceFirst(
+                                                  ':jobId',
+                                                  offer.id,
+                                                ),
                                           ),
                                           icon: const Icon(
                                             Icons.arrow_forward_rounded,
@@ -387,11 +415,13 @@ class _ProDashboardPageState extends ConsumerState<ProDashboardPage> {
                                           ),
                                           label: Text(
                                             ar ? 'تفاصيل الطلب' : 'View Job',
-                                            style: FixoTypography.labelSm(
-                                              color: FixoColors.deepestForest,
-                                            ).copyWith(
-                                              fontWeight: FontWeight.w800,
-                                            ),
+                                            style:
+                                                FixoTypography.labelSm(
+                                                  color:
+                                                      FixoColors.deepestForest,
+                                                ).copyWith(
+                                                  fontWeight: FontWeight.w800,
+                                                ),
                                           ),
                                         ),
                                       ],
@@ -410,7 +440,9 @@ class _ProDashboardPageState extends ConsumerState<ProDashboardPage> {
                               crossAxisAlignment: CrossAxisAlignment.stretch,
                               children: [
                                 Text(
-                                  ar ? 'صافي أرباح اليوم' : "Today's Net Earnings",
+                                  ar
+                                      ? 'صافي أرباح اليوم'
+                                      : "Today's Net Earnings",
                                   style: FixoTypography.labelMd(
                                     color: palette.mutedText,
                                   ),
@@ -429,16 +461,22 @@ class _ProDashboardPageState extends ConsumerState<ProDashboardPage> {
                                       children: [
                                         Text(
                                           '${dashboard.todayEarningsEgp}',
-                                          style: FixoTypography.displayMobile(
-                                            color: FixoColors.primaryForest,
-                                          ).copyWith(fontWeight: FontWeight.w900),
+                                          style:
+                                              FixoTypography.displayMobile(
+                                                color: FixoColors.primaryForest,
+                                              ).copyWith(
+                                                fontWeight: FontWeight.w900,
+                                              ),
                                         ),
                                         const SizedBox(width: 6),
                                         Text(
                                           ar ? 'ج.م' : 'EGP',
-                                          style: FixoTypography.labelLg(
-                                            color: palette.deepForest,
-                                          ).copyWith(fontWeight: FontWeight.bold),
+                                          style:
+                                              FixoTypography.labelLg(
+                                                color: palette.deepForest,
+                                              ).copyWith(
+                                                fontWeight: FontWeight.bold,
+                                              ),
                                         ),
                                       ],
                                     ),
@@ -462,11 +500,18 @@ class _ProDashboardPageState extends ConsumerState<ProDashboardPage> {
                                           ),
                                           const SizedBox(width: 4),
                                           Text(
-                                            '${dashboard.ratingAvg.toStringAsFixed(1)} (${dashboard.reviewsCount})',
-                                            style: FixoTypography.labelSm(
-                                              color: FixoColors.deepestForest,
-                                            ).copyWith(
-                                                fontWeight: FontWeight.bold),
+                                            dashboard.reviewsCount == 0
+                                                ? (ar
+                                                      ? 'لا توجد تقييمات بعد'
+                                                      : 'No reviews yet')
+                                                : '${dashboard.ratingAvg.toStringAsFixed(1)} (${dashboard.reviewsCount})',
+                                            style:
+                                                FixoTypography.labelSm(
+                                                  color:
+                                                      FixoColors.deepestForest,
+                                                ).copyWith(
+                                                  fontWeight: FontWeight.bold,
+                                                ),
                                           ),
                                         ],
                                       ),
@@ -480,19 +525,25 @@ class _ProDashboardPageState extends ConsumerState<ProDashboardPage> {
                                   children: [
                                     Expanded(
                                       child: Column(
-                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
                                         children: [
                                           Text(
-                                            ar ? 'أرباح الأسبوع' : 'Weekly Total',
+                                            ar
+                                                ? 'أرباح الأسبوع'
+                                                : 'Weekly Total',
                                             style: FixoTypography.bodySm(
                                               color: palette.mutedText,
                                             ),
                                           ),
                                           Text(
                                             '${dashboard.weekEarningsEgp} ${ar ? 'ج.م' : 'EGP'}',
-                                            style: FixoTypography.labelLg(
-                                              color: palette.deepForest,
-                                            ).copyWith(fontWeight: FontWeight.w800),
+                                            style:
+                                                FixoTypography.labelLg(
+                                                  color: palette.deepForest,
+                                                ).copyWith(
+                                                  fontWeight: FontWeight.w800,
+                                                ),
                                           ),
                                         ],
                                       ),
@@ -505,19 +556,25 @@ class _ProDashboardPageState extends ConsumerState<ProDashboardPage> {
                                     const SizedBox(width: 16),
                                     Expanded(
                                       child: Column(
-                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
                                         children: [
                                           Text(
-                                            ar ? 'الطلبات المكتملة' : 'Completed Jobs',
+                                            ar
+                                                ? 'الطلبات المكتملة'
+                                                : 'Completed Jobs',
                                             style: FixoTypography.bodySm(
                                               color: palette.mutedText,
                                             ),
                                           ),
                                           Text(
                                             '${dashboard.completedJobsCount}',
-                                            style: FixoTypography.labelLg(
-                                              color: palette.deepForest,
-                                            ).copyWith(fontWeight: FontWeight.w800),
+                                            style:
+                                                FixoTypography.labelLg(
+                                                  color: palette.deepForest,
+                                                ).copyWith(
+                                                  fontWeight: FontWeight.w800,
+                                                ),
                                           ),
                                         ],
                                       ),
@@ -538,7 +595,9 @@ class _ProDashboardPageState extends ConsumerState<ProDashboardPage> {
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   Text(
-                                    ar ? 'مؤشر أرباح الأسبوع' : '7-Day Net Trajectory',
+                                    ar
+                                        ? 'مؤشر أرباح الأسبوع'
+                                        : '7-Day Net Trajectory',
                                     style: FixoTypography.headlineSm(
                                       color: palette.deepForest,
                                     ).copyWith(fontWeight: FontWeight.bold),
@@ -548,12 +607,16 @@ class _ProDashboardPageState extends ConsumerState<ProDashboardPage> {
                                     mainAxisAlignment:
                                         MainAxisAlignment.spaceAround,
                                     crossAxisAlignment: CrossAxisAlignment.end,
-                                    children: dashboard.dailyTrajectory.map((d) {
+                                    children: dashboard.dailyTrajectory.map((
+                                      d,
+                                    ) {
                                       final maxEgp = dashboard.dailyTrajectory
                                           .map((e) => e.netEgp)
                                           .reduce((a, b) => a > b ? a : b);
                                       final ratio = maxEgp > 0
-                                          ? (d.netEgp / maxEgp).toDouble().clamp(0.12, 1.0)
+                                          ? (d.netEgp / maxEgp)
+                                                .toDouble()
+                                                .clamp(0.12, 1.0)
                                           : 0.12;
                                       final isToday = d.netEgp > 0;
 
@@ -562,15 +625,16 @@ class _ProDashboardPageState extends ConsumerState<ProDashboardPage> {
                                         children: [
                                           Text(
                                             '${d.netEgp}',
-                                            style: FixoTypography.labelSm(
-                                              color: isToday
-                                                  ? FixoColors.primaryForest
-                                                  : palette.mutedText,
-                                              tabularFigures: true,
-                                            ).copyWith(
-                                              fontSize: 9,
-                                              fontWeight: FontWeight.bold,
-                                            ),
+                                            style:
+                                                FixoTypography.labelSm(
+                                                  color: isToday
+                                                      ? FixoColors.primaryForest
+                                                      : palette.mutedText,
+                                                  tabularFigures: true,
+                                                ).copyWith(
+                                                  fontSize: 9,
+                                                  fontWeight: FontWeight.bold,
+                                                ),
                                           ),
                                           const SizedBox(height: 4),
                                           Container(
@@ -587,16 +651,17 @@ class _ProDashboardPageState extends ConsumerState<ProDashboardPage> {
                                           const SizedBox(height: 6),
                                           Text(
                                             ar ? d.dayLabelAr : d.dayLabelEn,
-                                            style: FixoTypography.labelSm(
-                                              color: isToday
-                                                  ? palette.deepForest
-                                                  : palette.mutedText,
-                                            ).copyWith(
-                                              fontSize: 10,
-                                              fontWeight: isToday
-                                                  ? FontWeight.bold
-                                                  : FontWeight.normal,
-                                            ),
+                                            style:
+                                                FixoTypography.labelSm(
+                                                  color: isToday
+                                                      ? palette.deepForest
+                                                      : palette.mutedText,
+                                                ).copyWith(
+                                                  fontSize: 10,
+                                                  fontWeight: isToday
+                                                      ? FontWeight.bold
+                                                      : FontWeight.normal,
+                                                ),
                                           ),
                                         ],
                                       );
@@ -620,7 +685,9 @@ class _ProDashboardPageState extends ConsumerState<ProDashboardPage> {
                                       MainAxisAlignment.spaceBetween,
                                   children: [
                                     Text(
-                                      ar ? 'جدول طلبات اليوم' : "Today's Schedule",
+                                      ar
+                                          ? 'جدول طلبات اليوم'
+                                          : "Today's Schedule",
                                       style: FixoTypography.headlineSm(
                                         color: palette.deepForest,
                                       ).copyWith(fontWeight: FontWeight.bold),
@@ -725,7 +792,11 @@ class _ProDashboardPageState extends ConsumerState<ProDashboardPage> {
           const SizedBox(height: 4),
           Row(
             children: [
-              Icon(Icons.location_on_outlined, size: 14, color: palette.mutedText),
+              Icon(
+                Icons.location_on_outlined,
+                size: 14,
+                color: palette.mutedText,
+              ),
               const SizedBox(width: 4),
               Expanded(
                 child: Text(
@@ -772,8 +843,10 @@ class _ProDashboardPageState extends ConsumerState<ProDashboardPage> {
                   padding: const EdgeInsets.symmetric(horizontal: 10),
                 ),
                 onPressed: () => context.push(
-                  AppRoutes.customerChat
-                      .replaceFirst(':orderId', job.bookingId),
+                  AppRoutes.customerChat.replaceFirst(
+                    ':orderId',
+                    job.bookingId,
+                  ),
                 ),
                 icon: const Icon(Icons.chat_bubble_outline, size: 16),
                 label: Text(ar ? 'المحادثة' : 'Chat'),
@@ -784,7 +857,8 @@ class _ProDashboardPageState extends ConsumerState<ProDashboardPage> {
                     minimumSize: const Size(0, 36),
                     backgroundColor: FixoColors.primaryForest,
                   ),
-                  onPressed: () => _advanceStatus(job.bookingId, 'PRO_EN_ROUTE', ar),
+                  onPressed: () =>
+                      _advanceStatus(job.bookingId, 'PRO_EN_ROUTE', ar),
                   icon: const Icon(Icons.directions_bike_outlined, size: 16),
                   label: Text(ar ? 'التحرك للعميل' : 'Start En Route'),
                 ),
@@ -816,9 +890,12 @@ class _ProDashboardPageState extends ConsumerState<ProDashboardPage> {
                     backgroundColor: FixoColors.secondary,
                     foregroundColor: Colors.white,
                   ),
-                  onPressed: () => _advanceStatus(job.bookingId, 'COMPLETED', ar),
+                  onPressed: () =>
+                      _advanceStatus(job.bookingId, 'COMPLETED', ar),
                   icon: const Icon(Icons.check_circle_outline, size: 16),
-                  label: Text(ar ? 'إتمام وتحصيل الكاش' : 'Complete & Collect Cash'),
+                  label: Text(
+                    ar ? 'إتمام وتحصيل الكاش' : 'Complete & Collect Cash',
+                  ),
                 ),
             ],
           ),

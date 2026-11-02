@@ -10,7 +10,10 @@ import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
  * - Never fabricates verification badges or ratings if not explicitly set.
  */
 export class PublicProfessionalDto {
-  @ApiProperty({ example: 'pro-tarek-01', description: 'Public professional ID' })
+  @ApiProperty({
+    example: 'pro-tarek-01',
+    description: 'Public professional ID',
+  })
   id!: string;
 
   @ApiProperty({ example: 'Eng. Tarek Mansour' })
@@ -27,6 +30,11 @@ export class PublicProfessionalDto {
 
   @ApiProperty({ example: 'ac-maintenance' })
   primaryCategorySlug!: string;
+
+  @ApiProperty({
+    description: 'Actual service category ID for booking selection',
+  })
+  primaryCategoryId!: string;
 
   @ApiProperty({ example: 'sheikh-zayed' })
   primaryZoneSlug!: string;
@@ -68,4 +76,3 @@ export class PublicProfessionalDto {
   @ApiProperty({ example: true })
   isOnline!: boolean;
 }
-

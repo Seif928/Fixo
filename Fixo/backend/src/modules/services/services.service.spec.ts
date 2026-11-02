@@ -53,7 +53,9 @@ describe('ServicesController & ProfessionalsController (Phase 2 Marketplace API)
       limit: 10,
     });
     expect(featuredRes.items).toHaveLength(1);
-    expect(featuredRes.items[0].titleEn).toBe('Summer AC Deep Clean & Gas Refill');
+    expect(featuredRes.items[0].titleEn).toBe(
+      'Summer AC Deep Clean & Gas Refill',
+    );
     expect(featuredRes.items[0].flatPriceEgp).toBe(350);
 
     const bundleRes = await servicesController.listServices({
@@ -254,6 +256,81 @@ describe('ServicesController & ProfessionalsController (Phase 2 Marketplace API)
       getProfessionalsSpy = jest.spyOn(memoryStore, 'getProfessionals');
     });
 
+    it('filters by actual coverage relations, never profile marketing text', async () => {
+      const row = (id: string, covered: string[]) => ({
+        id,
+        user: { fullName: 'Technician' },
+        primaryCategoryId: 'cat-plumbing',
+        primaryCategory: { slug: 'plumbing' },
+        primaryZone: null,
+        coverageZones: covered.map((slug) => ({
+          slug,
+          governorate: slug === 'giza' ? 'Giza' : 'Cairo',
+        })),
+        zonesLabelEn: 'Everywhere in Egypt, Alexandria',
+        ratingAvg: 5,
+        reviewsCount: 0,
+        completedJobsCount: 0,
+        acceptanceRatePct: 0,
+        estimatedPriceEgp: 200,
+        isOnline: false,
+      });
+      jest
+        .spyOn(prisma.proProfile, 'findMany')
+        .mockResolvedValue([
+          row('real-giza', ['giza']),
+          row('misleading-label', ['cairo']),
+        ] as any);
+      jest
+        .spyOn(prisma.coverageZone, 'findUnique')
+        .mockResolvedValue({ slug: 'giza', governorate: 'Giza' } as any);
+      const result = await professionalsController.listProfessionals({
+        zone: 'giza',
+      });
+      expect(result.items.map((p) => p.id)).toEqual(['real-giza']);
+      expect(result.items[0].specialtyEn).not.toContain('Certified');
+      expect(result.items[0].primaryZoneSlug).toBe('');
+      expect(result.items[0]).toHaveProperty(
+        'primaryCategoryId',
+        'cat-plumbing',
+      );
+      expect(result.items[0].ratingAvg).toBe(0);
+      expect(
+        (
+          await professionalsController.listProfessionals({
+            categoryId: 'cat-plumbing',
+          })
+        ).items,
+      ).toHaveLength(2);
+    });
+
+    it('does not turn district-only approval into whole-governorate coverage', async () => {
+      jest
+        .spyOn(prisma.coverageZone, 'findUnique')
+        .mockResolvedValue({
+          slug: 'giza',
+          governorate: 'Giza',
+          isActive: true,
+        } as any);
+      jest.spyOn(prisma.proProfile, 'findMany').mockResolvedValue([
+        {
+          id: 'district-only',
+          user: { fullName: 'Technician' },
+          primaryCategory: { slug: 'plumbing' },
+          primaryZone: null,
+          coverageZones: [
+            { slug: 'sheikh-zayed', governorate: 'Giza', isActive: true },
+          ],
+          reviewsCount: 0,
+          ratingAvg: 0,
+        },
+      ] as any);
+      expect(
+        (await professionalsController.listProfessionals({ zone: 'giza' }))
+          .items,
+      ).toEqual([]);
+    });
+
     it('returns empty categories and zones exclusively from DB without reading demo data', async () => {
       const result = await servicesController.listCategories();
 
@@ -270,7 +347,10 @@ describe('ServicesController & ProfessionalsController (Phase 2 Marketplace API)
     });
 
     it('returns empty services list exclusively from DB without reading demo data', async () => {
-      const result = await servicesController.listServices({ page: 1, limit: 20 });
+      const result = await servicesController.listServices({
+        page: 1,
+        limit: 20,
+      });
 
       expect(result.items).toEqual([]);
       expect(result.meta.total).toBe(0);
@@ -292,7 +372,10 @@ describe('ServicesController & ProfessionalsController (Phase 2 Marketplace API)
     });
 
     it('returns empty professionals list exclusively from DB without reading demo data', async () => {
-      const result = await professionalsController.listProfessionals({ page: 1, limit: 20 });
+      const result = await professionalsController.listProfessionals({
+        page: 1,
+        limit: 20,
+      });
 
       expect(result.items).toEqual([]);
       expect(result.meta.total).toBe(0);
@@ -314,11 +397,17 @@ describe('ServicesController & ProfessionalsController (Phase 2 Marketplace API)
         expect(catRes.zones).toEqual([]);
         expect(getCategoriesSpy).not.toHaveBeenCalled();
 
-        const servRes = await servicesController.listServices({ page: 1, limit: 10 });
+        const servRes = await servicesController.listServices({
+          page: 1,
+          limit: 10,
+        });
         expect(servRes.items).toEqual([]);
         expect(getOfferingsSpy).not.toHaveBeenCalled();
 
-        const proRes = await professionalsController.listProfessionals({ page: 1, limit: 10 });
+        const proRes = await professionalsController.listProfessionals({
+          page: 1,
+          limit: 10,
+        });
         expect(proRes.items).toEqual([]);
         expect(getProfessionalsSpy).not.toHaveBeenCalled();
       } finally {
@@ -335,10 +424,16 @@ describe('ServicesController & ProfessionalsController (Phase 2 Marketplace API)
         expect(catRes.categories).toEqual([]);
         expect(catRes.zones).toEqual([]);
 
-        const servRes = await servicesController.listServices({ page: 1, limit: 10 });
+        const servRes = await servicesController.listServices({
+          page: 1,
+          limit: 10,
+        });
         expect(servRes.items).toEqual([]);
 
-        const proRes = await professionalsController.listProfessionals({ page: 1, limit: 10 });
+        const proRes = await professionalsController.listProfessionals({
+          page: 1,
+          limit: 10,
+        });
         expect(proRes.items).toEqual([]);
 
         expect(getCategoriesSpy).not.toHaveBeenCalled();

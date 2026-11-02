@@ -16,6 +16,7 @@ import {
   JobOfferStatus,
   PaymentMethodType,
   PaymentStatus,
+  Prisma,
   ProVerificationStatus,
   TransportMode,
   UserRole,
@@ -27,13 +28,14 @@ import {
 } from '../../prisma/egypt-demo-seed.data';
 import { PrismaService } from '../../prisma/prisma.service';
 import { INTERNAL_FAILED_PIN_EVENT_NOTE } from '../bookings/bookings.service';
-import {
-  validatePrivateUploadPayload,
-} from '../bookings/private-upload.util';
+import { validatePrivateUploadPayload } from '../bookings/private-upload.util';
 import { createHash, randomUUID } from 'crypto';
 import { PrivateStorageService } from '../media/private-storage.service';
 const sharp: typeof import('sharp').default = require('sharp');
 import { PushService } from '../communications/push.service';
+import { addressCoverageWhere } from '../services/coverage-policy';
+import { ensureDispatchOffer, jobOfferDetailsInclude } from './dispatch-offers';
+import { readCairoEarnings } from './cairo-earnings';
 import {
   ProAdvanceJobStatusDto,
   ProAdminReviewDto,
@@ -101,8 +103,6 @@ export class ProService {
         requiredDocumentTypes: REQUIRED_PRO_DOC_TYPES,
       };
     }
-
-    await this.ensureSubSkillsSeeded();
 
     const [categories, zones] = await Promise.all([
       this.prisma.serviceCategory.findMany({
@@ -181,35 +181,41 @@ export class ProService {
         });
       }
 
-
       const dossierCode =
         existing?.dossierCode ?? (await this.generateUniqueDossierCode());
 
       const profile = existing
-        ? await tx.proProfile.update({ where: { userId }, data: {
-          nationalIdSynthetic: dto.nationalIdSynthetic.trim(),
-          primaryZoneId: zone.id,
-          transportMode: dto.transportMode,
-          vehicleDescription: dto.vehicleDescription?.trim() || null,
-          vehiclePlateAr: dto.vehiclePlateAr?.trim() || null,
-          zonesLabelEn: existing?.zonesLabelEn || zone.nameEn,
-          zonesLabelAr: existing?.zonesLabelAr || zone.nameAr,
-        }, include: this.proProfileInclude })
-        : await tx.proProfile.create({ data: {
-          userId,
-          dossierCode,
-          nationalIdSynthetic: dto.nationalIdSynthetic.trim(),
-          primaryZoneId: zone.id,
-          transportMode: dto.transportMode,
-          vehicleDescription: dto.vehicleDescription?.trim() || null,
-          vehiclePlateAr: dto.vehiclePlateAr?.trim() || null,
-          zonesLabelEn: zone.nameEn,
-          zonesLabelAr: zone.nameAr,
-          verificationStatus: ProVerificationStatus.DRAFT,
-          coverageZones: {
-            connect: [{ id: zone.id }],
-          },
-        }, include: this.proProfileInclude });
+        ? await tx.proProfile.update({
+            where: { userId },
+            data: {
+              nationalIdSynthetic: dto.nationalIdSynthetic.trim(),
+              primaryZoneId: zone.id,
+              transportMode: dto.transportMode,
+              vehicleDescription: dto.vehicleDescription?.trim() || null,
+              vehiclePlateAr: dto.vehiclePlateAr?.trim() || null,
+              zonesLabelEn: existing?.zonesLabelEn || zone.nameEn,
+              zonesLabelAr: existing?.zonesLabelAr || zone.nameAr,
+            },
+            include: this.proProfileInclude,
+          })
+        : await tx.proProfile.create({
+            data: {
+              userId,
+              dossierCode,
+              nationalIdSynthetic: dto.nationalIdSynthetic.trim(),
+              primaryZoneId: zone.id,
+              transportMode: dto.transportMode,
+              vehicleDescription: dto.vehicleDescription?.trim() || null,
+              vehiclePlateAr: dto.vehiclePlateAr?.trim() || null,
+              zonesLabelEn: zone.nameEn,
+              zonesLabelAr: zone.nameAr,
+              verificationStatus: ProVerificationStatus.DRAFT,
+              coverageZones: {
+                connect: [{ id: zone.id }],
+              },
+            },
+            include: this.proProfileInclude,
+          });
 
       return this.mapProProfile(profile);
     });
@@ -263,8 +269,6 @@ export class ProService {
         );
       }
 
-      await this.ensureSubSkillsSeeded();
-
       const uniqueSubSkillIds = Array.from(new Set(dto.subSkillIds ?? []));
       if (uniqueSubSkillIds.length > 0) {
         const validSubSkills = await tx.serviceSubSkill.findMany({
@@ -293,8 +297,7 @@ export class ProService {
           toolkitCommitmentConfirmed: dto.toolkitCommitmentConfirmed,
           specialtyEn:
             dto.specialtyEn?.trim() || `${category.nameEn} Specialist`,
-          specialtyAr:
-            dto.specialtyAr?.trim() || `أخصائي ${category.nameAr}`,
+          specialtyAr: dto.specialtyAr?.trim() || `أخصائي ${category.nameAr}`,
           estimatedPriceEgp:
             dto.estimatedPriceEgp ?? category.startingPriceEgp ?? 250,
           zonesLabelEn,
@@ -319,18 +322,51 @@ export class ProService {
    * Stores document privately in `storageKey` so it is never publicly enumerable.
    */
   async uploadVerificationDocument(userId: string, dto: ProDocumentUploadDto) {
-    if (!this.privateStorage) throw new ServiceUnavailableException('Private document storage is unavailable.');
-    const profile = await this.prisma.proProfile.findUnique({ where: { userId } });
-    if (!profile) throw new BadRequestException('Complete personal details before uploading documents.');
+    if (!this.privateStorage)
+      throw new ServiceUnavailableException(
+        'Private document storage is unavailable.',
+      );
+    const profile = await this.prisma.proProfile.findUnique({
+      where: { userId },
+    });
+    if (!profile)
+      throw new BadRequestException(
+        'Complete personal details before uploading documents.',
+      );
     this.assertDossierEditable(profile.verificationStatus);
-    const validated = validatePrivateUploadPayload({ purpose: 'PRO_DOCUMENT', fileName: dto.fileName, mimeType: dto.mimeType, contentBase64: dto.contentBase64 });
+    const validated = validatePrivateUploadPayload({
+      purpose: 'PRO_DOCUMENT',
+      fileName: dto.fileName,
+      mimeType: dto.mimeType,
+      contentBase64: dto.contentBase64,
+    });
     let bytes: Buffer;
     try {
-      const image = sharp(Buffer.from(validated.normalizedBase64, 'base64'), { limitInputPixels: 20_000_000, failOn: 'warning' });
+      const image = sharp(Buffer.from(validated.normalizedBase64, 'base64'), {
+        limitInputPixels: 20_000_000,
+        failOn: 'warning',
+      });
       const metadata = await image.metadata();
-      if (!['jpeg', 'png', 'webp'].includes(metadata.format ?? '') || (metadata.pages ?? 1) !== 1) throw new Error('Unsupported');
-      bytes = await image.rotate().resize({ width: 1600, height: 1600, fit: 'inside', withoutEnlargement: true }).webp({ quality: 88 }).toBuffer();
-    } catch { throw new BadRequestException('Choose a readable JPEG, PNG or WebP document photo.'); }
+      if (
+        !['jpeg', 'png', 'webp'].includes(metadata.format ?? '') ||
+        (metadata.pages ?? 1) !== 1
+      )
+        throw new Error('Unsupported');
+      bytes = await image
+        .rotate()
+        .resize({
+          width: 1600,
+          height: 1600,
+          fit: 'inside',
+          withoutEnlargement: true,
+        })
+        .webp({ quality: 88 })
+        .toBuffer();
+    } catch {
+      throw new BadRequestException(
+        'Choose a readable JPEG, PNG or WebP document photo.',
+      );
+    }
     const key = `documents/${profile.id}/${randomUUID()}.webp`;
     const hash = createHash('sha256').update(bytes).digest('hex');
     await this.privateStorage.put(key, bytes, 'image/webp');
@@ -340,60 +376,130 @@ export class ProService {
         if (this.prisma.isDatabaseConnected()) {
           await tx.$queryRaw`SELECT id FROM "ProProfile" WHERE id = ${profile.id} FOR UPDATE`;
         }
-        const current = await tx.proProfile.findUnique({ where: { id: profile.id } });
-        if (!current) throw new NotFoundException('Professional profile was not found.');
+        const current = await tx.proProfile.findUnique({
+          where: { id: profile.id },
+        });
+        if (!current)
+          throw new NotFoundException('Professional profile was not found.');
         this.assertDossierEditable(current.verificationStatus);
-        const existing = await tx.proVerificationDocument.findFirst({ where: { proProfileId: profile.id, docType: dto.docType } });
-        const data = { storageKey: `obj::${hash}::image/webp::${key}`, fileName: `${dto.docType.toLowerCase()}.webp`, fileSizeBytes: bytes.length, status: DocumentStatus.PENDING, reviewerComment: null, uploadedAt: new Date() };
+        const existing = await tx.proVerificationDocument.findFirst({
+          where: { proProfileId: profile.id, docType: dto.docType },
+        });
+        const data = {
+          storageKey: `obj::${hash}::image/webp::${key}`,
+          fileName: `${dto.docType.toLowerCase()}.webp`,
+          fileSizeBytes: bytes.length,
+          status: DocumentStatus.PENDING,
+          reviewerComment: null,
+          uploadedAt: new Date(),
+        };
         const doc = existing
-          ? await tx.proVerificationDocument.update({ where: { id: existing.id }, data })
-          : await tx.proVerificationDocument.create({ data: { ...data, proProfileId: profile.id, docType: dto.docType } });
-        return { doc, oldKey: existing?.storageKey?.startsWith('obj::') ? existing.storageKey.split('::')[3] : null };
+          ? await tx.proVerificationDocument.update({
+              where: { id: existing.id },
+              data,
+            })
+          : await tx.proVerificationDocument.create({
+              data: { ...data, proProfileId: profile.id, docType: dto.docType },
+            });
+        return {
+          doc,
+          oldKey: existing?.storageKey?.startsWith('obj::')
+            ? existing.storageKey.split('::')[3]
+            : null,
+        };
       });
-    } catch (error) { await this.cleanupDocumentObject(key); throw error; }
+    } catch (error) {
+      await this.cleanupDocumentObject(key);
+      throw error;
+    }
     if (result.oldKey) await this.cleanupDocumentObject(result.oldKey);
     return this.mapDocumentSummary(result.doc);
   }
 
   private assertDossierEditable(status: ProVerificationStatus) {
-    if (status !== ProVerificationStatus.DRAFT && status !== ProVerificationStatus.ACTION_REQUIRED) {
-      throw new ForbiddenException('Documents can be changed while drafting or when a reviewer requests corrections.');
+    if (
+      status !== ProVerificationStatus.DRAFT &&
+      status !== ProVerificationStatus.ACTION_REQUIRED
+    ) {
+      throw new ForbiddenException(
+        'Documents can be changed while drafting or when a reviewer requests corrections.',
+      );
     }
   }
 
   private async cleanupDocumentObject(key: string) {
-    try { await this.privateStorage!.remove(key); }
-    catch { this.logger.warn('Private document cleanup needs retry.'); }
+    try {
+      await this.privateStorage!.remove(key);
+    } catch {
+      this.logger.warn('Private document cleanup needs retry.');
+    }
   }
 
   /**
    * Generates a short-lived authenticated access payload for a private verification document.
    * Strictly restricted to the owning user or an ADMIN reviewer.
    */
-  private async authorizedDocument(userId: string, docId: string, isAdmin: boolean) {
+  private async authorizedDocument(
+    userId: string,
+    docId: string,
+    isAdmin: boolean,
+  ) {
     const doc = await this.prisma.proVerificationDocument.findUnique({
-      where: { id: docId }, include: { proProfile: { select: { id: true, userId: true } } },
+      where: { id: docId },
+      include: { proProfile: { select: { id: true, userId: true } } },
     });
-    if (!doc) throw new NotFoundException('Verification document was not found.');
-    if (!isAdmin && doc.proProfile.userId !== userId) throw new ForbiddenException('This private document belongs to another account.');
+    if (!doc)
+      throw new NotFoundException('Verification document was not found.');
+    if (!isAdmin && doc.proProfile.userId !== userId)
+      throw new ForbiddenException(
+        'This private document belongs to another account.',
+      );
     return doc;
   }
 
-  async getVerificationDocumentAccess(userId: string, docId: string, isAdmin = false) {
+  async getVerificationDocumentAccess(
+    userId: string,
+    docId: string,
+    isAdmin = false,
+  ) {
     const doc = await this.authorizedDocument(userId, docId, isAdmin);
-    return { ...this.mapDocumentSummary(doc), downloadPath: `/api/v1/pro/onboarding/documents/${encodeURIComponent(doc.id)}/content` };
+    return {
+      ...this.mapDocumentSummary(doc),
+      downloadPath: `/api/v1/pro/onboarding/documents/${encodeURIComponent(doc.id)}/content`,
+    };
   }
 
-  async getVerificationDocumentContent(userId: string, docId: string, isAdmin = false) {
+  async getVerificationDocumentContent(
+    userId: string,
+    docId: string,
+    isAdmin = false,
+  ) {
     const doc = await this.authorizedDocument(userId, docId, isAdmin);
     const parts = doc.storageKey.split('::');
-    if (parts[0] === 'obj' && parts[3]?.startsWith(`documents/${doc.proProfileId}/`)) {
-      if (!this.privateStorage) throw new ServiceUnavailableException('Private document storage is unavailable.');
-      return { bytes: await this.privateStorage.get(parts[3]), mimeType: parts[2] };
+    if (
+      parts[0] === 'obj' &&
+      parts[3]?.startsWith(`documents/${doc.proProfileId}/`)
+    ) {
+      if (!this.privateStorage)
+        throw new ServiceUnavailableException(
+          'Private document storage is unavailable.',
+        );
+      return {
+        bytes: await this.privateStorage.get(parts[3]),
+        mimeType: parts[2],
+      };
     }
     // Existing private development records remain available only through ownership checks.
-    if (parts[0] === 'prvdoc' && ['image/jpeg', 'image/png', 'image/webp', 'application/pdf'].includes(parts[2])) {
-      return { bytes: Buffer.from(parts[3] ?? '', 'base64'), mimeType: parts[2] };
+    if (
+      parts[0] === 'prvdoc' &&
+      ['image/jpeg', 'image/png', 'image/webp', 'application/pdf'].includes(
+        parts[2],
+      )
+    ) {
+      return {
+        bytes: Buffer.from(parts[3] ?? '', 'base64'),
+        mimeType: parts[2],
+      };
     }
     throw new NotFoundException('Private document content was not found.');
   }
@@ -435,7 +541,16 @@ export class ProService {
         );
       }
 
-      const uploadedDocTypes = new Set(profile.documents.filter((d) => d.status !== DocumentStatus.REJECTED && (d.storageKey.startsWith('obj::') || d.storageKey.startsWith('prvdoc::'))).map((d) => d.docType));
+      const uploadedDocTypes = new Set(
+        profile.documents
+          .filter(
+            (d) =>
+              d.status !== DocumentStatus.REJECTED &&
+              (d.storageKey.startsWith('obj::') ||
+                d.storageKey.startsWith('prvdoc::')),
+          )
+          .map((d) => d.docType),
+      );
       const missingDocs = REQUIRED_PRO_DOC_TYPES.filter(
         (reqType) => !uploadedDocTypes.has(reqType),
       );
@@ -462,7 +577,6 @@ export class ProService {
           verificationStatus: ProVerificationStatus.PENDING_REVIEW,
         },
       });
-
     });
     return this.getVerificationStatus(userId);
   }
@@ -603,21 +717,43 @@ export class ProService {
         await tx.$queryRaw`SELECT id FROM "ProProfile" WHERE id = ${proProfileId} FOR UPDATE`;
       }
       const profile = await tx.proProfile.findUnique({
-        where: { id: proProfileId }, include: { documents: true },
+        where: { id: proProfileId },
+        include: { documents: true },
       });
-      if (!profile) throw new NotFoundException('Professional profile was not found.');
+      if (!profile)
+        throw new NotFoundException('Professional profile was not found.');
       if (dto.status === 'APPROVED') {
-        if (profile.verificationStatus !== ProVerificationStatus.PENDING_REVIEW &&
-            profile.verificationStatus !== ProVerificationStatus.APPROVED) {
-          throw new BadRequestException('Only a submitted dossier can be approved.');
+        if (
+          profile.verificationStatus !== ProVerificationStatus.PENDING_REVIEW &&
+          profile.verificationStatus !== ProVerificationStatus.APPROVED
+        ) {
+          throw new BadRequestException(
+            'Only a submitted dossier can be approved.',
+          );
         }
-        const missing = REQUIRED_PRO_DOC_TYPES.filter((type) =>
-          !profile.documents.some((doc) => doc.docType === type &&
-            Boolean(doc.storageKey) && doc.status !== DocumentStatus.REJECTED));
-        if (missing.length) throw new BadRequestException('All three required private documents must be uploaded before approval.');
-        if (dto.documentDecisions?.some((decision) =>
-            REQUIRED_PRO_DOC_TYPES.includes(decision.docType) && decision.status === 'REJECTED')) {
-          throw new BadRequestException('A dossier with rejected required documents cannot be approved.');
+        const missing = REQUIRED_PRO_DOC_TYPES.filter(
+          (type) =>
+            !profile.documents.some(
+              (doc) =>
+                doc.docType === type &&
+                Boolean(doc.storageKey) &&
+                doc.status !== DocumentStatus.REJECTED,
+            ),
+        );
+        if (missing.length)
+          throw new BadRequestException(
+            'All three required private documents must be uploaded before approval.',
+          );
+        if (
+          dto.documentDecisions?.some(
+            (decision) =>
+              REQUIRED_PRO_DOC_TYPES.includes(decision.docType) &&
+              decision.status === 'REJECTED',
+          )
+        ) {
+          throw new BadRequestException(
+            'A dossier with rejected required documents cannot be approved.',
+          );
         }
       }
 
@@ -653,12 +789,18 @@ export class ProService {
         data: {
           verificationStatus: dto.status as ProVerificationStatus,
           reviewerNote:
-            dto.reviewerNote?.trim() ||
-            `Reviewed by admin ${adminUserId}`,
+            dto.reviewerNote?.trim() || `Reviewed by admin ${adminUserId}`,
           ...(dto.status !== 'APPROVED' ? { isOnline: false } : {}),
         },
         include: this.proProfileInclude,
       });
+
+      if (dto.status !== 'APPROVED') {
+        await tx.jobOffer.updateMany({
+          where: { proProfileId: profile.id, status: JobOfferStatus.PENDING },
+          data: { status: JobOfferStatus.EXPIRED, respondedAt: new Date() },
+        });
+      }
 
       if (dto.status === 'APPROVED') {
         await tx.user.update({
@@ -693,10 +835,13 @@ export class ProService {
       );
     }
 
-    const updated = await this.prisma.proProfile.update({
-      where: { id: profile.id },
-      data: { isOnline: dto.isOnline },
-      include: this.proProfileInclude,
+    const updated = await this.prisma.$transaction(async (tx) => {
+      await this.lockApprovedProfile(tx, userId);
+      return tx.proProfile.update({
+        where: { id: profile.id },
+        data: { isOnline: dto.isOnline },
+        include: this.proProfileInclude,
+      });
     });
 
     if (dto.isOnline) {
@@ -747,13 +892,14 @@ export class ProService {
     }
 
     // 3. Query active PENDING offers, active assigned jobs, and completed bookings
-    const [activeOffersRaw, activeJobsRaw, completedJobsRaw] =
+    const [activeOffersRaw, activeJobsRaw, completedJobsRaw, earnings] =
       await Promise.all([
         this.prisma.jobOffer.findMany({
           where: {
             proProfileId: profile.id,
             status: JobOfferStatus.PENDING,
             expiresAt: { gt: now },
+            proProfile: { verificationStatus: ProVerificationStatus.APPROVED },
           },
           include: {
             booking: {
@@ -803,94 +949,26 @@ export class ProService {
             review: true,
           },
           orderBy: { completedAt: 'desc' },
-          take: 50,
+          take: 10,
         }),
+        readCairoEarnings(this.prisma, profile.id, now),
       ]);
 
     // 4. Compute actual Today & 7-Day Net Earnings from COMPLETED bookings
-    const todayStart = new Date(now);
-    todayStart.setUTCHours(0, 0, 0, 0);
-
-    const sevenDaysAgo = new Date(todayStart);
-    sevenDaysAgo.setUTCDate(sevenDaysAgo.getUTCDate() - 6);
-
-    let todayNetEarningsEgp = 0;
-    let todayCompletedCount = 0;
-    let weeklyNetEarningsEgp = 0;
-    let weeklyCompletedCount = 0;
-
-    const dayBuckets = new Map<
-      string,
-      {
-        date: string;
-        dayLabelEn: string;
-        dayLabelAr: string;
-        netEarningsEgp: number;
-        jobsCount: number;
-      }
-    >();
-
-    const enDays = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-    const arDays = [
-      'الأحد',
-      'الاثنين',
-      'الثلاثاء',
-      'الأربعاء',
-      'الخميس',
-      'الجمعة',
-      'السبت',
-    ];
-
-    for (let i = 0; i < 7; i++) {
-      const d = new Date(sevenDaysAgo);
-      d.setUTCDate(d.getUTCDate() + i);
-      const dateKey = d.toISOString().split('T')[0];
-      const dayOfWeek = d.getUTCDay();
-      dayBuckets.set(dateKey, {
-        date: dateKey,
-        dayLabelEn: enDays[dayOfWeek],
-        dayLabelAr: arDays[dayOfWeek],
-        netEarningsEgp: 0,
-        jobsCount: 0,
-      });
-    }
-
-    for (const job of completedJobsRaw) {
-      const completedDate = job.completedAt ?? job.updatedAt;
-      const tipEgp = job.payment?.tipEgp ?? job.review?.tipAmountEgp ?? 0;
-      const netEgp = job.netArtisanEgp + tipEgp;
-
-      if (completedDate >= todayStart) {
-        todayNetEarningsEgp += netEgp;
-        todayCompletedCount += 1;
-      }
-
-      if (completedDate >= sevenDaysAgo) {
-        weeklyNetEarningsEgp += netEgp;
-        weeklyCompletedCount += 1;
-        const dateKey = completedDate.toISOString().split('T')[0];
-        const bucket = dayBuckets.get(dateKey);
-        if (bucket) {
-          bucket.netEarningsEgp += netEgp;
-          bucket.jobsCount += 1;
-        }
-      }
-    }
-
     return {
       profile: this.mapProProfile(profile),
       earningsSummary: {
-        todayNetEarningsEgp,
-        todayCompletedCount,
-        weeklyNetEarningsEgp,
-        weeklyCompletedCount,
+        todayNetEarningsEgp: earnings.todayNetEarningsEgp,
+        todayCompletedCount: earnings.todayCompletedCount,
+        weeklyNetEarningsEgp: earnings.weeklyNetEarningsEgp,
+        weeklyCompletedCount: earnings.weeklyCompletedCount,
         totalCompletedJobsCount: profile.completedJobsCount,
         acceptanceRatePct: profile.acceptanceRatePct,
-        ratingAvg: profile.ratingAvg,
+        ratingAvg: profile.reviewsCount > 0 ? profile.ratingAvg : 0,
         reviewsCount: profile.reviewsCount,
         currency: 'EGP',
       },
-      weeklyTrajectory: Array.from(dayBuckets.values()),
+      weeklyTrajectory: earnings.weeklyTrajectory,
       activeOffers: activeOffersRaw.map((offer) =>
         this.mapJobOfferDetail(offer),
       ),
@@ -911,6 +989,11 @@ export class ProService {
 
     if (!profile) {
       throw new NotFoundException('Professional profile was not found.');
+    }
+    if (profile.verificationStatus !== ProVerificationStatus.APPROVED) {
+      throw new ForbiddenException(
+        'Only currently approved professionals can view incoming offers.',
+      );
     }
 
     const offer = await this.prisma.jobOffer.findUnique({
@@ -940,24 +1023,22 @@ export class ProService {
       offer.status === JobOfferStatus.PENDING &&
       offer.expiresAt <= new Date()
     ) {
-      const expired = await this.prisma.jobOffer.update({
-        where: { id: offer.id },
+      await this.prisma.jobOffer.updateMany({
+        where: {
+          id: offer.id,
+          status: JobOfferStatus.PENDING,
+          expiresAt: { lte: new Date() },
+        },
         data: {
           status: JobOfferStatus.EXPIRED,
           respondedAt: new Date(),
         },
-        include: {
-          booking: {
-            include: {
-              offering: { include: { category: true } },
-              address: { include: { zone: true } },
-              customer: {
-                select: { id: true, fullName: true, rewardPoints: true },
-              },
-            },
-          },
-        },
       });
+      const expired = await this.prisma.jobOffer.findUnique({
+        where: { id: offer.id },
+        include: jobOfferDetailsInclude,
+      });
+      if (!expired) throw new NotFoundException('Job offer was not found.');
       return this.mapJobOfferDetail(expired);
     }
 
@@ -982,7 +1063,18 @@ export class ProService {
       );
     }
 
+    const hint = await this.prisma.jobOffer.findUnique({
+      where: { id: offerId },
+      select: { bookingId: true, proProfileId: true },
+    });
+    if (!hint) throw new NotFoundException('Job offer was not found.');
+    if (hint.proProfileId !== profile.id)
+      throw new ForbiddenException('You do not own this job offer.');
     const result = await this.prisma.$transaction(async (tx) => {
+      if (this.prisma.isDatabaseConnected()) {
+        await tx.$queryRaw`SELECT id FROM "Booking" WHERE id = ${hint.bookingId} FOR UPDATE`;
+      }
+      const profile = await this.lockApprovedProfile(tx, userId);
       if (this.prisma.isDatabaseConnected()) {
         await tx.$queryRaw`
           SELECT id, status::text
@@ -1003,6 +1095,8 @@ export class ProService {
       if (offer.proProfileId !== profile.id) {
         throw new ForbiddenException('You do not own this job offer.');
       }
+      if (offer.bookingId !== hint.bookingId)
+        throw new ConflictException('The job offer changed. Reload it.');
 
       const now = new Date();
       if (offer.expiresAt <= now) {
@@ -1019,15 +1113,6 @@ export class ProService {
         throw new ConflictException(
           `Job offer is no longer pending (current status: "${offer.status}").`,
         );
-      }
-
-      if (this.prisma.isDatabaseConnected()) {
-        await tx.$queryRaw`
-          SELECT id, status::text, "proProfileId"
-          FROM "Booking"
-          WHERE id = ${offer.bookingId}
-          FOR UPDATE;
-        `;
       }
 
       const booking = await tx.booking.findUnique({
@@ -1130,7 +1215,20 @@ export class ProService {
       throw new NotFoundException('Professional profile was not found.');
     }
 
+    const hint = await this.prisma.jobOffer.findUnique({
+      where: { id: offerId },
+      select: { bookingId: true, proProfileId: true },
+    });
+    if (!hint) throw new NotFoundException('Job offer was not found.');
+    if (hint.proProfileId !== profile.id)
+      throw new ForbiddenException('You do not own this job offer.');
     const updatedOffer = await this.prisma.$transaction(async (tx) => {
+      // Same lock order as acceptance, dispatch and customer cancellation.
+      if (this.prisma.isDatabaseConnected()) {
+        await tx.$queryRaw`SELECT id FROM "Booking" WHERE id = ${hint.bookingId} FOR UPDATE`;
+        await tx.$queryRaw`SELECT id FROM "ProProfile" WHERE id = ${profile.id} FOR UPDATE`;
+        await tx.$queryRaw`SELECT id FROM "JobOffer" WHERE id = ${offerId} FOR UPDATE`;
+      }
       const offer = await tx.jobOffer.findUnique({
         where: { id: offerId },
       });
@@ -1139,7 +1237,10 @@ export class ProService {
         throw new NotFoundException(`Job offer "${offerId}" was not found.`);
       }
 
-      if (offer.proProfileId !== profile.id) {
+      if (
+        offer.proProfileId !== profile.id ||
+        offer.bookingId !== hint.bookingId
+      ) {
         throw new ForbiddenException('You do not own this job offer.');
       }
 
@@ -1284,7 +1385,8 @@ export class ProService {
           );
           // Commit the failed attempt; throwing inside the transaction would roll it back.
           return {
-            updated: null, changed: false,
+            updated: null,
+            changed: false,
             pinError: new BadRequestException(
               `Invalid 4-digit Arrival PIN code. ${remainingAttempts} attempt(s) remaining.`,
             ),
@@ -1370,21 +1472,21 @@ export class ProService {
   }
 
   private async syncPendingOffersForPro(profile: any): Promise<void> {
-    if (!this.prisma.isDatabaseConnected() || !profile.primaryCategoryId) {
+    if (
+      !this.prisma.isDatabaseConnected() ||
+      !profile.primaryCategoryId ||
+      profile.verificationStatus !== ProVerificationStatus.APPROVED ||
+      !profile.isOnline
+    ) {
       return;
     }
 
-    const coveredZoneIds = new Set<string>();
-    if (profile.primaryZoneId) {
-      coveredZoneIds.add(profile.primaryZoneId);
-    }
-    if (Array.isArray(profile.coverageZones)) {
-      for (const z of profile.coverageZones) {
-        if (z?.id) coveredZoneIds.add(z.id);
-      }
-    }
+    const areas = [
+      ...(profile.primaryZone ? [profile.primaryZone] : []),
+      ...(profile.coverageZones ?? []),
+    ];
 
-    if (coveredZoneIds.size === 0) {
+    if (areas.length === 0) {
       return;
     }
 
@@ -1398,44 +1500,13 @@ export class ProService {
         offering: {
           categoryId: profile.primaryCategoryId,
         },
-        address: {
-          zoneId: { in: Array.from(coveredZoneIds) },
-        },
+        address: addressCoverageWhere(areas),
       },
       take: 10,
     });
 
-    const expiresAt = new Date(Date.now() + 5 * 60 * 1000);
     for (const bk of waitingBookings) {
-      const existingOffer = await this.prisma.jobOffer.findFirst({
-        where: {
-          bookingId: bk.id,
-          proProfileId: profile.id,
-        },
-      });
-
-      if (!existingOffer) {
-        await this.prisma.jobOffer.create({
-          data: {
-            bookingId: bk.id,
-            proProfileId: profile.id,
-            status: JobOfferStatus.PENDING,
-            expiresAt,
-          },
-        });
-      } else if (
-        existingOffer.status === JobOfferStatus.EXPIRED &&
-        bk.status === BookingStatus.PENDING_DISPATCH
-      ) {
-        await this.prisma.jobOffer.update({
-          where: { id: existingOffer.id },
-          data: {
-            status: JobOfferStatus.PENDING,
-            expiresAt,
-            respondedAt: null,
-          },
-        });
-      }
+      await ensureDispatchOffer(this.prisma, bk.id, profile.id, true);
     }
   }
 
@@ -1466,39 +1537,25 @@ export class ProService {
     });
   }
 
-  private async ensureSubSkillsSeeded(): Promise<void> {
-    if (!this.prisma.isDatabaseConnected() || !this.prisma.serviceSubSkill) {
-      return;
+  private async lockApprovedProfile(
+    tx: Prisma.TransactionClient,
+    userId: string,
+  ) {
+    if (this.prisma.isDatabaseConnected()) {
+      await tx.$queryRaw`SELECT id FROM "ProProfile" WHERE "userId" = ${userId} FOR UPDATE`;
     }
-
-    const count = await this.prisma.serviceSubSkill.count();
-    if (count >= EGYPT_SERVICE_SUB_SKILLS.length) {
-      return;
+    const profile = await tx.proProfile.findUnique({
+      where: { userId },
+      include: this.proProfileInclude,
+    });
+    if (!profile)
+      throw new NotFoundException('Professional profile was not found.');
+    if (profile.verificationStatus !== ProVerificationStatus.APPROVED) {
+      throw new ForbiddenException(
+        'Only currently APPROVED professionals can take new jobs or change availability.',
+      );
     }
-
-    for (const sub of EGYPT_SERVICE_SUB_SKILLS) {
-      const category = await this.prisma.serviceCategory.findUnique({
-        where: { slug: sub.categorySlug },
-        select: { id: true },
-      });
-      if (category) {
-        await this.prisma.serviceSubSkill.upsert({
-          where: { slug: sub.slug },
-          update: {
-            categoryId: category.id,
-            nameEn: sub.nameEn,
-            nameAr: sub.nameAr,
-          },
-          create: {
-            id: sub.id,
-            categoryId: category.id,
-            slug: sub.slug,
-            nameEn: sub.nameEn,
-            nameAr: sub.nameAr,
-          },
-        });
-      }
-    }
+    return profile;
   }
 
   private async generateUniqueDossierCode(): Promise<string> {
@@ -1519,7 +1576,9 @@ export class ProService {
   private mapDocumentSummary(doc: any) {
     let mimeType = 'image/png';
     const hasPrivateContent = Boolean(
-      doc.storageKey && (doc.storageKey.startsWith('obj::') || doc.storageKey.startsWith('prvdoc::')),
+      doc.storageKey &&
+        (doc.storageKey.startsWith('obj::') ||
+          doc.storageKey.startsWith('prvdoc::')),
     );
     if (hasPrivateContent) {
       const parts = doc.storageKey.split('::');
@@ -1582,7 +1641,7 @@ export class ProService {
       toolkitCommitmentConfirmed: profile.toolkitCommitmentConfirmed,
       verificationStatus: profile.verificationStatus,
       isOnline: profile.isOnline,
-      ratingAvg: profile.ratingAvg,
+      ratingAvg: profile.reviewsCount > 0 ? profile.ratingAvg : 0,
       reviewsCount: profile.reviewsCount,
       completedJobsCount: profile.completedJobsCount,
       acceptanceRatePct: profile.acceptanceRatePct,
@@ -1610,7 +1669,10 @@ export class ProService {
       offer.expiresAt instanceof Date
         ? offer.expiresAt.getTime()
         : new Date(offer.expiresAt).getTime();
-    const remainingSeconds = Math.max(0, Math.floor((expiresMs - nowMs) / 1000));
+    const remainingSeconds = Math.max(
+      0,
+      Math.floor((expiresMs - nowMs) / 1000),
+    );
     const bk = offer.booking;
 
     return {
@@ -1691,8 +1753,7 @@ export class ProService {
   }
 
   private mapProJobSummary(booking: any) {
-    const tipEgp =
-      booking.payment?.tipEgp ?? booking.review?.tipAmountEgp ?? 0;
+    const tipEgp = booking.payment?.tipEgp ?? booking.review?.tipAmountEgp ?? 0;
 
     return {
       id: booking.id,

@@ -1,10 +1,17 @@
 import { Module } from '@nestjs/common';
 import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
+import { FirebaseSessionPolicy } from './firebase-session-policy.service';
 import { FirebaseIdentityController } from './firebase-identity.controller';
-import { FirebaseIdentityService, FirebaseTokenVerifier } from './firebase-identity.service';
+import {
+  FirebaseIdentityService,
+  FirebaseTokenVerifier,
+} from './firebase-identity.service';
 import { PhonePasswordController } from './phone-password.controller';
-import { FirebasePasswordGateway, PhonePasswordService } from './phone-password.service';
+import {
+  FirebasePasswordGateway,
+  PhonePasswordService,
+} from './phone-password.service';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
 import { RolesGuard } from './guards/roles.guard';
 import {
@@ -14,9 +21,14 @@ import {
 } from './sms/sms.provider';
 
 @Module({
-  controllers: [AuthController, FirebaseIdentityController, PhonePasswordController],
+  controllers: [
+    AuthController,
+    FirebaseIdentityController,
+    PhonePasswordController,
+  ],
   providers: [
     AuthService,
+    FirebaseSessionPolicy,
     FirebaseIdentityService,
     FirebaseTokenVerifier,
     FirebasePasswordGateway,
@@ -29,7 +41,10 @@ import {
         devProvider: DevSmsProvider,
         prodProvider: ProductionTelecomSmsProvider,
       ) => {
-        if (process.env.NODE_ENV === 'production' || process.env.SMS_PROVIDER_TYPE === 'DISABLED') {
+        if (
+          process.env.NODE_ENV === 'production' ||
+          process.env.SMS_PROVIDER_TYPE === 'DISABLED'
+        ) {
           return prodProvider;
         }
         return devProvider;

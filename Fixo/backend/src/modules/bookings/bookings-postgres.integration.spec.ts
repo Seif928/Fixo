@@ -178,7 +178,9 @@ describe('Bookings PostgreSQL Real Database Integration Suite (fixo_test)', () =
 
   afterAll(async () => {
     if (prisma && prisma.isDatabaseConnected()) {
-      await safeCleanupBookingTestTables(prisma, { testDatabaseUrl: testDbUrl });
+      await safeCleanupBookingTestTables(prisma, {
+        testDatabaseUrl: testDbUrl,
+      });
     }
     if (moduleRef) {
       await moduleRef.close();
@@ -208,7 +210,9 @@ describe('Bookings PostgreSQL Real Database Integration Suite (fixo_test)', () =
 
   describe('POST /api/v1/bookings — Real DB Persistence', () => {
     it('creates a booking in DRAFT status and records initial BookingStatusEvent in PostgreSQL', async () => {
-      const tomorrow = new Date(Date.now() + 86400000).toISOString().split('T')[0];
+      const tomorrow = new Date(Date.now() + 86400000)
+        .toISOString()
+        .split('T')[0];
       const dto: CreateBookingDto = {
         offeringId: offeringAc.id,
         addressId: addressA.id,
@@ -219,7 +223,10 @@ describe('Bookings PostgreSQL Real Database Integration Suite (fixo_test)', () =
         issuePhotoUrls: ['https://storage.fixo.app/photos/leak-1.jpg'],
       };
 
-      const response = await bookingsService.createBooking(customerUserA.id, dto);
+      const response = await bookingsService.createBooking(
+        customerUserA.id,
+        dto,
+      );
 
       // Verify returned DTO
       expect(response.id).toBeDefined();
@@ -228,8 +235,12 @@ describe('Bookings PostgreSQL Real Database Integration Suite (fixo_test)', () =
       expect(response.customerId).toBe(customerUserA.id);
       expect(response.proProfileId).toBe(proProfile.id);
       expect(response.arrivalPinCode).toMatch(/^\d{4}$/);
-      expect(response.issueDescription).toBe('Split AC indoor unit is dripping water.');
-      expect(response.issuePhotoUrls).toEqual(['https://storage.fixo.app/photos/leak-1.jpg']);
+      expect(response.issueDescription).toBe(
+        'Split AC indoor unit is dripping water.',
+      );
+      expect(response.issuePhotoUrls).toEqual([
+        'https://storage.fixo.app/photos/leak-1.jpg',
+      ]);
 
       // Verify deterministic EGP pricing breakdown
       const expectedTotal =
@@ -300,7 +311,9 @@ describe('Bookings PostgreSQL Real Database Integration Suite (fixo_test)', () =
     });
 
     it('enforces address ownership: Customer B cannot book with Customer As address', async () => {
-      const tomorrow = new Date(Date.now() + 86400000).toISOString().split('T')[0];
+      const tomorrow = new Date(Date.now() + 86400000)
+        .toISOString()
+        .split('T')[0];
       const dto: CreateBookingDto = {
         offeringId: offeringAc.id,
         addressId: addressA.id, // Belongs to Customer A!
@@ -338,7 +351,9 @@ describe('Bookings PostgreSQL Real Database Integration Suite (fixo_test)', () =
         },
       });
 
-      const tomorrow = new Date(Date.now() + 86400000).toISOString().split('T')[0];
+      const tomorrow = new Date(Date.now() + 86400000)
+        .toISOString()
+        .split('T')[0];
       const dto: CreateBookingDto = {
         offeringId: offeringAc.id,
         addressId: addressA.id,
@@ -363,7 +378,9 @@ describe('Bookings PostgreSQL Real Database Integration Suite (fixo_test)', () =
     let cancelledBookingId: string;
 
     beforeAll(async () => {
-      const tomorrow = new Date(Date.now() + 86400000).toISOString().split('T')[0];
+      const tomorrow = new Date(Date.now() + 86400000)
+        .toISOString()
+        .split('T')[0];
 
       // Create an active booking for Customer A
       const activeRes = await bookingsService.createBooking(customerUserA.id, {
@@ -427,8 +444,12 @@ describe('Bookings PostgreSQL Real Database Integration Suite (fixo_test)', () =
       const statuses = result.bookings.map((b) => b.status);
       expect(statuses.every((s) => s === BookingStatus.DRAFT)).toBe(true);
       expect(result.bookings.some((b) => b.id === activeBookingId)).toBe(true);
-      expect(result.bookings.some((b) => b.id === completedBookingId)).toBe(false);
-      expect(result.bookings.some((b) => b.id === cancelledBookingId)).toBe(false);
+      expect(result.bookings.some((b) => b.id === completedBookingId)).toBe(
+        false,
+      );
+      expect(result.bookings.some((b) => b.id === cancelledBookingId)).toBe(
+        false,
+      );
     });
 
     it('filters customer orders by tab: completed', async () => {
@@ -467,7 +488,9 @@ describe('Bookings PostgreSQL Real Database Integration Suite (fixo_test)', () =
     let bookingId: string;
 
     beforeAll(async () => {
-      const tomorrow = new Date(Date.now() + 86400000).toISOString().split('T')[0];
+      const tomorrow = new Date(Date.now() + 86400000)
+        .toISOString()
+        .split('T')[0];
       const res = await bookingsService.createBooking(customerUserA.id, {
         offeringId: offeringAc.id,
         addressId: addressA.id,
@@ -528,7 +551,9 @@ describe('Bookings PostgreSQL Real Database Integration Suite (fixo_test)', () =
 
   describe('POST /api/v1/bookings/:bookingId/checkout — Phase 4A Cash on Service Checkout', () => {
     let draftBooking: any;
-    const tomorrowStr = new Date(Date.now() + 86400000).toISOString().split('T')[0];
+    const tomorrowStr = new Date(Date.now() + 86400000)
+      .toISOString()
+      .split('T')[0];
 
     beforeEach(async () => {
       // Create a fresh DRAFT booking for Customer A before each test in this suite
@@ -543,11 +568,9 @@ describe('Bookings PostgreSQL Real Database Integration Suite (fixo_test)', () =
 
     it('rejects unsupported digital payment methods (INSTAPAY_SANDBOX) with BadRequestException', async () => {
       await expect(
-        bookingsService.checkoutBooking(
-          customerUserA.id,
-          draftBooking.id,
-          { paymentMethod: PaymentMethodType.INSTAPAY_SANDBOX },
-        ),
+        bookingsService.checkoutBooking(customerUserA.id, draftBooking.id, {
+          paymentMethod: PaymentMethodType.INSTAPAY_SANDBOX,
+        }),
       ).rejects.toThrow(BadRequestException);
 
       // Verify booking status was not altered in PostgreSQL
@@ -592,11 +615,9 @@ describe('Bookings PostgreSQL Real Database Integration Suite (fixo_test)', () =
       });
 
       await expect(
-        bookingsService.checkoutBooking(
-          customerUserA.id,
-          draftBooking.id,
-          { paymentMethod: PaymentMethodType.CASH_ON_SERVICE },
-        ),
+        bookingsService.checkoutBooking(customerUserA.id, draftBooking.id, {
+          paymentMethod: PaymentMethodType.CASH_ON_SERVICE,
+        }),
       ).rejects.toThrow(BadRequestException);
 
       const dbBooking = await prisma.booking.findUnique({
@@ -651,7 +672,9 @@ describe('Bookings PostgreSQL Real Database Integration Suite (fixo_test)', () =
       expect(statusEvents[1].fromStatus).toBe(BookingStatus.DRAFT);
       expect(statusEvents[1].toStatus).toBe(BookingStatus.PENDING_DISPATCH);
       expect(statusEvents[1].actorUserId).toBe(customerUserA.id);
-      expect(statusEvents[1].note).toBe('Customer confirmed Cash on Service checkout');
+      expect(statusEvents[1].note).toBe(
+        'Customer confirmed Cash on Service checkout',
+      );
     });
 
     it('is idempotent and retry-safe: duplicate sequential checkout calls return identical data without duplicating records', async () => {
@@ -691,11 +714,9 @@ describe('Bookings PostgreSQL Real Database Integration Suite (fixo_test)', () =
     it('handles concurrent checkout requests safely with PostgreSQL row locking', async () => {
       // Fire 5 concurrent requests on the exact same DRAFT booking
       const concurrentAttempts = [1, 2, 3, 4, 5].map(() =>
-        bookingsService.checkoutBooking(
-          customerUserA.id,
-          draftBooking.id,
-          { paymentMethod: PaymentMethodType.CASH_ON_SERVICE },
-        ),
+        bookingsService.checkoutBooking(customerUserA.id, draftBooking.id, {
+          paymentMethod: PaymentMethodType.CASH_ON_SERVICE,
+        }),
       );
 
       const results = await Promise.all(concurrentAttempts);
@@ -742,11 +763,9 @@ describe('Bookings PostgreSQL Real Database Integration Suite (fixo_test)', () =
         });
 
       await expect(
-        bookingsService.checkoutBooking(
-          customerUserA.id,
-          draftBooking.id,
-          { paymentMethod: PaymentMethodType.CASH_ON_SERVICE },
-        ),
+        bookingsService.checkoutBooking(customerUserA.id, draftBooking.id, {
+          paymentMethod: PaymentMethodType.CASH_ON_SERVICE,
+        }),
       ).rejects.toThrow('SIMULATED_POSTGRES_PAYMENT_INSERT_FAILURE');
 
       txSpy.mockRestore();
@@ -776,15 +795,20 @@ describe('Bookings PostgreSQL Real Database Integration Suite (fixo_test)', () =
 
   describe('Tracking, Cancellation, Receipt & Review — Real DB Persistence', () => {
     it('supports customer tracking, cancellation before service start, receipt generation, and duplicate-protected reviews', async () => {
-      const tomorrowStr = new Date(Date.now() + 86400000).toISOString().split('T')[0];
+      const tomorrowStr = new Date(Date.now() + 86400000)
+        .toISOString()
+        .split('T')[0];
 
       // 1. Create and cancel a booking before service starts
-      const cancellable = await bookingsService.createBooking(customerUserA.id, {
-        offeringId: offeringAc.id,
-        addressId: addressA.id,
-        scheduledDate: tomorrowStr,
-        timeWindow: TimeWindow.MORNING_09_12,
-      });
+      const cancellable = await bookingsService.createBooking(
+        customerUserA.id,
+        {
+          offeringId: offeringAc.id,
+          addressId: addressA.id,
+          scheduledDate: tomorrowStr,
+          timeWindow: TimeWindow.MORNING_09_12,
+        },
+      );
 
       const cancelled = await bookingsService.cancelBooking(
         customerUserA.id,
@@ -795,16 +819,23 @@ describe('Bookings PostgreSQL Real Database Integration Suite (fixo_test)', () =
       expect(cancelled.cancellationReason).toBe('Changed schedule');
 
       // 2. Create a booking, complete it with assigned pro, and verify Tracking + Review + Receipt
-      const activeBooking = await bookingsService.createBooking(customerUserA.id, {
-        offeringId: offeringAc.id,
-        addressId: addressA.id,
-        scheduledDate: tomorrowStr,
-        timeWindow: TimeWindow.AFTERNOON_13_16,
-      });
+      const activeBooking = await bookingsService.createBooking(
+        customerUserA.id,
+        {
+          offeringId: offeringAc.id,
+          addressId: addressA.id,
+          scheduledDate: tomorrowStr,
+          timeWindow: TimeWindow.AFTERNOON_13_16,
+        },
+      );
 
-      await bookingsService.checkoutBooking(customerUserA.id, activeBooking.id, {
-        paymentMethod: PaymentMethodType.CASH_ON_SERVICE,
-      });
+      await bookingsService.checkoutBooking(
+        customerUserA.id,
+        activeBooking.id,
+        {
+          paymentMethod: PaymentMethodType.CASH_ON_SERVICE,
+        },
+      );
 
       // Mark booking COMPLETED with assigned pro in PostgreSQL
       await prisma.booking.update({
@@ -829,7 +860,9 @@ describe('Bookings PostgreSQL Real Database Integration Suite (fixo_test)', () =
         activeBooking.id,
       );
       expect(tracking.booking.status).toBe(BookingStatus.COMPLETED);
-      expect(tracking.booking.arrivalPinCode).toBe(activeBooking.arrivalPinCode);
+      expect(tracking.booking.arrivalPinCode).toBe(
+        activeBooking.arrivalPinCode,
+      );
       expect(tracking.canReview).toBe(true);
       expect(tracking.milestones).toHaveLength(5);
 
@@ -856,9 +889,13 @@ describe('Bookings PostgreSQL Real Database Integration Suite (fixo_test)', () =
 
       // Duplicate review attempt must fail with ConflictException (409)
       await expect(
-        bookingsService.submitBookingReview(customerUserA.id, activeBooking.id, {
-          rating: 4,
-        }),
+        bookingsService.submitBookingReview(
+          customerUserA.id,
+          activeBooking.id,
+          {
+            rating: 4,
+          },
+        ),
       ).rejects.toThrow(/already been submitted/);
 
       // Verify receipt reflects actual total + tipEgp
@@ -872,6 +909,47 @@ describe('Bookings PostgreSQL Real Database Integration Suite (fixo_test)', () =
       expect(receipt.grandTotalEgp).toBe(activeBooking.pricing.totalEgp + 50);
       expect(receipt.paymentStatus).toBe(PaymentStatus.PAID);
     });
+
+    it('keeps the exact aggregate for concurrent reviews on different bookings', async () => {
+      const bookings = [];
+      for (let i = 0; i < 8; i++) {
+        const draft = await bookingsService.createBooking(customerUserA.id, {
+          offeringId: offeringAc.id,
+          addressId: addressA.id,
+          scheduledDate: new Date(Date.now() + 86400000)
+            .toISOString()
+            .slice(0, 10),
+          timeWindow: TimeWindow.MORNING_09_12,
+        });
+        await prisma.booking.update({
+          where: { id: draft.id },
+          data: {
+            status: BookingStatus.COMPLETED,
+            proProfileId: proProfile.id,
+            completedAt: new Date(),
+          },
+        });
+        bookings.push(draft);
+      }
+      await Promise.all(
+        bookings.map((b, i) =>
+          bookingsService.submitBookingReview(customerUserA.id, b.id, {
+            rating: (i % 5) + 1,
+          }),
+        ),
+      );
+      const actual = await prisma.review.aggregate({
+        where: { proProfileId: proProfile.id },
+        _count: { id: true },
+        _avg: { rating: true },
+      });
+      const profile = await prisma.proProfile.findUniqueOrThrow({
+        where: { id: proProfile.id },
+      });
+      expect(profile.reviewsCount).toBe(actual._count.id);
+      expect(profile.ratingAvg).toBe(
+        Math.round(actual._avg.rating! * 100) / 100,
+      );
+    });
   });
 });
-

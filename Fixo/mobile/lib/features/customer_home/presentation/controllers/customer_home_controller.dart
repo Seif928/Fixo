@@ -1,4 +1,8 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'dart:convert';
+import '../../../../core/location/egypt_places.dart';
+import '../../../../core/l10n/app_locale_controller.dart';
+import '../../../auth/presentation/controllers/auth_controller.dart';
 import '../../data/marketplace_repository.dart';
 import '../../domain/marketplace_models.dart';
 
@@ -7,7 +11,7 @@ class CustomerHomeState {
     this.isLoading = true,
     this.errorMessage,
     this.feed,
-    this.selectedZoneSlug = 'sheikh-zayed',
+    this.selectedArea,
     this.selectedCategorySlug,
     this.searchQuery = '',
     this.activeBottomTab = 0,
@@ -16,28 +20,20 @@ class CustomerHomeState {
   final bool isLoading;
   final String? errorMessage;
   final CustomerHomeFeed? feed;
-  final String selectedZoneSlug;
+  final SelectedServiceArea? selectedArea;
+  String? get selectedZoneSlug => selectedArea?.zoneSlug;
   final String? selectedCategorySlug;
   final String searchQuery;
   final int activeBottomTab;
 
-  CoverageZoneModel get activeZone {
+  CoverageZoneModel? get activeZone {
     final zones = feed?.zones ?? const <CoverageZoneModel>[];
     for (final zone in zones) {
       if (zone.slug == selectedZoneSlug) {
         return zone;
       }
     }
-    if (zones.isNotEmpty) {
-      return zones.first;
-    }
-    return const CoverageZoneModel(
-      id: 'zone-sheikh-zayed',
-      slug: 'sheikh-zayed',
-      nameEn: 'Sheikh Zayed, Dist. 9',
-      nameAr: 'الشيخ زايد، الحي التاسع',
-      governorate: 'Giza',
-    );
+    return null;
   }
 
   List<ServiceCategoryModel> get filteredCategories {
@@ -113,7 +109,8 @@ class CustomerHomeState {
     String? errorMessage,
     bool clearError = false,
     CustomerHomeFeed? feed,
-    String? selectedZoneSlug,
+    SelectedServiceArea? selectedArea,
+    bool clearArea = false,
     String? selectedCategorySlug,
     bool clearCategory = false,
     String? searchQuery,
@@ -123,7 +120,7 @@ class CustomerHomeState {
       isLoading: isLoading ?? this.isLoading,
       errorMessage: clearError ? null : (errorMessage ?? this.errorMessage),
       feed: feed ?? this.feed,
-      selectedZoneSlug: selectedZoneSlug ?? this.selectedZoneSlug,
+      selectedArea: clearArea ? null : (selectedArea ?? this.selectedArea),
       selectedCategorySlug: clearCategory
           ? null
           : (selectedCategorySlug ?? this.selectedCategorySlug),
@@ -134,21 +131,49 @@ class CustomerHomeState {
 }
 
 class CustomerHomeController extends Notifier<CustomerHomeState> {
+  int _request = 0;
+  String? _userId;
+  bool _disposed = false;
   @override
   CustomerHomeState build() {
+    _disposed = false;
+    _userId = ref.watch(
+      authControllerProvider.select((s) => s.session?.user.id),
+    );
+    ref.onDispose(() {
+      _disposed = true;
+      _request++;
+    });
+    _request++;
+    SelectedServiceArea? saved;
+    final raw = _userId == null
+        ? null
+        : ref.read(appPreferencesProvider)?.getString('fixo.area.$_userId');
+    try {
+      if (raw != null) saved = SelectedServiceArea.fromJson(jsonDecode(raw));
+    } catch (_) {
+      /* Ignore invalid/old preferences. */
+    }
     Future<void>.microtask(loadFeed);
-    return const CustomerHomeState(isLoading: true);
+    return CustomerHomeState(isLoading: true, selectedArea: saved);
   }
 
   Future<void> loadFeed() async {
+    if (_disposed) return;
+    final request = ++_request;
     state = state.copyWith(isLoading: true, clearError: true);
     try {
       final repository = ref.read(marketplaceRepositoryProvider);
-      final feed = await repository.fetchCustomerHomeFeed();
+      final feed = await repository.fetchCustomerHomeFeed(
+        zone: state.selectedZoneSlug,
+      );
+      if (_disposed || request != _request) return;
       state = state.copyWith(isLoading: false, feed: feed, clearError: true);
     } on MarketplaceApiException catch (error) {
+      if (_disposed || request != _request) return;
       state = state.copyWith(isLoading: false, errorMessage: error.message);
     } catch (_) {
+      if (_disposed || request != _request) return;
       state = state.copyWith(
         isLoading: false,
         errorMessage:
@@ -169,20 +194,18 @@ class CustomerHomeController extends Notifier<CustomerHomeState> {
     }
   }
 
-  void cycleOrSelectZone([String? zoneSlug]) {
-    if (zoneSlug != null) {
-      state = state.copyWith(selectedZoneSlug: zoneSlug);
-      return;
+  Future<void> selectArea(SelectedServiceArea area) async {
+    final userId = _userId;
+    state = state.copyWith(selectedArea: area);
+    final preferences = ref.read(appPreferencesProvider);
+    final fetch = loadFeed();
+    if (userId != null && preferences != null) {
+      await preferences.setString(
+        'fixo.area.$userId',
+        jsonEncode(area.toJson()),
+      );
     }
-    final zones = state.feed?.zones ?? const <CoverageZoneModel>[];
-    if (zones.isEmpty) {
-      return;
-    }
-    final currentIndex = zones.indexWhere(
-      (z) => z.slug == state.selectedZoneSlug,
-    );
-    final nextIndex = (currentIndex + 1) % zones.length;
-    state = state.copyWith(selectedZoneSlug: zones[nextIndex].slug);
+    await fetch;
   }
 
   void clearFilters() {

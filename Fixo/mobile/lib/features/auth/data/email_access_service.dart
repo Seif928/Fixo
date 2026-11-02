@@ -87,6 +87,19 @@ class EmailAccessService {
     if (Firebase.apps.isNotEmpty) await FirebaseAuth.instance.signOut();
   }
 
+  Future<void> signOutIfCurrent(String? expectedEmail) async {
+    if (Firebase.apps.isEmpty) {
+      await signOut();
+      return;
+    }
+    final current = FirebaseAuth.instance.currentUser;
+    if (current == null ||
+        (expectedEmail != null &&
+            current.email?.toLowerCase() == expectedEmail.toLowerCase())) {
+      await signOut();
+    }
+  }
+
   Future<AuthSession> signInWithPhone(String phone, String password) async {
     final response = await dio.post<Map<String, dynamic>>(
       '/auth/phone-password',

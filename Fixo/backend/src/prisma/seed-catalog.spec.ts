@@ -113,7 +113,7 @@ describe('Catalog Seed Integration Suite (fixo_test)', () => {
   });
 
   it('verifies catalog definitions match expected record counts', () => {
-    expect(EGYPT_COVERAGE_ZONES.length).toBe(5);
+    expect(EGYPT_COVERAGE_ZONES.length).toBe(32);
     expect(EGYPT_SERVICE_CATEGORIES.length).toBe(6);
     expect(EGYPT_SERVICE_OFFERINGS.length).toBe(8);
   });
@@ -129,9 +129,9 @@ describe('Catalog Seed Integration Suite (fixo_test)', () => {
 
     // 3. Verify returned statistics
     expect(result.coverageZones).toEqual({
-      created: 5,
+      created: EGYPT_COVERAGE_ZONES.length,
       preserved: 0,
-      total: 5,
+      total: EGYPT_COVERAGE_ZONES.length,
     });
     expect(result.serviceCategories).toEqual({
       created: 6,
@@ -145,7 +145,7 @@ describe('Catalog Seed Integration Suite (fixo_test)', () => {
     });
 
     // 4. Verify actual database counts in PostgreSQL
-    expect(await prisma.coverageZone.count()).toBe(5);
+    expect(await prisma.coverageZone.count()).toBe(EGYPT_COVERAGE_ZONES.length);
     expect(await prisma.serviceCategory.count()).toBe(6);
     expect(await prisma.serviceOffering.count()).toBe(8);
 
@@ -160,7 +160,7 @@ describe('Catalog Seed Integration Suite (fixo_test)', () => {
   it('is completely idempotent and preserves existing customized records on repeated runs', async () => {
     // 1. First run: initial seed
     const firstRun = await seedCatalog(prisma);
-    expect(firstRun.coverageZones.created).toBe(5);
+    expect(firstRun.coverageZones.created).toBe(EGYPT_COVERAGE_ZONES.length);
     expect(firstRun.serviceCategories.created).toBe(6);
     expect(firstRun.serviceOfferings.created).toBe(8);
 
@@ -192,8 +192,8 @@ describe('Catalog Seed Integration Suite (fixo_test)', () => {
     // 4. Verify that second run created 0 new records and preserved all existing
     expect(secondRun.coverageZones).toEqual({
       created: 0,
-      preserved: 5,
-      total: 5,
+      preserved: EGYPT_COVERAGE_ZONES.length,
+      total: EGYPT_COVERAGE_ZONES.length,
     });
     expect(secondRun.serviceCategories).toEqual({
       created: 0,
@@ -207,7 +207,7 @@ describe('Catalog Seed Integration Suite (fixo_test)', () => {
     });
 
     // 5. Verify total record counts did NOT change (no duplicates created)
-    expect(await prisma.coverageZone.count()).toBe(5);
+    expect(await prisma.coverageZone.count()).toBe(EGYPT_COVERAGE_ZONES.length);
     expect(await prisma.serviceCategory.count()).toBe(6);
     expect(await prisma.serviceOffering.count()).toBe(8);
 

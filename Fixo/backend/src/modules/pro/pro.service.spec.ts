@@ -3,11 +3,7 @@ import {
   ForbiddenException,
   NotFoundException,
 } from '@nestjs/common';
-import {
-  ProVerificationStatus,
-  TransportMode,
-  UserRole,
-} from '@prisma/client';
+import { ProVerificationStatus, TransportMode, UserRole } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import { ProService } from './pro.service';
 
@@ -29,6 +25,7 @@ describe('ProService (Unit Tests)', () => {
       serviceSubSkill: {
         findMany: jest.fn(),
         count: jest.fn().mockResolvedValue(18),
+        upsert: jest.fn().mockResolvedValue({ id: 'existing-skill' }),
       },
       user: {
         update: jest.fn(),
@@ -77,6 +74,24 @@ describe('ProService (Unit Tests)', () => {
     expect(options.transportModes).toContain(TransportMode.MOTORCYCLE);
   });
 
+  it('reads the catalog without overwriting an administrator custom skill', async () => {
+    prismaMock.isDatabaseConnected.mockReturnValue(true);
+    prismaMock.serviceSubSkill.count.mockResolvedValue(0);
+    prismaMock.serviceCategory.findUnique.mockResolvedValue({
+      id: 'custom-category',
+    });
+    prismaMock.serviceCategory.findMany.mockResolvedValue([
+      {
+        id: 'custom-category',
+        subSkills: [{ id: 'custom-skill', nameEn: 'Owner custom label' }],
+      },
+    ]);
+    prismaMock.coverageZone.findMany.mockResolvedValue([]);
+    const result = await service.getCatalogOptions();
+    expect(result.categories[0].subSkills[0].nameEn).toBe('Owner custom label');
+    expect(prismaMock.serviceSubSkill.upsert).not.toHaveBeenCalled();
+  });
+
   it('rejects non-14-digit synthetic National ID on Screen 11', async () => {
     await expect(
       service.upsertPersonalDetails('user-1', {
@@ -96,20 +111,44 @@ describe('ProService (Unit Tests)', () => {
   });
 
   it('cannot approve a dossier that lacks the three required documents', async () => {
-    const profile = { id: 'pro-1', userId: 'user-1', documents: [], coverageZones: [], verificationStatus: ProVerificationStatus.PENDING_REVIEW };
+    const profile = {
+      id: 'pro-1',
+      userId: 'user-1',
+      documents: [],
+      coverageZones: [],
+      verificationStatus: ProVerificationStatus.PENDING_REVIEW,
+    };
     prismaMock.proProfile.findUnique.mockResolvedValue(profile);
-    prismaMock.proProfile.update.mockResolvedValue({ ...profile, verificationStatus: ProVerificationStatus.APPROVED });
-    await expect(service.adminReviewProProfile('reviewer-1', UserRole.ADMIN, 'pro-1', { status: 'APPROVED' }))
-      .rejects.toThrow(BadRequestException);
+    prismaMock.proProfile.update.mockResolvedValue({
+      ...profile,
+      verificationStatus: ProVerificationStatus.APPROVED,
+    });
+    await expect(
+      service.adminReviewProProfile('reviewer-1', UserRole.ADMIN, 'pro-1', {
+        status: 'APPROVED',
+      }),
+    ).rejects.toThrow(BadRequestException);
     expect(prismaMock.proProfile.update).not.toHaveBeenCalled();
   });
 
   it('locks reviewed identity fields until a reviewer requests corrections', async () => {
-    prismaMock.coverageZone.findUnique.mockResolvedValue({ id: 'zone-1', isActive: true });
-    prismaMock.proProfile.findUnique.mockResolvedValue({ id: 'pro-1', userId: 'user-1', verificationStatus: ProVerificationStatus.APPROVED });
-    await expect(service.upsertPersonalDetails('user-1', {
-      fullName: 'Changed name', nationalIdSynthetic: '12345678901234', primaryZoneId: 'zone-1', transportMode: TransportMode.MOTORCYCLE,
-    })).rejects.toThrow(ForbiddenException);
+    prismaMock.coverageZone.findUnique.mockResolvedValue({
+      id: 'zone-1',
+      isActive: true,
+    });
+    prismaMock.proProfile.findUnique.mockResolvedValue({
+      id: 'pro-1',
+      userId: 'user-1',
+      verificationStatus: ProVerificationStatus.APPROVED,
+    });
+    await expect(
+      service.upsertPersonalDetails('user-1', {
+        fullName: 'Changed name',
+        nationalIdSynthetic: '12345678901234',
+        primaryZoneId: 'zone-1',
+        transportMode: TransportMode.MOTORCYCLE,
+      }),
+    ).rejects.toThrow(ForbiddenException);
     expect(prismaMock.user.update).not.toHaveBeenCalled();
     expect(prismaMock.proProfile.upsert).not.toHaveBeenCalled();
   });

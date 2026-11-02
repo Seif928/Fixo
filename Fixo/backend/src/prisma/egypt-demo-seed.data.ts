@@ -1,4 +1,10 @@
-import { ExperienceTier, ProVerificationStatus, TransportMode, UserRole } from '@prisma/client';
+import {
+  ExperienceTier,
+  ProVerificationStatus,
+  TransportMode,
+  UserRole,
+} from '@prisma/client';
+import { EGYPT_GOVERNORATES } from './egypt-governorates';
 
 export interface SeedCoverageZone {
   id: string;
@@ -135,6 +141,7 @@ export const EGYPT_COVERAGE_ZONES: SeedCoverageZone[] = [
     governorate: 'Giza',
     isActive: true,
   },
+  ...EGYPT_GOVERNORATES,
 ];
 
 /**
@@ -380,8 +387,10 @@ export const EGYPT_SERVICE_OFFERINGS: SeedServiceOffering[] = [
     slug: 'summer-ac-deep-clean-gas-refill',
     titleEn: 'Summer AC Deep Clean & Gas Refill',
     titleAr: 'غسيل التكييف العميق وشحن الفريون الصيفي',
-    descriptionEn: 'Complete coil flush, antibacterial sanitized mist, and pressure gauge test.',
-    descriptionAr: 'تنظيف شامل للمكثف، تعقيم مضاد للبكتيريا، واختبار ضغط الفريون.',
+    descriptionEn:
+      'Complete coil flush, antibacterial sanitized mist, and pressure gauge test.',
+    descriptionAr:
+      'تنظيف شامل للمكثف، تعقيم مضاد للبكتيريا، واختبار ضغط الفريون.',
     badgeEn: 'SEASONAL PEAK',
     badgeAr: 'عرض الموسم',
     providerTagEn: 'Daikin & Carrier Pros',
@@ -420,8 +429,10 @@ export const EGYPT_SERVICE_OFFERINGS: SeedServiceOffering[] = [
     slug: 'inverter-split-ac-maintenance',
     titleEn: 'Inverter & Split AC Full Tune-Up',
     titleAr: 'صيانة شاملة للتكييف الإنفرتر والسبليت',
-    descriptionEn: 'Thermostat calibration, drainage line clearing, and capacitor load test.',
-    descriptionAr: 'معايرة الثرموستات، تسليك خرطوم الصرف، واختبار كفاءة الكباس.',
+    descriptionEn:
+      'Thermostat calibration, drainage line clearing, and capacitor load test.',
+    descriptionAr:
+      'معايرة الثرموستات، تسليك خرطوم الصرف، واختبار كفاءة الكباس.',
     badgeEn: null,
     badgeAr: null,
     providerTagEn: 'Carrier & LG Certified',
@@ -440,8 +451,10 @@ export const EGYPT_SERVICE_OFFERINGS: SeedServiceOffering[] = [
     slug: 'plumbing-leak-water-heater-repair',
     titleEn: 'Leak Detection & Water Heater Repair',
     titleAr: 'كشف التسريبات وصيانة السخانات',
-    descriptionEn: 'Grohe mixer cartridges, pressure valve replacement, and thermal pipe sealing.',
-    descriptionAr: 'تغيير قلب خلاطات جروهي، صمامات الأمان، ولحام مواسير البولي.',
+    descriptionEn:
+      'Grohe mixer cartridges, pressure valve replacement, and thermal pipe sealing.',
+    descriptionAr:
+      'تغيير قلب خلاطات جروهي، صمامات الأمان، ولحام مواسير البولي.',
     badgeEn: null,
     badgeAr: null,
     providerTagEn: 'Grohe & Ideal Standard',
@@ -460,7 +473,8 @@ export const EGYPT_SERVICE_OFFERINGS: SeedServiceOffering[] = [
     slug: 'electrical-breaker-led-installation',
     titleEn: 'Breaker Panel & LED Lighting Upgrade',
     titleAr: 'صيانة لوحة القواطع وتركيب إضاءة LED',
-    descriptionEn: 'Schneider breaker diagnostics, voltage stabilizer wiring, and chandelier mounting.',
+    descriptionEn:
+      'Schneider breaker diagnostics, voltage stabilizer wiring, and chandelier mounting.',
     descriptionAr: 'فحص قواطع شنايدر، ضبط الأحمال، وتركيب السبوتات والنجف.',
     badgeEn: null,
     badgeAr: null,
@@ -480,8 +494,10 @@ export const EGYPT_SERVICE_OFFERINGS: SeedServiceOffering[] = [
     slug: 'deep-home-cleaning-steam-sanitization',
     titleEn: 'Deep Home & Post-Renovation Cleaning',
     titleAr: 'تنظيف عميق وتعقيم بالبخار للشقق والفيلات',
-    descriptionEn: 'Marble polishing, kitchen degreasing, window tracks, and upholstery steam care.',
-    descriptionAr: 'تلميع الرخام، إزالة دهون المطبخ، تنظيف الشبابيك وتعقيم المفروشات بالبخار.',
+    descriptionEn:
+      'Marble polishing, kitchen degreasing, window tracks, and upholstery steam care.',
+    descriptionAr:
+      'تلميع الرخام، إزالة دهون المطبخ، تنظيف الشبابيك وتعقيم المفروشات بالبخار.',
     badgeEn: null,
     badgeAr: null,
     providerTagEn: 'Eco-Safe Karcher Gear',
@@ -500,8 +516,10 @@ export const EGYPT_SERVICE_OFFERINGS: SeedServiceOffering[] = [
     slug: 'carpentry-door-alignment-lock-service',
     titleEn: 'Door Alignment, Locks & Hinges Service',
     titleAr: 'ضبط الأبواب وتغيير الكوالين والمفصلات',
-    descriptionEn: 'Armored door cylinder replacement, kitchen cabinet soft-close hinges, and pergola care.',
-    descriptionAr: 'تغيير سلندر الأبواب المصفحة، مفصلات المطابخ الهيدروليك وإصلاح الأخشاب.',
+    descriptionEn:
+      'Armored door cylinder replacement, kitchen cabinet soft-close hinges, and pergola care.',
+    descriptionAr:
+      'تغيير سلندر الأبواب المصفحة، مفصلات المطابخ الهيدروليك وإصلاح الأخشاب.',
     badgeEn: null,
     badgeAr: null,
     providerTagEn: 'Yale & Blum Hardware',
@@ -520,8 +538,10 @@ export const EGYPT_SERVICE_OFFERINGS: SeedServiceOffering[] = [
     slug: 'jotun-room-wall-painting-finishing',
     titleEn: 'Jotun Fenomastic Wall Coating & Putty',
     titleAr: 'دهانات جوتن فينوماستيك ومعجون الحوائط',
-    descriptionEn: 'Crack putty treatment, laser-masked edges, and 2-coat Jotun Fenomastic application.',
-    descriptionAr: 'معالجة الشروخ بالمعجون، تغطية الأثاث والأرضيات، ودهان وجهين جوتن أصلي.',
+    descriptionEn:
+      'Crack putty treatment, laser-masked edges, and 2-coat Jotun Fenomastic application.',
+    descriptionAr:
+      'معالجة الشروخ بالمعجون، تغطية الأثاث والأرضيات، ودهان وجهين جوتن أصلي.',
     badgeEn: null,
     badgeAr: null,
     providerTagEn: 'Jotun Egypt Certified',
@@ -662,4 +682,3 @@ export const DEFAULT_DEMO_CUSTOMER: SeedUserRecord = {
   createdAt: new Date('2026-01-15T10:00:00.000Z'),
   updatedAt: new Date('2026-10-31T00:00:00.000Z'),
 };
-

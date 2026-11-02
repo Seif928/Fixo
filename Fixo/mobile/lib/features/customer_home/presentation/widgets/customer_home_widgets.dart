@@ -587,23 +587,28 @@ class RecommendedProCard extends StatelessWidget {
                         ),
                         const SizedBox(width: 4),
                         Text(
-                          '${professional.ratingAvg}',
+                          professional.reviewsCount == 0
+                              ? (isArabic
+                                    ? 'لا توجد تقييمات بعد'
+                                    : 'No reviews yet')
+                              : '${professional.ratingAvg}',
                           style: FixoTypography.labelMd(
                             color: palette.inkText,
                             tabularFigures: true,
                           ).copyWith(fontWeight: FontWeight.w700),
                         ),
                         const SizedBox(width: 4),
-                        Flexible(
-                          child: Text(
-                            isArabic
-                                ? '(${professional.reviewsCount} تقييم)'
-                                : '(${professional.reviewsCount} reviews)',
-                            style: FixoTypography.bodySm(
-                              color: palette.mutedText,
+                        if (professional.reviewsCount > 0)
+                          Flexible(
+                            child: Text(
+                              isArabic
+                                  ? '(${professional.reviewsCount} تقييم)'
+                                  : '(${professional.reviewsCount} reviews)',
+                              style: FixoTypography.bodySm(
+                                color: palette.mutedText,
+                              ),
                             ),
                           ),
-                        ),
                       ],
                     ),
                   ],
@@ -649,45 +654,46 @@ class RecommendedProCard extends StatelessWidget {
             spacing: 8,
             runSpacing: 8,
             children: [
-              Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 10,
-                  vertical: 5,
-                ),
-                decoration: BoxDecoration(
-                  color: isFastResponder
-                      ? FixoColors.secondaryContainer
-                      : palette.surfaceHigh,
-                  borderRadius: FixoRadius.borderRadiusPill,
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(
-                      isFastResponder
-                          ? Icons.bolt_rounded
-                          : Icons.verified_user_rounded,
-                      size: 14,
-                      color: isFastResponder
-                          ? FixoColors.onSecondaryContainer
-                          : palette.deepForest,
-                    ),
-                    const SizedBox(width: 4),
-                    Flexible(
-                      child: Text(
-                        professional.localizedBadge(isArabic),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: FixoTypography.labelMd(
-                          color: isFastResponder
-                              ? FixoColors.onSecondaryContainer
-                              : palette.deepForest,
-                        ).copyWith(fontWeight: FontWeight.w700),
+              if (professional.localizedBadge(isArabic).trim().isNotEmpty)
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 5,
+                  ),
+                  decoration: BoxDecoration(
+                    color: isFastResponder
+                        ? FixoColors.secondaryContainer
+                        : palette.surfaceHigh,
+                    borderRadius: FixoRadius.borderRadiusPill,
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        isFastResponder
+                            ? Icons.bolt_rounded
+                            : Icons.verified_user_rounded,
+                        size: 14,
+                        color: isFastResponder
+                            ? FixoColors.onSecondaryContainer
+                            : palette.deepForest,
                       ),
-                    ),
-                  ],
+                      const SizedBox(width: 4),
+                      Flexible(
+                        child: Text(
+                          professional.localizedBadge(isArabic),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: FixoTypography.labelMd(
+                            color: isFastResponder
+                                ? FixoColors.onSecondaryContainer
+                                : palette.deepForest,
+                          ).copyWith(fontWeight: FontWeight.w700),
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
-              ),
               Material(
                 color: palette.primaryBrand,
                 borderRadius: FixoRadius.borderRadiusMd,

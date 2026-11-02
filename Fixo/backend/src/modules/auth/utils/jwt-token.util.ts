@@ -10,6 +10,7 @@ export interface FixoJwtPayload {
   jti: string;
   iat: number;
   exp: number;
+  firebaseAuthTime?: number;
 }
 
 function base64UrlEncode(input: Buffer | string): string {
@@ -40,7 +41,9 @@ export function signFixoJwt(
     exp: nowSec + expiresInSeconds,
   };
 
-  const headerSegment = base64UrlEncode(JSON.stringify({ alg: 'HS256', typ: 'JWT' }));
+  const headerSegment = base64UrlEncode(
+    JSON.stringify({ alg: 'HS256', typ: 'JWT' }),
+  );
   const payloadSegment = base64UrlEncode(JSON.stringify(fullPayload));
   const signingInput = `${headerSegment}.${payloadSegment}`;
   const signature = createHmac('sha256', secret).update(signingInput).digest();
@@ -54,7 +57,9 @@ export function signFixoJwt(
 
 export function verifyFixoJwt(token: string, secret: string): FixoJwtPayload {
   if (!token || typeof token !== 'string') {
-    throw new UnauthorizedException('Missing or malformed authentication token.');
+    throw new UnauthorizedException(
+      'Missing or malformed authentication token.',
+    );
   }
 
   const segments = token.split('.');
@@ -64,7 +69,9 @@ export function verifyFixoJwt(token: string, secret: string): FixoJwtPayload {
 
   const [headerSegment, payloadSegment, signatureSegment] = segments;
   const signingInput = `${headerSegment}.${payloadSegment}`;
-  const expectedSig = createHmac('sha256', secret).update(signingInput).digest();
+  const expectedSig = createHmac('sha256', secret)
+    .update(signingInput)
+    .digest();
   const actualSig = base64UrlDecode(signatureSegment);
 
   if (
@@ -76,7 +83,9 @@ export function verifyFixoJwt(token: string, secret: string): FixoJwtPayload {
 
   let parsed: FixoJwtPayload;
   try {
-    parsed = JSON.parse(base64UrlDecode(payloadSegment).toString('utf8')) as FixoJwtPayload;
+    parsed = JSON.parse(
+      base64UrlDecode(payloadSegment).toString('utf8'),
+    ) as FixoJwtPayload;
   } catch {
     throw new UnauthorizedException('Invalid JWT payload encoding.');
   }
@@ -93,7 +102,11 @@ export function hashTokenSha256(token: string): string {
   return createHash('sha256').update(token).digest('hex');
 }
 
-export function hashOtpHmacSha256(phone: string, code: string, secret: string): string {
+export function hashOtpHmacSha256(
+  phone: string,
+  code: string,
+  secret: string,
+): string {
   return createHmac('sha256', secret).update(`${phone}:${code}`).digest('hex');
 }
 
@@ -111,4 +124,3 @@ export function verifyOtpHmacTimingSafe(
   }
   return timingSafeEqual(actualBuf, expectedBuf);
 }
-

@@ -6,7 +6,8 @@ import 'package:fixo_mobile/core/network/session_refresh_interceptor.dart';
 import 'package:fixo_mobile/core/storage/secure_token_storage.dart';
 
 class _Adapter implements HttpClientAdapter {
-  _Adapter(this.answer);
+  _Adapter(this.answer, {this.onBody});
+  final void Function(List<int> bytes)? onBody;
   final Future<(int, Map<String, dynamic>)> Function(RequestOptions) answer;
   @override
   Future<ResponseBody> fetch(
@@ -14,6 +15,14 @@ class _Adapter implements HttpClientAdapter {
     Stream<Uint8List>? requestStream,
     Future<dynamic>? cancelFuture,
   ) async {
+    if (onBody != null && requestStream != null) {
+      onBody!(
+        await requestStream.fold<List<int>>(
+          [],
+          (all, part) => all..addAll(part),
+        ),
+      );
+    }
     final (status, data) = await answer(options);
     return ResponseBody.fromString(
       jsonEncode(data),
@@ -156,4 +165,34 @@ void main() {
     expect(await storage.readTokens(), isNull);
     expect(expired, 1);
   });
+  test(
+    'multipart avatar retries once with a fresh body after token rotation',
+    () async {
+      final bodies = <List<int>>[];
+      final forms = <Object?>[];
+      api.httpClientAdapter = _Adapter((request) async {
+        forms.add(request.data);
+        return request.headers['Authorization'] == 'Bearer new'
+            ? (200, {'ok': true})
+            : (401, {'message': 'expired'});
+      }, onBody: bodies.add);
+      final response = await api.post(
+        '/users/me/avatar',
+        data: FormData.fromMap({
+          'photo': MultipartFile.fromBytes(
+            utf8.encode('PRIVATE_AVATAR_BYTES'),
+            filename: 'photo.png',
+          ),
+        }),
+      );
+      expect(response.statusCode, 200);
+      expect(refreshCalls, 1);
+      expect(bodies.length, 2);
+      expect(
+        bodies.every((b) => utf8.decode(b).contains('PRIVATE_AVATAR_BYTES')),
+        isTrue,
+      );
+      expect(identical(forms[0], forms[1]), isFalse);
+    },
+  );
 }

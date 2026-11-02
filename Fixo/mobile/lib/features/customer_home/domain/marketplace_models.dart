@@ -19,12 +19,17 @@ class CoverageZoneModel {
   String localizedName(bool isArabic) => isArabic ? nameAr : nameEn;
 
   factory CoverageZoneModel.fromJson(Map<String, dynamic> json) {
+    for (final field in ['id', 'slug', 'nameEn', 'nameAr', 'governorate']) {
+      if (json[field] is! String || (json[field] as String).trim().isEmpty) {
+        throw const FormatException('Invalid coverage area.');
+      }
+    }
     return CoverageZoneModel(
-      id: json['id'] as String? ?? 'zone-sheikh-zayed',
-      slug: json['slug'] as String? ?? 'sheikh-zayed',
-      nameEn: json['nameEn'] as String? ?? 'Sheikh Zayed, Dist. 9',
-      nameAr: json['nameAr'] as String? ?? 'الشيخ زايد، الحي التاسع',
-      governorate: json['governorate'] as String? ?? 'Giza',
+      id: json['id'],
+      slug: json['slug'],
+      nameEn: json['nameEn'],
+      nameAr: json['nameAr'],
+      governorate: json['governorate'],
       isActive: json['isActive'] as bool? ?? true,
     );
   }
@@ -137,7 +142,8 @@ class ServiceOfferModel {
       providerTagAr: json['providerTagAr'] as String?,
       baseInspectionEgp: baseEgp,
       serviceFeeEgp: feeEgp,
-      flatPriceEgp: (json['flatPriceEgp'] as num?)?.toInt() ?? (baseEgp + feeEgp),
+      flatPriceEgp:
+          (json['flatPriceEgp'] as num?)?.toInt() ?? (baseEgp + feeEgp),
       estimatedDurationMins:
           (json['estimatedDurationMins'] as num?)?.toInt() ?? 60,
       isSeasonalPromo: json['isSeasonalPromo'] as bool? ?? false,
@@ -195,24 +201,31 @@ class ProfessionalCardModel {
   bool get isFastResponder => badgeVariant == 'fast_responder';
 
   factory ProfessionalCardModel.fromJson(Map<String, dynamic> json) {
+    final price = json['estimatedPriceEgp'];
+    if (price is! num ||
+        !price.isFinite ||
+        price < 0 ||
+        price != price.roundToDouble()) {
+      throw const FormatException('Invalid professional pricing.');
+    }
     return ProfessionalCardModel(
       id: json['id'] as String? ?? '',
       fullNameEn: json['fullNameEn'] as String? ?? '',
       fullNameAr: json['fullNameAr'] as String? ?? '',
       primaryCategoryId: json['primaryCategoryId'] as String? ?? '',
       primaryCategorySlug: json['primaryCategorySlug'] as String? ?? '',
-      primaryZoneSlug: json['primaryZoneSlug'] as String? ?? 'sheikh-zayed',
+      primaryZoneSlug: json['primaryZoneSlug'] as String? ?? '',
       specialtyEn: json['specialtyEn'] as String? ?? '',
       specialtyAr: json['specialtyAr'] as String? ?? '',
       zonesLabelEn: json['zonesLabelEn'] as String? ?? '',
       zonesLabelAr: json['zonesLabelAr'] as String? ?? '',
-      ratingAvg: (json['ratingAvg'] as num?)?.toDouble() ?? 4.9,
-      reviewsCount: (json['reviewsCount'] as num?)?.toInt() ?? 100,
-      estimatedPriceEgp: (json['estimatedPriceEgp'] as num?)?.toInt() ?? 250,
-      badgeEn: json['badgeEn'] as String? ?? 'Verified Master Pro',
-      badgeAr: json['badgeAr'] as String? ?? 'فني خبير معتمد',
-      badgeVariant: json['badgeVariant'] as String? ?? 'verified_master',
-      isOnline: json['isOnline'] as bool? ?? true,
+      ratingAvg: (json['ratingAvg'] as num?)?.toDouble() ?? 0,
+      reviewsCount: (json['reviewsCount'] as num?)?.toInt() ?? 0,
+      estimatedPriceEgp: price.toInt(),
+      badgeEn: json['badgeEn'] as String? ?? '',
+      badgeAr: json['badgeAr'] as String? ?? '',
+      badgeVariant: json['badgeVariant'] as String? ?? '',
+      isOnline: json['isOnline'] as bool? ?? false,
     );
   }
 }
@@ -252,4 +265,3 @@ class CustomerHomeFeed {
     return null;
   }
 }
-

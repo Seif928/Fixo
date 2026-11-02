@@ -19,6 +19,8 @@ class RestoreRepository implements AuthRepository {
   Completer<AuthSession>? pending;
   int calls = 0;
   String? revokedToken;
+  Completer<void>? logoutPending;
+  final logoutStarted = Completer<void>();
   @override
   Future<AuthSession> refreshSession({required String refreshToken}) async {
     calls++;
@@ -29,10 +31,24 @@ class RestoreRepository implements AuthRepository {
   @override
   Future<void> logout({required String refreshToken}) async {
     revokedToken = refreshToken;
+    if (!logoutStarted.isCompleted) logoutStarted.complete();
+    if (logoutPending != null) await logoutPending!.future;
   }
 
   @override
   dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
+}
+
+class DelayedSignInStorage extends MemoryTokenStorage {
+  final saved = Completer<void>(), release = Completer<void>();
+  @override
+  Future<void> saveTokens(StoredAuthTokens tokens) async {
+    await super.saveTokens(tokens);
+    if (tokens.userId == 'a') {
+      saved.complete();
+      await release.future;
+    }
+  }
 }
 
 class RotatingPush extends DevicePushService {
@@ -102,6 +118,37 @@ void main() {
     expect(await storage.readTokens(), isNotNull);
     expect(container.read(authControllerProvider).isAuthenticated, false);
   });
+  for (final rejected in [false, true]) {
+    test(
+      'restore cannot replace or clear another stored account (rejected=$rejected)',
+      () async {
+        repository.pending = Completer<AuthSession>();
+        final restoring = container
+            .read(authControllerProvider.notifier)
+            .restoreSession();
+        await Future<void>.delayed(Duration.zero);
+        await storage.saveTokens(
+          const StoredAuthTokens(
+            accessToken: 'other-access',
+            refreshToken: 'other-refresh',
+            userId: 'other',
+            phone: '',
+            role: 'CUSTOMER',
+          ),
+        );
+        if (rejected) {
+          repository.pending!.completeError(
+            const AuthApiException('revoked', statusCode: 401),
+          );
+        } else {
+          repository.pending!.complete(session);
+        }
+        await restoring;
+        expect((await storage.readTokens())?.userId, 'other');
+        expect(container.read(authControllerProvider).session, isNull);
+      },
+    );
+  }
   test('logout during refresh cannot resurrect a session', () async {
     repository.pending = Completer<AuthSession>();
     final controller = container.read(authControllerProvider.notifier);
@@ -141,6 +188,67 @@ void main() {
         }),
         throwsFormatException,
       );
+    },
+  );
+  test(
+    'a completed old logout does not clear a new login while server revocation was pending',
+    () async {
+      final controller = container.read(authControllerProvider.notifier);
+      await controller.acceptVerifiedSession(session);
+      repository.logoutPending = Completer<void>();
+      final exiting = controller.logout();
+      await repository.logoutStarted.future;
+      await controller.acceptVerifiedSession(
+        const AuthSession(
+          accessToken: 'b-access',
+          refreshToken: 'b-refresh',
+          user: AuthUser(id: 'b', phone: '', fullName: 'B', role: 'CUSTOMER'),
+        ),
+      );
+      repository.logoutPending!.complete();
+      await exiting;
+      expect((await storage.readTokens())?.userId, 'b');
+      expect(container.read(authControllerProvider).session?.user.id, 'b');
+    },
+  );
+  test(
+    'late sign-in storage completion does not restore an older visible account',
+    () async {
+      final delayed = DelayedSignInStorage();
+      final scoped = ProviderContainer(
+        overrides: [
+          secureTokenStorageProvider.overrideWithValue(delayed),
+          authRepositoryProvider.overrideWithValue(repository),
+        ],
+      );
+      addTearDown(scoped.dispose);
+      final controller = scoped.read(authControllerProvider.notifier);
+      final first = controller
+          .acceptVerifiedSession(
+            const AuthSession(
+              accessToken: 'a',
+              refreshToken: 'ar',
+              user: AuthUser(
+                id: 'a',
+                phone: '',
+                fullName: 'A',
+                role: 'CUSTOMER',
+              ),
+            ),
+          )
+          .then<Object?>((_) => null, onError: (Object error) => error);
+      await delayed.saved.future;
+      await controller.acceptVerifiedSession(
+        const AuthSession(
+          accessToken: 'b',
+          refreshToken: 'br',
+          user: AuthUser(id: 'b', phone: '', fullName: 'B', role: 'CUSTOMER'),
+        ),
+      );
+      delayed.release.complete();
+      await first;
+      expect(scoped.read(authControllerProvider).session?.user.id, 'b');
+      expect((await delayed.readTokens())?.userId, 'b');
     },
   );
 }

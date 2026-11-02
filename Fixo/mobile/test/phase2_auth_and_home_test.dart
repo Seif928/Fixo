@@ -11,10 +11,12 @@ import 'package:fixo_mobile/features/auth/presentation/pages/phone_password_page
 import 'package:fixo_mobile/features/customer_home/data/marketplace_repository.dart';
 import 'package:fixo_mobile/features/customer_home/domain/marketplace_models.dart';
 import 'package:fixo_mobile/features/customer_home/presentation/pages/customer_home_page.dart';
+import 'package:fixo_mobile/features/customer_home/presentation/widgets/customer_home_widgets.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:go_router/go_router.dart';
 
 class FakeAuthRepository implements AuthRepository {
   bool shouldFailOtpRequest = false;
@@ -299,7 +301,8 @@ Widget _buildTestApp({
         final themeMode = ref.watch(appThemeModeProvider);
         final router = createAppRouter(
           initialLocation: initialLocation,
-          isAuthenticated: () => ref.read(authControllerProvider).isAuthenticated,
+          isAuthenticated: () =>
+              ref.read(authControllerProvider).isAuthenticated,
         );
 
         return MaterialApp.router(
@@ -323,14 +326,29 @@ Widget _buildTestApp({
 
 void main() {
   group('Screen 02: PhoneAuthPage — Validation, OTP, Token Storage & Redirects', () {
-    test('EgyptPhoneValidator validates +20 Egyptian numbers and rejects invalid prefixes', () {
-      expect(EgyptPhoneValidator.tryNormalize('010 2345 6789'), '+201023456789');
-      expect(EgyptPhoneValidator.tryNormalize('+20 112 345 6789'), '+201123456789');
-      expect(EgyptPhoneValidator.tryNormalize('01287654321'), '+201287654321');
-      expect(EgyptPhoneValidator.tryNormalize('01551234567'), '+201551234567');
-      expect(EgyptPhoneValidator.tryNormalize('01912345678'), isNull);
-      expect(EgyptPhoneValidator.tryNormalize('12345'), isNull);
-    });
+    test(
+      'EgyptPhoneValidator validates +20 Egyptian numbers and rejects invalid prefixes',
+      () {
+        expect(
+          EgyptPhoneValidator.tryNormalize('010 2345 6789'),
+          '+201023456789',
+        );
+        expect(
+          EgyptPhoneValidator.tryNormalize('+20 112 345 6789'),
+          '+201123456789',
+        );
+        expect(
+          EgyptPhoneValidator.tryNormalize('01287654321'),
+          '+201287654321',
+        );
+        expect(
+          EgyptPhoneValidator.tryNormalize('01551234567'),
+          '+201551234567',
+        );
+        expect(EgyptPhoneValidator.tryNormalize('01912345678'), isNull);
+        expect(EgyptPhoneValidator.tryNormalize('12345'), isNull);
+      },
+    );
 
     testWidgets(
       'displays error banner when invalid Egyptian phone is submitted, then sends OTP and verifies 6-digit code',
@@ -373,7 +391,10 @@ void main() {
 
         // Should now be on State 2: OTP Code
         expect(find.byKey(const Key('section-otp-code')), findsOneWidget);
-        expect(find.byKey(const Key('otp-resend-countdown-label')), findsOneWidget);
+        expect(
+          find.byKey(const Key('otp-resend-countdown-label')),
+          findsOneWidget,
+        );
         expect(
           find.textContaining('00:42', findRichText: true),
           findsOneWidget,
@@ -394,7 +415,10 @@ void main() {
 
         // API error must be shown
         expect(find.byKey(const Key('auth-error-banner')), findsOneWidget);
-        expect(find.textContaining('Invalid verification code'), findsOneWidget);
+        expect(
+          find.textContaining('Invalid verification code'),
+          findsOneWidget,
+        );
 
         // Enter valid 6-digit OTP ('482910') and verify
         await tester.enterText(
@@ -410,12 +434,15 @@ void main() {
         // Tokens must be saved in SecureTokenStorage
         final storedAccess = await tokenStorage.readAccessToken();
         expect(storedAccess, 'jwt-access-token-test');
+        expect(
+          ProviderScope.containerOf(
+            tester.element(find.byType(CustomerHomePage)),
+          ).read(activeSessionOwnerProvider),
+          'u-salma-01',
+        );
 
         // Must redirect to Screen 03 Customer Home
-        expect(
-          find.text('Summer AC Deep Clean & Gas Refill'),
-          findsOneWidget,
-        );
+        expect(find.text('Summer AC Deep Clean & Gas Refill'), findsOneWidget);
       },
     );
 
@@ -449,6 +476,65 @@ void main() {
 
   group('Screen 03: CustomerHomePage — Layout, Categories, EGP Prices & States', () {
     testWidgets(
+      'Book Slot asks for a matching service before navigating with both selections',
+      (tester) async {
+        final router = GoRouter(
+          routes: [
+            GoRoute(path: '/', builder: (_, _) => const CustomerHomePage()),
+            GoRoute(
+              path: AppRoutes.createBooking,
+              builder: (_, state) {
+                final extra = state.extra! as Map<String, dynamic>;
+                return Scaffold(
+                  body: Text(
+                    'selected:${(extra['offering'] as ServiceOfferModel?)?.id}:${(extra['preferredPro'] as ProfessionalCardModel?)?.id}',
+                  ),
+                );
+              },
+            ),
+          ],
+        );
+        addTearDown(router.dispose);
+        await tester.pumpWidget(
+          ProviderScope(
+            overrides: [
+              marketplaceRepositoryProvider.overrideWithValue(
+                FakeMarketplaceRepository(),
+              ),
+            ],
+            child: MaterialApp.router(
+              theme: FixoTheme.light(),
+              routerConfig: router,
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+        await tester.scrollUntilVisible(
+          find.text('Hassan El-Sayed'),
+          400,
+          scrollable: find.byType(Scrollable).first,
+        );
+        final card = find.ancestor(
+          of: find.text('Hassan El-Sayed'),
+          matching: find.byType(RecommendedProCard),
+        );
+        await tester.tap(
+          find.descendant(of: card, matching: find.text('Book Slot')),
+        );
+        await tester.pumpAndSettle();
+        expect(find.text('Choose a service'), findsOneWidget);
+        expect(find.textContaining('selected:'), findsNothing);
+        await tester.tap(
+          find.byKey(const Key('pro-service-off-ac-deep-clean')),
+        );
+        await tester.pumpAndSettle();
+        expect(
+          find.text('selected:off-ac-deep-clean:pro-hassan-01'),
+          findsOneWidget,
+        );
+      },
+    );
+    testWidgets(
       'renders header, location selector, search bar, seasonal promo, 6 categories, bundle card, and Cairo pros in EGP',
       (WidgetTester tester) async {
         final fakeMarketRepo = FakeMarketplaceRepository();
@@ -468,14 +554,11 @@ void main() {
 
         // Brand header & Location selector
         expect(find.text('FIXO'), findsOneWidget);
-        expect(find.text('Cairo / Giza'), findsOneWidget);
-        expect(find.text('Sheikh Zayed, Dist. 9'), findsOneWidget);
+        expect(find.text('Choose your area'), findsNWidgets(2));
+        expect(find.text('Sheikh Zayed, Dist. 9'), findsNothing);
 
         // Featured Seasonal Promo (350 EGP)
-        expect(
-          find.text('Summer AC Deep Clean & Gas Refill'),
-          findsOneWidget,
-        );
+        expect(find.text('Summer AC Deep Clean & Gas Refill'), findsOneWidget);
         expect(find.text('350'), findsWidgets);
 
         // All 6 Service Categories in EGP
@@ -571,7 +654,11 @@ void main() {
         };
         addTearDown(() => FlutterError.onError = previousOnError);
 
-        const viewports = <Size>[Size(360, 800), Size(390, 844), Size(412, 915)];
+        const viewports = <Size>[
+          Size(360, 800),
+          Size(390, 844),
+          Size(412, 915),
+        ];
 
         for (final size in viewports) {
           tester.view.physicalSize = size;
@@ -585,7 +672,9 @@ void main() {
               ),
             ],
           );
-          container.read(appLocaleProvider.notifier).setLocale(const Locale('ar'));
+          container
+              .read(appLocaleProvider.notifier)
+              .setLocale(const Locale('ar'));
           container
               .read(appThemeModeProvider.notifier)
               .setThemeMode(ThemeMode.dark);

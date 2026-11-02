@@ -32,7 +32,8 @@ class SessionRefreshInterceptor extends Interceptor {
         await _expire(original);
         return false;
       }
-      await storage.saveTokens(
+      return await storage.replaceTokensIfCurrent(
+        original,
         StoredAuthTokens(
           accessToken: session.accessToken,
           refreshToken: session.refreshToken,
@@ -41,7 +42,6 @@ class SessionRefreshInterceptor extends Interceptor {
           role: session.user.role,
         ),
       );
-      return true;
     } on DioException catch (error) {
       if ([400, 401, 403].contains(error.response?.statusCode)) {
         await _expire(original);
@@ -57,8 +57,7 @@ class SessionRefreshInterceptor extends Interceptor {
     final current = await storage.readTokens();
     if (current?.userId == original.userId &&
         current?.refreshToken == original.refreshToken) {
-      await storage.clearTokens();
-      onExpired();
+      if (await storage.replaceTokensIfCurrent(original, null)) onExpired();
     }
   }
 
@@ -101,6 +100,9 @@ class SessionRefreshInterceptor extends Interceptor {
       }
       request.extra['fixo_refresh_retry'] = true;
       request.headers['Authorization'] = 'Bearer ${current.accessToken}';
+      if (request.data is FormData) {
+        request.data = (request.data as FormData).clone();
+      }
       try {
         handler.resolve(await api.fetch<dynamic>(request));
       } on DioException catch (retryError) {

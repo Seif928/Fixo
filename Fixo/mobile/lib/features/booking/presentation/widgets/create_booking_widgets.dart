@@ -1,3 +1,5 @@
+import '../../../../core/location/egypt_places.dart';
+import '../../../../core/location/service_area_picker.dart';
 import '../../../../core/location/free_map_picker.dart';
 import '../../../../core/location/address_maps_actions.dart';
 import 'package:flutter/material.dart';
@@ -253,9 +255,7 @@ class SelectedServiceCard extends StatelessWidget {
                       Expanded(
                         child: Text(
                           preferredPro != null
-                              ? (isArabic
-                                    ? 'فني مسجل'
-                                    : 'Registered Pro')
+                              ? (isArabic ? 'فني مسجل' : 'Registered Pro')
                               : (isArabic
                                     ? 'خدمة منزلية معلنة'
                                     : 'Catalog Home Service'),
@@ -1097,6 +1097,8 @@ class AddressCreationBottomSheet extends StatefulWidget {
     required this.isSubmitting,
     this.errorMessage,
     required this.onSave,
+    this.initialArea,
+    this.onAreaChanged,
     this.onRetryZones,
     required this.isArabic,
   });
@@ -1106,6 +1108,8 @@ class AddressCreationBottomSheet extends StatefulWidget {
   final bool isSubmitting;
   final String? errorMessage;
   final ValueChanged<CreateAddressRequest> onSave;
+  final SelectedServiceArea? initialArea;
+  final VoidCallback? onAreaChanged;
   final VoidCallback? onRetryZones;
   final bool isArabic;
 
@@ -1123,6 +1127,7 @@ class _AddressCreationBottomSheetState
   late final TextEditingController _gateNotesController;
 
   String? _selectedZoneId;
+  SelectedServiceArea? _area;
   bool _isDefault = false;
   String? _localError;
 
@@ -1136,19 +1141,45 @@ class _AddressCreationBottomSheetState
     _districtController = TextEditingController();
     _gateNotesController = TextEditingController();
 
-    if (widget.zones.isNotEmpty) {
-      _selectedZoneId = widget.zones.first.id;
+    _area = widget.initialArea;
+    _applyArea();
+  }
+
+  void _applyArea({bool updateText = true}) {
+    final matches = widget.zones.where((z) => z.slug == _area?.zoneSlug);
+    _selectedZoneId = matches.isEmpty ? null : matches.first.id;
+    if (_area != null && updateText) {
+      _districtController.text = widget.isArabic
+          ? _area!.localityAr
+          : _area!.localityEn;
     }
   }
 
   @override
   void didUpdateWidget(covariant AddressCreationBottomSheet oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (_selectedZoneId == null && widget.zones.isNotEmpty) {
-      setState(() {
-        _selectedZoneId = widget.zones.first.id;
-      });
+    if (oldWidget.zones != widget.zones && _area != null) {
+      _applyArea(updateText: false);
     }
+  }
+
+  Future<void> _chooseArea() async {
+    final area = await showServiceAreaPicker(
+      context,
+      isArabic: widget.isArabic,
+      initial: _area,
+    );
+    if (!mounted || area == null) return;
+    widget.onAreaChanged?.call();
+    setState(() {
+      _area = area;
+      _applyArea();
+      _localError = _selectedZoneId == null
+          ? (widget.isArabic
+                ? 'المحافظة غير متاحة حاليًا. حدّث قائمة الأماكن.'
+                : 'This governorate is unavailable. Refresh the area list.')
+          : null;
+    });
   }
 
   @override
@@ -1361,36 +1392,17 @@ class _AddressCreationBottomSheetState
                     ],
                   ),
                 ] else ...[
-                  DropdownButtonFormField<String>(
+                  OutlinedButton.icon(
                     key: const Key('address-zone-dropdown'),
-                    initialValue:
-                        widget.zones.any((z) => z.id == _selectedZoneId)
-                        ? _selectedZoneId
-                        : widget.zones.first.id,
-                    items: widget.zones.map((zone) {
-                      return DropdownMenuItem<String>(
-                        value: zone.id,
-                        child: Text(
-                          zone.localizedName(widget.isArabic),
-                          style: FixoTypography.bodyMd(color: palette.inkText),
-                        ),
-                      );
-                    }).toList(),
-                    onChanged: (val) {
-                      if (val != null) {
-                        setState(() => _selectedZoneId = val);
-                      }
-                    },
-                    decoration: InputDecoration(
-                      filled: true,
-                      fillColor: palette.surfaceLow,
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(10),
-                        borderSide: BorderSide.none,
-                      ),
-                      contentPadding: const EdgeInsets.symmetric(
-                        horizontal: 12,
-                        vertical: 10,
+                    onPressed: widget.isSubmitting ? null : _chooseArea,
+                    icon: const Icon(Icons.location_on_outlined),
+                    label: Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      child: Text(
+                        _area?.label(widget.isArabic) ??
+                            (widget.isArabic
+                                ? 'اختار المحافظة والمنطقة'
+                                : 'Choose governorate and area'),
                       ),
                     ),
                   ),

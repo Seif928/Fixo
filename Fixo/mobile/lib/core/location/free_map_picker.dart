@@ -2,18 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:maplibre_gl/maplibre_gl.dart';
 import 'package:url_launcher/url_launcher.dart';
-
-class ServiceMapPoint {
-  ServiceMapPoint(this.latitude, this.longitude) {
-    if (!latitude.isFinite ||
-        !longitude.isFinite ||
-        latitude.abs() > 90 ||
-        longitude.abs() > 180) {
-      throw ArgumentError('Invalid map coordinate.');
-    }
-  }
-  final double latitude, longitude;
-}
+import 'map_point.dart';
+import 'device_location_service.dart';
+export 'map_point.dart';
 
 abstract final class FreeMapProvider {
   static const lightStyle = 'https://tiles.openfreemap.org/styles/liberty';
@@ -55,6 +46,28 @@ class _MapSurfaceState extends State<_MapSurface> {
   MapLibreMapController? _controller;
   Circle? _pin;
   bool _styleReady = false;
+  @override
+  void didUpdateWidget(covariant _MapSurface oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    final point = widget.initial;
+    if (point != null &&
+        (point.latitude != oldWidget.initial?.latitude ||
+            point.longitude != oldWidget.initial?.longitude)) {
+      _moveTo(point);
+    }
+  }
+
+  Future<void> _moveTo(ServiceMapPoint point) async {
+    try {
+      await _controller?.animateCamera(
+        CameraUpdate.newLatLngZoom(LatLng(point.latitude, point.longitude), 15),
+      );
+      await _pinAt(LatLng(point.latitude, point.longitude));
+    } catch (_) {
+      /* Keep coordinates and manual selection when rendering fails. */
+    }
+  }
+
   Future<void> _pinAt(LatLng location) async {
     if (!_styleReady || _controller == null) return;
     try {
@@ -148,6 +161,31 @@ class FreeMapPicker extends ConsumerStatefulWidget {
 
 class _FreeMapPickerState extends ConsumerState<FreeMapPicker> {
   ServiceMapPoint? _selected;
+  bool _locating = false;
+  String? _locationError;
+  Future<void> _locate() async {
+    setState(() {
+      _locating = true;
+      _locationError = null;
+    });
+    try {
+      final point = await ref.read(deviceLocationProvider).currentPoint();
+      if (mounted) setState(() => _selected = point);
+    } catch (error) {
+      if (mounted) {
+        setState(
+          () => _locationError =
+              (error is LocationChoiceException
+                      ? error
+                      : const LocationChoiceException('unavailable'))
+                  .message(widget.isArabic),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _locating = false);
+    }
+  }
+
   @override
   void initState() {
     super.initState();
@@ -193,12 +231,25 @@ class _FreeMapPickerState extends ConsumerState<FreeMapPicker> {
                   ),
                 ),
                 data: (_) => ref.watch(freeMapSurfaceProvider)(
-                  widget.initial,
+                  _selected,
                   (point) => setState(() => _selected = point),
                   Theme.of(context).brightness == Brightness.dark,
                 ),
               ),
             ),
+            TextButton.icon(
+              key: const Key('detect-map-point'),
+              onPressed: _locating ? null : _locate,
+              icon: const Icon(Icons.my_location),
+              label: Text(
+                ar ? 'استخدم موقعي الحالي' : 'Use my current location',
+              ),
+            ),
+            if (_locationError != null)
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                child: Text(_locationError!),
+              ),
             Padding(
               padding: const EdgeInsets.all(12),
               child: Column(
@@ -249,7 +300,8 @@ class AddressMapWrapper extends StatefulWidget {
     required this.builder,
   });
   final bool isArabic;
-  final Widget Function(ServiceMapPoint? point) builder;
+  final Widget Function(ServiceMapPoint? point, VoidCallback clearPoint)
+  builder;
   @override
   State<AddressMapWrapper> createState() => _AddressMapWrapperState();
 }
@@ -286,7 +338,9 @@ class _AddressMapWrapperState extends State<AddressMapWrapper> {
             if (mounted && point != null) setState(() => _point = point);
           },
         ),
-        Flexible(child: widget.builder(_point)),
+        Flexible(
+          child: widget.builder(_point, () => setState(() => _point = null)),
+        ),
       ],
     ),
   );

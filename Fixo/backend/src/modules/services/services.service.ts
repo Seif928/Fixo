@@ -5,10 +5,17 @@ import {
   SeedServiceCategory,
   SeedServiceOffering,
 } from '../../prisma/egypt-demo-seed.data';
+import { coversServiceArea } from './coverage-policy';
 import { InMemoryStoreService } from '../../prisma/in-memory-store.service';
-import { PrismaService, StoragePersistenceMode } from '../../prisma/prisma.service';
+import {
+  PrismaService,
+  StoragePersistenceMode,
+} from '../../prisma/prisma.service';
 import { PublicProfessionalDto } from './dto/public-professional.dto';
-import { QueryProfessionalsDto, QueryServicesDto } from './dto/query-services.dto';
+import {
+  QueryProfessionalsDto,
+  QueryServicesDto,
+} from './dto/query-services.dto';
 
 export interface PaginatedResponse<T> {
   items: T[];
@@ -23,6 +30,10 @@ export interface PaginatedResponse<T> {
     databaseConnected: boolean;
   };
 }
+
+type DiscoveryProfessional = PublicProfessionalDto & {
+  coverage?: Array<{ slug: string; governorate: string }>;
+};
 
 @Injectable()
 export class ServicesService {
@@ -196,21 +207,22 @@ export class ServicesService {
     if (categoryFilter) {
       allPros = allPros.filter(
         (pro) =>
-          pro.primaryCategorySlug.toLowerCase() === categoryFilter,
+          pro.primaryCategorySlug.toLowerCase() === categoryFilter ||
+          pro.primaryCategoryId?.toLowerCase() === categoryFilter,
       );
     }
 
     if (zoneFilter) {
-      allPros = allPros.filter((pro) => {
-        const zoneHaystack = [
-          pro.primaryZoneSlug,
-          pro.zonesLabelEn,
-          pro.zonesLabelAr,
-        ]
-          .join(' ')
-          .toLowerCase();
-        return zoneHaystack.includes(zoneFilter);
-      });
+      const selected = this.prisma.isDatabaseConnected()
+        ? await this.prisma.coverageZone.findUnique({
+            where: { slug: zoneFilter },
+          })
+        : this.memoryStore.getZones().find((z) => z.slug === zoneFilter);
+      allPros = selected
+        ? allPros.filter((pro) =>
+            (pro.coverage ?? []).some((z) => coversServiceArea(z, selected)),
+          )
+        : [];
     }
 
     if (search) {
@@ -234,7 +246,9 @@ export class ServicesService {
     const total = allPros.length;
     const totalPages = Math.max(1, Math.ceil(total / limit));
     const offset = (page - 1) * limit;
-    const items = allPros.slice(offset, offset + limit);
+    const items = allPros
+      .slice(offset, offset + limit)
+      .map(({ coverage, ...publicFields }) => publicFields);
 
     return {
       items,
@@ -273,7 +287,8 @@ export class ServicesService {
         providerTagAr: row.providerTagAr,
         baseInspectionEgp: row.baseInspectionEgp,
         serviceFeeEgp: row.serviceFeeEgp,
-        flatPriceEgp: row.flatPriceEgp ?? row.baseInspectionEgp + row.serviceFeeEgp,
+        flatPriceEgp:
+          row.flatPriceEgp ?? row.baseInspectionEgp + row.serviceFeeEgp,
         estimatedDurationMins: row.estimatedDurationMins,
         isSeasonalPromo: row.isSeasonalPromo,
         isBundle: row.isBundle,
@@ -290,7 +305,7 @@ export class ServicesService {
     return this.memoryStore.getOfferings();
   }
 
-  private async loadAllProfessionals(): Promise<PublicProfessionalDto[]> {
+  private async loadAllProfessionals(): Promise<DiscoveryProfessional[]> {
     if (this.prisma.isDatabaseConnected()) {
       // Database-connected mode: Professionals come EXCLUSIVELY from PostgreSQL.
       // Security Invariant: Only APPROVED profiles appear in public discovery.
@@ -304,20 +319,27 @@ export class ServicesService {
           user: true,
           primaryCategory: true,
           primaryZone: true,
+          coverageZones: true,
         },
       });
 
       return rows.map((row) => ({
         id: row.id,
-        fullNameEn: row.user.fullName ?? 'Cairo Specialist',
+        fullNameEn: row.user.fullName ?? 'FIXO technician',
         fullNameAr: row.user.fullName ?? 'فني معتمد',
-        specialtyEn: row.specialtyEn ?? 'Certified Specialist',
+        specialtyEn: row.specialtyEn ?? row.primaryCategory?.nameEn ?? '',
         specialtyAr: row.specialtyAr ?? 'فني معتمد',
-        primaryCategorySlug: row.primaryCategory?.slug ?? 'ac-maintenance',
-        primaryZoneSlug: row.primaryZone?.slug ?? 'sheikh-zayed',
-        zonesLabelEn: row.zonesLabelEn ?? 'Cairo & Giza',
-        zonesLabelAr: row.zonesLabelAr ?? 'القاهرة والجيزة',
-        ratingAvg: row.ratingAvg,
+        primaryCategorySlug: row.primaryCategory?.slug ?? '',
+        primaryCategoryId:
+          row.primaryCategoryId ?? row.primaryCategory?.id ?? '',
+        primaryZoneSlug: row.primaryZone?.slug ?? '',
+        coverage: [
+          ...(row.coverageZones ?? []),
+          ...(row.primaryZone ? [row.primaryZone] : []),
+        ],
+        zonesLabelEn: row.zonesLabelEn ?? row.primaryZone?.nameEn ?? '',
+        zonesLabelAr: row.zonesLabelAr ?? row.primaryZone?.nameAr ?? '',
+        ratingAvg: row.reviewsCount > 0 ? row.ratingAvg : 0,
         reviewsCount: row.reviewsCount,
         completedJobsCount: row.completedJobsCount,
         acceptanceRatePct: row.acceptanceRatePct,
@@ -343,7 +365,9 @@ export class ServicesService {
 
     const demoPros = this.memoryStore
       .getProfessionals()
-      .filter((pro) => pro.verificationStatus === ProVerificationStatus.APPROVED);
+      .filter(
+        (pro) => pro.verificationStatus === ProVerificationStatus.APPROVED,
+      );
 
     return demoPros.map((pro) => ({
       id: pro.id,
@@ -352,7 +376,14 @@ export class ServicesService {
       specialtyEn: pro.specialtyEn,
       specialtyAr: pro.specialtyAr,
       primaryCategorySlug: pro.primaryCategorySlug,
+      primaryCategoryId:
+        this.memoryStore
+          .getCategories()
+          .find((c) => c.slug === pro.primaryCategorySlug)?.id ?? '',
       primaryZoneSlug: pro.primaryZoneSlug,
+      coverage: this.memoryStore
+        .getZones()
+        .filter((z) => z.slug === pro.primaryZoneSlug),
       zonesLabelEn: pro.zonesLabelEn,
       zonesLabelAr: pro.zonesLabelAr,
       ratingAvg: pro.ratingAvg,

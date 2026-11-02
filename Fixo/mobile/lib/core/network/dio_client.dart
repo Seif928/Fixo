@@ -45,6 +45,25 @@ final dioClientProvider = Provider<Dio>((ref) {
       onRequest: (options, handler) async {
         final tokens = await tokenStorage.readTokens();
         final requestOwner = options.extra['fixo_session_user'];
+        final activeOwner = ref.read(activeSessionOwnerProvider);
+        final authBootstrap =
+            options.path.startsWith('/auth/') &&
+            options.path != '/auth/first-profile';
+        if (!authBootstrap &&
+            ((requestOwner != null && requestOwner != activeOwner) ||
+                tokens?.userId != activeOwner)) {
+          if (requestOwner == null && activeOwner != null) {
+            ref.read(sessionExpiredProvider.notifier).state++;
+          }
+          handler.reject(
+            DioException(
+              requestOptions: options,
+              type: DioExceptionType.cancel,
+              message: 'The account session changed. Please sign in again.',
+            ),
+          );
+          return;
+        }
         if (options.extra['fixo_refresh_retry'] == true &&
             requestOwner != tokens?.userId) {
           handler.reject(
@@ -62,6 +81,26 @@ final dioClientProvider = Provider<Dio>((ref) {
           options.extra['fixo_session_user'] = tokens.userId;
         }
         handler.next(options);
+      },
+      onResponse: (response, handler) {
+        final request = response.requestOptions;
+        final owner = request.extra['fixo_session_user'];
+        final authBootstrap =
+            request.path.startsWith('/auth/') &&
+            request.path != '/auth/first-profile';
+        if (!authBootstrap &&
+            owner != null &&
+            owner != ref.read(activeSessionOwnerProvider)) {
+          handler.reject(
+            DioException(
+              requestOptions: request,
+              type: DioExceptionType.cancel,
+              message: 'The account changed before this response completed.',
+            ),
+          );
+          return;
+        }
+        handler.next(response);
       },
     ),
   );

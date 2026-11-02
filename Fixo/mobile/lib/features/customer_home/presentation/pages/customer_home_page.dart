@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../../../app/router/app_routes.dart';
 import '../../../../app/router/customer_tab_navigation.dart';
 import '../../../../core/l10n/app_locale_controller.dart';
+import '../../../../core/location/service_area_picker.dart';
 import '../../../../core/theme/fixo_colors.dart';
 import '../../../../core/theme/fixo_spacing.dart';
 import '../../../../core/theme/fixo_typography.dart';
@@ -14,6 +15,7 @@ import '../../../../core/widgets/fixo_cards.dart';
 import '../../../auth/presentation/controllers/auth_controller.dart';
 import '../../../chat/presentation/notification_sheet.dart';
 import '../../domain/marketplace_models.dart';
+import '../../data/marketplace_repository.dart';
 import '../controllers/customer_home_controller.dart';
 import '../widgets/customer_home_widgets.dart';
 
@@ -28,6 +30,21 @@ class CustomerHomePage extends ConsumerStatefulWidget {
 
 class _CustomerHomePageState extends ConsumerState<CustomerHomePage> {
   late final TextEditingController _searchController;
+
+  Future<void> _chooseArea() async {
+    final userId = ref.read(authControllerProvider).session?.user.id;
+    final area = await showServiceAreaPicker(
+      context,
+      isArabic: ref.read(appLocaleProvider).languageCode == 'ar',
+      initial: ref.read(customerHomeControllerProvider).selectedArea,
+    );
+    if (!mounted ||
+        area == null ||
+        userId != ref.read(authControllerProvider).session?.user.id) {
+      return;
+    }
+    await ref.read(customerHomeControllerProvider.notifier).selectArea(area);
+  }
 
   @override
   void initState() {
@@ -52,6 +69,116 @@ class _CustomerHomePageState extends ConsumerState<CustomerHomePage> {
         'preferredPro': ?preferredPro,
       },
     );
+  }
+
+  Future<void> _chooseProfessionalService(
+    ProfessionalCardModel professional,
+  ) async {
+    final owner = ref.read(authControllerProvider).session?.user.id;
+    final repository = ref.read(marketplaceRepositoryProvider);
+    final arabic = ref.read(appLocaleProvider).languageCode == 'ar';
+    Future<CustomerHomeFeed> load() => repository.fetchCustomerHomeFeed(
+      categoryId: professional.primaryCategoryId,
+    );
+    var request = load();
+    final selected = await showModalBottomSheet<ServiceOfferModel>(
+      context: context,
+      showDragHandle: true,
+      isScrollControlled: true,
+      builder: (sheetContext) => StatefulBuilder(
+        builder: (context, setSheetState) {
+          final palette = context.fixoPalette;
+          return SafeArea(
+            child: SizedBox(
+              height: MediaQuery.sizeOf(context).height * .65,
+              child: Padding(
+                padding: const EdgeInsets.all(FixoSpacing.md),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Text(
+                      arabic ? 'اختار الخدمة' : 'Choose a service',
+                      style: FixoTypography.headlineSm(color: palette.inkText),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      professional.localizedName(arabic),
+                      style: FixoTypography.bodyMd(color: palette.mutedText),
+                    ),
+                    const SizedBox(height: 12),
+                    Expanded(
+                      child: FutureBuilder<CustomerHomeFeed>(
+                        future: request,
+                        builder: (context, snapshot) {
+                          if (snapshot.connectionState !=
+                              ConnectionState.done) {
+                            return const Center(
+                              child: CircularProgressIndicator(),
+                            );
+                          }
+                          if (snapshot.hasError) {
+                            return Center(
+                              child: FixoSecondaryButton(
+                                label: arabic
+                                    ? 'تعذر تحميل الخدمات، أعد المحاولة'
+                                    : 'Could not load services. Retry',
+                                onPressed: () =>
+                                    setSheetState(() => request = load()),
+                              ),
+                            );
+                          }
+                          final services = snapshot.data!.services
+                              .where(
+                                (service) =>
+                                    service.categoryId ==
+                                    professional.primaryCategoryId,
+                              )
+                              .toList();
+                          if (services.isEmpty) {
+                            return Center(
+                              child: Text(
+                                arabic
+                                    ? 'لا توجد خدمات متاحة للفني حالياً'
+                                    : 'No services available for this professional yet.',
+                              ),
+                            );
+                          }
+                          return ListView.separated(
+                            itemCount: services.length,
+                            separatorBuilder: (_, _) => const Divider(),
+                            itemBuilder: (context, index) {
+                              final service = services[index];
+                              return ListTile(
+                                key: Key('pro-service-${service.id}'),
+                                title: Text(service.localizedTitle(arabic)),
+                                subtitle: Text(
+                                  '${service.flatPriceEgp} ${arabic ? 'ج.م' : 'EGP'}',
+                                ),
+                                trailing: const Icon(
+                                  Icons.chevron_right_rounded,
+                                ),
+                                onTap: () =>
+                                    Navigator.of(sheetContext).pop(service),
+                              );
+                            },
+                          );
+                        },
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          );
+        },
+      ),
+    );
+    if (!mounted ||
+        selected == null ||
+        owner != ref.read(authControllerProvider).session?.user.id) {
+      return;
+    }
+    _navigateToCreateBooking(offering: selected, preferredPro: professional);
   }
 
   @override
@@ -172,7 +299,7 @@ class _CustomerHomePageState extends ConsumerState<CustomerHomePage> {
         children: [
           Flexible(
             child: InkWell(
-              onTap: homeNotifier.cycleOrSelectZone,
+              onTap: _chooseArea,
               borderRadius: FixoRadius.borderRadiusSm,
               child: Row(
                 mainAxisSize: MainAxisSize.min,
@@ -195,7 +322,17 @@ class _CustomerHomePageState extends ConsumerState<CustomerHomePage> {
                             const SizedBox(width: 2),
                             Flexible(
                               child: Text(
-                                isArabic ? 'القاهرة / الجيزة' : 'Cairo / Giza',
+                                homeState.selectedArea == null
+                                    ? (isArabic
+                                          ? 'اختار مكانك'
+                                          : 'Choose your area')
+                                    : (isArabic
+                                          ? homeState
+                                                .selectedArea!
+                                                .governorateAr
+                                          : homeState
+                                                .selectedArea!
+                                                .governorateEn),
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
                                 style: FixoTypography.labelMd(
@@ -275,8 +412,6 @@ class _CustomerHomePageState extends ConsumerState<CustomerHomePage> {
     required bool isArabic,
     required FixoPaletteExtension palette,
   }) {
-    final activeZone = homeState.activeZone;
-
     return Padding(
       padding: const EdgeInsets.fromLTRB(FixoSpacing.md, 12, FixoSpacing.md, 8),
       child: Column(
@@ -291,7 +426,7 @@ class _CustomerHomePageState extends ConsumerState<CustomerHomePage> {
                   borderRadius: FixoRadius.borderRadiusPill,
                   child: InkWell(
                     key: const Key('location-picker-btn'),
-                    onTap: homeNotifier.cycleOrSelectZone,
+                    onTap: _chooseArea,
                     borderRadius: FixoRadius.borderRadiusPill,
                     child: Padding(
                       padding: const EdgeInsets.symmetric(
@@ -309,7 +444,10 @@ class _CustomerHomePageState extends ConsumerState<CustomerHomePage> {
                           const SizedBox(width: 6),
                           Flexible(
                             child: Text(
-                              activeZone.localizedName(isArabic),
+                              homeState.selectedArea?.label(isArabic) ??
+                                  (isArabic
+                                      ? 'اختار مكانك'
+                                      : 'Choose your area'),
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
                               style: FixoTypography.labelMd(
@@ -725,9 +863,8 @@ class _CustomerHomePageState extends ConsumerState<CustomerHomePage> {
                   RecommendedProCard(
                     professional: professionals[i],
                     isArabic: isArabic,
-                    onBookSlot: () => _navigateToCreateBooking(
-                      preferredPro: professionals[i],
-                    ),
+                    onBookSlot: () =>
+                        _chooseProfessionalService(professionals[i]),
                   ),
                 ],
               ],

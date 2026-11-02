@@ -59,7 +59,13 @@ describe('Pro Workflows PostgreSQL Real Database Integration Suite (fixo_test)',
   const privateObjects = new Map<string, Buffer>();
 
   beforeAll(async () => {
-    VALID_PNG_BASE64 = (await sharp({ create: { width: 32, height: 32, channels: 3, background: '#173f35' } }).png().toBuffer()).toString('base64');
+    VALID_PNG_BASE64 = (
+      await sharp({
+        create: { width: 32, height: 32, channels: 3, background: '#173f35' },
+      })
+        .png()
+        .toBuffer()
+    ).toString('base64');
     validateTestDatabaseTarget(process.env.TEST_DATABASE_URL);
     testDbUrl = process.env.TEST_DATABASE_URL!;
 
@@ -70,11 +76,19 @@ describe('Pro Workflows PostgreSQL Real Database Integration Suite (fixo_test)',
 
     moduleRef = await Test.createTestingModule({
       imports: [PrismaModule, AuthModule, BookingsModule, ProModule],
-    }).overrideProvider(PrivateStorageService).useValue({
-      put: async (key: string, bytes: Buffer) => { privateObjects.set(key, bytes); return key; },
-      get: async (key: string) => privateObjects.get(key),
-      remove: async (key: string) => { privateObjects.delete(key); },
-    }).compile();
+    })
+      .overrideProvider(PrivateStorageService)
+      .useValue({
+        put: async (key: string, bytes: Buffer) => {
+          privateObjects.set(key, bytes);
+          return key;
+        },
+        get: async (key: string) => privateObjects.get(key),
+        remove: async (key: string) => {
+          privateObjects.delete(key);
+        },
+      })
+      .compile();
 
     await moduleRef.init();
 
@@ -148,7 +162,9 @@ describe('Pro Workflows PostgreSQL Real Database Integration Suite (fixo_test)',
 
   afterAll(async () => {
     if (prisma && prisma.isDatabaseConnected()) {
-      await safeCleanupBookingTestTables(prisma, { testDatabaseUrl: testDbUrl });
+      await safeCleanupBookingTestTables(prisma, {
+        testDatabaseUrl: testDbUrl,
+      });
     }
     if (moduleRef) {
       await moduleRef.close();
@@ -260,10 +276,16 @@ describe('Pro Workflows PostgreSQL Real Database Integration Suite (fixo_test)',
         uploadedDocId,
         false,
       );
-      expect(ownerAccess.downloadPath).toBe(`/api/v1/pro/onboarding/documents/${uploadedDocId}/content`);
+      expect(ownerAccess.downloadPath).toBe(
+        `/api/v1/pro/onboarding/documents/${uploadedDocId}/content`,
+      );
       expect(JSON.stringify(ownerAccess)).not.toContain('base64');
-      const stored = await prisma.proVerificationDocument.findUniqueOrThrow({ where: { id: uploadedDocId } });
-      expect(stored.storageKey).toMatch(/^obj::[a-f0-9]+::image\/webp::documents\//);
+      const stored = await prisma.proVerificationDocument.findUniqueOrThrow({
+        where: { id: uploadedDocId },
+      });
+      expect(stored.storageKey).toMatch(
+        /^obj::[a-f0-9]+::image\/webp::documents\//,
+      );
       expect(privateObjects.size).toBe(3);
 
       // Submit for review -> transitions DRAFT -> PENDING_REVIEW
@@ -304,7 +326,9 @@ describe('Pro Workflows PostgreSQL Real Database Integration Suite (fixo_test)',
 
       expect(approved.verificationStatus).toBe(ProVerificationStatus.APPROVED);
       expect(
-        approved.documents.every((d: any) => d.status === DocumentStatus.VERIFIED),
+        approved.documents.every(
+          (d: any) => d.status === DocumentStatus.VERIFIED,
+        ),
       ).toBe(true);
 
       // Verify user role was promoted to PRO in PostgreSQL
@@ -442,7 +466,9 @@ describe('Pro Workflows PostgreSQL Real Database Integration Suite (fixo_test)',
           toStatus: 'IN_PROGRESS',
           arrivalPinCode: wrongPin,
         }),
-      ).rejects.toThrow(/Invalid 4-digit Arrival PIN code\. 4 attempt\(s\) remaining/);
+      ).rejects.toThrow(
+        /Invalid 4-digit Arrival PIN code\. 4 attempt\(s\) remaining/,
+      );
 
       // 4. Correct customer Arrival PIN transitions ARRIVED -> IN_PROGRESS
       const inProgress = await proService.advanceBookingStatus(
@@ -464,12 +490,18 @@ describe('Pro Workflows PostgreSQL Real Database Integration Suite (fixo_test)',
         ),
       );
       const completed = completions[0];
-      expect(completions.every((result) => result.status === BookingStatus.COMPLETED)).toBe(true);
+      expect(
+        completions.every(
+          (result) => result.status === BookingStatus.COMPLETED,
+        ),
+      ).toBe(true);
       expect(completed.status).toBe(BookingStatus.COMPLETED);
       expect(completed.completedAt).not.toBeNull();
-      expect(await prisma.bookingStatusEvent.count({
-        where: { bookingId, toStatus: BookingStatus.COMPLETED },
-      })).toBe(1);
+      expect(
+        await prisma.bookingStatusEvent.count({
+          where: { bookingId, toStatus: BookingStatus.COMPLETED },
+        }),
+      ).toBe(1);
 
       const dbPayment = await prisma.paymentRecord.findUnique({
         where: { bookingId },
@@ -518,10 +550,18 @@ describe('Pro Workflows PostgreSQL Real Database Integration Suite (fixo_test)',
           }),
         ),
       );
-      expect(attempts.every((attempt) => attempt.status === 'rejected')).toBe(true);
-      expect(await prisma.bookingStatusEvent.count({
-        where: { bookingId: bk.id, fromStatus: BookingStatus.ARRIVED, toStatus: BookingStatus.ARRIVED },
-      })).toBe(5);
+      expect(attempts.every((attempt) => attempt.status === 'rejected')).toBe(
+        true,
+      );
+      expect(
+        await prisma.bookingStatusEvent.count({
+          where: {
+            bookingId: bk.id,
+            fromStatus: BookingStatus.ARRIVED,
+            toStatus: BookingStatus.ARRIVED,
+          },
+        }),
+      ).toBe(5);
 
       // 6th attempt even with the CORRECT PIN must be blocked with ForbiddenException
       await expect(
@@ -531,5 +571,391 @@ describe('Pro Workflows PostgreSQL Real Database Integration Suite (fixo_test)',
         }),
       ).rejects.toThrow(ForbiddenException);
     });
+  });
+
+  describe('Approval revocation at the final decision', () => {
+    it('includes an eligible preferred professional before applying the five-offer limit', async () => {
+      const suffix = Date.now().toString();
+      const users: string[] = [];
+      try {
+        for (let index = 0; index < 6; index++) {
+          const user = await prisma.user.create({
+            data: { fullName: 'Local preferred-pro fixture' },
+          });
+          users.push(user.id);
+          await prisma.proProfile.create({
+            data: {
+              id: `z-pref-${suffix}-${index}`,
+              userId: user.id,
+              dossierCode: `TEST-PREF-${suffix}-${index}`,
+              nationalIdSynthetic: '90000000000000',
+              primaryCategoryId: categoryAc.id,
+              primaryZoneId: zoneCairo.id,
+              verificationStatus: ProVerificationStatus.APPROVED,
+              isOnline: true,
+            },
+          });
+          expect(
+            (
+              await prisma.proProfile.findUniqueOrThrow({
+                where: { userId: user.id },
+              })
+            ).ratingAvg,
+          ).toBe(0);
+        }
+        const preferred = `z-pref-${suffix}-5`;
+        const draft = await bookingsService.createBooking(customerUser.id, {
+          offeringId: offeringAc.id,
+          addressId: customerAddress.id,
+          preferredProId: preferred,
+          scheduledDate: new Date(Date.now() + 86400000)
+            .toISOString()
+            .slice(0, 10),
+          timeWindow: TimeWindow.MORNING_09_12,
+        });
+        await bookingsService.checkoutBooking(customerUser.id, draft.id, {
+          paymentMethod: PaymentMethodType.CASH_ON_SERVICE,
+        });
+        const offers = await prisma.jobOffer.findMany({
+          where: { bookingId: draft.id },
+        });
+        expect(offers).toHaveLength(5);
+        expect(offers.some((offer) => offer.proProfileId === preferred)).toBe(
+          true,
+        );
+      } finally {
+        await prisma.user.deleteMany({ where: { id: { in: users } } });
+      }
+    });
+    it('database rejects duplicate pending invitations while preserving offer history', async () => {
+      const profile = await prisma.proProfile.findUniqueOrThrow({
+        where: { userId: proCompetingUser.id },
+      });
+      const draft = await bookingsService.createBooking(customerUser.id, {
+        offeringId: offeringAc.id,
+        addressId: customerAddress.id,
+        scheduledDate: new Date(Date.now() + 86400000)
+          .toISOString()
+          .slice(0, 10),
+        timeWindow: TimeWindow.MORNING_09_12,
+      });
+      const data = {
+        bookingId: draft.id,
+        proProfileId: profile.id,
+        expiresAt: new Date(Date.now() + 300000),
+        status: JobOfferStatus.PENDING,
+      };
+      const original = await prisma.jobOffer.create({ data });
+      await expect(prisma.jobOffer.create({ data })).rejects.toMatchObject({
+        code: 'P2002',
+      });
+      await prisma.jobOffer.update({
+        where: { id: original.id },
+        data: { status: JobOfferStatus.EXPIRED },
+      });
+      await prisma.jobOffer.create({ data });
+      expect(
+        await prisma.jobOffer.count({ where: { bookingId: draft.id } }),
+      ).toBe(2);
+    });
+    it('counts every completion in the period even when there are more than fifty', async () => {
+      const profile = await prisma.proProfile.findUniqueOrThrow({
+        where: { userId: proCompetingUser.id },
+      });
+      const before = await proService.getDashboard(proCompetingUser.id);
+      const now = new Date();
+      const created = await prisma.booking.createMany({
+        data: Array.from({ length: 60 }, (_, i) => ({
+          orderCode: `EARN-${now.getTime()}-${i}`,
+          customerId: customerUser.id,
+          proProfileId: profile.id,
+          offeringId: offeringAc.id,
+          addressId: customerAddress.id,
+          status: BookingStatus.COMPLETED,
+          scheduledDate: now,
+          timeWindow: TimeWindow.MORNING_09_12,
+          completedAt: now,
+          arrivalPinCode: '1234',
+          baseInspectionEgp: 100,
+          serviceFeeEgp: 0,
+          transportFeeEgp: 0,
+          totalEgp: 100,
+          platformFeeEgp: 10,
+          netArtisanEgp: 90,
+        })),
+      });
+      expect(created.count).toBe(60);
+      try {
+        const after = await proService.getDashboard(proCompetingUser.id);
+        expect(
+          after.earningsSummary.todayCompletedCount -
+            before.earningsSummary.todayCompletedCount,
+        ).toBe(60);
+        expect(
+          after.earningsSummary.weeklyNetEarningsEgp -
+            before.earningsSummary.weeklyNetEarningsEgp,
+        ).toBe(5400);
+        expect(after.recentCompletedJobs).toHaveLength(10);
+      } finally {
+        await prisma.booking.deleteMany({
+          where: { orderCode: { startsWith: `EARN-${now.getTime()}-` } },
+        });
+      }
+    });
+    it('does not decline a job accepted after a stale offer read', async () => {
+      const profile = await prisma.proProfile.findUniqueOrThrow({
+        where: { userId: proCompetingUser.id },
+      });
+      const draft = await bookingsService.createBooking(customerUser.id, {
+        offeringId: offeringAc.id,
+        addressId: customerAddress.id,
+        scheduledDate: new Date(Date.now() + 86400000)
+          .toISOString()
+          .slice(0, 10),
+        timeWindow: TimeWindow.MORNING_09_12,
+      });
+      const offer = await prisma.jobOffer.create({
+        data: {
+          bookingId: draft.id,
+          proProfileId: profile.id,
+          status: JobOfferStatus.PENDING,
+          expiresAt: new Date(Date.now() + 300000),
+        },
+      });
+      const spy = jest
+        .spyOn(prisma.jobOffer as any, 'findUnique')
+        .mockImplementationOnce(async () => {
+          await prisma.jobOffer.update({
+            where: { id: offer.id },
+            data: { status: JobOfferStatus.ACCEPTED, respondedAt: new Date() },
+          });
+          return offer;
+        });
+      try {
+        await expect(
+          proService.declineJobOffer(proCompetingUser.id, offer.id, {}),
+        ).rejects.toThrow();
+        expect(
+          (await prisma.jobOffer.findUniqueOrThrow({ where: { id: offer.id } }))
+            .status,
+        ).toBe(JobOfferStatus.ACCEPTED);
+      } finally {
+        spy.mockRestore();
+      }
+    });
+    it('dispatches governorate coverage to a child district without broadening district-only pros', async () => {
+      const profile = await prisma.proProfile.findUniqueOrThrow({
+        where: { userId: proCompetingUser.id },
+      });
+      const governorate = await prisma.coverageZone.findUniqueOrThrow({
+        where: { slug: 'cairo' },
+      });
+      const maadi = await prisma.coverageZone.findUniqueOrThrow({
+        where: { slug: 'maadi' },
+      });
+      await prisma.proProfile.update({
+        where: { id: profile.id },
+        data: {
+          isOnline: true,
+          coverageZones: { connect: { id: governorate.id } },
+        },
+      });
+      try {
+        const address = await prisma.customerAddress.create({
+          data: {
+            userId: customerUser.id,
+            zoneId: maadi.id,
+            label: 'Test',
+            buildingLine: 'Test building',
+            districtLine: 'Maadi',
+          },
+        });
+        const draft = await bookingsService.createBooking(customerUser.id, {
+          offeringId: offeringAc.id,
+          addressId: address.id,
+          scheduledDate: new Date(Date.now() + 86400000)
+            .toISOString()
+            .slice(0, 10),
+          timeWindow: TimeWindow.MORNING_09_12,
+        });
+        await bookingsService.checkoutBooking(customerUser.id, draft.id, {
+          paymentMethod: PaymentMethodType.CASH_ON_SERVICE,
+        });
+        const offers = await prisma.jobOffer.findMany({
+          where: { bookingId: draft.id },
+        });
+        expect(offers.map((o) => o.proProfileId)).toEqual([profile.id]);
+      } finally {
+        await prisma.proProfile.update({
+          where: { id: profile.id },
+          data: { coverageZones: { disconnect: { id: governorate.id } } },
+        });
+      }
+    });
+    it('keeps a decided offer when a stale detail response tries to expire it', async () => {
+      const profile = await prisma.proProfile.findUniqueOrThrow({
+        where: { userId: proCompetingUser.id },
+      });
+      const draft = await bookingsService.createBooking(customerUser.id, {
+        offeringId: offeringAc.id,
+        addressId: customerAddress.id,
+        scheduledDate: new Date(Date.now() + 86400000)
+          .toISOString()
+          .slice(0, 10),
+        timeWindow: TimeWindow.MORNING_09_12,
+      });
+      const offer = await prisma.jobOffer.create({
+        data: {
+          bookingId: draft.id,
+          proProfileId: profile.id,
+          expiresAt: new Date(Date.now() - 1000),
+          status: JobOfferStatus.PENDING,
+        },
+      });
+      const stale = await prisma.jobOffer.findUniqueOrThrow({
+        where: { id: offer.id },
+        include: {
+          booking: {
+            include: {
+              offering: { include: { category: true } },
+              address: { include: { zone: true } },
+              customer: true,
+            },
+          },
+        },
+      });
+      const spy = jest
+        .spyOn(prisma.jobOffer as any, 'findUnique')
+        .mockImplementationOnce(async () => {
+          await prisma.$transaction([
+            prisma.booking.update({
+              where: { id: draft.id },
+              data: {
+                status: BookingStatus.CONFIRMED,
+                proProfileId: profile.id,
+              },
+            }),
+            prisma.jobOffer.update({
+              where: { id: offer.id },
+              data: {
+                status: JobOfferStatus.ACCEPTED,
+                respondedAt: new Date(),
+              },
+            }),
+          ]);
+          return stale;
+        });
+      try {
+        const result = await proService.getJobOfferById(
+          proCompetingUser.id,
+          offer.id,
+        );
+        expect(result.status).toBe(JobOfferStatus.ACCEPTED);
+        expect(
+          (await prisma.jobOffer.findUniqueOrThrow({ where: { id: offer.id } }))
+            .status,
+        ).toBe(JobOfferStatus.ACCEPTED);
+      } finally {
+        spy.mockRestore();
+      }
+    });
+
+    it('creates one offer per technician under concurrent checkout and dashboard polls', async () => {
+      await prisma.proProfile.update({
+        where: { userId: proCompetingUser.id },
+        data: { verificationStatus: 'APPROVED', isOnline: true },
+      });
+      const draft = await bookingsService.createBooking(customerUser.id, {
+        offeringId: offeringAc.id,
+        addressId: customerAddress.id,
+        scheduledDate: new Date(Date.now() + 86400000)
+          .toISOString()
+          .slice(0, 10),
+        timeWindow: TimeWindow.MORNING_09_12,
+      });
+      await Promise.all(
+        Array.from({ length: 6 }, () =>
+          bookingsService.checkoutBooking(customerUser.id, draft.id, {
+            paymentMethod: PaymentMethodType.CASH_ON_SERVICE,
+          }),
+        ),
+      );
+      await Promise.all(
+        Array.from({ length: 6 }, () =>
+          proService.getDashboard(proCompetingUser.id),
+        ),
+      );
+      const pairs = await prisma.jobOffer.groupBy({
+        by: ['bookingId', 'proProfileId'],
+        where: { bookingId: draft.id },
+        _count: { id: true },
+      });
+      expect(pairs.length).toBeGreaterThan(0);
+      expect(pairs.every((pair) => pair._count.id === 1)).toBe(true);
+    });
+    for (const action of ['online', 'accept'] as const) {
+      it(`rejects ${action} when approval changes after the initial profile read`, async () => {
+        const profile = await prisma.proProfile.findUniqueOrThrow({
+          where: { userId: proCompetingUser.id },
+        });
+        await prisma.proProfile.update({
+          where: { id: profile.id },
+          data: { verificationStatus: 'APPROVED', isOnline: true },
+        });
+        let offerId = 'unused';
+        if (action === 'accept') {
+          const draft = await bookingsService.createBooking(customerUser.id, {
+            offeringId: offeringAc.id,
+            addressId: customerAddress.id,
+            scheduledDate: new Date(Date.now() + 86400000)
+              .toISOString()
+              .slice(0, 10),
+            timeWindow: TimeWindow.MORNING_09_12,
+          });
+          await bookingsService.checkoutBooking(customerUser.id, draft.id, {
+            paymentMethod: PaymentMethodType.CASH_ON_SERVICE,
+          });
+          offerId = (
+            await prisma.jobOffer.findFirstOrThrow({
+              where: { bookingId: draft.id, proProfileId: profile.id },
+            })
+          ).id;
+        }
+        const stale = await prisma.proProfile.findUniqueOrThrow({
+          where: { id: profile.id },
+        });
+        const spy = jest
+          .spyOn(prisma.proProfile as any, 'findUnique')
+          .mockImplementationOnce(async () => {
+            await prisma.proProfile.update({
+              where: { id: profile.id },
+              data: { verificationStatus: 'SUSPENDED', isOnline: false },
+            });
+            return stale;
+          });
+        try {
+          await expect(
+            action === 'online'
+              ? proService.updateAvailability(proCompetingUser.id, {
+                  isOnline: true,
+                })
+              : proService.acceptJobOffer(proCompetingUser.id, offerId),
+          ).rejects.toThrow(ForbiddenException);
+          expect(
+            (
+              await prisma.proProfile.findUniqueOrThrow({
+                where: { id: profile.id },
+              })
+            ).isOnline,
+          ).toBe(false);
+        } finally {
+          spy.mockRestore();
+          await prisma.proProfile.update({
+            where: { id: profile.id },
+            data: { verificationStatus: 'APPROVED', isOnline: false },
+          });
+        }
+      });
+    }
   });
 });

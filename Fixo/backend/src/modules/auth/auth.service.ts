@@ -27,8 +27,13 @@ import {
   RequestOtpDto,
   VerifyOtpDto,
 } from './dto/auth.dto';
-import { SMS_PROVIDER, SmsProvider, SupportedSmsProvider } from './sms/sms.provider';
+import {
+  SMS_PROVIDER,
+  SmsProvider,
+  SupportedSmsProvider,
+} from './sms/sms.provider';
 import { normalizeEgyptPhone } from './utils/egypt-phone.util';
+import { FirebaseSessionPolicy } from './firebase-session-policy.service';
 import {
   FixoJwtPayload,
   hashOtpHmacSha256,
@@ -88,6 +93,7 @@ export class AuthService implements OnModuleInit {
     private readonly prisma: PrismaService,
     private readonly memoryStore: InMemoryStoreService,
     @Inject(SMS_PROVIDER) private readonly smsProvider: SmsProvider,
+    private readonly providerSessions: FirebaseSessionPolicy = new FirebaseSessionPolicy(),
   ) {}
 
   onModuleInit(): void {
@@ -128,10 +134,7 @@ export class AuthService implements OnModuleInit {
 
   private generateOtpCode(): string {
     // Permit deterministic demo OTP when explicitly enabled in non-production environments
-    if (
-      this.config?.allowTestFixedOtp &&
-      !this.config.isProduction
-    ) {
+    if (this.config?.allowTestFixedOtp && !this.config.isProduction) {
       return process.env.FIXO_DEV_OTP_CODE ?? '482910';
     }
     // Cryptographically secure random 6-digit integer in range [100000, 999999]
@@ -139,8 +142,14 @@ export class AuthService implements OnModuleInit {
   }
 
   async requestOtp(dto: RequestOtpDto): Promise<OtpRequestResponse> {
-    if ((this.config ?? validateAuthSecurityConfig()).smsProviderType === 'DISABLED') {
-      throw new HttpException('Phone sign-in is unavailable. Use verified email sign-in.', HttpStatus.SERVICE_UNAVAILABLE);
+    if (
+      (this.config ?? validateAuthSecurityConfig()).smsProviderType ===
+      'DISABLED'
+    ) {
+      throw new HttpException(
+        'Phone sign-in is unavailable. Use verified email sign-in.',
+        HttpStatus.SERVICE_UNAVAILABLE,
+      );
     }
     const phone = normalizeEgyptPhone(dto.phone);
     const otpCode = this.generateOtpCode();
@@ -176,7 +185,9 @@ export class AuthService implements OnModuleInit {
           }
 
           // 2. Check distributed rate limit (5 requests / 15 minutes)
-          const windowStart = new Date(Date.now() - AuthService.RATE_LIMIT_WINDOW_MS);
+          const windowStart = new Date(
+            Date.now() - AuthService.RATE_LIMIT_WINDOW_MS,
+          );
           const recentCount = await tx.otpChallenge.count({
             where: { phone, createdAt: { gte: windowStart } },
           });
@@ -395,8 +406,32 @@ export class AuthService implements OnModuleInit {
 
     const oldTokenHash = hashTokenSha256(dto.refreshToken);
 
+    if (this.prisma.isDatabaseConnected()) {
+      const identity = await this.prisma.user.findUnique({
+        where: { id: user.id },
+        select: { firebaseUid: true },
+      });
+      if (identity?.firebaseUid) {
+        if (
+          !Number.isSafeInteger(payload.firebaseAuthTime) ||
+          !payload.firebaseAuthTime
+        ) {
+          throw new UnauthorizedException(
+            'Sign in again to renew your account session.',
+          );
+        }
+        await this.providerSessions.assertValid(
+          identity.firebaseUid,
+          payload.firebaseAuthTime,
+        );
+      }
+    }
+
     // Pre-generate replacement bundle
-    const { accessToken, refreshToken } = this.generateTokenStrings(user);
+    const { accessToken, refreshToken } = this.generateTokenStrings(
+      user,
+      payload.firebaseAuthTime,
+    );
     const newTokenHash = hashTokenSha256(refreshToken);
     const refreshExpiresAt = new Date(
       Date.now() + AuthService.REFRESH_TOKEN_TTL_SECONDS * 1000,
@@ -544,7 +579,10 @@ export class AuthService implements OnModuleInit {
     return payload;
   }
 
-  private generateTokenStrings(user: AuthenticatedUserProfile): {
+  private generateTokenStrings(
+    user: AuthenticatedUserProfile,
+    firebaseAuthTime?: number,
+  ): {
     accessToken: string;
     refreshToken: string;
   } {
@@ -565,6 +603,7 @@ export class AuthService implements OnModuleInit {
         phone: user.phone,
         role: user.role,
         type: 'refresh',
+        ...(firebaseAuthTime ? { firebaseAuthTime } : {}),
       },
       this.refreshSecret,
       AuthService.REFRESH_TOKEN_TTL_SECONDS,
@@ -575,8 +614,12 @@ export class AuthService implements OnModuleInit {
 
   private async issueTokenBundle(
     user: AuthenticatedUserProfile,
+    firebaseAuthTime?: number,
   ): Promise<AuthTokensResponse> {
-    const { accessToken, refreshToken } = this.generateTokenStrings(user);
+    const { accessToken, refreshToken } = this.generateTokenStrings(
+      user,
+      firebaseAuthTime,
+    );
     const refreshTokenHash = hashTokenSha256(refreshToken);
     const refreshExpiresAt = new Date(
       Date.now() + AuthService.REFRESH_TOKEN_TTL_SECONDS * 1000,
@@ -597,10 +640,13 @@ export class AuthService implements OnModuleInit {
     };
   }
 
-  async issueVerifiedUserSession(userId: string): Promise<AuthTokensResponse> {
+  async issueVerifiedUserSession(
+    userId: string,
+    firebaseAuthTime?: number,
+  ): Promise<AuthTokensResponse> {
     const user = await this.findUserById(userId);
     if (!user) throw new UnauthorizedException('Account not found.');
-    return this.issueTokenBundle(user);
+    return this.issueTokenBundle(user, firebaseAuthTime);
   }
 
   private async getLatestChallengeForPhone(
@@ -735,9 +781,17 @@ export class AuthService implements OnModuleInit {
       }
       return {
         id: user.id,
-        requiresProfileSetup: Boolean(user.firebaseUid && (!user.phone || !user.fullName?.trim())),
+        requiresProfileSetup: Boolean(
+          user.firebaseUid && (!user.phone || !user.fullName?.trim()),
+        ),
         ...(user.avatarUrl?.startsWith(`avatars/${user.id}/`)
-          ? { hasAvatar: true, avatarVersion: user.avatarUrl.split('/').pop()!.replace('.webp', '') }
+          ? {
+              hasAvatar: true,
+              avatarVersion: user.avatarUrl
+                .split('/')
+                .pop()!
+                .replace('.webp', ''),
+            }
           : {}),
         phone: user.phone ?? '',
         fullName: user.fullName,

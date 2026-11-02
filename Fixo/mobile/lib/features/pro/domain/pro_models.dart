@@ -1,5 +1,12 @@
 import '../../customer_home/domain/marketplace_models.dart';
 
+int _requiredEgp(dynamic value) {
+  if (value is! num || !value.isFinite || value < 0 || value != value.toInt()) {
+    throw const FormatException('Professional pricing is unavailable.');
+  }
+  return value.toInt();
+}
+
 /// Available options returned by `GET /api/v1/pro/catalog-options`.
 class ProCatalogOptionsModel {
   const ProCatalogOptionsModel({
@@ -145,7 +152,7 @@ class ProProfileModel {
     this.toolkitCommitmentConfirmed = false,
     this.verificationStatus = 'DRAFT',
     this.isOnline = false,
-    this.ratingAvg = 5.0,
+    this.ratingAvg = 0,
     this.reviewsCount = 0,
     this.completedJobsCount = 0,
     this.specialtyEn,
@@ -211,7 +218,7 @@ class ProProfileModel {
           json['toolkitCommitmentConfirmed'] as bool? ?? false,
       verificationStatus: json['verificationStatus'] as String? ?? 'DRAFT',
       isOnline: json['isOnline'] as bool? ?? false,
-      ratingAvg: (json['ratingAvg'] as num?)?.toDouble() ?? 5.0,
+      ratingAvg: (json['ratingAvg'] as num?)?.toDouble() ?? 0,
       reviewsCount: (json['reviewsCount'] as num?)?.toInt() ?? 0,
       completedJobsCount: (json['completedJobsCount'] as num?)?.toInt() ?? 0,
       specialtyEn: json['specialtyEn'] as String?,
@@ -383,10 +390,7 @@ class ProDashboardDailyEarningsModel {
       dayKey: json['date'] as String? ?? json['dayKey'] as String? ?? '',
       dayLabelEn: json['dayLabelEn'] as String? ?? '',
       dayLabelAr: json['dayLabelAr'] as String? ?? '',
-      netEgp:
-          (json['netEarningsEgp'] as num?)?.toInt() ??
-          (json['netEgp'] as num?)?.toInt() ??
-          0,
+      netEgp: _requiredEgp(json['netEarningsEgp'] ?? json['netEgp']),
     );
   }
 }
@@ -487,18 +491,13 @@ class JobOfferModel {
       timeWindow:
           json['timeWindow'] as String? ??
           (booking['timeWindow'] as String? ?? ''),
-      grossEgp:
-          (json['grossEgp'] as num?)?.toInt() ??
-          (pricing['totalEgp'] as num?)?.toInt() ??
-          0,
-      platformFeeEgp:
-          (json['platformFeeEgp'] as num?)?.toInt() ??
-          (pricing['platformFeeEgp'] as num?)?.toInt() ??
-          0,
-      netArtisanEgp:
-          (json['netArtisanEgp'] as num?)?.toInt() ??
-          (pricing['netArtisanEgp'] as num?)?.toInt() ??
-          0,
+      grossEgp: _requiredEgp(json['grossEgp'] ?? pricing['totalEgp']),
+      platformFeeEgp: _requiredEgp(
+        json['platformFeeEgp'] ?? pricing['platformFeeEgp'],
+      ),
+      netArtisanEgp: _requiredEgp(
+        json['netArtisanEgp'] ?? pricing['netArtisanEgp'],
+      ),
     );
   }
 }
@@ -578,14 +577,10 @@ class ProScheduledJobModel {
           json['zoneNameAr'] as String? ?? zone['nameAr'] as String? ?? '',
       timeWindow: json['timeWindow'] as String? ?? '',
       scheduledDate: json['scheduledDate'] as String? ?? '',
-      totalEgp:
-          (pricing['totalEgp'] as num?)?.toInt() ??
-          (json['totalEgp'] as num?)?.toInt() ??
-          0,
-      netArtisanEgp:
-          (pricing['netArtisanEgp'] as num?)?.toInt() ??
-          (json['netArtisanEgp'] as num?)?.toInt() ??
-          0,
+      totalEgp: _requiredEgp(pricing['totalEgp'] ?? json['totalEgp']),
+      netArtisanEgp: _requiredEgp(
+        pricing['netArtisanEgp'] ?? json['netArtisanEgp'],
+      ),
       hasArrivalPin: json['status'] == 'ARRIVED',
     );
   }
@@ -637,11 +632,11 @@ class ProDashboardModel {
 
     return ProDashboardModel(
       isOnline: profile['isOnline'] as bool? ?? false,
-      todayEarningsEgp: (earnings['todayNetEarningsEgp'] as num?)?.toInt() ?? 0,
-      weekEarningsEgp: (earnings['weeklyNetEarningsEgp'] as num?)?.toInt() ?? 0,
+      todayEarningsEgp: _requiredEgp(earnings['todayNetEarningsEgp']),
+      weekEarningsEgp: _requiredEgp(earnings['weeklyNetEarningsEgp']),
       completedJobsCount:
           (earnings['totalCompletedJobsCount'] as num?)?.toInt() ?? 0,
-      ratingAvg: (earnings['ratingAvg'] as num?)?.toDouble() ?? 5.0,
+      ratingAvg: (earnings['ratingAvg'] as num?)?.toDouble() ?? 0,
       reviewsCount: (earnings['reviewsCount'] as num?)?.toInt() ?? 0,
       dailyTrajectory: daily,
       activeOffers: offers,
