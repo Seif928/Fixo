@@ -8,6 +8,7 @@ import {
 export const SMS_PROVIDER = Symbol('SMS_PROVIDER');
 
 export const SUPPORTED_SMS_PROVIDERS = [
+  'DISABLED',
   'DEV_SANDBOX_SMS',
   'TWILIO',
   'VICTORYLINK',
@@ -103,6 +104,10 @@ export class ProductionTelecomSmsProvider implements SmsProvider {
     _expiresInSeconds: number,
   ): Promise<SmsDispatchResult> {
     const rawProvider = process.env.SMS_PROVIDER_TYPE?.trim();
+
+    if (rawProvider === 'DISABLED') {
+      throw new HttpException('Phone sign-in is unavailable. Use verified email sign-in.', HttpStatus.SERVICE_UNAVAILABLE);
+    }
 
     if (!isSupportedSmsProvider(rawProvider) || rawProvider === 'DEV_SANDBOX_SMS') {
       this.logger.error(

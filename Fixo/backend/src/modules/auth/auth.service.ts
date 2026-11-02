@@ -27,7 +27,7 @@ import {
   RequestOtpDto,
   VerifyOtpDto,
 } from './dto/auth.dto';
-import { SMS_PROVIDER, SmsProvider } from './sms/sms.provider';
+import { SMS_PROVIDER, SmsProvider, SupportedSmsProvider } from './sms/sms.provider';
 import { normalizeEgyptPhone } from './utils/egypt-phone.util';
 import {
   FixoJwtPayload,
@@ -55,7 +55,7 @@ export interface OtpRequestResponse {
   phone: string;
   resendAvailableInSec: number;
   expiresInSec: number;
-  smsProvider: 'DEV_SANDBOX_SMS' | 'TWILIO' | 'VICTORYLINK' | 'VODAFONE_EG';
+  smsProvider: SupportedSmsProvider;
   storageMode: StoragePersistenceMode;
 }
 
@@ -136,6 +136,9 @@ export class AuthService implements OnModuleInit {
   }
 
   async requestOtp(dto: RequestOtpDto): Promise<OtpRequestResponse> {
+    if ((this.config ?? validateAuthSecurityConfig()).smsProviderType === 'DISABLED') {
+      throw new HttpException('Phone sign-in is unavailable. Use verified email sign-in.', HttpStatus.SERVICE_UNAVAILABLE);
+    }
     const phone = normalizeEgyptPhone(dto.phone);
     const otpCode = this.generateOtpCode();
     const codeHash = hashOtpHmacSha256(phone, otpCode, this.otpHmacSecret);
@@ -591,6 +594,12 @@ export class AuthService implements OnModuleInit {
     };
   }
 
+  async issueVerifiedUserSession(userId: string): Promise<AuthTokensResponse> {
+    const user = await this.findUserById(userId);
+    if (!user) throw new UnauthorizedException('Account not found.');
+    return this.issueTokenBundle(user);
+  }
+
   private async getLatestChallengeForPhone(
     phone: string,
   ): Promise<StoredOtpChallenge | null> {
@@ -671,7 +680,7 @@ export class AuthService implements OnModuleInit {
       if (existing) {
         return {
           id: existing.id,
-          phone: existing.phone,
+          phone: existing.phone ?? '',
           fullName: existing.fullName,
           email: existing.email,
           role: existing.role,
@@ -692,7 +701,7 @@ export class AuthService implements OnModuleInit {
       });
       return {
         id: created.id,
-        phone: created.phone,
+        phone: created.phone ?? '',
         fullName: created.fullName,
         email: created.email,
         role: created.role,
@@ -723,7 +732,7 @@ export class AuthService implements OnModuleInit {
       }
       return {
         id: user.id,
-        phone: user.phone,
+        phone: user.phone ?? '',
         fullName: user.fullName,
         email: user.email,
         role: user.role,

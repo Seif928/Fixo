@@ -1,6 +1,8 @@
 import { Module } from '@nestjs/common';
 import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
+import { FirebaseIdentityController } from './firebase-identity.controller';
+import { FirebaseIdentityService, FirebaseTokenVerifier } from './firebase-identity.service';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
 import { RolesGuard } from './guards/roles.guard';
 import {
@@ -10,9 +12,11 @@ import {
 } from './sms/sms.provider';
 
 @Module({
-  controllers: [AuthController],
+  controllers: [AuthController, FirebaseIdentityController],
   providers: [
     AuthService,
+    FirebaseIdentityService,
+    FirebaseTokenVerifier,
     DevSmsProvider,
     ProductionTelecomSmsProvider,
     {
@@ -21,7 +25,7 @@ import {
         devProvider: DevSmsProvider,
         prodProvider: ProductionTelecomSmsProvider,
       ) => {
-        if (process.env.NODE_ENV === 'production') {
+        if (process.env.NODE_ENV === 'production' || process.env.SMS_PROVIDER_TYPE === 'DISABLED') {
           return prodProvider;
         }
         return devProvider;

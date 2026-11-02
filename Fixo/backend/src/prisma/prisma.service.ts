@@ -47,16 +47,22 @@ export class PrismaService
       return;
     }
 
+    const timeoutMs = Number(process.env.DATABASE_CONNECT_TIMEOUT_MS ?? '10000');
+    if (!Number.isInteger(timeoutMs) || timeoutMs < 1000 || timeoutMs > 30000) {
+      throw new Error('DATABASE_CONNECT_TIMEOUT_MS must be an integer between 1000 and 30000.');
+    }
     try {
-      await Promise.race([
-        this.$connect(),
-        new Promise<never>((_, reject) =>
-          setTimeout(
-            () => reject(new Error('PostgreSQL connection timeout (1500ms)')),
-            1500,
-          ),
-        ),
-      ]);
+      let timer: ReturnType<typeof setTimeout> | undefined;
+      try {
+        await Promise.race([
+          this.$connect(),
+          new Promise<never>((_, reject) => {
+            timer = setTimeout(() => reject(new Error(`PostgreSQL connection timeout (${timeoutMs}ms)`)), timeoutMs);
+          }),
+        ]);
+      } finally {
+        clearTimeout(timer);
+      }
       await this.$queryRaw`SELECT 1`;
       this.connected = true;
       this.connectionFailureReason = null;

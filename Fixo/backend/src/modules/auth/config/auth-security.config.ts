@@ -131,6 +131,9 @@ export function validateAuthSecurityConfig(
   const allowDevSms = env.ALLOW_DEV_SMS === 'true';
 
   if (isProduction) {
+    if (smsProviderType === 'DISABLED' && !env.FIREBASE_PROJECT_ID?.trim()) {
+      throw new Error('FATAL AUTH CONFIGURATION ERROR: Disabling SMS requires a configured FIREBASE_PROJECT_ID for verified email sign-in.');
+    }
     if (!smsProviderType || smsProviderType === 'DEV_SANDBOX_SMS') {
       throw new Error(
         "FATAL AUTH CONFIGURATION ERROR: Production environment requires a configured telecom SMS provider ('TWILIO', 'VICTORYLINK', or 'VODAFONE_EG'). 'DEV_SANDBOX_SMS' is strictly forbidden in production.",
