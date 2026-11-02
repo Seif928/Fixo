@@ -5,6 +5,7 @@ import {
   EGYPT_PROFESSIONALS,
   EGYPT_SERVICE_CATEGORIES,
   EGYPT_SERVICE_OFFERINGS,
+  EGYPT_SERVICE_SUB_SKILLS,
 } from '../src/prisma/egypt-demo-seed.data';
 
 const prisma = new PrismaClient();
@@ -54,6 +55,24 @@ async function main(): Promise<void> {
         startingPriceEgp: category.startingPriceEgp,
         sortOrder: category.sortOrder,
         isActive: category.isActive,
+      },
+    });
+  }
+
+  for (const subSkill of EGYPT_SERVICE_SUB_SKILLS) {
+    await prisma.serviceSubSkill.upsert({
+      where: { slug: subSkill.slug },
+      update: {
+        categoryId: subSkill.categoryId,
+        nameEn: subSkill.nameEn,
+        nameAr: subSkill.nameAr,
+      },
+      create: {
+        id: subSkill.id,
+        categoryId: subSkill.categoryId,
+        slug: subSkill.slug,
+        nameEn: subSkill.nameEn,
+        nameAr: subSkill.nameAr,
       },
     });
   }

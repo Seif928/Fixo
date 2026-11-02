@@ -3,6 +3,7 @@ import {
   EGYPT_COVERAGE_ZONES,
   EGYPT_SERVICE_CATEGORIES,
   EGYPT_SERVICE_OFFERINGS,
+  EGYPT_SERVICE_SUB_SKILLS,
 } from './egypt-demo-seed.data';
 
 export interface EntitySeedStats {
@@ -88,6 +89,33 @@ export async function seedCatalog(
           categoriesCreated++;
         } else {
           categoriesPreserved++;
+        }
+      }
+
+      // 2b. Seed Service Sub-Skills (if tx.serviceSubSkill is available)
+      if ((tx as any).serviceSubSkill) {
+        for (const subSkill of EGYPT_SERVICE_SUB_SKILLS) {
+          const cat = await tx.serviceCategory.findUnique({
+            where: { slug: subSkill.categorySlug },
+            select: { id: true },
+          });
+          if (cat) {
+            const existingSub = await tx.serviceSubSkill.findUnique({
+              where: { slug: subSkill.slug },
+              select: { id: true },
+            });
+            if (!existingSub) {
+              await tx.serviceSubSkill.create({
+                data: {
+                  id: subSkill.id,
+                  categoryId: cat.id,
+                  slug: subSkill.slug,
+                  nameEn: subSkill.nameEn,
+                  nameAr: subSkill.nameAr,
+                },
+              });
+            }
+          }
         }
       }
 

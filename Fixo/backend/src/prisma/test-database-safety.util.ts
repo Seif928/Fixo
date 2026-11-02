@@ -170,7 +170,7 @@ export async function safeCleanupBookingTestTables(
   await assertCurrentDatabaseIsTest(prisma);
 
   await prisma.$executeRawUnsafe(
-    'TRUNCATE TABLE "PaymentRecord", "BookingStatusEvent", "Booking", "CustomerAddress", "ProProfile", "RefreshToken", "OtpChallenge", "User" CASCADE;',
+    'TRUNCATE TABLE "Review", "JobOffer", "ProVerificationDocument", "PaymentRecord", "BookingStatusEvent", "Booking", "CustomerAddress", "ProProfile", "RefreshToken", "OtpChallenge", "User" CASCADE;',
   );
 }
 

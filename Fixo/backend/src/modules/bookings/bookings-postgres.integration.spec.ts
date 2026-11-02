@@ -773,4 +773,105 @@ describe('Bookings PostgreSQL Real Database Integration Suite (fixo_test)', () =
       expect(dispatchEvents.length).toBe(0);
     });
   });
+
+  describe('Tracking, Cancellation, Receipt & Review — Real DB Persistence', () => {
+    it('supports customer tracking, cancellation before service start, receipt generation, and duplicate-protected reviews', async () => {
+      const tomorrowStr = new Date(Date.now() + 86400000).toISOString().split('T')[0];
+
+      // 1. Create and cancel a booking before service starts
+      const cancellable = await bookingsService.createBooking(customerUserA.id, {
+        offeringId: offeringAc.id,
+        addressId: addressA.id,
+        scheduledDate: tomorrowStr,
+        timeWindow: TimeWindow.MORNING_09_12,
+      });
+
+      const cancelled = await bookingsService.cancelBooking(
+        customerUserA.id,
+        cancellable.id,
+        { reason: 'Changed schedule' },
+      );
+      expect(cancelled.status).toBe(BookingStatus.CANCELLED);
+      expect(cancelled.cancellationReason).toBe('Changed schedule');
+
+      // 2. Create a booking, complete it with assigned pro, and verify Tracking + Review + Receipt
+      const activeBooking = await bookingsService.createBooking(customerUserA.id, {
+        offeringId: offeringAc.id,
+        addressId: addressA.id,
+        scheduledDate: tomorrowStr,
+        timeWindow: TimeWindow.AFTERNOON_13_16,
+      });
+
+      await bookingsService.checkoutBooking(customerUserA.id, activeBooking.id, {
+        paymentMethod: PaymentMethodType.CASH_ON_SERVICE,
+      });
+
+      // Mark booking COMPLETED with assigned pro in PostgreSQL
+      await prisma.booking.update({
+        where: { id: activeBooking.id },
+        data: {
+          proProfileId: proProfile.id,
+          status: BookingStatus.COMPLETED,
+          completedAt: new Date(),
+        },
+      });
+      await prisma.paymentRecord.update({
+        where: { bookingId: activeBooking.id },
+        data: {
+          status: PaymentStatus.PAID,
+          paidAt: new Date(),
+        },
+      });
+
+      // Tracking check
+      const tracking = await bookingsService.getBookingTracking(
+        customerUserA.id,
+        activeBooking.id,
+      );
+      expect(tracking.booking.status).toBe(BookingStatus.COMPLETED);
+      expect(tracking.booking.arrivalPinCode).toBe(activeBooking.arrivalPinCode);
+      expect(tracking.canReview).toBe(true);
+      expect(tracking.milestones).toHaveLength(5);
+
+      // Pro tracking redacts arrivalPinCode
+      const proTracking = await bookingsService.getBookingTracking(
+        proUser.id,
+        activeBooking.id,
+      );
+      expect(proTracking.booking.arrivalPinCode).toBe('****');
+
+      // Submit review with 50 EGP tip
+      const reviewRes = await bookingsService.submitBookingReview(
+        customerUserA.id,
+        activeBooking.id,
+        {
+          rating: 5,
+          tags: ['On Time', 'Clean Work'],
+          comment: 'Excellent AC deep clean!',
+          tipAmountEgp: 50,
+        },
+      );
+      expect(reviewRes.rating).toBe(5);
+      expect(reviewRes.tipAmountEgp).toBe(50);
+
+      // Duplicate review attempt must fail with ConflictException (409)
+      await expect(
+        bookingsService.submitBookingReview(customerUserA.id, activeBooking.id, {
+          rating: 4,
+        }),
+      ).rejects.toThrow(/already been submitted/);
+
+      // Verify receipt reflects actual total + tipEgp
+      const receipt = await bookingsService.getBookingReceipt(
+        customerUserA.id,
+        activeBooking.id,
+      );
+      expect(receipt.receiptNumber).toBe(`RCP-${activeBooking.orderCode}`);
+      expect(receipt.subtotalEgp).toBe(activeBooking.pricing.totalEgp);
+      expect(receipt.tipEgp).toBe(50);
+      expect(receipt.grandTotalEgp).toBe(activeBooking.pricing.totalEgp + 50);
+      expect(receipt.paymentStatus).toBe(PaymentStatus.PAID);
+    });
+  });
 });
+

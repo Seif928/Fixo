@@ -5,5 +5,10 @@ import { CommunicationsService } from './communications.service';
 import { PushController } from './push.controller';
 import { PushSender, PushService } from './push.service';
 
-@Module({ imports: [AuthModule], controllers: [CommunicationsController, PushController], providers: [CommunicationsService, PushService, PushSender] })
+@Module({
+  imports: [AuthModule],
+  controllers: [CommunicationsController, PushController],
+  providers: [CommunicationsService, PushService, PushSender],
+  exports: [PushService, PushSender],
+})
 export class CommunicationsModule {}

@@ -84,6 +84,7 @@ describe('BookingsService (Unit Tests)', () => {
       },
       proProfile: {
         findUnique: jest.fn(),
+        update: jest.fn(),
       },
       booking: {
         findUnique: jest.fn(),
@@ -94,9 +95,21 @@ describe('BookingsService (Unit Tests)', () => {
       },
       paymentRecord: {
         create: jest.fn(),
+        update: jest.fn(),
       },
       bookingStatusEvent: {
         create: jest.fn(),
+      },
+      review: {
+        findUnique: jest.fn(),
+        create: jest.fn(),
+        aggregate: jest.fn(),
+      },
+      jobOffer: {
+        updateMany: jest.fn(),
+      },
+      user: {
+        update: jest.fn(),
       },
       $queryRaw: jest.fn().mockResolvedValue([{ id: 'mock-id' }]),
       isDatabaseConnected: jest.fn().mockReturnValue(false),
@@ -662,5 +675,206 @@ describe('BookingsService (Unit Tests)', () => {
       expect(result.payment?.method).toBe(PaymentMethodType.CASH_ON_SERVICE);
     });
   });
+
+  describe('Tracking, Cancellation, Receipt, Reviews & Private Uploads', () => {
+    const completedBookingWithPro: any = {
+      id: 'bk-comp-100',
+      orderCode: 'FX-9010',
+      customerId: mockCustomerId,
+      proProfileId: 'pro-hassan-01',
+      offeringId: 'off-ac-clean',
+      addressId: 'addr-01',
+      status: BookingStatus.COMPLETED,
+      scheduledDate: new Date('2026-11-15T00:00:00.000Z'),
+      timeWindow: TimeWindow.MORNING_09_12,
+      issueDescription: 'AC maintenance completed',
+      issuePhotoUrls: [],
+      baseInspectionEgp: 150,
+      serviceFeeEgp: 250,
+      transportFeeEgp: 0,
+      totalEgp: 400,
+      platformFeeEgp: 40,
+      netArtisanEgp: 360,
+      arrivalPinCode: '5824',
+      offering: mockOffering,
+      address: { ...mockAddress, latitude: 30.0254, longitude: 31.4902 },
+      proProfile: {
+        ...mockPro,
+        user: { id: 'user-hassan', fullName: 'Hassan El-Sayed', avatarUrl: null },
+      },
+      customer: { id: mockCustomerId, fullName: 'Ahmed Customer' },
+      payment: {
+        id: 'pay-9010',
+        bookingId: 'bk-comp-100',
+        method: PaymentMethodType.CASH_ON_SERVICE,
+        status: PaymentStatus.PAID,
+        amountEgp: 400,
+        tipEgp: 0,
+        externalReference: null,
+        paidAt: new Date('2026-11-15T11:30:00.000Z'),
+        createdAt: new Date('2026-11-14T10:00:00.000Z'),
+      },
+      review: null,
+      statusEvents: [
+        {
+          id: 'evt-1',
+          fromStatus: null,
+          toStatus: BookingStatus.DRAFT,
+          note: 'Draft created',
+          createdAt: new Date('2026-11-14T10:00:00.000Z'),
+        },
+        {
+          id: 'evt-2',
+          fromStatus: BookingStatus.DRAFT,
+          toStatus: BookingStatus.CONFIRMED,
+          note: 'Pro accepted',
+          createdAt: new Date('2026-11-14T10:05:00.000Z'),
+        },
+        {
+          id: 'evt-3',
+          fromStatus: BookingStatus.IN_PROGRESS,
+          toStatus: BookingStatus.COMPLETED,
+          note: 'Completed',
+          createdAt: new Date('2026-11-15T11:30:00.000Z'),
+        },
+      ],
+      createdAt: new Date('2026-11-14T10:00:00.000Z'),
+      updatedAt: new Date('2026-11-15T11:30:00.000Z'),
+      completedAt: new Date('2026-11-15T11:30:00.000Z'),
+    };
+
+    it('builds 5 tracking milestones and masks arrivalPinCode when accessed by assigned Pro', async () => {
+      prismaMock.booking.findUnique.mockResolvedValue(completedBookingWithPro);
+
+      // Customer sees real arrivalPinCode
+      const customerTracking = await service.getBookingTracking(
+        mockCustomerId,
+        'bk-comp-100',
+      );
+      expect(customerTracking.booking.arrivalPinCode).toBe('5824');
+      expect(customerTracking.milestones).toHaveLength(5);
+      expect(
+        customerTracking.milestones.every((m) => m.state === 'COMPLETED'),
+      ).toBe(true);
+      expect(customerTracking.canReview).toBe(true);
+      expect(customerTracking.canCancel).toBe(false);
+
+      // Assigned pro sees masked arrivalPinCode ('****')
+      const proTracking = await service.getBookingTracking(
+        'user-hassan',
+        'bk-comp-100',
+      );
+      expect(proTracking.booking.arrivalPinCode).toBe('****');
+      expect(proTracking.canReview).toBe(false);
+    });
+
+    it('rejects review when booking is not COMPLETED or has duplicate review', async () => {
+      prismaMock.booking.findUnique.mockResolvedValue({
+        ...completedBookingWithPro,
+        status: BookingStatus.CONFIRMED,
+      });
+
+      await expect(
+        service.submitBookingReview(mockCustomerId, 'bk-comp-100', {
+          rating: 5,
+          tags: ['On Time'],
+          comment: 'Great service',
+        }),
+      ).rejects.toThrow(BadRequestException);
+
+      // Duplicate review check
+      prismaMock.booking.findUnique.mockResolvedValue({
+        ...completedBookingWithPro,
+        review: { id: 'rev-existing', rating: 5 },
+      });
+
+      await expect(
+        service.submitBookingReview(mockCustomerId, 'bk-comp-100', {
+          rating: 5,
+        }),
+      ).rejects.toThrow(/already been submitted/);
+    });
+
+    it('submits review for COMPLETED booking, updates tipEgp, and recalculates Pro ratingAvg', async () => {
+      prismaMock.booking.findUnique.mockResolvedValue(completedBookingWithPro);
+      prismaMock.review.findUnique.mockResolvedValue(null);
+      prismaMock.review.create.mockResolvedValue({
+        id: 'rev-new-1',
+        bookingId: 'bk-comp-100',
+        customerId: mockCustomerId,
+        proProfileId: 'pro-hassan-01',
+        rating: 5,
+        tags: ['On Time', 'Clean Work'],
+        comment: 'Fixed the AC leak quickly!',
+        photoUrls: [],
+        tipAmountEgp: 50,
+        createdAt: new Date('2026-11-15T12:00:00.000Z'),
+      });
+      prismaMock.review.aggregate.mockResolvedValue({
+        _avg: { rating: 4.92 },
+        _count: { id: 12 },
+      });
+
+      const res = await service.submitBookingReview(mockCustomerId, 'bk-comp-100', {
+        rating: 5,
+        tags: ['On Time', 'Clean Work'],
+        comment: 'Fixed the AC leak quickly!',
+        tipAmountEgp: 50,
+      });
+
+      expect(res.rating).toBe(5);
+      expect(res.tipAmountEgp).toBe(50);
+      expect(prismaMock.paymentRecord.update).toHaveBeenCalledWith({
+        where: { id: 'pay-9010' },
+        data: { tipEgp: 50 },
+      });
+      expect(prismaMock.proProfile.update).toHaveBeenCalledWith({
+        where: { id: 'pro-hassan-01' },
+        data: { ratingAvg: 4.92, reviewsCount: 12 },
+      });
+    });
+
+    it('validates and signs private image uploads and rejects spoofed magic bytes', async () => {
+      // Valid PNG magic header: 89 50 4E 47 0D 0A 1A 0A
+      const pngBytes = Buffer.from([
+        0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0x00, 0x00, 0x00, 0x0d,
+      ]);
+      const uploadRes = await service.createPrivateUpload(mockCustomerId, {
+        purpose: 'BOOKING_ISSUE',
+        fileName: 'ac-leak.png',
+        mimeType: 'image/png',
+        contentBase64: pngBytes.toString('base64'),
+      });
+
+      expect(uploadRes.mimeType).toBe('image/png');
+      expect(uploadRes.accessToken).toBeDefined();
+
+      const claims = service.verifyPrivateUploadToken(
+        mockCustomerId,
+        uploadRes.accessToken,
+      );
+      expect(claims.ownerUserId).toBe(mockCustomerId);
+      expect(claims.fileName).toBe('ac-leak.png');
+
+      // Other user cannot verify token
+      expect(() =>
+        service.verifyPrivateUploadToken(
+          mockOtherCustomerId,
+          uploadRes.accessToken,
+        ),
+      ).toThrow(ForbiddenException);
+
+      // Spoofed magic bytes (text claiming to be image/jpeg)
+      await expect(
+        service.createPrivateUpload(mockCustomerId, {
+          purpose: 'BOOKING_ISSUE',
+          fileName: 'fake.jpg',
+          mimeType: 'image/jpeg',
+          contentBase64: Buffer.from('hello world not a jpeg').toString('base64'),
+        }),
+      ).rejects.toThrow(BadRequestException);
+    });
+  });
 });
+
 

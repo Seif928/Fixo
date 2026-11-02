@@ -22,6 +22,15 @@ export interface SeedServiceCategory {
   isActive: boolean;
 }
 
+export interface SeedServiceSubSkill {
+  id: string;
+  categoryId: string;
+  categorySlug: string;
+  slug: string;
+  nameEn: string;
+  nameAr: string;
+}
+
 export interface SeedServiceOffering {
   id: string;
   categoryId: string;
@@ -203,6 +212,159 @@ export const EGYPT_SERVICE_CATEGORIES: SeedServiceCategory[] = [
     startingPriceEgp: 850,
     sortOrder: 6,
     isActive: true,
+  },
+];
+
+export const EGYPT_SERVICE_SUB_SKILLS: SeedServiceSubSkill[] = [
+  // Plumbing & Leaks (Screen 12 official Stitch chips)
+  {
+    id: 'sub-pipe-leak',
+    categoryId: 'cat-plumbing-leaks',
+    categorySlug: 'plumbing-leaks',
+    slug: 'pipe-leak-repair',
+    nameEn: 'Pipe Leak Repair',
+    nameAr: 'إصلاح تسريب المواسير',
+  },
+  {
+    id: 'sub-water-heater',
+    categoryId: 'cat-plumbing-leaks',
+    categorySlug: 'plumbing-leaks',
+    slug: 'water-heater-setup',
+    nameEn: 'Water Heater Setup',
+    nameAr: 'تركيب وصيانة السخانات',
+  },
+  {
+    id: 'sub-drain-unclog',
+    categoryId: 'cat-plumbing-leaks',
+    categorySlug: 'plumbing-leaks',
+    slug: 'drain-unclogging',
+    nameEn: 'Drain Unclogging',
+    nameAr: 'تسليك الصرف والأحواض',
+  },
+  {
+    id: 'sub-bathroom-fixtures',
+    categoryId: 'cat-plumbing-leaks',
+    categorySlug: 'plumbing-leaks',
+    slug: 'bathroom-fixtures',
+    nameEn: 'Bathroom Fixtures',
+    nameAr: 'تركيب أدوات صحية وخلاطات',
+  },
+  {
+    id: 'sub-water-pump',
+    categoryId: 'cat-plumbing-leaks',
+    categorySlug: 'plumbing-leaks',
+    slug: 'water-pump-maintenance',
+    nameEn: 'Water Pump Maintenance',
+    nameAr: 'صيانة مواتير المياه',
+  },
+  {
+    id: 'sub-kitchen-sink',
+    categoryId: 'cat-plumbing-leaks',
+    categorySlug: 'plumbing-leaks',
+    slug: 'kitchen-sink-mixer',
+    nameEn: 'Kitchen Sink & Mixer',
+    nameAr: 'صيانة حوض وخلاط المطبخ',
+  },
+  // Electrical & Lighting
+  {
+    id: 'sub-breaker-panel',
+    categoryId: 'cat-electrical-lighting',
+    categorySlug: 'electrical-lighting',
+    slug: 'breaker-panel-diagnostics',
+    nameEn: 'Breaker & Panel Diagnostics',
+    nameAr: 'فحص لوحة القواطع والكهرباء',
+  },
+  {
+    id: 'sub-chandelier-lighting',
+    categoryId: 'cat-electrical-lighting',
+    categorySlug: 'electrical-lighting',
+    slug: 'lighting-chandelier-install',
+    nameEn: 'Lighting & Chandelier Setup',
+    nameAr: 'تركيب النجف والإضاءة الحديثة',
+  },
+  {
+    id: 'sub-socket-wiring',
+    categoryId: 'cat-electrical-lighting',
+    categorySlug: 'electrical-lighting',
+    slug: 'socket-switch-rewiring',
+    nameEn: 'Sockets & Switch Rewiring',
+    nameAr: 'تغيير البرايز والمفاتيح والأسلاك',
+  },
+  // AC Maintenance
+  {
+    id: 'sub-ac-chemical-wash',
+    categoryId: 'cat-ac-maintenance',
+    categorySlug: 'ac-maintenance',
+    slug: 'split-ac-chemical-wash',
+    nameEn: 'Split AC Deep Wash',
+    nameAr: 'غسيل عميق للتكييف الاسبليت',
+  },
+  {
+    id: 'sub-ac-freon-check',
+    categoryId: 'cat-ac-maintenance',
+    categorySlug: 'ac-maintenance',
+    slug: 'freon-pressure-recharge',
+    nameEn: 'Freon Pressure & Recharge',
+    nameAr: 'فحص وشحن غاز الفريون',
+  },
+  {
+    id: 'sub-ac-drain-fix',
+    categoryId: 'cat-ac-maintenance',
+    categorySlug: 'ac-maintenance',
+    slug: 'ac-condensation-drain-fix',
+    nameEn: 'Condensation Leak Repair',
+    nameAr: 'إصلاح تسريب مياه التكييف',
+  },
+  // Deep Home Cleaning
+  {
+    id: 'sub-clean-apartment',
+    categoryId: 'cat-deep-cleaning',
+    categorySlug: 'deep-home-cleaning',
+    slug: 'full-apartment-sanitization',
+    nameEn: 'Full Home Sanitization',
+    nameAr: 'تنظيف وتعقيم شامل للمنزل',
+  },
+  {
+    id: 'sub-clean-upholstery',
+    categoryId: 'cat-deep-cleaning',
+    categorySlug: 'deep-home-cleaning',
+    slug: 'sofa-carpet-steam-clean',
+    nameEn: 'Sofa & Carpet Steam Clean',
+    nameAr: 'تنظيف المفروشات والسجاد بالبخار',
+  },
+  // Carpentry & Repairs
+  {
+    id: 'sub-carpentry-locks',
+    categoryId: 'cat-carpentry-repairs',
+    categorySlug: 'carpentry-repairs',
+    slug: 'door-locks-cylinders',
+    nameEn: 'Door Locks & Cylinders',
+    nameAr: 'تغيير كوالين وسلندرات الأبواب',
+  },
+  {
+    id: 'sub-carpentry-cabinets',
+    categoryId: 'cat-carpentry-repairs',
+    categorySlug: 'carpentry-repairs',
+    slug: 'kitchen-hinges-alignment',
+    nameEn: 'Cabinet Hinges & Alignment',
+    nameAr: 'ضبط مفصلات وأبواب المطابخ',
+  },
+  // Painting & Finishing
+  {
+    id: 'sub-paint-interior',
+    categoryId: 'cat-painting-finishing',
+    categorySlug: 'painting-finishing',
+    slug: 'interior-wall-repaint',
+    nameEn: 'Interior Wall Painting',
+    nameAr: 'دهانات الحوائط الداخلية',
+  },
+  {
+    id: 'sub-paint-putty',
+    categoryId: 'cat-painting-finishing',
+    categorySlug: 'painting-finishing',
+    slug: 'crack-putty-treatment',
+    nameEn: 'Crack & Moisture Treatment',
+    nameAr: 'معالجة الشروخ والرطوبة بالمعجون',
   },
 ];
 

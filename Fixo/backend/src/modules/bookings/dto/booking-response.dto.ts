@@ -17,6 +17,19 @@ export interface BookingPaymentSummary {
   createdAt: string;
 }
 
+export interface BookingReviewSummary {
+  id: string;
+  bookingId: string;
+  customerId: string;
+  proProfileId: string;
+  rating: number;
+  tags: string[];
+  comment: string | null;
+  photoUrls: string[];
+  tipAmountEgp: number;
+  createdAt: string;
+}
+
 export interface BookingPricingBreakdown {
   baseInspectionEgp: number;
   serviceFeeEgp: number;
@@ -34,6 +47,7 @@ export interface BookingOfferingSummary {
   titleAr: string;
   descriptionEn: string;
   descriptionAr: string;
+  estimatedDurationMins?: number;
   category: {
     id: string;
     slug: string;
@@ -48,6 +62,8 @@ export interface BookingAddressSummary {
   buildingLine: string;
   districtLine: string;
   gateNotes?: string | null;
+  latitude?: number | null;
+  longitude?: number | null;
   zone?: {
     id: string;
     slug: string;
@@ -63,6 +79,12 @@ export interface BookingProSummary {
   specialtyEn?: string | null;
   specialtyAr?: string | null;
   ratingAvg: number;
+  reviewsCount?: number;
+  completedJobsCount?: number;
+  transportMode?: string;
+  vehicleDescription?: string | null;
+  vehiclePlateAr?: string | null;
+  isOnline?: boolean;
   user?: {
     fullName?: string | null;
     avatarUrl?: string | null;
@@ -77,6 +99,7 @@ export interface BookingDetailResponse {
   offeringId: string;
   addressId: string;
   status: BookingStatus;
+  cancellationReason?: string | null;
   scheduledDate: string;
   timeWindow: TimeWindow;
   issueDescription: string | null;
@@ -87,6 +110,7 @@ export interface BookingDetailResponse {
   address: BookingAddressSummary;
   proProfile?: BookingProSummary | null;
   payment?: BookingPaymentSummary | null;
+  review?: BookingReviewSummary | null;
   statusEvents?: Array<{
     id: string;
     fromStatus: BookingStatus | null;
@@ -106,3 +130,63 @@ export interface BookingListResponse {
   offset: number;
 }
 
+export interface BookingTrackingMilestone {
+  key:
+    | 'ORDER_PLACED'
+    | 'PRO_ASSIGNED'
+    | 'PRO_EN_ROUTE'
+    | 'ARRIVED_AT_LOCATION'
+    | 'IN_PROGRESS_AND_COMPLETION';
+  titleEn: string;
+  titleAr: string;
+  subtitleEn: string;
+  subtitleAr: string;
+  state: 'COMPLETED' | 'CURRENT' | 'UPCOMING' | 'CANCELLED';
+  timestamp: string | null;
+}
+
+export interface BookingTrackingResponse {
+  booking: BookingDetailResponse;
+  milestones: BookingTrackingMilestone[];
+  canCancel: boolean;
+  canChat: boolean;
+  canReview: boolean;
+  trackingAccuracyNoteEn: string;
+  trackingAccuracyNoteAr: string;
+}
+
+export interface BookingReceiptLineItem {
+  key: string;
+  labelEn: string;
+  labelAr: string;
+  amountEgp: number;
+}
+
+export interface BookingReceiptResponse {
+  receiptNumber: string;
+  bookingId: string;
+  orderCode: string;
+  status: BookingStatus;
+  issuedAt: string;
+  scheduledDate: string;
+  timeWindow: TimeWindow;
+  completedAt: string | null;
+  customerName: string;
+  serviceTitleEn: string;
+  serviceTitleAr: string;
+  categoryNameEn: string;
+  categoryNameAr: string;
+  proName: string | null;
+  proDossierCode: string | null;
+  addressSummary: string;
+  lineItems: BookingReceiptLineItem[];
+  subtotalEgp: number;
+  tipEgp: number;
+  grandTotalEgp: number;
+  platformFeeEgp: number;
+  netArtisanEgp: number;
+  currency: 'EGP';
+  paymentMethod: PaymentMethodType;
+  paymentStatus: PaymentStatus;
+  paidAt: string | null;
+}
