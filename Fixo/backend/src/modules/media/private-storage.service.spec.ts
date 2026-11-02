@@ -3,7 +3,18 @@ import { PrivateStorageService } from './private-storage.service';
 
 describe('PrivateStorageService', () => {
   const original = { ...process.env };
+  beforeEach(() => { delete process.env.SUPABASE_SECRET_KEY; });
   afterEach(() => { process.env = { ...original }; jest.restoreAllMocks(); });
+
+  it('supports the current server secret key environment name', async () => {
+    delete process.env.SUPABASE_SERVICE_ROLE_KEY;
+    process.env.SUPABASE_URL = 'https://bvahuhtlrxnbbllkukhd.supabase.co';
+    process.env.SUPABASE_SECRET_KEY = 'sb_secret_TEST_ONLY';
+    const fetchSpy = jest.spyOn(global, 'fetch').mockResolvedValue(new Response('{}', { status:200 }));
+    const key = 'avatars/user-test/image.webp';
+    await expect(new PrivateStorageService().put(key,Buffer.from('test'),'image/webp')).resolves.toBe(key);
+    expect(fetchSpy).toHaveBeenCalledTimes(1);
+  });
 
   it('fails closed without server credentials instead of fabricating an upload', async () => {
     delete process.env.SUPABASE_SERVICE_ROLE_KEY;

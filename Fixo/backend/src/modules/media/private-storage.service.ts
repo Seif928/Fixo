@@ -12,7 +12,7 @@ export class PrivateStorageService {
   private storage() {
     if (!this.client) {
       const url = process.env.SUPABASE_URL;
-      const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
+      const key = process.env.SUPABASE_SECRET_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY;
       if (!url || !/^https:\/\/[a-z0-9]{20}\.supabase\.co\/?$/.test(url) || !key) {
         throw new ServiceUnavailableException('Private media storage is not configured.');
       }
