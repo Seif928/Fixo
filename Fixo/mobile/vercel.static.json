@@ -13,6 +13,7 @@
   "rewrites": [
     {"source": "/customer/:path*", "destination": "/index.html"},
     {"source": "/auth/:path*", "destination": "/index.html"},
-    {"source": "/onboarding", "destination": "/index.html"}
+    {"source": "/onboarding", "destination": "/index.html"},
+    {"source": "/pro/:path*", "destination": "/index.html"}
   ]
 }
