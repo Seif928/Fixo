@@ -123,6 +123,90 @@ class BookingRepository {
         .where((z) => z.isActive)
         .toList();
   }
+
+  /// Retrieves live tracking state & milestones for Screen 06 via `GET /api/v1/bookings/:bookingId/tracking`.
+  Future<BookingTrackingModel> getBookingTracking(String bookingId) async {
+    final response = await _dio.get('/bookings/$bookingId/tracking');
+    final data = response.data as Map<String, dynamic>;
+    return BookingTrackingModel.fromJson(data);
+  }
+
+  /// Cancels a pre-service booking via `POST /api/v1/bookings/:bookingId/cancel`.
+  Future<BookingDetailModel> cancelBooking(
+    String bookingId, {
+    String? reason,
+  }) async {
+    final response = await _dio.post(
+      '/bookings/$bookingId/cancel',
+      data: {
+        if (reason != null && reason.trim().isNotEmpty) 'reason': reason.trim(),
+      },
+    );
+    final data = response.data as Map<String, dynamic>;
+    return BookingDetailModel.fromJson(data);
+  }
+
+  /// Retrieves the structured booking receipt via `GET /api/v1/bookings/:bookingId/receipt`.
+  Future<BookingReceiptModel> getBookingReceipt(String bookingId) async {
+    final response = await _dio.get('/bookings/$bookingId/receipt');
+    final data = response.data as Map<String, dynamic>;
+    return BookingReceiptModel.fromJson(data);
+  }
+
+  /// Retrieves the customer review for a booking via `GET /api/v1/bookings/:bookingId/review`.
+  Future<BookingReviewModel?> getBookingReview(String bookingId) async {
+    final response = await _dio.get('/bookings/$bookingId/review');
+    final data = response.data as Map<String, dynamic>;
+    final reviewMap = data['review'] as Map<String, dynamic>?;
+    if (reviewMap == null) return null;
+    return BookingReviewModel.fromJson(reviewMap);
+  }
+
+  /// Submits a customer review for a COMPLETED booking via `POST /api/v1/bookings/:bookingId/review`.
+  Future<BookingReviewModel> submitBookingReview(
+    String bookingId, {
+    required int rating,
+    List<String> tags = const [],
+    String? comment,
+    List<String> photoUrls = const [],
+    int tipAmountEgp = 0,
+  }) async {
+    final response = await _dio.post(
+      '/bookings/$bookingId/review',
+      data: {
+        'rating': rating,
+        'tags': tags,
+        if (comment != null && comment.trim().isNotEmpty)
+          'comment': comment.trim(),
+        if (photoUrls.isNotEmpty) 'photoUrls': photoUrls,
+        'tipAmountEgp': tipAmountEgp,
+      },
+    );
+    final data = response.data as Map<String, dynamic>;
+    return BookingReviewModel.fromJson(data);
+  }
+
+  /// Uploads and validates private media via `POST /api/v1/uploads/private`.
+  Future<PrivateUploadResultModel> uploadPrivateMedia({
+    required String purpose,
+    required String fileName,
+    required String mimeType,
+    required String contentBase64,
+    String? bookingId,
+  }) async {
+    final response = await _dio.post(
+      '/uploads/private',
+      data: {
+        'purpose': purpose,
+        'fileName': fileName,
+        'mimeType': mimeType,
+        'contentBase64': contentBase64,
+        if (bookingId != null && bookingId.isNotEmpty) 'bookingId': bookingId,
+      },
+    );
+    final data = response.data as Map<String, dynamic>;
+    return PrivateUploadResultModel.fromJson(data);
+  }
 }
 
 final bookingRepositoryProvider = Provider<BookingRepository>((ref) {

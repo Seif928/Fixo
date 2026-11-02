@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import '../../../app/router/app_routes.dart';
 import '../../../app/router/customer_tab_navigation.dart';
 
 import '../../../core/l10n/app_locale_controller.dart';
@@ -164,6 +165,7 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
                   );
                 }
                 final user = snapshot.data!;
+                final isPro = user['role'] == 'PRO';
                 final fullName =
                     user['fullName'] as String? ??
                     (ar ? 'حساب FIXO' : 'FIXO account');
@@ -279,88 +281,121 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
                     const SizedBox(height: FixoSpacing.md),
 
                     // 2. Stitch Screen 10 "Earn With FIXO Pro" Partner Banner
-                    Container(
-                      padding: const EdgeInsets.all(FixoSpacing.md),
-                      decoration: BoxDecoration(
-                        gradient: const LinearGradient(
-                          begin: Alignment.topLeft,
-                          end: Alignment.bottomRight,
-                          colors: [
-                            FixoColors.deepestForest,
-                            FixoColors.primaryForest,
-                          ],
-                        ),
-                        borderRadius: FixoRadius.borderRadiusLg,
-                        boxShadow: FixoShadows.level2Interactive,
-                      ),
-                      child: Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Container(
-                            width: 44,
-                            height: 44,
-                            decoration: BoxDecoration(
-                              color: FixoColors.limeAccent,
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            alignment: Alignment.center,
-                            child: const Icon(
-                              Icons.engineering_rounded,
-                              color: FixoColors.deepestForest,
-                              size: 24,
-                            ),
+                    InkWell(
+                      onTap: () {
+                        if (isPro) {
+                          context.push(AppRoutes.proDashboard);
+                        } else {
+                          context.push(AppRoutes.proSignUp);
+                        }
+                      },
+                      borderRadius: FixoRadius.borderRadiusLg,
+                      child: Container(
+                        padding: const EdgeInsets.all(FixoSpacing.md),
+                        decoration: BoxDecoration(
+                          gradient: const LinearGradient(
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                            colors: [
+                              FixoColors.deepestForest,
+                              FixoColors.primaryForest,
+                            ],
                           ),
-                          const SizedBox(width: FixoSpacing.sm),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  ar
-                                      ? 'انضم لشبكة فنيي فيكسو'
-                                      : 'EARN WITH FIXO PRO',
-                                  style: textTheme.labelSmall?.copyWith(
-                                    color: FixoColors.limeAccent,
-                                    fontWeight: FontWeight.w800,
-                                    letterSpacing: ar ? 0 : 0.8,
-                                  ),
-                                ),
-                                const SizedBox(height: 4),
-                                Text(
-                                  ar
-                                      ? 'هل أنت فني أو حرفي خدمات منزلية؟'
-                                      : 'Are you a home services technician or artisan?',
-                                  style: textTheme.titleSmall?.copyWith(
-                                    color: Colors.white,
-                                    fontWeight: FontWeight.w800,
-                                  ),
-                                ),
-                                const SizedBox(height: 8),
-                                Container(
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 10,
-                                    vertical: 4,
-                                  ),
-                                  decoration: BoxDecoration(
-                                    color: Colors.white.withValues(alpha: 0.12),
-                                    borderRadius: FixoRadius.borderRadiusPill,
-                                  ),
-                                  child: Text(
+                          borderRadius: FixoRadius.borderRadiusLg,
+                          boxShadow: FixoShadows.level2Interactive,
+                        ),
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Container(
+                              width: 44,
+                              height: 44,
+                              decoration: BoxDecoration(
+                                color: FixoColors.limeAccent,
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              alignment: Alignment.center,
+                              child: const Icon(
+                                Icons.engineering_rounded,
+                                color: FixoColors.deepestForest,
+                                size: 24,
+                              ),
+                            ),
+                            const SizedBox(width: FixoSpacing.sm),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
                                     ar
-                                        ? 'بوابة تسجيل الفنيين قريباً'
-                                        : 'Pro partner onboarding coming soon',
+                                        ? 'انضم لشبكة فنيي فيكسو'
+                                        : 'EARN WITH FIXO PRO',
                                     style: textTheme.labelSmall?.copyWith(
-                                      color: Colors.white.withValues(
-                                        alpha: 0.9,
-                                      ),
-                                      fontWeight: FontWeight.w700,
+                                      color: FixoColors.limeAccent,
+                                      fontWeight: FontWeight.w800,
+                                      letterSpacing: ar ? 0 : 0.8,
                                     ),
                                   ),
-                                ),
-                              ],
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    isPro
+                                        ? (ar
+                                            ? 'لوحة تحكم الفني والحجوزات المسندة'
+                                            : 'Pro partner dashboard & assigned jobs')
+                                        : (ar
+                                            ? 'هل أنت فني أو حرفي خدمات منزلية؟'
+                                            : 'Are you a home services technician or artisan?'),
+                                    style: textTheme.titleSmall?.copyWith(
+                                      color: Colors.white,
+                                      fontWeight: FontWeight.w800,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 8),
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 10,
+                                      vertical: 4,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      color: Colors.white.withValues(
+                                        alpha: 0.16,
+                                      ),
+                                      borderRadius:
+                                          FixoRadius.borderRadiusPill,
+                                    ),
+                                    child: Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        Text(
+                                          isPro
+                                              ? (ar
+                                                  ? 'فتح لوحة الفني'
+                                                  : 'Open Pro Dashboard')
+                                              : (ar
+                                                  ? 'تسجيل كشريك فني'
+                                                  : 'Apply as Pro Partner'),
+                                          style: textTheme.labelSmall
+                                              ?.copyWith(
+                                                color: Colors.white,
+                                                fontWeight: FontWeight.w700,
+                                              ),
+                                        ),
+                                        const SizedBox(width: 4),
+                                        Icon(
+                                          ar
+                                              ? Icons.arrow_back_rounded
+                                              : Icons.arrow_forward_rounded,
+                                          size: 14,
+                                          color: Colors.white,
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ],
+                              ),
                             ),
-                          ),
-                        ],
+                          ],
+                        ),
                       ),
                     ),
                     const SizedBox(height: FixoSpacing.md),

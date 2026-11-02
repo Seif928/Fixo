@@ -187,6 +187,62 @@ class FakeBookingRepository implements BookingRepository {
       createdAt: DateTime.now().toIso8601String(),
     );
   }
+
+  @override
+  Future<BookingTrackingModel> getBookingTracking(String bookingId) async {
+    throw UnimplementedError();
+  }
+
+  @override
+  Future<BookingDetailModel> cancelBooking(
+    String bookingId, {
+    String? reason,
+  }) async {
+    throw UnimplementedError();
+  }
+
+  @override
+  Future<BookingReceiptModel> getBookingReceipt(String bookingId) async {
+    throw UnimplementedError();
+  }
+
+  @override
+  Future<BookingReviewModel?> getBookingReview(String bookingId) async {
+    return null;
+  }
+
+  @override
+  Future<BookingReviewModel> submitBookingReview(
+    String bookingId, {
+    required int rating,
+    List<String> tags = const [],
+    String? comment,
+    List<String> photoUrls = const [],
+    int tipAmountEgp = 0,
+  }) async {
+    throw UnimplementedError();
+  }
+
+  @override
+  Future<PrivateUploadResultModel> uploadPrivateMedia({
+    required String purpose,
+    required String fileName,
+    required String mimeType,
+    required String contentBase64,
+    String? bookingId,
+  }) async {
+    return PrivateUploadResultModel(
+      uploadId: 'mock-upl-01',
+      purpose: purpose,
+      fileName: fileName,
+      mimeType: mimeType,
+      fileSizeBytes: 1024,
+      sha256: 'mock-sha',
+      accessToken: 'mock-token',
+      expiresAt: '2099-01-01T00:00:00Z',
+      privateDataUri: 'data:$mimeType;base64,$contentBase64',
+    );
+  }
 }
 
 class FakeAuthRepository implements AuthRepository {

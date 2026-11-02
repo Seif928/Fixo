@@ -9,7 +9,9 @@ import '../../features/auth/presentation/pages/phone_password_page.dart';
 import '../../features/chat/presentation/chat_page.dart';
 import '../../features/profile/presentation/profile_page.dart';
 import '../../features/booking/presentation/pages/create_booking_page.dart';
+import '../../features/booking/presentation/pages/order_tracking_page.dart';
 import '../../features/booking/presentation/pages/orders_page.dart';
+import '../../features/booking/presentation/pages/review_page.dart';
 import '../../features/customer_home/domain/marketplace_models.dart';
 import '../../features/customer_home/presentation/pages/customer_home_page.dart';
 import '../../features/onboarding/presentation/pages/onboarding_page.dart';
@@ -145,6 +147,22 @@ GoRouter createAppRouter({
         builder: (context, state) {
           final bookingId = state.pathParameters['bookingId'] ?? '';
           return CheckoutPage(bookingId: bookingId);
+        },
+      ),
+      GoRoute(
+        path: AppRoutes.orderTracking,
+        name: 'orderTracking',
+        builder: (context, state) {
+          final orderId = state.pathParameters['orderId'] ?? '';
+          return OrderTrackingPage(orderId: orderId);
+        },
+      ),
+      GoRoute(
+        path: AppRoutes.rateReview,
+        name: 'rateReview',
+        builder: (context, state) {
+          final orderId = state.pathParameters['orderId'] ?? '';
+          return ReviewPage(orderId: orderId);
         },
       ),
     ],

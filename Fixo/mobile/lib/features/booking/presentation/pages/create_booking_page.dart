@@ -7,8 +7,10 @@ import '../../../../core/location/free_map_picker.dart';
 import '../../../../core/theme/fixo_colors.dart';
 import '../../../../core/theme/fixo_spacing.dart';
 import '../../../../core/theme/fixo_typography.dart';
+import '../../../../core/uploads/private_media_picker_sheet.dart';
 import '../../../../core/widgets/fixo_brand_mark.dart';
 import '../../../customer_home/domain/marketplace_models.dart';
+import '../../data/booking_repository.dart';
 import '../../domain/booking_models.dart';
 import '../controllers/create_booking_controller.dart';
 import '../widgets/create_booking_widgets.dart';
@@ -32,6 +34,7 @@ class CreateBookingPage extends ConsumerStatefulWidget {
 
 class _CreateBookingPageState extends ConsumerState<CreateBookingPage> {
   late final TextEditingController _issueDescriptionController;
+  bool _isUploadingPhoto = false;
 
   @override
   void initState() {
@@ -43,6 +46,48 @@ class _CreateBookingPageState extends ConsumerState<CreateBookingPage> {
   void dispose() {
     _issueDescriptionController.dispose();
     super.dispose();
+  }
+
+  Future<void> _pickAndUploadPhoto(bool isArabic) async {
+    final picked = await PrivateMediaPickerSheet.show(
+      context,
+      isArabic: isArabic,
+      titleEn: 'Attach Issue Photo',
+      titleAr: 'إرفاق صورة للعطل',
+      rationaleEn:
+          'Issue photos are stored securely and only accessible to assigned technicians for equipment preparation.',
+      rationaleAr:
+          'يتم تخزين صور الأعطال بشكل آمن وخاص ومشاركتها مع الفني المعتمد فقط لتجهيز المعدات وقطع الغيار.',
+      defaultFilePrefix: 'fixo_issue',
+    );
+    if (picked == null || !mounted) return;
+
+    setState(() => _isUploadingPhoto = true);
+    try {
+      final res = await ref.read(bookingRepositoryProvider).uploadPrivateMedia(
+            purpose: 'BOOKING_ISSUE',
+            fileName: picked.fileName,
+            mimeType: picked.mimeType,
+            contentBase64: picked.contentBase64,
+          );
+      if (!mounted) return;
+      ref
+          .read(createBookingControllerProvider.notifier)
+          .addPhotoUrl(res.accessUrl);
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            isArabic
+                ? 'تعذر رفع الصورة. تأكد من حجم الملف والاتصال.'
+                : 'Failed to upload photo. Check file size and network.',
+          ),
+        ),
+      );
+    } finally {
+      if (mounted) setState(() => _isUploadingPhoto = false);
+    }
   }
 
   void _showCreateAddressSheet(BuildContext context) {
@@ -503,12 +548,16 @@ class _CreateBookingPageState extends ConsumerState<CreateBookingPage> {
                             ).copyWith(fontWeight: FontWeight.w600),
                           ),
                           const SizedBox(height: 8),
-                          Row(
-                            crossAxisAlignment: CrossAxisAlignment.center,
+                          Wrap(
+                            spacing: 8,
+                            runSpacing: 8,
+                            crossAxisAlignment: WrapCrossAlignment.center,
                             children: [
-                              // Clearly disabled photo upload slot matching Stitch Screen 04
-                              Opacity(
-                                opacity: 0.55,
+                              InkWell(
+                                onTap: _isUploadingPhoto
+                                    ? null
+                                    : () => _pickAndUploadPhoto(isArabic),
+                                borderRadius: BorderRadius.circular(10),
                                 child: Container(
                                   constraints: const BoxConstraints(
                                     minWidth: 68,
@@ -522,7 +571,8 @@ class _CreateBookingPageState extends ConsumerState<CreateBookingPage> {
                                     color: palette.surfaceLow,
                                     borderRadius: BorderRadius.circular(10),
                                     border: Border.all(
-                                      color: palette.subtleBorder,
+                                      color: FixoColors.primaryForest
+                                          .withValues(alpha: 0.3),
                                       width: 1.5,
                                     ),
                                   ),
@@ -530,59 +580,88 @@ class _CreateBookingPageState extends ConsumerState<CreateBookingPage> {
                                     mainAxisSize: MainAxisSize.min,
                                     mainAxisAlignment: MainAxisAlignment.center,
                                     children: [
-                                      Icon(
-                                        Icons.add_a_photo_outlined,
-                                        size: 20,
-                                        color: palette.mutedText,
-                                      ),
+                                      if (_isUploadingPhoto)
+                                        const SizedBox(
+                                          width: 18,
+                                          height: 18,
+                                          child: CircularProgressIndicator(
+                                            strokeWidth: 2,
+                                            valueColor: AlwaysStoppedAnimation(
+                                              FixoColors.primaryForest,
+                                            ),
+                                          ),
+                                        )
+                                      else
+                                        Icon(
+                                          Icons.add_a_photo_outlined,
+                                          size: 20,
+                                          color: FixoColors.primaryForest,
+                                        ),
                                       const SizedBox(height: 2),
                                       Text(
-                                        isArabic ? '+ قريباً' : '+ Add',
-                                        style:
-                                            FixoTypography.bodySm(
-                                              color: palette.mutedText,
-                                            ).copyWith(
-                                              fontSize: 10,
-                                              fontWeight: FontWeight.w700,
-                                            ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              ),
-                              const SizedBox(width: 10),
-                              Expanded(
-                                child: Container(
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 10,
-                                    vertical: 8,
-                                  ),
-                                  decoration: BoxDecoration(
-                                    color: palette.surfaceLow,
-                                    borderRadius: BorderRadius.circular(8),
-                                  ),
-                                  child: Row(
-                                    children: [
-                                      Icon(
-                                        Icons.info_outline_rounded,
-                                        size: 16,
-                                        color: palette.mutedText,
-                                      ),
-                                      const SizedBox(width: 8),
-                                      Expanded(
-                                        child: Text(
-                                          isArabic
-                                              ? 'سيتم تفعيل رفع الصور فور تفعيل التخزين السحابي الآمن.'
-                                              : 'Photo uploads will be enabled once cloud media storage is activated.',
-                                          style: FixoTypography.bodySm(
-                                            color: palette.mutedText,
-                                          ),
+                                        isArabic ? '+ صورة' : '+ Add',
+                                        style: FixoTypography.bodySm(
+                                          color: FixoColors.primaryForest,
+                                        ).copyWith(
+                                          fontSize: 10,
+                                          fontWeight: FontWeight.w700,
                                         ),
                                       ),
                                     ],
                                   ),
                                 ),
                               ),
+                              ...state.issuePhotoUrls.map((url) {
+                                return Container(
+                                  height: 64,
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 10,
+                                    vertical: 8,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: palette.surfaceLow,
+                                    borderRadius: BorderRadius.circular(10),
+                                    border: Border.all(
+                                      color: palette.subtleBorder,
+                                    ),
+                                  ),
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Icon(
+                                        Icons.image_rounded,
+                                        size: 24,
+                                        color: palette.deepForest,
+                                      ),
+                                      const SizedBox(width: 6),
+                                      Text(
+                                        isArabic ? 'صورة مرفقة' : 'Attached',
+                                        style: FixoTypography.labelMd(
+                                          color: palette.deepForest,
+                                        ).copyWith(
+                                          fontWeight: FontWeight.w600,
+                                        ),
+                                      ),
+                                      const SizedBox(width: 4),
+                                      IconButton(
+                                        icon: const Icon(
+                                          Icons.close_rounded,
+                                          size: 16,
+                                          color: FixoColors.error,
+                                        ),
+                                        padding: EdgeInsets.zero,
+                                        constraints: const BoxConstraints(),
+                                        onPressed: () => ref
+                                            .read(
+                                              createBookingControllerProvider
+                                                  .notifier,
+                                            )
+                                            .removePhotoUrl(url),
+                                      ),
+                                    ],
+                                  ),
+                                );
+                              }),
                             ],
                           ),
                         ],

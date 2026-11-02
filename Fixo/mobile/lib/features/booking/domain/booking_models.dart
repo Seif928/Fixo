@@ -249,6 +249,67 @@ class PaymentRecordModel {
   };
 }
 
+/// Details of a customer review submitted for a completed booking.
+class BookingReviewModel {
+  const BookingReviewModel({
+    required this.id,
+    required this.bookingId,
+    required this.customerId,
+    required this.proProfileId,
+    required this.rating,
+    this.tags = const [],
+    this.comment,
+    this.photoUrls = const [],
+    this.tipAmountEgp = 0,
+    required this.createdAt,
+  });
+
+  final String id;
+  final String bookingId;
+  final String customerId;
+  final String proProfileId;
+  final int rating;
+  final List<String> tags;
+  final String? comment;
+  final List<String> photoUrls;
+  final int tipAmountEgp;
+  final String createdAt;
+
+  factory BookingReviewModel.fromJson(Map<String, dynamic> json) {
+    return BookingReviewModel(
+      id: json['id'] as String? ?? '',
+      bookingId: json['bookingId'] as String? ?? '',
+      customerId: json['customerId'] as String? ?? '',
+      proProfileId: json['proProfileId'] as String? ?? '',
+      rating: (json['rating'] as num?)?.toInt() ?? 5,
+      tags:
+          (json['tags'] as List<dynamic>?)?.map((e) => e.toString()).toList() ??
+          const [],
+      comment: json['comment'] as String?,
+      photoUrls:
+          (json['photoUrls'] as List<dynamic>?)
+              ?.map((e) => e.toString())
+              .toList() ??
+          const [],
+      tipAmountEgp: (json['tipAmountEgp'] as num?)?.toInt() ?? 0,
+      createdAt: json['createdAt'] as String? ?? '',
+    );
+  }
+
+  Map<String, dynamic> toJson() => {
+    'id': id,
+    'bookingId': bookingId,
+    'customerId': customerId,
+    'proProfileId': proProfileId,
+    'rating': rating,
+    'tags': tags,
+    'comment': comment,
+    'photoUrls': photoUrls,
+    'tipAmountEgp': tipAmountEgp,
+    'createdAt': createdAt,
+  };
+}
+
 /// Full details of a persisted customer booking.
 class BookingDetailModel {
   const BookingDetailModel({
@@ -259,6 +320,7 @@ class BookingDetailModel {
     required this.offeringId,
     required this.addressId,
     required this.status,
+    this.cancellationReason,
     required this.scheduledDate,
     required this.timeWindow,
     this.issueDescription,
@@ -269,8 +331,10 @@ class BookingDetailModel {
     this.address = const {},
     this.proProfile,
     this.payment,
+    this.review,
     this.statusEvents = const [],
     required this.createdAt,
+    this.completedAt,
   });
 
   final String id;
@@ -280,6 +344,7 @@ class BookingDetailModel {
   final String offeringId;
   final String addressId;
   final String status;
+  final String? cancellationReason;
   final String scheduledDate;
   final String timeWindow;
   final String? issueDescription;
@@ -294,8 +359,10 @@ class BookingDetailModel {
   final Map<String, dynamic> address;
   final Map<String, dynamic>? proProfile;
   final PaymentRecordModel? payment;
+  final BookingReviewModel? review;
   final List<dynamic> statusEvents;
   final String createdAt;
+  final String? completedAt;
 
   factory BookingDetailModel.fromJson(Map<String, dynamic> json) {
     return BookingDetailModel(
@@ -306,6 +373,7 @@ class BookingDetailModel {
       offeringId: json['offeringId'] as String? ?? '',
       addressId: json['addressId'] as String? ?? '',
       status: json['status'] as String? ?? 'DRAFT',
+      cancellationReason: json['cancellationReason'] as String?,
       scheduledDate: json['scheduledDate'] as String? ?? '',
       timeWindow: json['timeWindow'] as String? ?? 'AFTERNOON_13_16',
       issueDescription: json['issueDescription'] as String?,
@@ -330,8 +398,250 @@ class BookingDetailModel {
       payment: json['payment'] != null
           ? PaymentRecordModel.fromJson(json['payment'] as Map<String, dynamic>)
           : null,
+      review: json['review'] is Map<String, dynamic>
+          ? BookingReviewModel.fromJson(json['review'] as Map<String, dynamic>)
+          : null,
       statusEvents: (json['statusEvents'] as List<dynamic>?) ?? const [],
       createdAt: json['createdAt'] as String? ?? '',
+      completedAt: json['completedAt'] as String?,
+    );
+  }
+}
+
+/// Milestone item on Screen 06 (Live Order Tracking).
+class BookingTrackingMilestoneModel {
+  const BookingTrackingMilestoneModel({
+    required this.key,
+    required this.titleEn,
+    required this.titleAr,
+    required this.subtitleEn,
+    required this.subtitleAr,
+    required this.state,
+    this.timestamp,
+  });
+
+  final String key;
+  final String titleEn;
+  final String titleAr;
+  final String subtitleEn;
+  final String subtitleAr;
+  final String state; // COMPLETED | CURRENT | UPCOMING | CANCELLED
+  final String? timestamp;
+
+  factory BookingTrackingMilestoneModel.fromJson(Map<String, dynamic> json) {
+    return BookingTrackingMilestoneModel(
+      key: json['key'] as String? ?? '',
+      titleEn: json['titleEn'] as String? ?? '',
+      titleAr: json['titleAr'] as String? ?? '',
+      subtitleEn: json['subtitleEn'] as String? ?? '',
+      subtitleAr: json['subtitleAr'] as String? ?? '',
+      state: json['state'] as String? ?? 'UPCOMING',
+      timestamp: json['timestamp'] as String?,
+    );
+  }
+}
+
+/// Complete tracking response for Screen 06 (`GET /bookings/:id/tracking`).
+class BookingTrackingModel {
+  const BookingTrackingModel({
+    required this.booking,
+    required this.milestones,
+    required this.canCancel,
+    required this.canChat,
+    required this.canReview,
+    required this.trackingAccuracyNoteEn,
+    required this.trackingAccuracyNoteAr,
+  });
+
+  final BookingDetailModel booking;
+  final List<BookingTrackingMilestoneModel> milestones;
+  final bool canCancel;
+  final bool canChat;
+  final bool canReview;
+  final String trackingAccuracyNoteEn;
+  final String trackingAccuracyNoteAr;
+
+  factory BookingTrackingModel.fromJson(Map<String, dynamic> json) {
+    final rawMilestones = json['milestones'] as List<dynamic>? ?? const [];
+    return BookingTrackingModel(
+      booking: BookingDetailModel.fromJson(
+        json['booking'] as Map<String, dynamic>,
+      ),
+      milestones: rawMilestones
+          .map(
+            (e) => BookingTrackingMilestoneModel.fromJson(
+              e as Map<String, dynamic>,
+            ),
+          )
+          .toList(),
+      canCancel: json['canCancel'] as bool? ?? false,
+      canChat: json['canChat'] as bool? ?? false,
+      canReview: json['canReview'] as bool? ?? false,
+      trackingAccuracyNoteEn:
+          json['trackingAccuracyNoteEn'] as String? ??
+          'Map displays your saved service address.',
+      trackingAccuracyNoteAr:
+          json['trackingAccuracyNoteAr'] as String? ??
+          'تعرض الخريطة عنوان الخدمة المحفوظ.',
+    );
+  }
+}
+
+/// Line item in a booking receipt (`GET /bookings/:id/receipt`).
+class BookingReceiptLineItemModel {
+  const BookingReceiptLineItemModel({
+    required this.key,
+    required this.labelEn,
+    required this.labelAr,
+    required this.amountEgp,
+  });
+
+  final String key;
+  final String labelEn;
+  final String labelAr;
+  final int amountEgp;
+
+  factory BookingReceiptLineItemModel.fromJson(Map<String, dynamic> json) {
+    return BookingReceiptLineItemModel(
+      key: json['key'] as String? ?? '',
+      labelEn: json['labelEn'] as String? ?? '',
+      labelAr: json['labelAr'] as String? ?? '',
+      amountEgp: (json['amountEgp'] as num?)?.toInt() ?? 0,
+    );
+  }
+}
+
+/// Structured receipt generated from actual Booking, PaymentRecord, and Review rows.
+class BookingReceiptModel {
+  const BookingReceiptModel({
+    required this.receiptNumber,
+    required this.bookingId,
+    required this.orderCode,
+    required this.status,
+    required this.issuedAt,
+    required this.scheduledDate,
+    required this.timeWindow,
+    this.completedAt,
+    required this.customerName,
+    required this.serviceTitleEn,
+    required this.serviceTitleAr,
+    required this.categoryNameEn,
+    required this.categoryNameAr,
+    this.proName,
+    this.proDossierCode,
+    required this.addressSummary,
+    required this.lineItems,
+    required this.subtotalEgp,
+    required this.tipEgp,
+    required this.grandTotalEgp,
+    required this.platformFeeEgp,
+    required this.netArtisanEgp,
+    required this.paymentMethod,
+    required this.paymentStatus,
+    this.paidAt,
+  });
+
+  final String receiptNumber;
+  final String bookingId;
+  final String orderCode;
+  final String status;
+  final String issuedAt;
+  final String scheduledDate;
+  final String timeWindow;
+  final String? completedAt;
+  final String customerName;
+  final String serviceTitleEn;
+  final String serviceTitleAr;
+  final String categoryNameEn;
+  final String categoryNameAr;
+  final String? proName;
+  final String? proDossierCode;
+  final String addressSummary;
+  final List<BookingReceiptLineItemModel> lineItems;
+  final int subtotalEgp;
+  final int tipEgp;
+  final int grandTotalEgp;
+  final int platformFeeEgp;
+  final int netArtisanEgp;
+  final String paymentMethod;
+  final String paymentStatus;
+  final String? paidAt;
+
+  factory BookingReceiptModel.fromJson(Map<String, dynamic> json) {
+    final items = json['lineItems'] as List<dynamic>? ?? const [];
+    return BookingReceiptModel(
+      receiptNumber: json['receiptNumber'] as String? ?? '',
+      bookingId: json['bookingId'] as String? ?? '',
+      orderCode: json['orderCode'] as String? ?? '',
+      status: json['status'] as String? ?? '',
+      issuedAt: json['issuedAt'] as String? ?? '',
+      scheduledDate: json['scheduledDate'] as String? ?? '',
+      timeWindow: json['timeWindow'] as String? ?? '',
+      completedAt: json['completedAt'] as String?,
+      customerName: json['customerName'] as String? ?? '',
+      serviceTitleEn: json['serviceTitleEn'] as String? ?? '',
+      serviceTitleAr: json['serviceTitleAr'] as String? ?? '',
+      categoryNameEn: json['categoryNameEn'] as String? ?? '',
+      categoryNameAr: json['categoryNameAr'] as String? ?? '',
+      proName: json['proName'] as String?,
+      proDossierCode: json['proDossierCode'] as String?,
+      addressSummary: json['addressSummary'] as String? ?? '',
+      lineItems: items
+          .map(
+            (e) => BookingReceiptLineItemModel.fromJson(
+              e as Map<String, dynamic>,
+            ),
+          )
+          .toList(),
+      subtotalEgp: (json['subtotalEgp'] as num?)?.toInt() ?? 0,
+      tipEgp: (json['tipEgp'] as num?)?.toInt() ?? 0,
+      grandTotalEgp: (json['grandTotalEgp'] as num?)?.toInt() ?? 0,
+      platformFeeEgp: (json['platformFeeEgp'] as num?)?.toInt() ?? 0,
+      netArtisanEgp: (json['netArtisanEgp'] as num?)?.toInt() ?? 0,
+      paymentMethod: json['paymentMethod'] as String? ?? 'CASH_ON_SERVICE',
+      paymentStatus: json['paymentStatus'] as String? ?? 'PENDING',
+      paidAt: json['paidAt'] as String?,
+    );
+  }
+}
+
+/// Result of a validated private media upload (`POST /uploads/private`).
+class PrivateUploadResultModel {
+  const PrivateUploadResultModel({
+    required this.uploadId,
+    required this.purpose,
+    required this.fileName,
+    required this.mimeType,
+    required this.fileSizeBytes,
+    required this.sha256,
+    required this.accessToken,
+    required this.expiresAt,
+    required this.privateDataUri,
+  });
+
+  final String uploadId;
+  final String purpose;
+  final String fileName;
+  final String mimeType;
+  final int fileSizeBytes;
+  final String sha256;
+  final String accessToken;
+  final String expiresAt;
+  final String privateDataUri;
+
+  String get accessUrl => privateDataUri;
+
+  factory PrivateUploadResultModel.fromJson(Map<String, dynamic> json) {
+    return PrivateUploadResultModel(
+      uploadId: json['uploadId'] as String? ?? '',
+      purpose: json['purpose'] as String? ?? 'BOOKING_ISSUE',
+      fileName: json['fileName'] as String? ?? '',
+      mimeType: json['mimeType'] as String? ?? 'image/png',
+      fileSizeBytes: (json['fileSizeBytes'] as num?)?.toInt() ?? 0,
+      sha256: json['sha256'] as String? ?? '',
+      accessToken: json['accessToken'] as String? ?? '',
+      expiresAt: json['expiresAt'] as String? ?? '',
+      privateDataUri: json['privateDataUri'] as String? ?? '',
     );
   }
 }

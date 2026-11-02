@@ -13,6 +13,7 @@ import '../../../../core/widgets/fixo_cards.dart';
 import '../../../customer_home/presentation/widgets/customer_home_widgets.dart';
 import '../../data/booking_repository.dart';
 import '../../domain/booking_models.dart';
+import '../widgets/booking_receipt_sheet.dart';
 
 /// Live Stitch Screen 08; the Chat tab lists the user's actual booking threads.
 class OrdersPage extends ConsumerStatefulWidget {
@@ -496,22 +497,22 @@ class _OrdersPageState extends ConsumerState<OrdersPage> {
                   spacing: 8,
                   runSpacing: 8,
                   children: [
-                    if (!widget.showChats)
-                      OutlinedButton.icon(
-                        style: OutlinedButton.styleFrom(
-                          minimumSize: const Size(0, 40),
-                          foregroundColor: palette.deepForest,
-                          side: BorderSide(color: palette.subtleBorder),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: FixoRadius.borderRadiusMd,
+                    if (!widget.showChats) ...[
+                      if (isDraft)
+                        FilledButton.icon(
+                          style: FilledButton.styleFrom(
+                            minimumSize: const Size(0, 40),
+                            backgroundColor: palette.primaryBrand,
+                            foregroundColor: Colors.white,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: FixoRadius.borderRadiusMd,
+                            ),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 12,
+                              vertical: 8,
+                            ),
                           ),
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 12,
-                            vertical: 8,
-                          ),
-                        ),
-                        onPressed: () async {
-                          if (isDraft) {
+                          onPressed: () async {
                             await context.push(
                               AppRoutes.checkout.replaceFirst(
                                 ':bookingId',
@@ -519,73 +520,89 @@ class _OrdersPageState extends ConsumerState<OrdersPage> {
                               ),
                             );
                             if (mounted) _load();
-                          } else {
-                            showModalBottomSheet<void>(
-                              context: context,
-                              isScrollControlled: true,
-                              useSafeArea: true,
-                              builder: (_) => SingleChildScrollView(
-                                padding: const EdgeInsets.all(24),
-                                child: Column(
-                                  mainAxisSize: MainAxisSize.min,
-                                  crossAxisAlignment:
-                                      CrossAxisAlignment.stretch,
-                                  children: [
-                                    Text(
-                                      '#${booking.orderCode}',
-                                      style: Theme.of(
-                                        context,
-                                      ).textTheme.titleLarge,
-                                    ),
-                                    const SizedBox(height: 12),
-                                    Text(text),
-                                    Text(_status(booking.status, ar)),
-                                    if (date != null)
-                                      Text(
-                                        DateFormat.yMMMd(
-                                          ar ? 'ar' : 'en',
-                                        ).format(date),
-                                      ),
-                                    const Divider(height: 28),
-                                    Text(
-                                      '${ar ? 'المعاينة' : 'Inspection'}: ${booking.pricing.baseInspectionEgp} ${ar ? 'ج.م' : 'EGP'}',
-                                    ),
-                                    Text(
-                                      '${ar ? 'الخدمة' : 'Service'}: ${booking.pricing.serviceFeeEgp} ${ar ? 'ج.م' : 'EGP'}',
-                                    ),
-                                    Text(
-                                      '${ar ? 'الانتقال' : 'Transport'}: ${booking.pricing.transportFeeEgp} ${ar ? 'ج.م' : 'EGP'}',
-                                    ),
-                                    const SizedBox(height: 8),
-                                    Text(
-                                      '${ar ? 'قيمة الحجز' : 'Booking total'}: ${booking.pricing.totalEgp} ${ar ? 'ج.م' : 'EGP'}',
-                                      style: const TextStyle(
-                                        fontWeight: FontWeight.bold,
-                                      ),
-                                    ),
-                                    const SizedBox(height: 20),
-                                    TextButton(
-                                      onPressed: () => Navigator.pop(context),
-                                      child: Text(ar ? 'إغلاق' : 'Close'),
-                                    ),
-                                  ],
-                                ),
+                          },
+                          icon: const Icon(Icons.payments_outlined, size: 16),
+                          label: Text(
+                            ar ? 'استكمال الحجز' : 'Continue checkout',
+                          ),
+                        )
+                      else ...[
+                        OutlinedButton.icon(
+                          style: OutlinedButton.styleFrom(
+                            minimumSize: const Size(0, 40),
+                            foregroundColor: palette.deepForest,
+                            side: BorderSide(color: palette.subtleBorder),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: FixoRadius.borderRadiusMd,
+                            ),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 12,
+                              vertical: 8,
+                            ),
+                          ),
+                          onPressed: () => context.push(
+                            AppRoutes.orderTracking.replaceFirst(
+                              ':orderId',
+                              Uri.encodeComponent(booking.id),
+                            ),
+                          ),
+                          icon: const Icon(Icons.near_me_outlined, size: 16),
+                          label: Text(
+                            ar ? 'تتبع الطلب' : 'Live tracking',
+                          ),
+                        ),
+                        if (isCompleted) ...[
+                          FilledButton.icon(
+                            style: FilledButton.styleFrom(
+                              minimumSize: const Size(0, 40),
+                              backgroundColor: FixoColors.primaryForest,
+                              foregroundColor: Colors.white,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: FixoRadius.borderRadiusMd,
                               ),
-                            );
-                          }
-                        },
-                        icon: Icon(
-                          isDraft
-                              ? Icons.payments_outlined
-                              : Icons.receipt_long_outlined,
-                          size: 16,
-                        ),
-                        label: Text(
-                          isDraft
-                              ? (ar ? 'استكمال الحجز' : 'Continue checkout')
-                              : (ar ? 'ملخص الحجز' : 'Booking summary'),
-                        ),
-                      ),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 12,
+                                vertical: 8,
+                              ),
+                            ),
+                            onPressed: () => context.push(
+                              AppRoutes.rateReview.replaceFirst(
+                                ':orderId',
+                                Uri.encodeComponent(booking.id),
+                              ),
+                            ),
+                            icon: const Icon(Icons.star_rate_rounded, size: 16),
+                            label: Text(
+                              ar ? 'تقييم الخدمة' : 'Rate & Review',
+                            ),
+                          ),
+                          OutlinedButton.icon(
+                            style: OutlinedButton.styleFrom(
+                              minimumSize: const Size(0, 40),
+                              foregroundColor: palette.deepForest,
+                              side: BorderSide(color: palette.subtleBorder),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: FixoRadius.borderRadiusMd,
+                              ),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 12,
+                                vertical: 8,
+                              ),
+                            ),
+                            onPressed: () => BookingReceiptSheet.show(
+                              context,
+                              bookingId: booking.id,
+                              isArabic: ar,
+                            ),
+                            icon: const Icon(
+                              Icons.receipt_long_outlined,
+                              size: 16,
+                            ),
+                            label: Text(ar ? 'الإيصال' : 'Receipt'),
+                          ),
+                        ],
+                      ],
+                    ],
                     if (booking.proProfile != null)
                       FilledButton.icon(
                         style: FilledButton.styleFrom(

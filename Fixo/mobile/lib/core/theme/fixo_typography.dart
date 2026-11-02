@@ -168,6 +168,22 @@ abstract final class FixoTypography {
     color: color ?? FixoColors.onSurfaceVariant,
   );
 
+  /// Label Small (11px / 14px, w600)
+  static TextStyle labelSm({
+    Color? color,
+    Locale? locale,
+    bool tabularFigures = true,
+  }) => TextStyle(
+    fontFamily: fontFamilyForLocale(locale),
+    fontFamilyFallback: fallbackFonts,
+    fontSize: 11,
+    height: 14 / 11,
+    fontWeight: FontWeight.w600,
+    letterSpacing: 0.24,
+    fontFeatures: tabularFigures ? const [FontFeature.tabularFigures()] : null,
+    color: color ?? FixoColors.onSurfaceVariant,
+  );
+
   static TextTheme buildTextTheme({
     required Color primaryTextColor,
     required Color secondaryTextColor,

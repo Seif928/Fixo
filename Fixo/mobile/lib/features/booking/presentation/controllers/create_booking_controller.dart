@@ -238,6 +238,18 @@ class CreateBookingController extends StateNotifier<CreateBookingState> {
     state = state.copyWith(issueDescription: text);
   }
 
+  void addPhotoUrl(String url) {
+    if (!state.issuePhotoUrls.contains(url)) {
+      state = state.copyWith(issuePhotoUrls: [...state.issuePhotoUrls, url]);
+    }
+  }
+
+  void removePhotoUrl(String url) {
+    state = state.copyWith(
+      issuePhotoUrls: state.issuePhotoUrls.where((u) => u != url).toList(),
+    );
+  }
+
   /// Submits the booking draft via `POST /api/v1/bookings`.
   Future<bool> submitBooking({
     required ServiceOfferModel offering,
