@@ -163,49 +163,54 @@ class CheckoutPage extends ConsumerWidget {
 
     final booking = state.booking!;
 
-    return SingleChildScrollView(
-      physics: const BouncingScrollPhysics(),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          if (state.errorMessage != null)
-            Container(
-              margin: const EdgeInsets.all(FixoSpacing.md),
-              padding: const EdgeInsets.all(FixoSpacing.sm),
-              decoration: BoxDecoration(
-                color: colorScheme.errorContainer,
-                borderRadius: BorderRadius.circular(FixoRadius.md),
-                border: Border.all(
-                  color: colorScheme.error.withValues(alpha: 0.4),
-                ),
-              ),
-              child: Row(
-                children: [
-                  Icon(
-                    Icons.warning_amber_rounded,
-                    color: colorScheme.onErrorContainer,
-                    size: 20,
-                  ),
-                  const SizedBox(width: FixoSpacing.xs),
-                  Expanded(
-                    child: Text(
-                      state.errorMessage!,
-                      style: FixoTypography.bodySm(
-                        color: colorScheme.onErrorContainer,
-                      ),
+    return Center(
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 640),
+        child: SingleChildScrollView(
+          physics: const BouncingScrollPhysics(),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              if (state.errorMessage != null)
+                Container(
+                  margin: const EdgeInsets.all(FixoSpacing.md),
+                  padding: const EdgeInsets.all(FixoSpacing.sm),
+                  decoration: BoxDecoration(
+                    color: colorScheme.errorContainer,
+                    borderRadius: BorderRadius.circular(FixoRadius.md),
+                    border: Border.all(
+                      color: colorScheme.error.withValues(alpha: 0.4),
                     ),
                   ),
-                ],
-              ),
-            ),
-          const CheckoutReassuranceBanner(),
-          CheckoutOrderSummaryCard(booking: booking),
-          const SizedBox(height: FixoSpacing.sm),
-          const CheckoutPaymentMethodsSection(),
-          CheckoutReceiptCard(pricing: booking.pricing),
-          const CheckoutTrustFootnote(),
-          const SizedBox(height: 100), // Spacing for sticky bottom CTA
-        ],
+                  child: Row(
+                    children: [
+                      Icon(
+                        Icons.warning_amber_rounded,
+                        color: colorScheme.onErrorContainer,
+                        size: 20,
+                      ),
+                      const SizedBox(width: FixoSpacing.xs),
+                      Expanded(
+                        child: Text(
+                          state.errorMessage!,
+                          style: FixoTypography.bodySm(
+                            color: colorScheme.onErrorContainer,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              const CheckoutReassuranceBanner(),
+              CheckoutOrderSummaryCard(booking: booking),
+              const SizedBox(height: FixoSpacing.sm),
+              const CheckoutPaymentMethodsSection(),
+              CheckoutReceiptCard(pricing: booking.pricing),
+              const CheckoutTrustFootnote(),
+              const SizedBox(height: 120), // Spacing for sticky bottom CTA
+            ],
+          ),
+        ),
       ),
     );
   }
@@ -239,94 +244,108 @@ class CheckoutPage extends ConsumerWidget {
           ),
         ],
       ),
-      child: Row(
-        children: [
-          Flexible(
-            flex: 2,
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  isArabic ? 'يستحق بعد التنفيذ' : 'Due Upon Completion',
-                  style: FixoTypography.labelMd(
-                    color: palette.mutedText,
+      child: Center(
+        heightFactor: 1.0,
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 640),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                crossAxisAlignment: CrossAxisAlignment.baseline,
+                textBaseline: TextBaseline.alphabetic,
+                children: [
+                  Flexible(
+                    child: Text(
+                      isArabic ? 'يستحق بعد التنفيذ' : 'Due Upon Completion',
+                      style: FixoTypography.labelMd(
+                        color: palette.mutedText,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
                   ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-                Text(
-                  '${booking.pricing.totalEgp} ${booking.pricing.currency}',
-                  style: FixoTypography.priceDisplay(
-                    color: palette.deepForest,
-                  ).copyWith(fontWeight: FontWeight.bold),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(width: FixoSpacing.sm),
-          Expanded(
-            flex: 3,
-            child: SizedBox(
-              height: 48,
-              child: ElevatedButton(
-                key: const Key('confirm-checkout-btn'),
-                onPressed: state.isSubmitting
-                    ? null
-                    : () async {
-                        await controller.submitCheckout();
-                      },
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: palette.primaryBrand,
-                  disabledBackgroundColor: palette.primaryBrand.withValues(
-                    alpha: 0.4,
+                  const SizedBox(width: FixoSpacing.sm),
+                  Text(
+                    '${booking.pricing.totalEgp} ${booking.pricing.currency}',
+                    style: FixoTypography.priceDisplay(
+                      color: palette.deepForest,
+                    ).copyWith(fontWeight: FontWeight.bold, fontSize: 18),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                   ),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
+                ],
+              ),
+              const SizedBox(height: FixoSpacing.xs),
+              ConstrainedBox(
+                constraints: const BoxConstraints(minHeight: 48),
+                child: ElevatedButton(
+                  key: const Key('confirm-checkout-btn'),
+                  onPressed: state.isSubmitting
+                      ? null
+                      : () async {
+                          await controller.submitCheckout();
+                        },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: palette.primaryBrand,
+                    disabledBackgroundColor: palette.primaryBrand.withValues(
+                      alpha: 0.4,
+                    ),
+                    side: Theme.of(context).brightness == Brightness.dark
+                        ? BorderSide(
+                            color: palette.limeAccent.withValues(alpha: 0.4),
+                          )
+                        : BorderSide.none,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    elevation: 0,
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 14,
+                      vertical: 12,
+                    ),
                   ),
-                  elevation: 0,
-                  padding: const EdgeInsets.symmetric(horizontal: 10),
-                ),
-                child: state.isSubmitting
-                    ? const SizedBox(
-                        width: 22,
-                        height: 22,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                          valueColor: AlwaysStoppedAnimation<Color>(
-                            Colors.white,
-                          ),
-                        ),
-                      )
-                    : Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          const Icon(
-                            Icons.lock_outline_rounded,
-                            size: 16,
-                            color: Colors.white,
-                          ),
-                          const SizedBox(width: 6),
-                          Flexible(
-                            child: Text(
-                              isArabic
-                                  ? 'تأكيد الحجز (دفع نقدي لاحقاً)'
-                                  : 'Confirm Booking (Pay Cash Later)',
-                              style: FixoTypography.labelLg(
-                                color: Colors.white,
-                              ).copyWith(fontWeight: FontWeight.bold),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
+                  child: state.isSubmitting
+                      ? const SizedBox(
+                          width: 22,
+                          height: 22,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            valueColor: AlwaysStoppedAnimation<Color>(
+                              Colors.white,
                             ),
                           ),
-                        ],
-                      ),
+                        )
+                      : Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            const Icon(
+                              Icons.check_circle_outline_rounded,
+                              size: 18,
+                              color: Colors.white,
+                            ),
+                            const SizedBox(width: 8),
+                            Flexible(
+                              child: Text(
+                                isArabic
+                                    ? 'تأكيد الحجز (دفع نقدي لاحقاً)'
+                                    : 'Confirm Booking (Pay Cash Later)',
+                                textAlign: TextAlign.center,
+                                style: FixoTypography.labelLg(
+                                  color: Colors.white,
+                                ).copyWith(fontWeight: FontWeight.bold),
+                                maxLines: 2,
+                              ),
+                            ),
+                          ],
+                        ),
+                ),
               ),
-            ),
+            ],
           ),
-        ],
+        ),
       ),
     );
   }

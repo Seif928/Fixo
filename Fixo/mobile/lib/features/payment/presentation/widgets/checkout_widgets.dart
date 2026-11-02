@@ -179,7 +179,7 @@ class CheckoutOrderSummaryCard extends StatelessWidget {
                             ),
                           ),
                           child: Text(
-                            isArabic ? 'خدمة معتمدة' : 'Verified Service',
+                            isArabic ? 'خدمة مجدولة' : 'Scheduled Service',
                             style: FixoTypography.labelMd(
                               color: palette.deepForest,
                             ),
@@ -1043,7 +1043,7 @@ class CheckoutConfirmationView extends StatelessWidget {
                           const SizedBox(height: 4),
                           Text(
                             isArabic
-                                ? 'تم إدراج طلبك في قائمة التعيين. سيتم إشعارك فور تعيين فني معتمد.'
+                                ? 'تم إدراج طلبك في قائمة التعيين. سيتم إشعارك فور قبول أحد الفنيين لطلبك.'
                                 : 'Your request is in the dispatch queue. You will be notified as soon as a qualified artisan accepts your request.',
                             style: FixoTypography.bodySm(
                               color: palette.mutedText,

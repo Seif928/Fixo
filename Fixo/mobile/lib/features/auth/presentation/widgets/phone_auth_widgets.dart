@@ -83,16 +83,16 @@ class _StepTabButton extends StatelessWidget {
         onTap: onTap,
         borderRadius: FixoRadius.borderRadiusPill,
         child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
               Icon(
                 icon,
-                size: 16,
+                size: 15,
                 color: isSelected ? Colors.white : palette.mutedText,
               ),
-              const SizedBox(width: 6),
+              const SizedBox(width: 4),
               Flexible(
                 child: Text(
                   label,
@@ -407,8 +407,8 @@ class CairoLifestyleMoodAnchorCard extends StatelessWidget {
                     Expanded(
                       child: Text(
                         isArabic
-                            ? 'أكثر من ٢,٤٠٠ فني معتمد في القاهرة جاهزون للحجز'
-                            : 'Over 2,400 certified Cairo craftsmen ready for booking',
+                            ? 'حجز خدمات الصيانة والإصلاح المنزلي في القاهرة والجيزة'
+                            : 'Home maintenance & repair bookings across Cairo & Giza',
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
                         style: FixoTypography.bodySm(

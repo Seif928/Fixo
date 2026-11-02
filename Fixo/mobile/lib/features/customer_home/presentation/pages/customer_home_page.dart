@@ -694,8 +694,8 @@ class _CustomerHomePageState extends ConsumerState<CustomerHomePage> {
                       const SizedBox(height: 2),
                       Text(
                         isArabic
-                            ? 'تمت مراجعة الهوية وسجل الخبرة والتقييمات'
-                            : 'Identity-reviewed, background checked & vetted',
+                            ? 'تصفح الفنيين المتاحين حسب الفئة والمنطقة'
+                            : 'Browse available professionals by category and zone',
                         style: FixoTypography.bodySm(color: palette.mutedText),
                       ),
                     ],

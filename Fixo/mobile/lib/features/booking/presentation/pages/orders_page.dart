@@ -6,6 +6,10 @@ import '../../../../app/router/app_routes.dart';
 import '../../../../app/router/customer_tab_navigation.dart';
 import '../../../../core/l10n/app_locale_controller.dart';
 import '../../../../core/theme/fixo_colors.dart';
+import '../../../../core/theme/fixo_spacing.dart';
+import '../../../../core/theme/fixo_typography.dart';
+import '../../../../core/widgets/fixo_brand_mark.dart';
+import '../../../../core/widgets/fixo_cards.dart';
 import '../../../customer_home/presentation/widgets/customer_home_widgets.dart';
 import '../../data/booking_repository.dart';
 import '../../domain/booking_models.dart';
@@ -95,6 +99,7 @@ class _OrdersPageState extends ConsumerState<OrdersPage> {
   Widget build(BuildContext context) {
     final ar = ref.watch(appLocaleProvider).languageCode == 'ar';
     final palette = context.fixoPalette;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     final horizontal = (MediaQuery.sizeOf(context).width - 680) / 2;
     final inset = horizontal > 16 ? horizontal : 16.0;
     final visible = widget.showChats
@@ -103,10 +108,42 @@ class _OrdersPageState extends ConsumerState<OrdersPage> {
     return Scaffold(
       backgroundColor: palette.canvasBackground,
       appBar: AppBar(
-        title: Text(
-          widget.showChats
-              ? (ar ? 'المحادثات' : 'Conversations')
-              : (ar ? 'طلباتي' : 'My Orders'),
+        backgroundColor: palette.cardSurface.withValues(alpha: 0.94),
+        elevation: 0,
+        scrolledUnderElevation: 0,
+        titleSpacing: FixoSpacing.md,
+        title: Row(
+          children: [
+            const FixoBrandMark(showSubtitle: false, iconBoxSize: 28),
+            const SizedBox(width: FixoSpacing.sm),
+            Expanded(
+              child: Text(
+                widget.showChats
+                    ? (ar ? 'المحادثات' : 'Conversations')
+                    : (ar ? 'طلباتي' : 'My Orders'),
+                overflow: TextOverflow.ellipsis,
+                style: FixoTypography.headlineSm(
+                  color: palette.deepForest,
+                ).copyWith(fontWeight: FontWeight.w800),
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          IconButton(
+            tooltip: ar ? 'تحديث' : 'Refresh',
+            onPressed: _loading ? null : () => _load(),
+            icon: Icon(
+              Icons.refresh_rounded,
+              color: palette.deepForest,
+              size: 20,
+            ),
+          ),
+          const SizedBox(width: FixoSpacing.xs),
+        ],
+        bottom: PreferredSize(
+          preferredSize: const Size.fromHeight(1.0),
+          child: Container(color: palette.subtleBorder, height: 1.0),
         ),
       ),
       bottomNavigationBar: FixoCustomerBottomNav(
@@ -119,29 +156,59 @@ class _OrdersPageState extends ConsumerState<OrdersPage> {
           children: [
             if (!widget.showChats)
               Padding(
-                padding: EdgeInsets.symmetric(horizontal: inset, vertical: 16),
-                child: SegmentedButton<String>(
-                  showSelectedIcon: false,
-                  segments: [
-                    ButtonSegment(
-                      value: 'active',
-                      label: Text(ar ? 'نشطة' : 'Active'),
+                padding: EdgeInsets.fromLTRB(inset, 14, inset, 10),
+                child: SizedBox(
+                  width: double.infinity,
+                  child: SegmentedButton<String>(
+                    showSelectedIcon: false,
+                    style: ButtonStyle(
+                      backgroundColor: WidgetStateProperty.resolveWith((states) {
+                        if (states.contains(WidgetState.selected)) {
+                          return palette.primaryBrand;
+                        }
+                        return palette.surfaceContainer;
+                      }),
+                      foregroundColor: WidgetStateProperty.resolveWith((states) {
+                        if (states.contains(WidgetState.selected)) {
+                          return Colors.white;
+                        }
+                        return palette.mutedText;
+                      }),
+                      side: WidgetStatePropertyAll(
+                        BorderSide(color: palette.subtleBorder),
+                      ),
+                      shape: WidgetStatePropertyAll(
+                        RoundedRectangleBorder(
+                          borderRadius: FixoRadius.borderRadiusPill,
+                        ),
+                      ),
+                      textStyle: WidgetStatePropertyAll(
+                        FixoTypography.labelMd(
+                          color: palette.inkText,
+                        ).copyWith(fontWeight: FontWeight.w700),
+                      ),
                     ),
-                    ButtonSegment(
-                      value: 'completed',
-                      label: Text(ar ? 'مكتملة' : 'Completed'),
-                    ),
-                    ButtonSegment(
-                      value: 'cancelled',
-                      label: Text(ar ? 'ملغاة' : 'Cancelled'),
-                    ),
-                  ],
-                  selected: {_tab},
-                  onSelectionChanged: (values) {
-                    if (_tab == values.first) return;
-                    setState(() => _tab = values.first);
-                    _load();
-                  },
+                    segments: [
+                      ButtonSegment(
+                        value: 'active',
+                        label: Text(ar ? 'نشطة' : 'Active'),
+                      ),
+                      ButtonSegment(
+                        value: 'completed',
+                        label: Text(ar ? 'مكتملة' : 'Completed'),
+                      ),
+                      ButtonSegment(
+                        value: 'cancelled',
+                        label: Text(ar ? 'ملغاة' : 'Cancelled'),
+                      ),
+                    ],
+                    selected: {_tab},
+                    onSelectionChanged: (values) {
+                      if (_tab == values.first) return;
+                      setState(() => _tab = values.first);
+                      _load();
+                    },
+                  ),
                 ),
               ),
             Expanded(
@@ -152,60 +219,103 @@ class _OrdersPageState extends ConsumerState<OrdersPage> {
                       child: ListView(
                         controller: _scroll,
                         physics: const AlwaysScrollableScrollPhysics(),
-                        padding: EdgeInsets.fromLTRB(inset, 4, inset, 24),
+                        padding: EdgeInsets.fromLTRB(inset, 6, inset, 24),
                         children: [
                           if (_failed)
-                            Card(
-                              child: Padding(
-                                padding: const EdgeInsets.all(16),
-                                child: Column(
-                                  children: [
-                                    Text(
-                                      ar
-                                          ? 'تعذّر تحميل القائمة.'
-                                          : 'Could not load the list.',
+                            FixoSurfaceCard(
+                              padding: const EdgeInsets.all(FixoSpacing.md),
+                              borderRadius: FixoRadius.borderRadiusLg,
+                              child: Column(
+                                children: [
+                                  const Icon(
+                                    Icons.error_outline_rounded,
+                                    color: FixoColors.error,
+                                    size: 28,
+                                  ),
+                                  const SizedBox(height: 8),
+                                  Text(
+                                    ar
+                                        ? 'تعذّر تحميل القائمة.'
+                                        : 'Could not load the list.',
+                                    style: FixoTypography.bodyMd(
+                                      color: palette.inkText,
+                                    ).copyWith(fontWeight: FontWeight.w600),
+                                    textAlign: TextAlign.center,
+                                  ),
+                                  const SizedBox(height: 6),
+                                  TextButton.icon(
+                                    onPressed: () => _load(),
+                                    icon: const Icon(
+                                      Icons.refresh_rounded,
+                                      size: 18,
                                     ),
-                                    TextButton(
-                                      onPressed: () => _load(),
-                                      child: Text(
-                                        ar ? 'إعادة المحاولة' : 'Retry',
-                                      ),
+                                    label: Text(
+                                      ar ? 'إعادة المحاولة' : 'Retry',
                                     ),
-                                  ],
-                                ),
+                                  ),
+                                ],
                               ),
                             ),
                           if (!_failed && visible.isEmpty)
                             Padding(
-                              padding: const EdgeInsets.symmetric(vertical: 64),
-                              child: Column(
-                                children: [
-                                  Icon(
-                                    widget.showChats
-                                        ? Icons.chat_bubble_outline
-                                        : Icons.receipt_long_outlined,
-                                    size: 48,
-                                    color: palette.mutedText,
-                                  ),
-                                  const SizedBox(height: 16),
-                                  Text(
-                                    widget.showChats
-                                        ? (ar
-                                              ? 'لا توجد محادثات متاحة بعد.'
-                                              : 'No conversations available yet.')
-                                        : (ar
-                                              ? 'لا توجد طلبات في هذه القائمة.'
-                                              : 'No bookings in this list.'),
-                                    textAlign: TextAlign.center,
-                                  ),
-                                  if (widget.showChats)
-                                    Text(
-                                      ar
-                                          ? 'تظهر المحادثة بعد إسناد الطلب لفني.'
-                                          : 'Conversations appear after a professional is assigned.',
-                                      textAlign: TextAlign.center,
+                              padding: const EdgeInsets.symmetric(vertical: 48),
+                              child: FixoSurfaceCard(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: FixoSpacing.lg,
+                                  vertical: FixoSpacing.xl,
+                                ),
+                                borderRadius: FixoRadius.borderRadiusLg,
+                                child: Column(
+                                  children: [
+                                    Container(
+                                      width: 56,
+                                      height: 56,
+                                      decoration: BoxDecoration(
+                                        color: palette.surfaceLow,
+                                        shape: BoxShape.circle,
+                                        border: Border.all(
+                                          color: palette.subtleBorder,
+                                        ),
+                                      ),
+                                      alignment: Alignment.center,
+                                      child: Icon(
+                                        widget.showChats
+                                            ? Icons.chat_bubble_outline_rounded
+                                            : Icons.receipt_long_outlined,
+                                        size: 28,
+                                        color: isDark
+                                            ? palette.limeAccent
+                                            : palette.deepForest,
+                                      ),
                                     ),
-                                ],
+                                    const SizedBox(height: 14),
+                                    Text(
+                                      widget.showChats
+                                          ? (ar
+                                                ? 'لا توجد محادثات متاحة بعد.'
+                                                : 'No conversations available yet.')
+                                          : (ar
+                                                ? 'لا توجد طلبات في هذه القائمة.'
+                                                : 'No bookings in this list.'),
+                                      textAlign: TextAlign.center,
+                                      style: FixoTypography.labelLg(
+                                        color: palette.inkText,
+                                      ).copyWith(fontWeight: FontWeight.w700),
+                                    ),
+                                    if (widget.showChats) ...[
+                                      const SizedBox(height: 6),
+                                      Text(
+                                        ar
+                                            ? 'تظهر المحادثة بعد إسناد الطلب لفني.'
+                                            : 'Conversations appear after a professional is assigned.',
+                                        textAlign: TextAlign.center,
+                                        style: FixoTypography.bodySm(
+                                          color: palette.mutedText,
+                                        ),
+                                      ),
+                                    ],
+                                  ],
+                                ),
                               ),
                             ),
                           for (final booking in visible)
@@ -238,129 +348,269 @@ class _OrdersPageState extends ConsumerState<OrdersPage> {
         ? title!
         : (ar ? 'حجز خدمة' : 'Service booking');
     final palette = context.fixoPalette;
-    return Card(
+    final isDraft = booking.status == 'DRAFT';
+    final isCompleted = booking.status == 'COMPLETED';
+    final isCancelled = booking.status == 'CANCELLED';
+
+    return Padding(
       key: ValueKey('booking-${booking.id}'),
-      margin: const EdgeInsets.only(bottom: 16),
-      child: Padding(
-        padding: const EdgeInsets.all(18),
+      padding: const EdgeInsets.only(bottom: 14),
+      child: FixoSurfaceCard(
+        padding: const EdgeInsets.all(FixoSpacing.md),
+        borderRadius: FixoRadius.borderRadiusLg,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             Wrap(
               alignment: WrapAlignment.spaceBetween,
-              spacing: 12,
+              crossAxisAlignment: WrapCrossAlignment.center,
+              spacing: 10,
               runSpacing: 6,
               children: [
-                Text(
-                  '#${booking.orderCode}',
-                  style: TextStyle(color: palette.mutedText),
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 4,
+                  ),
+                  decoration: BoxDecoration(
+                    color: palette.surfaceLow,
+                    borderRadius: FixoRadius.borderRadiusPill,
+                    border: Border.all(color: palette.subtleBorder),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        Icons.tag_rounded,
+                        size: 14,
+                        color: palette.mutedText,
+                      ),
+                      const SizedBox(width: 4),
+                      Text(
+                        '#${booking.orderCode}',
+                        style: FixoTypography.labelMd(
+                          color: palette.deepForest,
+                        ).copyWith(fontWeight: FontWeight.w800),
+                      ),
+                    ],
+                  ),
                 ),
-                Text(
-                  _status(booking.status, ar),
-                  style: TextStyle(
-                    color: palette.deepForest,
-                    fontWeight: FontWeight.w700,
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 4,
+                  ),
+                  decoration: BoxDecoration(
+                    color: isCompleted
+                        ? FixoColors.secondaryContainer
+                        : isCancelled
+                        ? FixoColors.errorContainer
+                        : palette.surfaceHigh,
+                    borderRadius: FixoRadius.borderRadiusPill,
+                  ),
+                  child: Text(
+                    _status(booking.status, ar),
+                    style: FixoTypography.labelMd(
+                      color: isCompleted
+                          ? FixoColors.onSecondaryContainer
+                          : isCancelled
+                          ? FixoColors.onErrorContainer
+                          : palette.deepForest,
+                    ).copyWith(fontWeight: FontWeight.w700),
                   ),
                 ),
               ],
             ),
             const SizedBox(height: 12),
-            Text(text, style: Theme.of(context).textTheme.titleMedium),
-            if (date != null)
-              Padding(
-                padding: const EdgeInsets.only(top: 6),
-                child: Text(DateFormat.yMMMd(ar ? 'ar' : 'en').format(date)),
-              ),
-            const SizedBox(height: 12),
-            Text(
-              '${booking.pricing.totalEgp} ${ar ? 'ج.م — قيمة الحجز' : 'EGP — booking total'}',
-              style: const TextStyle(fontWeight: FontWeight.w700),
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Container(
+                  width: 44,
+                  height: 44,
+                  decoration: BoxDecoration(
+                    color: palette.surfaceLow,
+                    borderRadius: FixoRadius.borderRadiusMd,
+                    border: Border.all(color: palette.subtleBorder),
+                  ),
+                  alignment: Alignment.center,
+                  child: Icon(
+                    Icons.home_repair_service_rounded,
+                    size: 22,
+                    color: palette.deepForest,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        text,
+                        style: FixoTypography.headlineSm(
+                          color: palette.inkText,
+                        ).copyWith(fontWeight: FontWeight.w700),
+                      ),
+                      if (date != null) ...[
+                        const SizedBox(height: 4),
+                        Row(
+                          children: [
+                            Icon(
+                              Icons.calendar_today_outlined,
+                              size: 14,
+                              color: palette.mutedText,
+                            ),
+                            const SizedBox(width: 5),
+                            Flexible(
+                              child: Text(
+                                DateFormat.yMMMd(ar ? 'ar' : 'en').format(date),
+                                style: FixoTypography.bodySm(
+                                  color: palette.mutedText,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+              ],
             ),
             const SizedBox(height: 12),
+            Divider(height: 1, color: palette.subtleBorder),
+            const SizedBox(height: 12),
             Wrap(
-              spacing: 8,
-              runSpacing: 8,
+              alignment: WrapAlignment.spaceBetween,
+              crossAxisAlignment: WrapCrossAlignment.center,
+              spacing: 10,
+              runSpacing: 10,
               children: [
-                if (!widget.showChats)
-                  OutlinedButton(
-                    onPressed: () async {
-                      if (booking.status == 'DRAFT') {
-                        await context.push(
-                          AppRoutes.checkout.replaceFirst(
-                            ':bookingId',
+                Text(
+                  '${booking.pricing.totalEgp} ${ar ? 'ج.م — قيمة الحجز' : 'EGP — booking total'}',
+                  style: FixoTypography.labelLg(
+                    color: palette.deepForest,
+                  ).copyWith(fontWeight: FontWeight.w800),
+                ),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: [
+                    if (!widget.showChats)
+                      OutlinedButton.icon(
+                        style: OutlinedButton.styleFrom(
+                          minimumSize: const Size(0, 40),
+                          foregroundColor: palette.deepForest,
+                          side: BorderSide(color: palette.subtleBorder),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: FixoRadius.borderRadiusMd,
+                          ),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 8,
+                          ),
+                        ),
+                        onPressed: () async {
+                          if (isDraft) {
+                            await context.push(
+                              AppRoutes.checkout.replaceFirst(
+                                ':bookingId',
+                                Uri.encodeComponent(booking.id),
+                              ),
+                            );
+                            if (mounted) _load();
+                          } else {
+                            showModalBottomSheet<void>(
+                              context: context,
+                              isScrollControlled: true,
+                              useSafeArea: true,
+                              builder: (_) => SingleChildScrollView(
+                                padding: const EdgeInsets.all(24),
+                                child: Column(
+                                  mainAxisSize: MainAxisSize.min,
+                                  crossAxisAlignment:
+                                      CrossAxisAlignment.stretch,
+                                  children: [
+                                    Text(
+                                      '#${booking.orderCode}',
+                                      style: Theme.of(
+                                        context,
+                                      ).textTheme.titleLarge,
+                                    ),
+                                    const SizedBox(height: 12),
+                                    Text(text),
+                                    Text(_status(booking.status, ar)),
+                                    if (date != null)
+                                      Text(
+                                        DateFormat.yMMMd(
+                                          ar ? 'ar' : 'en',
+                                        ).format(date),
+                                      ),
+                                    const Divider(height: 28),
+                                    Text(
+                                      '${ar ? 'المعاينة' : 'Inspection'}: ${booking.pricing.baseInspectionEgp} ${ar ? 'ج.م' : 'EGP'}',
+                                    ),
+                                    Text(
+                                      '${ar ? 'الخدمة' : 'Service'}: ${booking.pricing.serviceFeeEgp} ${ar ? 'ج.م' : 'EGP'}',
+                                    ),
+                                    Text(
+                                      '${ar ? 'الانتقال' : 'Transport'}: ${booking.pricing.transportFeeEgp} ${ar ? 'ج.م' : 'EGP'}',
+                                    ),
+                                    const SizedBox(height: 8),
+                                    Text(
+                                      '${ar ? 'قيمة الحجز' : 'Booking total'}: ${booking.pricing.totalEgp} ${ar ? 'ج.م' : 'EGP'}',
+                                      style: const TextStyle(
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 20),
+                                    TextButton(
+                                      onPressed: () => Navigator.pop(context),
+                                      child: Text(ar ? 'إغلاق' : 'Close'),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            );
+                          }
+                        },
+                        icon: Icon(
+                          isDraft
+                              ? Icons.payments_outlined
+                              : Icons.receipt_long_outlined,
+                          size: 16,
+                        ),
+                        label: Text(
+                          isDraft
+                              ? (ar ? 'استكمال الحجز' : 'Continue checkout')
+                              : (ar ? 'ملخص الحجز' : 'Booking summary'),
+                        ),
+                      ),
+                    if (booking.proProfile != null)
+                      FilledButton.icon(
+                        style: FilledButton.styleFrom(
+                          minimumSize: const Size(0, 40),
+                          backgroundColor: palette.primaryBrand,
+                          foregroundColor: Colors.white,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: FixoRadius.borderRadiusMd,
+                          ),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 8,
+                          ),
+                        ),
+                        onPressed: () => context.push(
+                          AppRoutes.customerChat.replaceFirst(
+                            ':orderId',
                             Uri.encodeComponent(booking.id),
                           ),
-                        );
-                        if (mounted) _load();
-                      } else {
-                        showModalBottomSheet<void>(
-                          context: context,
-                          isScrollControlled: true,
-                          useSafeArea: true,
-                          builder: (_) => SingleChildScrollView(
-                            padding: const EdgeInsets.all(24),
-                            child: Column(
-                              mainAxisSize: MainAxisSize.min,
-                              crossAxisAlignment: CrossAxisAlignment.stretch,
-                              children: [
-                                Text(
-                                  '#${booking.orderCode}',
-                                  style: Theme.of(context).textTheme.titleLarge,
-                                ),
-                                const SizedBox(height: 12),
-                                Text(text),
-                                Text(_status(booking.status, ar)),
-                                if (date != null)
-                                  Text(
-                                    DateFormat.yMMMd(
-                                      ar ? 'ar' : 'en',
-                                    ).format(date),
-                                  ),
-                                const Divider(height: 28),
-                                Text(
-                                  '${ar ? 'المعاينة' : 'Inspection'}: ${booking.pricing.baseInspectionEgp} ${ar ? 'ج.م' : 'EGP'}',
-                                ),
-                                Text(
-                                  '${ar ? 'الخدمة' : 'Service'}: ${booking.pricing.serviceFeeEgp} ${ar ? 'ج.م' : 'EGP'}',
-                                ),
-                                Text(
-                                  '${ar ? 'الانتقال' : 'Transport'}: ${booking.pricing.transportFeeEgp} ${ar ? 'ج.م' : 'EGP'}',
-                                ),
-                                const SizedBox(height: 8),
-                                Text(
-                                  '${ar ? 'قيمة الحجز' : 'Booking total'}: ${booking.pricing.totalEgp} ${ar ? 'ج.م' : 'EGP'}',
-                                  style: const TextStyle(
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                                const SizedBox(height: 20),
-                                TextButton(
-                                  onPressed: () => Navigator.pop(context),
-                                  child: Text(ar ? 'إغلاق' : 'Close'),
-                                ),
-                              ],
-                            ),
-                          ),
-                        );
-                      }
-                    },
-                    child: Text(
-                      booking.status == 'DRAFT'
-                          ? (ar ? 'استكمال الحجز' : 'Continue checkout')
-                          : (ar ? 'ملخص الحجز' : 'Booking summary'),
-                    ),
-                  ),
-                if (booking.proProfile != null)
-                  FilledButton.icon(
-                    onPressed: () => context.push(
-                      AppRoutes.customerChat.replaceFirst(
-                        ':orderId',
-                        Uri.encodeComponent(booking.id),
+                        ),
+                        icon: const Icon(Icons.chat_bubble_outline, size: 18),
+                        label: Text(ar ? 'المحادثة' : 'Conversation'),
                       ),
-                    ),
-                    icon: const Icon(Icons.chat_bubble_outline, size: 18),
-                    label: Text(ar ? 'المحادثة' : 'Conversation'),
-                  ),
+                  ],
+                ),
               ],
             ),
           ],

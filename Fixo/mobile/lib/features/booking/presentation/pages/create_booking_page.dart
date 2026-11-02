@@ -347,8 +347,8 @@ class _CreateBookingPageState extends ConsumerState<CreateBookingPage> {
                   SnackBar(
                     content: Text(
                       isArabic
-                          ? 'فريق دعم عملاء فيكسو متاح على مدار الساعة.'
-                          : 'FIXO Cairo Support is available 24/7.',
+                          ? 'اختر العنوان واليوم والفترة الزمنية لإنشاء مسودة الحجز.'
+                          : 'Select your address, date, and preferred time window to create a booking draft.',
                     ),
                   ),
                 );
@@ -359,15 +359,18 @@ class _CreateBookingPageState extends ConsumerState<CreateBookingPage> {
         body: Column(
           children: [
             Expanded(
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: FixoSpacing.md,
-                  vertical: FixoSpacing.sm,
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    // Step Progress Header
+              child: Center(
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 640),
+                  child: SingleChildScrollView(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: FixoSpacing.md,
+                      vertical: FixoSpacing.sm,
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        // Step Progress Header
                     BookingProgressHeader(isArabic: isArabic),
                     const SizedBox(height: FixoSpacing.sm),
 
@@ -632,6 +635,8 @@ class _CreateBookingPageState extends ConsumerState<CreateBookingPage> {
                 ),
               ),
             ),
+          ),
+        ),
 
             // Sticky Bottom CTA Bar
             Container(
@@ -651,9 +656,13 @@ class _CreateBookingPageState extends ConsumerState<CreateBookingPage> {
                 ],
               ),
               child: SafeArea(
-                child: Row(
-                  children: [
-                    // Bookmark icon button
+                child: Center(
+                  heightFactor: 1.0,
+                  child: ConstrainedBox(
+                    constraints: const BoxConstraints(maxWidth: 640),
+                    child: Row(
+                      children: [
+                        // Bookmark icon button
                     Container(
                       width: 48,
                       height: 48,
@@ -826,7 +835,7 @@ class _CreateBookingPageState extends ConsumerState<CreateBookingPage> {
                             style: FixoTypography.bodySm(
                               color: palette.mutedText,
                             ).copyWith(fontSize: 10),
-                            maxLines: 1,
+                            maxLines: 2,
                             overflow: TextOverflow.ellipsis,
                             textAlign: TextAlign.center,
                           ),
@@ -837,9 +846,11 @@ class _CreateBookingPageState extends ConsumerState<CreateBookingPage> {
                 ),
               ),
             ),
-          ],
+          ),
         ),
-      ),
-    );
+      ],
+    ),
+  ),
+);
   }
 }

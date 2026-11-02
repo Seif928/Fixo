@@ -228,7 +228,7 @@ void main() {
       // Order Summary Card
       expect(find.text('AC Deep Cleaning & Wash'), findsOneWidget);
       expect(find.text('#FX-8842'), findsOneWidget);
-      expect(find.text('Verified Service'), findsOneWidget);
+      expect(find.text('Scheduled Service'), findsOneWidget);
       expect(find.text('Home Apartment, Sheikh Zayed, Dist. 9'), findsOneWidget);
       expect(find.text('Cash Collection After Service'), findsOneWidget);
       expect(find.text('0 EGP'), findsNothing);

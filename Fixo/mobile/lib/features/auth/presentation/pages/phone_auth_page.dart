@@ -121,6 +121,11 @@ class _PhoneAuthPageState extends ConsumerState<PhoneAuthPage> {
                       ),
                       TextButton(
                         key: const Key('btn-auth-toggle-locale'),
+                        style: TextButton.styleFrom(
+                          minimumSize: const Size(40, 40),
+                          padding: const EdgeInsets.symmetric(horizontal: 8),
+                          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                        ),
                         onPressed: () =>
                             ref.read(appLocaleProvider.notifier).toggleLocale(),
                         child: Text(
@@ -382,7 +387,7 @@ class _PhoneAuthPageState extends ConsumerState<PhoneAuthPage> {
                 ),
                 alignment: Alignment.center,
                 child: Icon(
-                  Icons.verified_user_outlined,
+                  Icons.location_on_outlined,
                   size: 20,
                   color: palette.deepForest,
                 ),
@@ -393,7 +398,7 @@ class _PhoneAuthPageState extends ConsumerState<PhoneAuthPage> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      isArabic ? 'شبكة فنيين معتمدين' : 'Verified Pro Network',
+                      isArabic ? 'تغطية القاهرة والجيزة' : 'Cairo & Giza Coverage',
                       style: FixoTypography.labelMd(
                         color: palette.inkText,
                       ).copyWith(fontWeight: FontWeight.w700),
@@ -654,8 +659,8 @@ class _PhoneAuthPageState extends ConsumerState<PhoneAuthPage> {
                   Flexible(
                     child: Text(
                       isArabic
-                          ? 'محمي بتشفير 256-bit'
-                          : 'Protected by 256-bit encryption',
+                          ? 'تحقق رمز الدخول التجريبي'
+                          : 'Development OTP verification',
                       style: FixoTypography.bodySm(
                         color: palette.mutedText,
                       ).copyWith(fontWeight: FontWeight.w600),
@@ -671,14 +676,16 @@ class _PhoneAuthPageState extends ConsumerState<PhoneAuthPage> {
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   const Icon(
-                    Icons.support_agent_rounded,
+                    Icons.home_repair_service_outlined,
                     size: 16,
                     color: FixoColors.secondary,
                   ),
                   const SizedBox(width: 4),
                   Flexible(
                     child: Text(
-                      isArabic ? 'دعم القاهرة ٢٤/٧' : '24/7 Cairo Support',
+                      isArabic
+                          ? 'خدمات منزلية في القاهرة والجيزة'
+                          : 'Cairo & Giza Home Services',
                       style: FixoTypography.bodySm(
                         color: palette.mutedText,
                       ).copyWith(fontWeight: FontWeight.w600),

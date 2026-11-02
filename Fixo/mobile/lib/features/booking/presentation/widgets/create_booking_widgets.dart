@@ -244,9 +244,9 @@ class SelectedServiceCard extends StatelessWidget {
                 Expanded(
                   child: Row(
                     children: [
-                      const Icon(
+                      Icon(
                         Icons.verified_user_rounded,
-                        color: FixoColors.secondary,
+                        color: palette.deepForest,
                         size: 18,
                       ),
                       const SizedBox(width: 6),
@@ -254,13 +254,13 @@ class SelectedServiceCard extends StatelessWidget {
                         child: Text(
                           preferredPro != null
                               ? (isArabic
-                                    ? 'فني مسجل ومعتمد'
+                                    ? 'فني مسجل'
                                     : 'Registered Pro')
                               : (isArabic
                                     ? 'خدمة منزلية معلنة'
                                     : 'Catalog Home Service'),
                           style: FixoTypography.labelMd(
-                            color: FixoColors.secondary,
+                            color: palette.deepForest,
                           ).copyWith(fontWeight: FontWeight.w600),
                           overflow: TextOverflow.ellipsis,
                         ),
@@ -366,7 +366,7 @@ class ServiceLocationCard extends StatelessWidget {
                   child: Text(
                     isArabic ? 'تغيير' : 'Change',
                     style: FixoTypography.labelMd(
-                      color: FixoColors.secondary,
+                      color: palette.deepForest,
                     ).copyWith(fontWeight: FontWeight.bold),
                   ),
                 ),

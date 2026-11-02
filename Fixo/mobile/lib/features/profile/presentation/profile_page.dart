@@ -328,8 +328,8 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
                                 const SizedBox(height: 4),
                                 Text(
                                   ar
-                                      ? 'هل أنت فني أو حرفي متخصص؟'
-                                      : 'Are you a certified craftsman or artisan?',
+                                      ? 'هل أنت فني أو حرفي خدمات منزلية؟'
+                                      : 'Are you a home services technician or artisan?',
                                   style: textTheme.titleSmall?.copyWith(
                                     color: Colors.white,
                                     fontWeight: FontWeight.w800,

@@ -611,4 +611,94 @@ void main() {
       });
     }
   });
+
+  group(
+    'Desktop (1280x800), System Theme, Readability & Unsupported Claims Audit',
+    () {
+      for (final entry in screens.entries) {
+        testWidgets(
+          '${entry.key} renders cleanly on desktop (1280x800) with ThemeMode.system',
+          (tester) async {
+            tester.view.physicalSize = const Size(1280, 800);
+            tester.view.devicePixelRatio = 1.0;
+            addTearDown(() {
+              tester.view.resetPhysicalSize();
+              tester.view.resetDevicePixelRatio();
+            });
+
+            final widget = await _buildTestHarness(
+              child: entry.value(),
+              locale: const Locale('en'),
+              themeMode: ThemeMode.system,
+              textScale: 1.0,
+            );
+
+            await tester.pumpWidget(widget);
+            await tester.pumpAndSettle();
+
+            expect(tester.takeException(), isNull);
+
+            await tester.pumpWidget(const SizedBox.shrink());
+            await tester.pump(const Duration(seconds: 11));
+            expect(tester.takeException(), isNull);
+          },
+        );
+      }
+
+      testWidgets(
+        'Checkout button stays readable at 360dp 1.35x in EN & AR and omits unsupported verification claims',
+        (tester) async {
+          tester.view.physicalSize = const Size(360, 900);
+          tester.view.devicePixelRatio = 1.0;
+          addTearDown(() {
+            tester.view.resetPhysicalSize();
+            tester.view.resetDevicePixelRatio();
+          });
+
+          final enWidget = await _buildTestHarness(
+            child: const CheckoutPage(bookingId: 'bk-8842'),
+            locale: const Locale('en'),
+            themeMode: ThemeMode.light,
+            textScale: 1.35,
+          );
+          await tester.pumpWidget(enWidget);
+          await tester.pumpAndSettle();
+
+          expect(tester.takeException(), isNull);
+          final enBtnFinder = find.byKey(const Key('confirm-checkout-btn'));
+          expect(enBtnFinder, findsOneWidget);
+          expect(tester.getSize(enBtnFinder).width, greaterThanOrEqualTo(300));
+          expect(
+            find.text('Confirm Booking (Pay Cash Later)'),
+            findsOneWidget,
+          );
+          expect(find.text('Scheduled Service'), findsOneWidget);
+          expect(find.text('Verified Service'), findsNothing);
+
+          await tester.pumpWidget(const SizedBox.shrink());
+          await tester.pump();
+
+          final arWidget = await _buildTestHarness(
+            child: const CheckoutPage(bookingId: 'bk-8842'),
+            locale: const Locale('ar'),
+            themeMode: ThemeMode.dark,
+            textScale: 1.35,
+          );
+          await tester.pumpWidget(arWidget);
+          await tester.pumpAndSettle();
+
+          expect(tester.takeException(), isNull);
+          final arBtnFinder = find.byKey(const Key('confirm-checkout-btn'));
+          expect(arBtnFinder, findsOneWidget);
+          expect(tester.getSize(arBtnFinder).width, greaterThanOrEqualTo(300));
+          expect(
+            find.text('تأكيد الحجز (دفع نقدي لاحقاً)'),
+            findsOneWidget,
+          );
+          expect(find.text('خدمة مجدولة'), findsOneWidget);
+          expect(find.text('خدمة معتمدة'), findsNothing);
+        },
+      );
+    },
+  );
 }

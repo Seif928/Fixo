@@ -809,25 +809,30 @@ class FixoCustomerBottomNav extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final palette = context.fixoPalette;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     final items = <_NavTabItem>[
       _NavTabItem(
         keyName: 'nav-tab-home',
-        icon: Icons.home_rounded,
+        icon: Icons.home_outlined,
+        activeIcon: Icons.home_rounded,
         label: isArabic ? 'الرئيسية' : 'Home',
       ),
       _NavTabItem(
         keyName: 'nav-tab-orders',
-        icon: Icons.receipt_long_rounded,
+        icon: Icons.receipt_long_outlined,
+        activeIcon: Icons.receipt_long_rounded,
         label: isArabic ? 'طلباتي' : 'Orders',
       ),
       _NavTabItem(
         keyName: 'nav-tab-chat',
         icon: Icons.chat_bubble_outline_rounded,
+        activeIcon: Icons.chat_bubble_rounded,
         label: isArabic ? 'المحادثات' : 'Chat',
       ),
       _NavTabItem(
         keyName: 'nav-tab-profile',
         icon: Icons.account_circle_outlined,
+        activeIcon: Icons.account_circle_rounded,
         label: isArabic ? 'حسابي' : 'Profile',
       ),
     ];
@@ -842,14 +847,14 @@ class FixoCustomerBottomNav extends StatelessWidget {
       child: SafeArea(
         top: false,
         child: SizedBox(
-          height: 64,
+          height: 66,
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceAround,
             children: List<Widget>.generate(items.length, (index) {
               final item = items[index];
               final isSelected = index == currentIndex;
               final fgColor = isSelected
-                  ? palette.deepForest
+                  ? (isDark ? palette.limeAccent : palette.deepForest)
                   : palette.mutedText;
 
               return Expanded(
@@ -864,7 +869,8 @@ class FixoCustomerBottomNav extends StatelessWidget {
                       children: [
                         AnimatedContainer(
                           duration: const Duration(milliseconds: 180),
-                          width: isSelected ? 22 : 0,
+                          curve: Curves.easeOutCubic,
+                          width: isSelected ? 24 : 0,
                           height: 3,
                           margin: const EdgeInsets.only(bottom: 3),
                           decoration: BoxDecoration(
@@ -874,7 +880,27 @@ class FixoCustomerBottomNav extends StatelessWidget {
                             borderRadius: FixoRadius.borderRadiusPill,
                           ),
                         ),
-                        Icon(item.icon, size: 22, color: fgColor),
+                        AnimatedContainer(
+                          duration: const Duration(milliseconds: 180),
+                          curve: Curves.easeOutCubic,
+                          padding: EdgeInsets.symmetric(
+                            horizontal: isSelected ? 12 : 6,
+                            vertical: 2,
+                          ),
+                          decoration: BoxDecoration(
+                            color: isSelected
+                                ? palette.primaryBrand.withValues(
+                                    alpha: isDark ? 0.55 : 0.10,
+                                  )
+                                : Colors.transparent,
+                            borderRadius: FixoRadius.borderRadiusPill,
+                          ),
+                          child: Icon(
+                            isSelected ? item.activeIcon : item.icon,
+                            size: 22,
+                            color: fgColor,
+                          ),
+                        ),
                         const SizedBox(height: 2),
                         Text(
                           item.label,
@@ -883,7 +909,7 @@ class FixoCustomerBottomNav extends StatelessWidget {
                           style: FixoTypography.labelMd(color: fgColor)
                               .copyWith(
                                 fontWeight: isSelected
-                                    ? FontWeight.w700
+                                    ? FontWeight.w800
                                     : FontWeight.w600,
                               ),
                         ),
@@ -904,10 +930,12 @@ class _NavTabItem {
   const _NavTabItem({
     required this.keyName,
     required this.icon,
+    required this.activeIcon,
     required this.label,
   });
 
   final String keyName;
   final IconData icon;
+  final IconData activeIcon;
   final String label;
 }
