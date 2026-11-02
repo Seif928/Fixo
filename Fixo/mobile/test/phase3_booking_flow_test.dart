@@ -352,7 +352,7 @@ void main() {
   late FakeBookingRepository fakeBookingRepo;
   late FakeAuthRepository fakeAuthRepo;
   late FakeMarketplaceRepository fakeMarketplaceRepo;
-  late VaultTokenStorage tokenStorage;
+  late MemoryTokenStorage tokenStorage;
 
   const sampleAddress = CustomerAddressModel(
     id: 'addr-palm-hills-14',
@@ -409,7 +409,7 @@ void main() {
     fakeBookingRepo = FakeBookingRepository();
     fakeAuthRepo = FakeAuthRepository();
     fakeMarketplaceRepo = FakeMarketplaceRepository();
-    tokenStorage = VaultTokenStorage();
+    tokenStorage = MemoryTokenStorage();
 
     fakeBookingRepo.fakeAddresses = [sampleAddress];
   });

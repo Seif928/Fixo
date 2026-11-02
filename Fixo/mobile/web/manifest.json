@@ -1,11 +1,11 @@
 {
-    "name": "fixo_mobile",
-    "short_name": "fixo_mobile",
+    "name": "FIXO Home Services",
+    "short_name": "FIXO",
     "start_url": ".",
     "display": "standalone",
-    "background_color": "#0175C2",
-    "theme_color": "#0175C2",
-    "description": "A new Flutter project.",
+    "background_color": "#F1FCF5",
+    "theme_color": "#173F35",
+    "description": "Home services in Cairo and Giza. Pay after service.",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
     "icons": [

@@ -10,11 +10,14 @@ import '../../../../core/theme/fixo_typography.dart';
 /// layered with the Stitch scrim, top craftsman pill, and bottom live
 /// neighborhood availability card.
 class CairoInteriorHeroCard extends StatelessWidget {
-  const CairoInteriorHeroCard({super.key});
+  const CairoInteriorHeroCard({super.key, this.isArabic = false});
+
+  final bool isArabic;
 
   @override
   Widget build(BuildContext context) {
     final palette = context.fixoPalette;
+    final locale = isArabic ? const Locale('ar') : const Locale('en');
 
     return Container(
       width: double.infinity,
@@ -74,16 +77,19 @@ class CairoInteriorHeroCard extends StatelessWidget {
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         const Icon(
-                          Icons.verified_rounded,
+                          Icons.home_repair_service_rounded,
                           size: 16,
                           color: FixoColors.secondary,
                         ),
                         const SizedBox(width: 6),
                         Flexible(
                           child: Text(
-                            'Skilled Local Artisans',
+                            isArabic
+                                ? 'خدمات للمنزل'
+                                : 'Services for Your Home',
                             style: FixoTypography.labelMd(
                               color: FixoColors.deepestForest,
+                              locale: locale,
                             ).copyWith(fontWeight: FontWeight.w700),
                           ),
                         ),
@@ -140,16 +146,22 @@ class CairoInteriorHeroCard extends StatelessWidget {
                             mainAxisSize: MainAxisSize.min,
                             children: [
                               Text(
-                                '142 Pros On Call (Demo)',
+                                isArabic
+                                    ? 'القاهرة والجيزة'
+                                    : 'Cairo & Giza',
                                 style: FixoTypography.labelMd(
                                   color: FixoColors.onSurface,
+                                  locale: locale,
                                 ).copyWith(fontWeight: FontWeight.w700),
                               ),
                               const SizedBox(height: 2),
                               Text(
-                                'Maadi • New Cairo • Zamalek • Zayed',
+                                isArabic
+                                    ? 'المعادي • القاهرة الجديدة • الزمالك • زايد'
+                                    : 'Maadi • New Cairo • Zamalek • Zayed',
                                 style: FixoTypography.bodySm(
                                   color: FixoColors.onSurfaceVariant,
+                                  locale: locale,
                                 ).copyWith(fontSize: 11, height: 1.25),
                               ),
                             ],
@@ -176,9 +188,10 @@ class CairoInteriorHeroCard extends StatelessWidget {
                               ),
                               const SizedBox(width: 2),
                               Text(
-                                '~18 min',
+                                isArabic ? 'نقداً' : 'Cash',
                                 style: FixoTypography.labelMd(
                                   color: FixoColors.deepestForest,
+                                  locale: locale,
                                 ).copyWith(fontWeight: FontWeight.w700),
                               ),
                             ],

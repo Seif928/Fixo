@@ -98,11 +98,14 @@ class _StepTabButton extends StatelessWidget {
                   label,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: FixoTypography.labelMd(
-                    color: isSelected ? Colors.white : palette.mutedText,
-                  ).copyWith(
-                    fontWeight: isSelected ? FontWeight.w700 : FontWeight.w600,
-                  ),
+                  style:
+                      FixoTypography.labelMd(
+                        color: isSelected ? Colors.white : palette.mutedText,
+                      ).copyWith(
+                        fontWeight: isSelected
+                            ? FontWeight.w700
+                            : FontWeight.w600,
+                      ),
                 ),
               ),
             ],
@@ -137,8 +140,7 @@ class FixoOtpDigitRow extends StatelessWidget {
         child: Row(
           children: List<Widget>.generate(6, (index) {
             final isFilled = index < otpCode.length;
-            final isCursorActive =
-                index == activeIndex && otpCode.length < 6;
+            final isCursorActive = index == activeIndex && otpCode.length < 6;
             final digit = isFilled ? otpCode[index] : '';
 
             return Expanded(
@@ -324,10 +326,7 @@ class FixoNumericKeypad extends StatelessWidget {
 }
 
 class _DigitKeyButton extends StatelessWidget {
-  const _DigitKeyButton({
-    required this.digit,
-    required this.onTap,
-  });
+  const _DigitKeyButton({required this.digit, required this.onTap});
 
   final String digit;
   final VoidCallback onTap;
@@ -364,10 +363,7 @@ class _DigitKeyButton extends StatelessWidget {
 /// Renders a sunlit Zamalek Cairo apartment scene with a phone sign-in preview
 /// and bottom `#002920` gradient scrim using local custom painting (no hotlinks).
 class CairoLifestyleMoodAnchorCard extends StatelessWidget {
-  const CairoLifestyleMoodAnchorCard({
-    super.key,
-    required this.isArabic,
-  });
+  const CairoLifestyleMoodAnchorCard({super.key, required this.isArabic});
 
   final bool isArabic;
 
@@ -415,8 +411,9 @@ class CairoLifestyleMoodAnchorCard extends StatelessWidget {
                             : 'Over 2,400 certified Cairo craftsmen ready for booking',
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
-                        style: FixoTypography.bodySm(color: Colors.white)
-                            .copyWith(fontWeight: FontWeight.w600),
+                        style: FixoTypography.bodySm(
+                          color: Colors.white,
+                        ).copyWith(fontWeight: FontWeight.w600),
                       ),
                     ),
                   ],
@@ -439,11 +436,7 @@ class _ZamalekMoodPainter extends CustomPainter {
       ..shader = const LinearGradient(
         begin: Alignment.topLeft,
         end: Alignment.bottomRight,
-        colors: [
-          Color(0xFFE6DEC8),
-          Color(0xFFD2C7AF),
-          Color(0xFF9EB09E),
-        ],
+        colors: [Color(0xFFE6DEC8), Color(0xFFD2C7AF), Color(0xFF9EB09E)],
       ).createShader(Offset.zero & size);
     canvas.drawRect(Offset.zero & size, bgPaint);
 
@@ -509,4 +502,3 @@ class _ZamalekMoodPainter extends CustomPainter {
   @override
   bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }
-

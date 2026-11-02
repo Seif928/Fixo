@@ -7,6 +7,7 @@ import 'package:fixo_mobile/features/auth/data/auth_repository.dart';
 import 'package:fixo_mobile/features/auth/domain/auth_models.dart';
 import 'package:fixo_mobile/features/auth/presentation/controllers/auth_controller.dart';
 import 'package:fixo_mobile/features/auth/presentation/pages/phone_auth_page.dart';
+import 'package:fixo_mobile/features/auth/presentation/pages/phone_password_page.dart';
 import 'package:fixo_mobile/features/customer_home/data/marketplace_repository.dart';
 import 'package:fixo_mobile/features/customer_home/domain/marketplace_models.dart';
 import 'package:fixo_mobile/features/customer_home/presentation/pages/customer_home_page.dart';
@@ -288,7 +289,7 @@ class FakeMarketplaceRepository implements MarketplaceRepository {
 
 Widget _buildTestApp({
   required List<Override> overrides,
-  String initialLocation = AppRoutes.phoneAuth,
+  String initialLocation = '${AppRoutes.phoneAuth}?method=dev-otp',
 }) {
   return ProviderScope(
     overrides: overrides,
@@ -336,7 +337,7 @@ void main() {
       (WidgetTester tester) async {
         final fakeAuthRepo = FakeAuthRepository();
         final fakeMarketRepo = FakeMarketplaceRepository();
-        final tokenStorage = VaultTokenStorage();
+        final tokenStorage = MemoryTokenStorage();
 
         await tester.pumpWidget(
           _buildTestApp(
@@ -435,7 +436,12 @@ void main() {
         await tester.pumpAndSettle();
 
         // Because user is not authenticated, /customer/home redirects to /auth/phone
-        expect(find.byType(PhoneAuthPage), findsOneWidget);
+        expect(
+          find.byWidgetPredicate(
+            (w) => w is PhoneAuthPage || w is PhonePasswordPage,
+          ),
+          findsOneWidget,
+        );
         expect(find.text('Welcome to FIXO'), findsOneWidget);
       },
     );
@@ -624,4 +630,3 @@ void main() {
     );
   });
 }
-

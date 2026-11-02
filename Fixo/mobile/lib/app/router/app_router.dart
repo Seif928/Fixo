@@ -4,7 +4,12 @@ import 'package:go_router/go_router.dart';
 
 import '../../features/auth/presentation/controllers/auth_controller.dart';
 import '../../features/auth/presentation/pages/phone_auth_page.dart';
+import '../../features/auth/presentation/pages/email_auth_page.dart';
+import '../../features/auth/presentation/pages/phone_password_page.dart';
+import '../../features/chat/presentation/chat_page.dart';
+import '../../features/profile/presentation/profile_page.dart';
 import '../../features/booking/presentation/pages/create_booking_page.dart';
+import '../../features/booking/presentation/pages/orders_page.dart';
 import '../../features/customer_home/domain/marketplace_models.dart';
 import '../../features/customer_home/presentation/pages/customer_home_page.dart';
 import '../../features/onboarding/presentation/pages/onboarding_page.dart';
@@ -15,14 +20,13 @@ import 'app_routes.dart';
 /// authentication state changes.
 class _AuthRouterRefreshNotifier extends ChangeNotifier {
   _AuthRouterRefreshNotifier(Ref ref) {
-    ref.listen<AuthState>(
-      authControllerProvider,
-      (previous, next) {
-        if (previous?.isAuthenticated != next.isAuthenticated) {
-          notifyListeners();
-        }
-      },
-    );
+    ref.listen<AuthState>(authControllerProvider, (previous, next) {
+      if (previous?.isAuthenticated != next.isAuthenticated ||
+          previous?.session?.user.requiresProfileSetup !=
+              next.session?.user.requiresProfileSetup) {
+        notifyListeners();
+      }
+    });
   }
 }
 
@@ -33,8 +37,14 @@ final appRouterProvider = Provider<GoRouter>((ref) {
   ref.onDispose(refreshNotifier.dispose);
 
   return createAppRouter(
+    initialLocation: ref.read(authControllerProvider).isAuthenticated
+        ? AppRoutes.customerHome
+        : AppRoutes.onboarding,
     refreshListenable: refreshNotifier,
     isAuthenticated: () => ref.read(authControllerProvider).isAuthenticated,
+    requiresProfileSetup: () =>
+        ref.read(authControllerProvider).session?.user.requiresProfileSetup ==
+        true,
   );
 });
 
@@ -42,6 +52,7 @@ GoRouter createAppRouter({
   String initialLocation = AppRoutes.onboarding,
   Listenable? refreshListenable,
   bool Function()? isAuthenticated,
+  bool Function()? requiresProfileSetup,
 }) {
   return GoRouter(
     initialLocation: initialLocation,
@@ -52,6 +63,10 @@ GoRouter createAppRouter({
       }
       final authed = isAuthenticated();
       final path = state.uri.path;
+      final setupRequired = authed && requiresProfileSetup?.call() == true;
+      if (setupRequired && path != AppRoutes.phoneAuth) {
+        return AppRoutes.phoneAuth;
+      }
 
       // Protect customer routes when unauthenticated
       if (!authed && path.startsWith('/customer')) {
@@ -59,13 +74,34 @@ GoRouter createAppRouter({
       }
 
       // Redirect authenticated users away from the login screen to Customer Home
-      if (authed && path == AppRoutes.phoneAuth) {
+      if (authed && !setupRequired && path == AppRoutes.phoneAuth) {
         return AppRoutes.customerHome;
       }
 
       return null;
     },
     routes: <RouteBase>[
+      GoRoute(
+        path: AppRoutes.myOrders,
+        name: 'myOrders',
+        builder: (_, state) {
+          final chats = state.uri.queryParameters['view'] == 'chat';
+          return OrdersPage(key: ValueKey(chats), showChats: chats);
+        },
+      ),
+      GoRoute(
+        path: AppRoutes.customerProfile,
+        name: 'customerProfile',
+        builder: (_, _) => const ProfilePage(),
+      ),
+      GoRoute(
+        path: AppRoutes.customerChat,
+        name: 'customerChat',
+        builder: (context, state) => ChatPage(
+          key: ValueKey(state.pathParameters['orderId']),
+          bookingId: state.pathParameters['orderId']!,
+        ),
+      ),
       GoRoute(
         path: AppRoutes.onboarding,
         name: 'onboarding',
@@ -75,8 +111,14 @@ GoRouter createAppRouter({
         path: AppRoutes.phoneAuth,
         name: 'phoneAuth',
         builder: (context, state) {
-          final entryIntent = state.uri.queryParameters['intent'] ?? 'signup';
-          return PhoneAuthPage(entryIntent: entryIntent);
+          if (state.uri.queryParameters['method'] == 'email' && !kReleaseMode) {
+            return const EmailAuthPage();
+          }
+          if (!kReleaseMode &&
+              state.uri.queryParameters['method'] == 'dev-otp') {
+            return const PhoneAuthPage();
+          }
+          return const PhonePasswordPage();
         },
       ),
       GoRoute(
@@ -90,8 +132,7 @@ GoRouter createAppRouter({
         builder: (context, state) {
           final extra = state.extra as Map<String, dynamic>?;
           final offering = extra?['offering'] as ServiceOfferModel?;
-          final preferredPro =
-              extra?['preferredPro'] as ProfessionalCardModel?;
+          final preferredPro = extra?['preferredPro'] as ProfessionalCardModel?;
           return CreateBookingPage(
             initialOffering: offering,
             initialPreferredPro: preferredPro,

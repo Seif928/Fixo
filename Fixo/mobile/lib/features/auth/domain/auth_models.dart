@@ -33,9 +33,7 @@ abstract final class EgyptPhoneValidator {
   static String formatForDisplay(String rawOrNormalized) {
     final normalized = tryNormalize(rawOrNormalized);
     if (normalized == null || normalized.length != 13) {
-      return rawOrNormalized.trim().isEmpty
-          ? '+20 102 345 6789'
-          : rawOrNormalized;
+      return rawOrNormalized;
     }
     final subscriber = normalized.substring(3); // 10 digits e.g. 1023456789
     return '+20 ${subscriber.substring(0, 3)} ${subscriber.substring(3, 6)} ${subscriber.substring(6)}';
@@ -67,6 +65,7 @@ class AuthUser {
     this.email,
     this.preferredLocale = 'en',
     this.rewardPoints = 0,
+    this.requiresProfileSetup = false,
   });
 
   final String id;
@@ -76,18 +75,25 @@ class AuthUser {
   final String? email;
   final String preferredLocale;
   final int rewardPoints;
+  final bool requiresProfileSetup;
 
   factory AuthUser.fromJson(Map<String, dynamic> json) {
+    if (json['id'] is! String ||
+        (json['id'] as String).trim().isEmpty ||
+        !['CUSTOMER', 'PRO', 'ADMIN'].contains(json['role'])) {
+      throw const FormatException('Invalid account identity.');
+    }
     return AuthUser(
-      id: json['id'] as String? ?? 'u-unknown',
-      phone: json['phone'] as String? ?? '+201023456789',
+      id: json['id'] as String,
+      phone: json['phone'] as String? ?? '',
       fullName: (json['fullName'] as String?)?.trim().isNotEmpty == true
           ? json['fullName'] as String
-          : 'Cairo Homeowner',
+          : '',
       role: json['role'] as String? ?? 'CUSTOMER',
       email: json['email'] as String?,
       preferredLocale: json['preferredLocale'] as String? ?? 'en',
       rewardPoints: (json['rewardPoints'] as num?)?.toInt() ?? 0,
+      requiresProfileSetup: json['requiresProfileSetup'] == true,
     );
   }
 }
@@ -110,7 +116,7 @@ class OtpChallengeResult {
   factory OtpChallengeResult.fromJson(Map<String, dynamic> json) {
     return OtpChallengeResult(
       challengeId: json['challengeId'] as String? ?? '',
-      phone: json['phone'] as String? ?? '+201023456789',
+      phone: json['phone'] as String? ?? '',
       resendAvailableInSec:
           (json['resendAvailableInSec'] as num?)?.toInt() ?? 45,
       expiresInSec: (json['expiresInSec'] as num?)?.toInt() ?? 300,
@@ -131,6 +137,11 @@ class AuthSession {
   final AuthUser user;
 
   factory AuthSession.fromJson(Map<String, dynamic> json) {
+    for (final key in ['accessToken', 'refreshToken']) {
+      if (json[key] is! String || (json[key] as String).trim().isEmpty) {
+        throw const FormatException('Invalid session credentials.');
+      }
+    }
     return AuthSession(
       accessToken: json['accessToken'] as String? ?? '',
       refreshToken: json['refreshToken'] as String? ?? '',

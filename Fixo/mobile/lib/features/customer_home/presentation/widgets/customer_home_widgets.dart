@@ -41,7 +41,8 @@ class FixoArtisanAvatar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isHassan = identifier.toLowerCase().contains('hassan');
-    final isCustomer = identifier.toLowerCase().contains('salma') ||
+    final isCustomer =
+        identifier.toLowerCase().contains('salma') ||
         identifier.toLowerCase().contains('customer');
 
     return Container(
@@ -106,7 +107,10 @@ class _PortraitAvatarPainter extends CustomPainter {
     canvas.drawCircle(
       Offset(size.width * 0.63, size.height * 0.84),
       size.width * 0.045,
-      Paint()..color = hasHvacGaugeBadge ? const Color(0xFF6BB5FF) : FixoColors.limeAccent,
+      Paint()
+        ..color = hasHvacGaugeBadge
+            ? const Color(0xFF6BB5FF)
+            : FixoColors.limeAccent,
     );
 
     // Head silhouette
@@ -197,46 +201,15 @@ class SeasonalPromoHeroCard extends StatelessWidget {
                       child: Text(
                         (offer.localizedBadge(isArabic) ?? 'SEASONAL PEAK')
                             .toUpperCase(),
-                        style: FixoTypography.labelMd(
-                          color: FixoColors.onTertiaryFixed,
-                        ).copyWith(
-                          fontWeight: FontWeight.w800,
-                          letterSpacing: 0.6,
-                        ),
+                        style:
+                            FixoTypography.labelMd(
+                              color: FixoColors.onTertiaryFixed,
+                            ).copyWith(
+                              fontWeight: FontWeight.w800,
+                              letterSpacing: 0.6,
+                            ),
                       ),
                     ),
-                    if (offer.localizedProviderTag(isArabic) != null)
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 9,
-                          vertical: 3,
-                        ),
-                        decoration: BoxDecoration(
-                          color: Colors.white.withValues(alpha: 0.10),
-                          borderRadius: FixoRadius.borderRadiusPill,
-                        ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Icon(
-                              Icons.verified_rounded,
-                              size: 14,
-                              color: palette.limeAccent,
-                            ),
-                            const SizedBox(width: 4),
-                            Flexible(
-                              child: Text(
-                                offer.localizedProviderTag(isArabic)!,
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                style: FixoTypography.labelMd(
-                                  color: FixoColors.primaryFixed,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
                   ],
                 ),
                 const SizedBox(height: 12),
@@ -348,6 +321,7 @@ class ServiceCategoryGridTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final palette = context.fixoPalette;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Material(
       color: palette.cardSurface,
@@ -362,7 +336,9 @@ class ServiceCategoryGridTile extends StatelessWidget {
           decoration: BoxDecoration(
             borderRadius: FixoRadius.borderRadiusLg,
             border: Border.all(
-              color: isSelected ? palette.primaryBrand : palette.subtleBorder,
+              color: isSelected
+                  ? (isDark ? palette.limeAccent : palette.primaryBrand)
+                  : palette.subtleBorder,
               width: isSelected ? 1.8 : 1.0,
             ),
             boxShadow: FixoShadows.level1CardResting,
@@ -390,7 +366,7 @@ class ServiceCategoryGridTile extends StatelessWidget {
                       size: 22,
                       color: isSelected
                           ? palette.limeAccent
-                          : palette.primaryBrand,
+                          : palette.deepForest,
                     ),
                   ),
                   Flexible(
@@ -496,12 +472,13 @@ class BundleSaveInspectionCard extends StatelessWidget {
                           ),
                           child: Text(
                             offer.localizedBadge(isArabic) ?? 'BUNDLE SAVE',
-                            style: FixoTypography.labelMd(
-                              color: FixoColors.onTertiaryFixed,
-                            ).copyWith(
-                              fontSize: 10.5,
-                              fontWeight: FontWeight.w800,
-                            ),
+                            style:
+                                FixoTypography.labelMd(
+                                  color: FixoColors.onTertiaryFixed,
+                                ).copyWith(
+                                  fontSize: 10.5,
+                                  fontWeight: FontWeight.w800,
+                                ),
                           ),
                         ),
                         Text(
@@ -527,7 +504,7 @@ class BundleSaveInspectionCard extends StatelessWidget {
                   Text(
                     '${offer.flatPriceEgp}',
                     style: FixoTypography.priceDisplay(
-                      color: palette.primaryBrand,
+                      color: palette.deepForest,
                     ),
                   ),
                   Text(
@@ -563,6 +540,7 @@ class RecommendedProCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final palette = context.fixoPalette;
     final isFastResponder = professional.isFastResponder;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Container(
       key: Key('pro-card-${professional.id}'),
@@ -600,10 +578,12 @@ class RecommendedProCard extends StatelessWidget {
                     Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        const Icon(
+                        Icon(
                           Icons.star_rounded,
                           size: 16,
-                          color: Color(0xFF313D00),
+                          color: isDark
+                              ? palette.limeAccent
+                              : const Color(0xFF313D00),
                         ),
                         const SizedBox(width: 4),
                         Text(
@@ -771,9 +751,7 @@ class ConciergeQuoteBanner extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  isArabic
-                      ? 'هل تحتاج عرض سعر مخصص للشركات أو الفيلات؟'
-                      : 'Need a custom enterprise quote?',
+                  isArabic ? 'إزاي تحجز خدمتك؟' : 'How does booking work?',
                   style: FixoTypography.labelMd(
                     color: palette.inkText,
                   ).copyWith(fontWeight: FontWeight.w700),
@@ -781,8 +759,8 @@ class ConciergeQuoteBanner extends StatelessWidget {
                 const SizedBox(height: 2),
                 Text(
                   isArabic
-                      ? 'تحدث مع مدير صيانة المنشآت السكنية'
-                      : 'Talk with a residential facility manager',
+                      ? 'اختار الخدمة والميعاد، والدفع بعد التنفيذ'
+                      : 'Choose a service and time. Pay after service.',
                   style: FixoTypography.bodySm(color: palette.mutedText),
                 ),
               ],
@@ -797,10 +775,12 @@ class ConciergeQuoteBanner extends StatelessWidget {
               onTap: onTap,
               customBorder: const CircleBorder(),
               child: SizedBox(
-                width: 34,
-                height: 34,
+                width: 48,
+                height: 48,
                 child: Icon(
-                  Icons.chevron_right_rounded,
+                  isArabic
+                      ? Icons.chevron_left_rounded
+                      : Icons.chevron_right_rounded,
                   size: 20,
                   color: palette.deepForest,
                 ),
@@ -856,9 +836,7 @@ class FixoCustomerBottomNav extends StatelessWidget {
       key: const Key('customer-bottom-nav'),
       decoration: BoxDecoration(
         color: palette.cardSurface.withValues(alpha: 0.96),
-        border: Border(
-          top: BorderSide(color: palette.subtleBorder, width: 1),
-        ),
+        border: Border(top: BorderSide(color: palette.subtleBorder, width: 1)),
         boxShadow: FixoShadows.level2Interactive,
       ),
       child: SafeArea(
@@ -871,29 +849,46 @@ class FixoCustomerBottomNav extends StatelessWidget {
               final item = items[index];
               final isSelected = index == currentIndex;
               final fgColor = isSelected
-                  ? palette.primaryBrand
+                  ? palette.deepForest
                   : palette.mutedText;
 
               return Expanded(
-                child: InkWell(
-                  key: Key(item.keyName),
-                  onTap: () => onTabSelected(index),
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(item.icon, size: 24, color: fgColor),
-                      const SizedBox(height: 2),
-                      Text(
-                        item.label,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: FixoTypography.labelMd(color: fgColor).copyWith(
-                          fontWeight: isSelected
-                              ? FontWeight.w700
-                              : FontWeight.w600,
+                child: Semantics(
+                  selected: isSelected,
+                  button: true,
+                  child: InkWell(
+                    key: Key(item.keyName),
+                    onTap: () => onTabSelected(index),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        AnimatedContainer(
+                          duration: const Duration(milliseconds: 180),
+                          width: isSelected ? 22 : 0,
+                          height: 3,
+                          margin: const EdgeInsets.only(bottom: 3),
+                          decoration: BoxDecoration(
+                            color: isSelected
+                                ? palette.limeAccent
+                                : Colors.transparent,
+                            borderRadius: FixoRadius.borderRadiusPill,
+                          ),
                         ),
-                      ),
-                    ],
+                        Icon(item.icon, size: 22, color: fgColor),
+                        const SizedBox(height: 2),
+                        Text(
+                          item.label,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: FixoTypography.labelMd(color: fgColor)
+                              .copyWith(
+                                fontWeight: isSelected
+                                    ? FontWeight.w700
+                                    : FontWeight.w600,
+                              ),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
               );
@@ -916,4 +911,3 @@ class _NavTabItem {
   final IconData icon;
   final String label;
 }
-

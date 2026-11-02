@@ -65,9 +65,7 @@ class _PhoneAuthPageState extends ConsumerState<PhoneAuthPage> {
     if (_phoneTextController.text != authState.phoneInput) {
       _phoneTextController.value = TextEditingValue(
         text: authState.phoneInput,
-        selection: TextSelection.collapsed(
-          offset: authState.phoneInput.length,
-        ),
+        selection: TextSelection.collapsed(offset: authState.phoneInput.length),
       );
     }
     if (_otpHiddenController.text != authState.otpCode) {
@@ -128,11 +126,23 @@ class _PhoneAuthPageState extends ConsumerState<PhoneAuthPage> {
                         child: Text(
                           isArabic ? 'EN' : 'ع',
                           style: FixoTypography.labelMd(
-                            color: palette.primaryBrand,
+                            color: palette.deepForest,
                           ).copyWith(fontWeight: FontWeight.w800),
                         ),
                       ),
                     ],
+                  ),
+                  const SizedBox(height: 14),
+                  OutlinedButton.icon(
+                    key: const Key('auth-use-email-google'),
+                    onPressed: () =>
+                        context.go('${AppRoutes.phoneAuth}?method=email'),
+                    icon: const Icon(Icons.alternate_email),
+                    label: Text(
+                      isArabic
+                          ? 'الدخول بالبريد أو Google'
+                          : 'Continue with email or Google',
+                    ),
                   ),
                   const SizedBox(height: 18),
 
@@ -305,11 +315,13 @@ class _PhoneAuthPageState extends ConsumerState<PhoneAuthPage> {
                           color: FixoColors.secondary,
                         ),
                         const SizedBox(width: 4),
-                        Text(
-                          isArabic ? 'رمز SMS فوري' : 'Instant SMS code',
-                          style: FixoTypography.bodySm(
-                            color: FixoColors.secondary,
-                          ).copyWith(fontWeight: FontWeight.w600),
+                        Flexible(
+                          child: Text(
+                            isArabic ? 'رمز SMS فوري' : 'Instant SMS code',
+                            style: FixoTypography.bodySm(
+                              color: FixoColors.secondary,
+                            ).copyWith(fontWeight: FontWeight.w600),
+                          ),
                         ),
                       ],
                     ),
@@ -326,13 +338,13 @@ class _PhoneAuthPageState extends ConsumerState<PhoneAuthPage> {
                           color: FixoColors.secondary,
                         ),
                         const SizedBox(width: 4),
-                        Text(
-                          isArabic
-                              ? 'بدون كلمة مرور'
-                              : 'No password required',
-                          style: FixoTypography.bodySm(
-                            color: FixoColors.secondary,
-                          ).copyWith(fontWeight: FontWeight.w600),
+                        Flexible(
+                          child: Text(
+                            isArabic ? 'بدون كلمة مرور' : 'No password required',
+                            style: FixoTypography.bodySm(
+                              color: FixoColors.secondary,
+                            ).copyWith(fontWeight: FontWeight.w600),
+                          ),
                         ),
                       ],
                     ),
@@ -365,7 +377,7 @@ class _PhoneAuthPageState extends ConsumerState<PhoneAuthPage> {
                 width: 40,
                 height: 40,
                 decoration: BoxDecoration(
-                  color: FixoColors.surfaceContainerHighest,
+                  color: palette.surfaceHighest,
                   borderRadius: FixoRadius.borderRadiusSm,
                 ),
                 alignment: Alignment.center,
@@ -412,8 +424,7 @@ class _PhoneAuthPageState extends ConsumerState<PhoneAuthPage> {
     required bool isArabic,
     required FixoPaletteExtension palette,
   }) {
-    final canResend =
-        authState.resendCountdownSec == 0 && !authState.isLoading;
+    final canResend = authState.resendCountdownSec == 0 && !authState.isLoading;
 
     return Column(
       key: const Key('section-otp-code'),
@@ -711,4 +722,3 @@ class _PhoneAuthPageState extends ConsumerState<PhoneAuthPage> {
     );
   }
 }
-

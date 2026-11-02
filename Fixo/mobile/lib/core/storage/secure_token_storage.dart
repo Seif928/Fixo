@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 /// Stored authentication token bundle persisted securely across sessions.
@@ -45,75 +46,59 @@ abstract class SecureTokenStorage {
   Future<void> clearTokens();
 }
 
-/// Default secure token storage implementation using sealed base64-encoded
-/// envelope storage in memory/platform keychain.
+/// Platform keychain/keystore storage; no embedded encryption keys or memory fallback.
 class VaultTokenStorage implements SecureTokenStorage {
-  String? _sealedEnvelope;
-
-  static const List<int> _keyMask = <int>[
-    0x46,
-    0x49,
-    0x58,
-    0x4F,
-    0x5F,
-    0x45,
-    0x47,
-    0x5F,
-    0x32,
-    0x30,
-    0x32,
-    0x36,
-  ];
-
+  VaultTokenStorage({FlutterSecureStorage? storage})
+    : _storage = storage ?? const FlutterSecureStorage();
+  final FlutterSecureStorage _storage;
+  static const _storageKey = "fixo.auth.session.v1";
   @override
-  Future<void> saveTokens(StoredAuthTokens tokens) async {
-    final rawBytes = utf8.encode(jsonEncode(tokens.toJson()));
-    final masked = List<int>.generate(
-      rawBytes.length,
-      (index) => rawBytes[index] ^ _keyMask[index % _keyMask.length],
-    );
-    _sealedEnvelope = base64UrlEncode(masked);
-  }
-
+  Future<void> saveTokens(StoredAuthTokens tokens) =>
+      _storage.write(key: _storageKey, value: jsonEncode(tokens.toJson()));
   @override
   Future<StoredAuthTokens?> readTokens() async {
-    final envelope = _sealedEnvelope;
-    if (envelope == null || envelope.isEmpty) {
-      return null;
-    }
+    final raw = await _storage.read(key: _storageKey);
+    if (raw == null) return null;
     try {
-      final masked = base64Url.decode(envelope);
-      final unmasked = List<int>.generate(
-        masked.length,
-        (index) => masked[index] ^ _keyMask[index % _keyMask.length],
-      );
-      final decoded =
-          jsonDecode(utf8.decode(unmasked)) as Map<String, dynamic>;
-      return StoredAuthTokens.fromJson(decoded);
-    } catch (_) {
+      return StoredAuthTokens.fromJson(jsonDecode(raw) as Map<String, dynamic>);
+    } on FormatException {
+      await clearTokens();
       return null;
     }
   }
 
   @override
-  Future<String?> readAccessToken() async {
-    final tokens = await readTokens();
-    return tokens?.accessToken;
+  Future<String?> readAccessToken() async => (await readTokens())?.accessToken;
+  @override
+  Future<String?> readRefreshToken() async =>
+      (await readTokens())?.refreshToken;
+  @override
+  Future<void> clearTokens() => _storage.delete(key: _storageKey);
+}
+
+/// Explicit test fixture. Never selected by the production provider.
+class MemoryTokenStorage implements SecureTokenStorage {
+  StoredAuthTokens? _tokens;
+  @override
+  Future<void> saveTokens(StoredAuthTokens tokens) async {
+    _tokens = tokens;
   }
 
   @override
-  Future<String?> readRefreshToken() async {
-    final tokens = await readTokens();
-    return tokens?.refreshToken;
-  }
-
+  Future<StoredAuthTokens?> readTokens() async => _tokens;
+  @override
+  Future<String?> readAccessToken() async => _tokens?.accessToken;
+  @override
+  Future<String?> readRefreshToken() async => _tokens?.refreshToken;
   @override
   Future<void> clearTokens() async {
-    _sealedEnvelope = null;
+    _tokens = null;
   }
 }
 
-final secureTokenStorageProvider = Provider<SecureTokenStorage>((ref) {
-  return VaultTokenStorage();
-});
+final secureTokenStorageProvider = Provider<SecureTokenStorage>(
+  (ref) => VaultTokenStorage(),
+);
 
+/// Raised only when the server rejects the stored refresh credential.
+final sessionExpiredProvider = StateProvider<int>((ref) => 0);

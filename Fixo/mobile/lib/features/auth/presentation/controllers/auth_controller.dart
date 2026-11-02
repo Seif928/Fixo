@@ -1,7 +1,9 @@
 import 'dart:async';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/storage/secure_token_storage.dart';
+import '../../../../core/notifications/device_push_service.dart';
 import '../../data/auth_repository.dart';
+import '../../data/email_access_service.dart';
 import '../../domain/auth_models.dart';
 
 /// Represents the two visual states of Screen 02 (`02 — Phone Auth & OTP`).
@@ -10,7 +12,7 @@ enum PhoneAuthStep { phoneInput, otpCode }
 class AuthState {
   const AuthState({
     this.step = PhoneAuthStep.phoneInput,
-    this.phoneInput = '010 9593 0009',
+    this.phoneInput = '',
     this.otpCode = '',
     this.challenge,
     this.resendCountdownSec = 0,
@@ -60,10 +62,20 @@ class AuthState {
 
 class AuthController extends Notifier<AuthState> {
   Timer? _countdownTimer;
+  int _sessionEpoch = 0;
+  bool _disposed = false;
+  Future<void>? _restoring;
 
   @override
   AuthState build() {
+    ref.listen(sessionExpiredProvider, (_, _) {
+      _sessionEpoch++;
+      _countdownTimer?.cancel();
+      state = const AuthState();
+      unawaited(ref.read(devicePushProvider).invalidateLocalSession());
+    });
     ref.onDispose(() {
+      _disposed = true;
       _countdownTimer?.cancel();
     });
     return const AuthState();
@@ -228,14 +240,96 @@ class AuthController extends Notifier<AuthState> {
   }
 
   Future<void> logout() async {
-    final refreshToken = state.session?.refreshToken;
+    _sessionEpoch++;
     final tokenStorage = ref.read(secureTokenStorageProvider);
-    if (refreshToken != null && refreshToken.isNotEmpty) {
-      await ref.read(authRepositoryProvider).logout(refreshToken: refreshToken);
+    final repository = ref.read(authRepositoryProvider);
+    final email = ref.read(emailAccessProvider);
+    try {
+      await ref.read(devicePushProvider).disable();
+    } catch (_) {
+      /* Local sign-out must remain possible offline. */
     }
-    await tokenStorage.clearTokens();
     _countdownTimer?.cancel();
     state = const AuthState();
+    try {
+      // Unregistering push may have refreshed an expired access token.
+      final refreshToken = await tokenStorage.readRefreshToken();
+      if (refreshToken != null && refreshToken.isNotEmpty) {
+        await repository.logout(refreshToken: refreshToken);
+      }
+    } finally {
+      await tokenStorage.clearTokens();
+      await email.signOut();
+    }
+  }
+
+  /// Cached profile data never establishes identity; the server refresh does.
+  Future<void> restoreSession() => _restoring ??= _restoreSession(
+    _sessionEpoch,
+  ).whenComplete(() => _restoring = null);
+
+  Future<void> _restoreSession(int epoch) async {
+    final storage = ref.read(secureTokenStorageProvider);
+    try {
+      final tokens = await storage.readTokens();
+      if (tokens == null || tokens.refreshToken.isEmpty) return;
+      final session = await ref
+          .read(authRepositoryProvider)
+          .refreshSession(refreshToken: tokens.refreshToken);
+      if (_disposed || epoch != _sessionEpoch) return;
+      if (session.user.id != tokens.userId) {
+        await storage.clearTokens();
+        return;
+      }
+      await acceptVerifiedSession(session);
+    } on AuthApiException catch (error) {
+      if (!_disposed &&
+          epoch == _sessionEpoch &&
+          [400, 401, 403].contains(error.statusCode)) {
+        await storage.clearTokens();
+      }
+    } on FormatException {
+      if (!_disposed && epoch == _sessionEpoch) await storage.clearTokens();
+    } catch (_) {
+      // Offline or unavailable secure storage: show sign-in, never a fake session.
+    }
+  }
+
+  Future<void> acceptVerifiedSession(AuthSession session) async {
+    _sessionEpoch++;
+    await ref
+        .read(secureTokenStorageProvider)
+        .saveTokens(
+          StoredAuthTokens(
+            accessToken: session.accessToken,
+            refreshToken: session.refreshToken,
+            userId: session.user.id,
+            phone: session.user.phone,
+            role: session.user.role,
+          ),
+        );
+    _countdownTimer?.cancel();
+    state = state.copyWith(
+      isLoading: false,
+      session: session,
+      clearError: true,
+    );
+    if (_restoring == null) unawaited(ref.read(devicePushProvider).resume());
+  }
+
+  /// Profile requests may rotate tokens; never replace them with a stale pair.
+  Future<void> acceptUpdatedProfile(AuthUser user) async {
+    final tokens = await ref.read(secureTokenStorageProvider).readTokens();
+    if (tokens == null || tokens.userId != user.id) {
+      throw const FormatException('The account session has ended.');
+    }
+    await acceptVerifiedSession(
+      AuthSession(
+        accessToken: tokens.accessToken,
+        refreshToken: tokens.refreshToken,
+        user: user,
+      ),
+    );
   }
 
   void _startResendCountdown(int initialSeconds) {

@@ -47,20 +47,23 @@ void main() {
         expect(find.text('Cairo & Giza Active'), findsOneWidget);
 
         // Hero card elements
-        expect(find.text('Skilled Local Artisans'), findsOneWidget);
-        expect(find.text('142 Pros On Call (Demo)'), findsOneWidget);
+        expect(find.text('Services for Your Home'), findsOneWidget);
+        expect(find.text('Cairo & Giza'), findsOneWidget);
         expect(
           find.text('Maadi • New Cairo • Zamalek • Zayed'),
           findsOneWidget,
         );
-        expect(find.text('~18 min'), findsOneWidget);
+        expect(find.text('Cash'), findsOneWidget);
 
         // Editorial copy & trust chips
         expect(find.text('THE STANDARD IN HOME CARE'), findsOneWidget);
         expect(find.text('Your home, in better hands.'), findsOneWidget);
-        expect(find.text('Identity-Reviewed Pros'), findsOneWidget);
-        expect(find.text('Fixed EGP Quotes'), findsOneWidget);
-        expect(find.text('Live Arrival Tracking'), findsOneWidget);
+        expect(find.text('Home Services'), findsOneWidget);
+        expect(find.text('EGP Price Breakdown'), findsOneWidget);
+        expect(find.text('Cash After Service'), findsOneWidget);
+        expect(find.textContaining('142'), findsNothing);
+        expect(find.textContaining('Arrival Tracking'), findsNothing);
+        expect(find.textContaining('Identity-Reviewed'), findsNothing);
 
         // Verify unsupported insurance claim was replaced per STITCH_AUDIT.md
         expect(find.textContaining('Insured up to 25,000 EGP'), findsNothing);
@@ -83,7 +86,7 @@ void main() {
         await tester.pumpAndSettle();
 
         expect(find.text('Welcome to FIXO'), findsOneWidget);
-        expect(find.text('Egyptian Mobile Number'), findsOneWidget);
+        expect(find.byKey(const Key('phone-password-number')), findsOneWidget);
 
         await tester.tap(find.byKey(const Key('btn-back-to-onboarding')));
         await tester.pumpAndSettle();
@@ -104,7 +107,7 @@ void main() {
         await tester.pumpAndSettle();
 
         expect(find.text('Welcome to FIXO'), findsOneWidget);
-        expect(find.byKey(const Key('tab-phone-input')), findsOneWidget);
+        expect(find.byKey(const Key('phone-password-secret')), findsOneWidget);
       },
     );
   });

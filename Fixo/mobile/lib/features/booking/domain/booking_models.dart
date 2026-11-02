@@ -13,6 +13,8 @@ class CustomerAddressModel {
     this.gateNotes,
     this.zone,
     this.isDefault = false,
+    this.latitude,
+    this.longitude,
   });
 
   final String id;
@@ -24,6 +26,7 @@ class CustomerAddressModel {
   final String? gateNotes;
   final CoverageZoneModel? zone;
   final bool isDefault;
+  final double? latitude, longitude;
 
   String get fullAddress => '$buildingLine, $districtLine';
 
@@ -40,19 +43,23 @@ class CustomerAddressModel {
           ? CoverageZoneModel.fromJson(json['zone'] as Map<String, dynamic>)
           : null,
       isDefault: json['isDefault'] as bool? ?? false,
+      latitude: (json['latitude'] as num?)?.toDouble(),
+      longitude: (json['longitude'] as num?)?.toDouble(),
     );
   }
 
   Map<String, dynamic> toJson() => {
-        'id': id,
-        'userId': userId,
-        'zoneId': zoneId,
-        'label': label,
-        'buildingLine': buildingLine,
-        'districtLine': districtLine,
-        'gateNotes': gateNotes,
-        'isDefault': isDefault,
-      };
+    'id': id,
+    'userId': userId,
+    'zoneId': zoneId,
+    'label': label,
+    'buildingLine': buildingLine,
+    'districtLine': districtLine,
+    'gateNotes': gateNotes,
+    'isDefault': isDefault,
+    'latitude': latitude,
+    'longitude': longitude,
+  };
 }
 
 /// Payload sent to `POST /api/v1/users/me/addresses` to persist a new customer address.
@@ -66,6 +73,8 @@ class CreateAddressRequest {
     required this.districtLine,
     this.gateNotes,
     this.isDefault = false,
+    this.latitude,
+    this.longitude,
   });
 
   final String zoneId;
@@ -74,8 +83,29 @@ class CreateAddressRequest {
   final String districtLine;
   final String? gateNotes;
   final bool isDefault;
+  final double? latitude, longitude;
+
+  CreateAddressRequest withCoordinates(double latitude, double longitude) =>
+      CreateAddressRequest(
+        zoneId: zoneId,
+        label: label,
+        buildingLine: buildingLine,
+        districtLine: districtLine,
+        gateNotes: gateNotes,
+        isDefault: isDefault,
+        latitude: latitude,
+        longitude: longitude,
+      );
 
   Map<String, dynamic> toJson() {
+    if ((latitude == null) != (longitude == null) ||
+        (latitude != null &&
+            (!latitude!.isFinite ||
+                latitude!.abs() > 90 ||
+                !longitude!.isFinite ||
+                longitude!.abs() > 180))) {
+      throw ArgumentError('Both valid coordinates are required for a map pin.');
+    }
     final map = <String, dynamic>{
       'zoneId': zoneId,
       'label': label.trim(),
@@ -85,6 +115,10 @@ class CreateAddressRequest {
     };
     if (gateNotes != null && gateNotes!.trim().isNotEmpty) {
       map['gateNotes'] = gateNotes!.trim();
+    }
+    if (latitude != null) {
+      map['latitude'] = latitude;
+      map['longitude'] = longitude;
     }
     return map;
   }
@@ -154,14 +188,14 @@ class BookingPricingModel {
   }
 
   Map<String, dynamic> toJson() => {
-        'baseInspectionEgp': baseInspectionEgp,
-        'serviceFeeEgp': serviceFeeEgp,
-        'transportFeeEgp': transportFeeEgp,
-        'totalEgp': totalEgp,
-        'platformFeeEgp': platformFeeEgp,
-        'netArtisanEgp': netArtisanEgp,
-        'currency': currency,
-      };
+    'baseInspectionEgp': baseInspectionEgp,
+    'serviceFeeEgp': serviceFeeEgp,
+    'transportFeeEgp': transportFeeEgp,
+    'totalEgp': totalEgp,
+    'platformFeeEgp': platformFeeEgp,
+    'netArtisanEgp': netArtisanEgp,
+    'currency': currency,
+  };
 }
 
 /// Details of an associated payment record.
@@ -203,16 +237,16 @@ class PaymentRecordModel {
   }
 
   Map<String, dynamic> toJson() => {
-        'id': id,
-        'bookingId': bookingId,
-        'method': method,
-        'status': status,
-        'amountEgp': amountEgp,
-        'tipEgp': tipEgp,
-        'externalReference': externalReference,
-        'paidAt': paidAt,
-        'createdAt': createdAt,
-      };
+    'id': id,
+    'bookingId': bookingId,
+    'method': method,
+    'status': status,
+    'amountEgp': amountEgp,
+    'tipEgp': tipEgp,
+    'externalReference': externalReference,
+    'paidAt': paidAt,
+    'createdAt': createdAt,
+  };
 }
 
 /// Full details of a persisted customer booking.
@@ -275,17 +309,20 @@ class BookingDetailModel {
       scheduledDate: json['scheduledDate'] as String? ?? '',
       timeWindow: json['timeWindow'] as String? ?? 'AFTERNOON_13_16',
       issueDescription: json['issueDescription'] as String?,
-      issuePhotoUrls: (json['issuePhotoUrls'] as List<dynamic>?)
+      issuePhotoUrls:
+          (json['issuePhotoUrls'] as List<dynamic>?)
               ?.map((e) => e.toString())
               .toList() ??
           const [],
       pricing: json['pricing'] is Map<String, dynamic>
-          ? BookingPricingModel.fromJson(json['pricing'] as Map<String, dynamic>)
+          ? BookingPricingModel.fromJson(
+              json['pricing'] as Map<String, dynamic>,
+            )
           : (json['baseInspectionEgp'] != null
-              ? BookingPricingModel.fromJson(json)
-              : throw const FormatException(
-                  'Missing required pricing data in booking',
-                )),
+                ? BookingPricingModel.fromJson(json)
+                : throw const FormatException(
+                    'Missing required pricing data in booking',
+                  )),
       arrivalPinCode: json['arrivalPinCode'] as String?,
       offering: (json['offering'] as Map<String, dynamic>?) ?? const {},
       address: (json['address'] as Map<String, dynamic>?) ?? const {},
@@ -358,7 +395,8 @@ class TimeWindowSlot {
   final IconData icon;
 
   String localizedTitle(bool isArabic) => isArabic ? titleAr : titleEn;
-  String localizedTimeRange(bool isArabic) => isArabic ? timeRangeAr : timeRangeEn;
+  String localizedTimeRange(bool isArabic) =>
+      isArabic ? timeRangeAr : timeRangeEn;
 
   static const List<TimeWindowSlot> all = [
     TimeWindowSlot(
@@ -387,4 +425,3 @@ class TimeWindowSlot {
     ),
   ];
 }
-

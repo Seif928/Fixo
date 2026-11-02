@@ -20,29 +20,38 @@ API: https://fixo-api.vercel.app/api/v1
 
 ## Flutter integrations already implemented
 
-- Verified email and Google sign-in; secure token storage, server-verified session restoration and local sign-out cleanup.
+- First registration uses verified Google identity followed by name, Egyptian phone alias and a Firebase password. Later login uses phone/password, with recovery through the linked email. The phone is an unverified username; it is not proof of phone ownership. No public phone-to-email lookup, no password storage in Prisma, no account merges by matching phone.
+- One-time profile completion is JWT-protected and transactional; conflicting phone aliases and attempts to overwrite a complete profile are rejected.
+- Secure token storage, server-verified session restoration, single-flight access-token refresh and local sign-out cleanup. A revoked refresh clears the session; provider outages preserve credentials. Requests from an old account are never replayed as a different signed-in account.
 - Persisted language and theme preferences; native chat, profile/settings and in-app activity sheet.
 - Contextual device-push opt-in, denial/unavailable states, token refresh, sign-out unregister, foreground alerts and notification navigation.
-- Public Firebase Web service worker added. Google Maps uses public address/directions URLs; embedded Maps and GPS selection are not active.
+- Embedded OpenFreeMap styles/tiles through MapLibre, with required OpenStreetMap/OpenMapTiles attribution. No key, account, billing or paid Maps API. A Cairo overview is not a selected address: the user explicitly picks a coordinate, and the existing address API persists it. No GPS permission, geocoding or live technician tracking is claimed. Public Google Maps links remain available for directions.
+- Public Firebase Web service worker, with an explicit no-cache response header in the static deployment configuration.
 - Android release INTERNET and notification permissions, Firebase config, debug signing fingerprints, Kotlin/R8 compatibility configuration; iOS minimum target 15 with Google sign-in callback configuration.
+- Gemini's completed presentation changes integrated: EN/AR RTL, Light/Dark/System, bundled Manrope/Cairo fonts and licenses, readable real-font golden screenshots, professional app/Web icons and metadata, and responsive forms/cards.
+- Customer bottom navigation opens the correct Home/Orders/Chat/Profile route, marks the selected tab accessibly, and preserves Home state while changing peer tabs. Screen 08 reads real bookings with status filters, pagination, retry and pull-to-refresh. Chat lists actual assigned booking conversations; it does not invent contacts.
+- Removed the unsupported brand-certified promo badge and the claim of a 24/7 concierge; the same design area now explains the actual booking process. Onboarding no longer invents a technician count, arrival estimate, identity-review process or live tracking.
 
 ## Verification evidence and limits
 
-- Backend lint passed and all 216 tests/20 suites passed, including a PostgreSQL concurrent-device-limit regression test. Registrations serialize per user and per token to prevent limit bypass and cross-account token races.
-- Flutter analyze passed and 80 tests passed (2 explicit live checks skipped) before concurrent Gemini presentation edits started.
-- Release APK built successfully (52.7 MB), using the API above, before the latest presentation edits. This is a debug-signed development artifact, not a Play Store signing/release setup or a claim of runtime verification.
+- Backend lint/build passed and all 227 tests/23 suites passed, including real PostgreSQL tests for one-time profile setup, conflicts and device-registration races. Tests use only the guarded local fixo_test target.
+- Flutter analyze passed and 257 tests passed (2 explicit live checks skipped). The UI checks include 144 combinations of 360/390/412dp, 1.35x text scale, EN/AR and Light/Dark, plus 18 real-font golden images. These are test fixtures, not fabricated production users or bookings. Logout also revokes the latest refresh token if push unregister triggered rotation.
+- Integrated release Web and Android builds passed with the API above. Web contains the fonts and FCM service worker. Android APK is about 83.9 MB with native MapLibre; signing is still the development/debug key, not a Play Store release setup.
 - Deployed API readiness and live catalog reads returned HTTP 200 with PostgreSQL persistence. Public OTP request returned HTTP 503, as intended.
 - FCM service-account validation reached the live FCM v1 API and returned INVALID_ARGUMENT for a deliberately invalid, validation-only token. This verifies API authorization, not delivery to an actual device.
 - User approved real Google sign-in and browser notification testing with the configured Google account. No live account sign-in or real-device notification delivery has yet been verified.
+- The deployed Web login rendered correctly in the real browser and opened Google's account chooser. Browser control stalled while selecting the authorized account; the user must complete that step and enter the new password in the app. Do not treat this as a successful account setup or notification-delivery test.
 
-## Pending integration gate
+## Remaining live verification
 
-Gemini owns presentation/theme/localization polish. Preserve its concurrent changes; do not commit or overwrite its work. During a Web build, its email screen contained `Icons.mark_email_Read_outlined`, which is not a valid Flutter icon. Wait for Gemini's completed/verified design before the final integrated Web/APK build and Google/push runtime tests.
-
-After Gemini finishes: inspect its diff, run analyze/full Flutter tests, rebuild Web/APK, deploy the verified Web artifact including firebase-messaging-sw.js, and perform the approved sign-in/notification tests. Review and stage the task's design changes without including unrelated files. The user has already authorized committing and pushing the reviewed project work.
+Gemini has finished and its changes are integrated. The final live Google/profile/password setup and notification delivery still need runtime verification. User approval for Google identity sharing and browser notifications is already recorded. Creating the new password must be completed by the user in the app; never ask for it in chat or choose one on the user's behalf. Do not create cloud bookings/payments for this account test.
 
 iOS runtime/APNs remains unavailable without appropriate Apple credentials and a macOS/Xcode test environment. Do not claim it works. SMS remains disabled. No real professionals/dispatch/tracking/reviews have been fabricated; missing product workflows remain separate development work.
 
 ## Reproduction
 
 Configure server variables from backend/.env.example with independent secrets. Local integration tests must target explicit localhost:5432/fixo_test and pass the existing fail-closed guard. Native Firebase configuration files are deliberately ignored: regenerate them with FlutterFire against the approved project. Public Firebase client options and the Web service worker contain no service-account secret.
+
+Build Web using `flutter build web --release --dart-define=FIXO_API_BASE_URL=https://fixo-api.vercel.app/api/v1`. Copy `mobile/vercel.static.json` to `mobile/build/web/vercel.json` and the locally linked `.vercel/project.json` into `build/web/.vercel/project.json`, then run `vercel deploy --prod --yes` from `build/web`. Deploying source mobile/ as a guessed framework is not the static-artifact deployment used here.
+
+Brand icons reuse the existing Material `handyman_rounded` glyph from FixoBrandMark. Re-export with `python tool/generate_brand_icons.py <Flutter SDK>/bin/cache/artifacts/material_fonts/materialicons-regular.otf` (Pillow required). The font is supplied/licensed by the Flutter SDK; no new remote logo service is used.

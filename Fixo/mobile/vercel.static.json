@@ -1,0 +1,18 @@
+{
+  "framework": null,
+  "headers": [
+    {
+      "source": "/firebase-messaging-sw.js",
+      "headers": [{"key": "Cache-Control", "value": "no-cache, no-store, must-revalidate"}]
+    },
+    {
+      "source": "/index.html",
+      "headers": [{"key": "Cache-Control", "value": "no-cache, must-revalidate"}]
+    }
+  ],
+  "rewrites": [
+    {"source": "/customer/:path*", "destination": "/index.html"},
+    {"source": "/auth/:path*", "destination": "/index.html"},
+    {"source": "/onboarding", "destination": "/index.html"}
+  ]
+}

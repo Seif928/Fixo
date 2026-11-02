@@ -1,3 +1,10 @@
+buildscript {
+    repositories { google(); mavenCentral() }
+    // Firebase Auth 25 uses Kotlin 2.4 metadata; Android's compatibility
+    // matrix requires R8 9.1.29 or newer when keeping AGP 8.11.
+    dependencies { classpath("com.android.tools:r8:9.1.31") }
+}
+
 allprojects {
     repositories {
         google()

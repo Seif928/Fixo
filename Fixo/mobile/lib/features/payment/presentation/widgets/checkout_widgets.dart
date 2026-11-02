@@ -11,6 +11,7 @@ class CheckoutReassuranceBanner extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isArabic = Directionality.of(context) == TextDirection.rtl;
+    final palette = context.fixoPalette;
 
     return Padding(
       padding: const EdgeInsets.symmetric(
@@ -31,9 +32,11 @@ class CheckoutReassuranceBanner extends StatelessWidget {
                 const SizedBox(width: FixoSpacing.xs),
                 Flexible(
                   child: Text(
-                    isArabic ? 'تأكيد الدفع نقداً عند التنفيذ' : 'Cash on Service Checkout',
+                    isArabic
+                        ? 'تأكيد الدفع نقداً عند التنفيذ'
+                        : 'Cash on Service Checkout',
                     style: FixoTypography.labelMd(
-                      color: FixoColors.onSurfaceVariant,
+                      color: palette.mutedText,
                     ),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
@@ -46,7 +49,7 @@ class CheckoutReassuranceBanner extends StatelessWidget {
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
             decoration: BoxDecoration(
-              color: FixoColors.surfaceContainerHigh,
+              color: palette.surfaceHigh,
               borderRadius: BorderRadius.circular(FixoRadius.pill),
             ),
             child: Row(
@@ -64,7 +67,7 @@ class CheckoutReassuranceBanner extends StatelessWidget {
                 Text(
                   isArabic ? 'نقداً' : 'Cash',
                   style: FixoTypography.labelMd(
-                    color: FixoColors.primaryForest,
+                    color: palette.deepForest,
                   ),
                 ),
               ],
@@ -78,10 +81,7 @@ class CheckoutReassuranceBanner extends StatelessWidget {
 
 /// Order summary card displaying real service title, order code, schedule, and location.
 class CheckoutOrderSummaryCard extends StatelessWidget {
-  const CheckoutOrderSummaryCard({
-    super.key,
-    required this.booking,
-  });
+  const CheckoutOrderSummaryCard({super.key, required this.booking});
 
   final BookingDetailModel booking;
 
@@ -101,13 +101,14 @@ class CheckoutOrderSummaryCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isArabic = Directionality.of(context) == TextDirection.rtl;
+    final palette = context.fixoPalette;
     final offeringTitle = isArabic
         ? (booking.offering['titleAr'] as String? ??
-            booking.offering['titleEn'] as String? ??
-            'خدمة منزلية')
+              booking.offering['titleEn'] as String? ??
+              'خدمة منزلية')
         : (booking.offering['titleEn'] as String? ??
-            booking.offering['titleAr'] as String? ??
-            'Home Service');
+              booking.offering['titleAr'] as String? ??
+              'Home Service');
 
     final addressLabel = booking.address['label'] as String? ?? 'Home';
     final districtLine = booking.address['districtLine'] as String? ?? '';
@@ -122,10 +123,10 @@ class CheckoutOrderSummaryCard extends StatelessWidget {
       ),
       padding: const EdgeInsets.all(FixoSpacing.md),
       decoration: BoxDecoration(
-        color: FixoColors.surfaceContainerLowest,
+        color: palette.cardSurface,
         borderRadius: BorderRadius.circular(FixoRadius.lg),
         border: Border.all(
-          color: FixoColors.outlineVariant.withValues(alpha: 0.5),
+          color: palette.subtleBorder,
         ),
         boxShadow: [
           BoxShadow(
@@ -146,12 +147,12 @@ class CheckoutOrderSummaryCard extends StatelessWidget {
                 width: 56,
                 height: 56,
                 decoration: BoxDecoration(
-                  color: FixoColors.surfaceContainerLow,
+                  color: palette.surfaceLow,
                   borderRadius: BorderRadius.circular(FixoRadius.md),
                 ),
-                child: const Icon(
+                child: Icon(
                   Icons.handyman_outlined,
-                  color: FixoColors.primaryForest,
+                  color: palette.deepForest,
                   size: 28,
                 ),
               ),
@@ -172,7 +173,7 @@ class CheckoutOrderSummaryCard extends StatelessWidget {
                             vertical: 2,
                           ),
                           decoration: BoxDecoration(
-                            color: FixoColors.surfaceContainerHigh,
+                            color: palette.surfaceHigh,
                             borderRadius: BorderRadius.circular(
                               FixoRadius.pill,
                             ),
@@ -180,14 +181,14 @@ class CheckoutOrderSummaryCard extends StatelessWidget {
                           child: Text(
                             isArabic ? 'خدمة معتمدة' : 'Verified Service',
                             style: FixoTypography.labelMd(
-                              color: FixoColors.primaryForest,
+                              color: palette.deepForest,
                             ),
                           ),
                         ),
                         Text(
                           '${booking.pricing.totalEgp} ${booking.pricing.currency}',
                           style: FixoTypography.headlineSm(
-                            color: FixoColors.deepestForest,
+                            color: palette.deepForest,
                           ).copyWith(fontWeight: FontWeight.bold),
                         ),
                       ],
@@ -196,7 +197,7 @@ class CheckoutOrderSummaryCard extends StatelessWidget {
                     Text(
                       offeringTitle,
                       style: FixoTypography.headlineSm(
-                        color: FixoColors.onSurface,
+                        color: palette.inkText,
                       ).copyWith(fontWeight: FontWeight.bold),
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
@@ -213,7 +214,7 @@ class CheckoutOrderSummaryCard extends StatelessWidget {
                         Text(
                           '#${booking.orderCode}',
                           style: FixoTypography.bodySm(
-                            color: FixoColors.onSurfaceVariant,
+                            color: palette.mutedText,
                           ).copyWith(fontWeight: FontWeight.w600),
                         ),
                       ],
@@ -231,7 +232,7 @@ class CheckoutOrderSummaryCard extends StatelessWidget {
                           child: Text(
                             '${booking.scheduledDate} • ${_formatTimeWindow(booking.timeWindow, isArabic)}',
                             style: FixoTypography.bodySm(
-                              color: FixoColors.onSurfaceVariant,
+                              color: palette.mutedText,
                             ),
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
@@ -252,7 +253,7 @@ class CheckoutOrderSummaryCard extends StatelessWidget {
                           child: Text(
                             addressDisplay,
                             style: FixoTypography.bodySm(
-                              color: FixoColors.onSurfaceVariant,
+                              color: palette.mutedText,
                             ),
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
@@ -269,7 +270,7 @@ class CheckoutOrderSummaryCard extends StatelessWidget {
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
             decoration: BoxDecoration(
-              color: FixoColors.surfaceContainerLow,
+              color: palette.surfaceLow,
               borderRadius: BorderRadius.circular(FixoRadius.md),
             ),
             child: Row(
@@ -286,7 +287,7 @@ class CheckoutOrderSummaryCard extends StatelessWidget {
                         ? 'تحصيل نقدي بعد اكتمال الخدمة'
                         : 'Cash Collection After Service',
                     style: FixoTypography.labelMd(
-                      color: FixoColors.onSecondaryContainer,
+                      color: palette.deepForest,
                     ),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
@@ -308,6 +309,8 @@ class CheckoutPaymentMethodsSection extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isArabic = Directionality.of(context) == TextDirection.rtl;
+    final palette = context.fixoPalette;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: FixoSpacing.md),
@@ -325,13 +328,13 @@ class CheckoutPaymentMethodsSection extends StatelessWidget {
                 Text(
                   isArabic ? 'طريقة الدفع' : 'Payment Method',
                   style: FixoTypography.headlineSm(
-                    color: FixoColors.deepestForest,
+                    color: palette.deepForest,
                   ).copyWith(fontWeight: FontWeight.bold),
                 ),
                 Text(
                   isArabic ? 'وسائل الدفع المحلية' : 'Egypt Local Rail',
                   style: FixoTypography.labelMd(
-                    color: FixoColors.onSurfaceVariant,
+                    color: palette.mutedText,
                   ),
                 ),
               ],
@@ -344,10 +347,10 @@ class CheckoutPaymentMethodsSection extends StatelessWidget {
             key: const Key('payment-method-cash-on-service'),
             padding: const EdgeInsets.all(FixoSpacing.md),
             decoration: BoxDecoration(
-              color: FixoColors.surfaceContainerLowest,
+              color: palette.cardSurface,
               borderRadius: BorderRadius.circular(FixoRadius.lg),
               border: Border.all(
-                color: FixoColors.primaryForest,
+                color: isDark ? palette.limeAccent : FixoColors.primaryForest,
                 width: 1.5,
               ),
               boxShadow: [
@@ -368,13 +371,12 @@ class CheckoutPaymentMethodsSection extends StatelessWidget {
                       width: 40,
                       height: 40,
                       decoration: BoxDecoration(
-                        color: FixoColors.surfaceContainerHigh,
-                        borderRadius:
-                            BorderRadius.circular(FixoRadius.md),
+                        color: palette.surfaceHigh,
+                        borderRadius: BorderRadius.circular(FixoRadius.md),
                       ),
-                      child: const Icon(
+                      child: Icon(
                         Icons.payments_outlined,
-                        color: FixoColors.primaryForest,
+                        color: palette.deepForest,
                         size: 22,
                       ),
                     ),
@@ -389,9 +391,11 @@ class CheckoutPaymentMethodsSection extends StatelessWidget {
                             crossAxisAlignment: WrapCrossAlignment.center,
                             children: [
                               Text(
-                                isArabic ? 'الدفع نقداً للفني' : 'Cash to Artisan',
+                                isArabic
+                                    ? 'الدفع نقداً للفني'
+                                    : 'Cash to Artisan',
                                 style: FixoTypography.labelLg(
-                                  color: FixoColors.onSurface,
+                                  color: palette.inkText,
                                 ).copyWith(fontWeight: FontWeight.bold),
                               ),
                               Container(
@@ -420,7 +424,7 @@ class CheckoutPaymentMethodsSection extends StatelessWidget {
                                 ? 'ادفع نقداً بالجنيه المصري فقط بعد إتمام الخدمة ومعاينتها'
                                 : 'Hand cash in EGP only after job completed & inspected',
                             style: FixoTypography.bodySm(
-                              color: FixoColors.onSurfaceVariant,
+                              color: palette.mutedText,
                             ),
                           ),
                         ],
@@ -446,7 +450,7 @@ class CheckoutPaymentMethodsSection extends StatelessWidget {
                 Container(
                   padding: const EdgeInsets.all(FixoSpacing.sm),
                   decoration: BoxDecoration(
-                    color: FixoColors.surfaceContainerLow,
+                    color: palette.surfaceLow,
                     borderRadius: BorderRadius.circular(FixoRadius.md),
                   ),
                   child: Row(
@@ -464,7 +468,7 @@ class CheckoutPaymentMethodsSection extends StatelessWidget {
                               ? 'يتم تحصيل المبلغ نقداً بواسطة الفني فقط بعد تقديم الخدمة ومعاينتها. لا يوجد أي خصم مسبق.'
                               : 'Cash is collected in person by the technician only after service is performed and inspected. No upfront charge.',
                           style: FixoTypography.bodySm(
-                            color: FixoColors.onSecondaryContainer,
+                            color: palette.inkText,
                           ),
                         ),
                       ),
@@ -478,6 +482,7 @@ class CheckoutPaymentMethodsSection extends StatelessWidget {
 
           // Option 2: InstaPay (Disabled)
           _buildDisabledPaymentOption(
+            palette: palette,
             key: const Key('payment-method-instapay'),
             icon: Icons.bolt_rounded,
             title: isArabic ? 'انستاباي مصر' : 'InstaPay Egypt',
@@ -490,6 +495,7 @@ class CheckoutPaymentMethodsSection extends StatelessWidget {
 
           // Option 3: Smart Wallets (Disabled)
           _buildDisabledPaymentOption(
+            palette: palette,
             key: const Key('payment-method-wallets'),
             icon: Icons.account_balance_wallet_outlined,
             title: isArabic ? 'المحافظ الإلكترونية' : 'Smart Wallets',
@@ -502,6 +508,7 @@ class CheckoutPaymentMethodsSection extends StatelessWidget {
 
           // Option 4: Cards & Meeza (Disabled)
           _buildDisabledPaymentOption(
+            palette: palette,
             key: const Key('payment-method-cards'),
             icon: Icons.credit_card_outlined,
             title: isArabic ? 'البطاقات وكارت ميزة' : 'Cards & Meeza',
@@ -514,6 +521,7 @@ class CheckoutPaymentMethodsSection extends StatelessWidget {
 
           // Option 5: Fawry Pay (Disabled)
           _buildDisabledPaymentOption(
+            palette: palette,
             key: const Key('payment-method-fawry'),
             icon: Icons.storefront_outlined,
             title: isArabic ? 'منافذ فوري' : 'Fawry Pay Kiosk',
@@ -528,6 +536,7 @@ class CheckoutPaymentMethodsSection extends StatelessWidget {
   }
 
   Widget _buildDisabledPaymentOption({
+    required FixoPaletteExtension palette,
     required Key key,
     required IconData icon,
     required String title,
@@ -538,10 +547,10 @@ class CheckoutPaymentMethodsSection extends StatelessWidget {
       key: key,
       padding: const EdgeInsets.all(FixoSpacing.md),
       decoration: BoxDecoration(
-        color: FixoColors.surfaceContainerLowest.withValues(alpha: 0.6),
+        color: palette.cardSurface.withValues(alpha: 0.65),
         borderRadius: BorderRadius.circular(FixoRadius.lg),
         border: Border.all(
-          color: FixoColors.outlineVariant.withValues(alpha: 0.3),
+          color: palette.subtleBorder.withValues(alpha: 0.6),
         ),
       ),
       child: Row(
@@ -550,14 +559,10 @@ class CheckoutPaymentMethodsSection extends StatelessWidget {
             width: 40,
             height: 40,
             decoration: BoxDecoration(
-              color: FixoColors.surfaceContainer,
+              color: palette.surfaceContainer,
               borderRadius: BorderRadius.circular(FixoRadius.md),
             ),
-            child: Icon(
-              icon,
-              color: FixoColors.outline,
-              size: 22,
-            ),
+            child: Icon(icon, color: palette.mutedText, size: 22),
           ),
           const SizedBox(width: FixoSpacing.sm),
           Expanded(
@@ -572,7 +577,7 @@ class CheckoutPaymentMethodsSection extends StatelessWidget {
                     Text(
                       title,
                       style: FixoTypography.labelLg(
-                        color: FixoColors.outline,
+                        color: palette.mutedText,
                       ).copyWith(fontWeight: FontWeight.bold),
                     ),
                     Container(
@@ -581,15 +586,13 @@ class CheckoutPaymentMethodsSection extends StatelessWidget {
                         vertical: 2,
                       ),
                       decoration: BoxDecoration(
-                        color: FixoColors.surfaceContainerHigh,
-                        borderRadius: BorderRadius.circular(
-                          FixoRadius.pill,
-                        ),
+                        color: palette.surfaceHigh,
+                        borderRadius: BorderRadius.circular(FixoRadius.pill),
                       ),
                       child: Text(
                         badge,
                         style: FixoTypography.labelMd(
-                          color: FixoColors.outline,
+                          color: palette.mutedText,
                         ),
                       ),
                     ),
@@ -598,9 +601,7 @@ class CheckoutPaymentMethodsSection extends StatelessWidget {
                 const SizedBox(height: 2),
                 Text(
                   subtitle,
-                  style: FixoTypography.bodySm(
-                    color: FixoColors.outline,
-                  ),
+                  style: FixoTypography.bodySm(color: palette.mutedText),
                 ),
               ],
             ),
@@ -609,10 +610,7 @@ class CheckoutPaymentMethodsSection extends StatelessWidget {
             width: 20,
             height: 20,
             decoration: BoxDecoration(
-              border: Border.all(
-                color: FixoColors.outlineVariant,
-                width: 1.5,
-              ),
+              border: Border.all(color: palette.subtleBorder, width: 1.5),
               shape: BoxShape.circle,
             ),
           ),
@@ -624,16 +622,14 @@ class CheckoutPaymentMethodsSection extends StatelessWidget {
 
 /// Receipt fare breakdown card showing transparent fees in EGP.
 class CheckoutReceiptCard extends StatelessWidget {
-  const CheckoutReceiptCard({
-    super.key,
-    required this.pricing,
-  });
+  const CheckoutReceiptCard({super.key, required this.pricing});
 
   final BookingPricingModel pricing;
 
   @override
   Widget build(BuildContext context) {
     final isArabic = Directionality.of(context) == TextDirection.rtl;
+    final palette = context.fixoPalette;
 
     return Container(
       margin: const EdgeInsets.symmetric(
@@ -642,10 +638,10 @@ class CheckoutReceiptCard extends StatelessWidget {
       ),
       padding: const EdgeInsets.all(FixoSpacing.md),
       decoration: BoxDecoration(
-        color: FixoColors.surfaceContainerLowest,
+        color: palette.cardSurface,
         borderRadius: BorderRadius.circular(FixoRadius.lg),
         border: Border.all(
-          color: FixoColors.outlineVariant.withValues(alpha: 0.5),
+          color: palette.subtleBorder,
         ),
       ),
       child: Column(
@@ -654,35 +650,36 @@ class CheckoutReceiptCard extends StatelessWidget {
           Text(
             isArabic ? 'تفاصيل الفاتورة' : 'Receipt Breakdown',
             style: FixoTypography.labelLg(
-              color: FixoColors.primaryForest,
+              color: palette.deepForest,
             ).copyWith(fontWeight: FontWeight.bold),
           ),
           const SizedBox(height: FixoSpacing.sm),
           _buildRow(
+            palette: palette,
             label: isArabic ? 'أجرة الفحص والمعاينة' : 'Base Inspection Fee',
             value: '${pricing.baseInspectionEgp} ${pricing.currency}',
             isBold: false,
           ),
           const SizedBox(height: 6),
           _buildRow(
+            palette: palette,
             label: isArabic ? 'أجرة الخدمة والصيانة' : 'Service Fee',
             value: '${pricing.serviceFeeEgp} ${pricing.currency}',
             isBold: false,
           ),
           const SizedBox(height: 6),
           _buildRow(
-            label: isArabic
-                ? 'رسوم الانتقال والتوصيل'
-                : 'Transport Fee',
+            palette: palette,
+            label: isArabic ? 'رسوم الانتقال والتوصيل' : 'Transport Fee',
             value: pricing.transportFeeEgp == 0
                 ? (isArabic ? 'مجاناً' : 'FREE')
                 : '${pricing.transportFeeEgp} ${pricing.currency}',
             isSecondary: pricing.transportFeeEgp == 0,
             isBold: pricing.transportFeeEgp > 0,
           ),
-          const Padding(
-            padding: EdgeInsets.symmetric(vertical: FixoSpacing.sm),
-            child: Divider(color: FixoColors.surfaceContainer, height: 1),
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: FixoSpacing.sm),
+            child: Divider(color: palette.subtleBorder, height: 1),
           ),
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -696,7 +693,7 @@ class CheckoutReceiptCard extends StatelessWidget {
                     Text(
                       isArabic ? 'الإجمالي المستحق' : 'Total Amount Due',
                       style: FixoTypography.labelLg(
-                        color: FixoColors.deepestForest,
+                        color: palette.deepForest,
                       ).copyWith(fontWeight: FontWeight.bold),
                     ),
                     Text(
@@ -704,7 +701,7 @@ class CheckoutReceiptCard extends StatelessWidget {
                           ? 'شامل كافة الرسوم المقررة'
                           : 'All stated fees inclusive',
                       style: FixoTypography.bodySm(
-                        color: FixoColors.onSurfaceVariant,
+                        color: palette.mutedText,
                       ),
                     ),
                   ],
@@ -717,7 +714,7 @@ class CheckoutReceiptCard extends StatelessWidget {
                   child: Text(
                     '${pricing.totalEgp} ${pricing.currency}',
                     style: FixoTypography.priceDisplay(
-                      color: FixoColors.deepestForest,
+                      color: palette.deepForest,
                     ).copyWith(fontWeight: FontWeight.bold),
                   ),
                 ),
@@ -726,15 +723,12 @@ class CheckoutReceiptCard extends StatelessWidget {
           ),
           const SizedBox(height: FixoSpacing.sm),
           Container(
-            padding: const EdgeInsets.symmetric(
-              horizontal: 10,
-              vertical: 8,
-            ),
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
             decoration: BoxDecoration(
-              color: FixoColors.surfaceBotanical,
+              color: palette.surfaceLow,
               borderRadius: BorderRadius.circular(FixoRadius.sm),
               border: Border.all(
-                color: FixoColors.outlineVariant.withValues(alpha: 0.4),
+                color: palette.subtleBorder,
               ),
             ),
             child: Column(
@@ -761,10 +755,10 @@ class CheckoutReceiptCard extends StatelessWidget {
                 const SizedBox(height: 6),
                 Row(
                   children: [
-                    const Icon(
+                    Icon(
                       Icons.schedule,
                       size: 16,
-                      color: FixoColors.primaryForest,
+                      color: palette.deepForest,
                     ),
                     const SizedBox(width: 8),
                     Expanded(
@@ -773,7 +767,7 @@ class CheckoutReceiptCard extends StatelessWidget {
                             ? 'المستحق بعد الخدمة: ${pricing.totalEgp} ج.م'
                             : 'Due after service: ${pricing.totalEgp} EGP',
                         style: FixoTypography.labelMd(
-                          color: FixoColors.deepestForest,
+                          color: palette.deepForest,
                         ).copyWith(fontWeight: FontWeight.bold),
                       ),
                     ),
@@ -788,6 +782,7 @@ class CheckoutReceiptCard extends StatelessWidget {
   }
 
   Widget _buildRow({
+    required FixoPaletteExtension palette,
     required String label,
     required String value,
     bool isBold = false,
@@ -799,21 +794,21 @@ class CheckoutReceiptCard extends StatelessWidget {
         Expanded(
           child: Text(
             label,
-            style: FixoTypography.bodySm(
-              color: FixoColors.onSurfaceVariant,
-            ),
+            style: FixoTypography.bodySm(color: palette.mutedText),
           ),
         ),
         Text(
           value,
-          style: FixoTypography.bodySm(
-            color: isSecondary
-                ? FixoColors.secondary
-                : FixoColors.deepestForest,
-          ).copyWith(
-            fontWeight:
-                isBold || isSecondary ? FontWeight.bold : FontWeight.w500,
-          ),
+          style:
+              FixoTypography.bodySm(
+                color: isSecondary
+                    ? FixoColors.secondary
+                    : palette.deepForest,
+              ).copyWith(
+                fontWeight: isBold || isSecondary
+                    ? FontWeight.bold
+                    : FontWeight.w500,
+              ),
         ),
       ],
     );
@@ -827,6 +822,7 @@ class CheckoutTrustFootnote extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isArabic = Directionality.of(context) == TextDirection.rtl;
+    final palette = context.fixoPalette;
 
     return Padding(
       padding: const EdgeInsets.symmetric(
@@ -850,7 +846,7 @@ class CheckoutTrustFootnote extends StatelessWidget {
                       ? 'سياسة الدفع نقداً عند التنفيذ'
                       : 'Cash on Service Policy',
                   style: FixoTypography.labelMd(
-                    color: FixoColors.primaryForest,
+                    color: palette.deepForest,
                   ).copyWith(fontWeight: FontWeight.w600),
                   textAlign: TextAlign.center,
                 ),
@@ -862,9 +858,7 @@ class CheckoutTrustFootnote extends StatelessWidget {
             isArabic
                 ? 'الدفع نقداً يتم بالكامل في يد الفني فقط بعد انتهاء ومعاينة الخدمة.'
                 : 'Cash payment is collected entirely in person only after service is completed and inspected.',
-            style: FixoTypography.bodySm(
-              color: FixoColors.onSurfaceVariant,
-            ),
+            style: FixoTypography.bodySm(color: palette.mutedText),
             textAlign: TextAlign.center,
           ),
         ],
@@ -883,14 +877,17 @@ class CheckoutConfirmationView extends StatelessWidget {
     super.key,
     required this.booking,
     required this.onReturnHome,
+    this.onOpenChat,
   });
 
   final BookingDetailModel booking;
   final VoidCallback onReturnHome;
+  final VoidCallback? onOpenChat;
 
   @override
   Widget build(BuildContext context) {
     final isArabic = Directionality.of(context) == TextDirection.rtl;
+    final palette = context.fixoPalette;
 
     return SingleChildScrollView(
       key: const Key('checkout-confirmation-view'),
@@ -922,7 +919,7 @@ class CheckoutConfirmationView extends StatelessWidget {
                 ? 'تم تأكيد الحجز — قيد التعيين'
                 : 'Booking Confirmed — Pending Dispatch',
             style: FixoTypography.headlineSm(
-              color: FixoColors.deepestForest,
+              color: palette.deepForest,
             ).copyWith(fontWeight: FontWeight.bold),
             textAlign: TextAlign.center,
           ),
@@ -932,10 +929,10 @@ class CheckoutConfirmationView extends StatelessWidget {
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
             decoration: BoxDecoration(
-              color: FixoColors.surfaceContainerLow,
+              color: palette.surfaceLow,
               borderRadius: BorderRadius.circular(FixoRadius.pill),
               border: Border.all(
-                color: FixoColors.outlineVariant.withValues(alpha: 0.5),
+                color: palette.subtleBorder,
               ),
             ),
             child: Text(
@@ -944,7 +941,7 @@ class CheckoutConfirmationView extends StatelessWidget {
                   ? 'رقم الطلب: #${booking.orderCode}'
                   : 'Order Code: #${booking.orderCode}',
               style: FixoTypography.labelLg(
-                color: FixoColors.primaryForest,
+                color: palette.deepForest,
               ).copyWith(fontWeight: FontWeight.bold),
             ),
           ),
@@ -954,10 +951,10 @@ class CheckoutConfirmationView extends StatelessWidget {
           Container(
             padding: const EdgeInsets.all(FixoSpacing.md),
             decoration: BoxDecoration(
-              color: FixoColors.surfaceContainerLowest,
+              color: palette.cardSurface,
               borderRadius: BorderRadius.circular(FixoRadius.lg),
               border: Border.all(
-                color: FixoColors.outlineVariant.withValues(alpha: 0.5),
+                color: palette.subtleBorder,
               ),
               boxShadow: [
                 BoxShadow(
@@ -976,13 +973,12 @@ class CheckoutConfirmationView extends StatelessWidget {
                       width: 40,
                       height: 40,
                       decoration: BoxDecoration(
-                        color: FixoColors.surfaceContainerLow,
-                        borderRadius:
-                            BorderRadius.circular(FixoRadius.md),
+                        color: palette.surfaceLow,
+                        borderRadius: BorderRadius.circular(FixoRadius.md),
                       ),
-                      child: const Icon(
+                      child: Icon(
                         Icons.payments_outlined,
-                        color: FixoColors.primaryForest,
+                        color: palette.deepForest,
                         size: 22,
                       ),
                     ),
@@ -992,9 +988,11 @@ class CheckoutConfirmationView extends StatelessWidget {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            isArabic ? 'الدفع نقداً بعد التنفيذ' : 'Cash to Artisan',
+                            isArabic
+                                ? 'الدفع نقداً بعد التنفيذ'
+                                : 'Cash to Artisan',
                             style: FixoTypography.labelLg(
-                              color: FixoColors.deepestForest,
+                              color: palette.deepForest,
                             ).copyWith(fontWeight: FontWeight.bold),
                           ),
                           const SizedBox(height: 4),
@@ -1003,7 +1001,7 @@ class CheckoutConfirmationView extends StatelessWidget {
                                 ? 'سيتم تحصيل المبلغ (${booking.pricing.totalEgp} ج.م) نقداً من قِبل الفني فقط بعد إتمام الخدمة ومعاينتها.'
                                 : 'Cash of ${booking.pricing.totalEgp} EGP will be collected in person by the technician only after service is completed and inspected.',
                             style: FixoTypography.bodySm(
-                              color: FixoColors.onSurfaceVariant,
+                              color: palette.mutedText,
                             ),
                           ),
                         ],
@@ -1011,9 +1009,9 @@ class CheckoutConfirmationView extends StatelessWidget {
                     ),
                   ],
                 ),
-                const Padding(
-                  padding: EdgeInsets.symmetric(vertical: FixoSpacing.sm),
-                  child: Divider(color: FixoColors.surfaceContainer, height: 1),
+                Padding(
+                  padding: const EdgeInsets.symmetric(vertical: FixoSpacing.sm),
+                  child: Divider(color: palette.subtleBorder, height: 1),
                 ),
                 Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -1022,9 +1020,8 @@ class CheckoutConfirmationView extends StatelessWidget {
                       width: 40,
                       height: 40,
                       decoration: BoxDecoration(
-                        color: FixoColors.surfaceContainerLow,
-                        borderRadius:
-                            BorderRadius.circular(FixoRadius.md),
+                        color: palette.surfaceLow,
+                        borderRadius: BorderRadius.circular(FixoRadius.md),
                       ),
                       child: const Icon(
                         Icons.assignment_ind_outlined,
@@ -1040,7 +1037,7 @@ class CheckoutConfirmationView extends StatelessWidget {
                           Text(
                             isArabic ? 'حالة التعيين' : 'Technician Matching',
                             style: FixoTypography.labelLg(
-                              color: FixoColors.deepestForest,
+                              color: palette.deepForest,
                             ).copyWith(fontWeight: FontWeight.bold),
                           ),
                           const SizedBox(height: 4),
@@ -1049,7 +1046,7 @@ class CheckoutConfirmationView extends StatelessWidget {
                                 ? 'تم إدراج طلبك في قائمة التعيين. سيتم إشعارك فور تعيين فني معتمد.'
                                 : 'Your request is in the dispatch queue. You will be notified as soon as a qualified artisan accepts your request.',
                             style: FixoTypography.bodySm(
-                              color: FixoColors.onSurfaceVariant,
+                              color: palette.mutedText,
                             ),
                           ),
                         ],
@@ -1063,6 +1060,14 @@ class CheckoutConfirmationView extends StatelessWidget {
           const SizedBox(height: FixoSpacing.xl),
 
           // Return to Home CTA
+          if (onOpenChat != null) ...[
+            TextButton.icon(
+              onPressed: onOpenChat,
+              icon: const Icon(Icons.chat_bubble_outline),
+              label: Text(isArabic ? 'محادثة الحجز' : 'Booking conversation'),
+            ),
+            const SizedBox(height: 12),
+          ],
           SizedBox(
             width: double.infinity,
             height: 48,

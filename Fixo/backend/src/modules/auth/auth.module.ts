@@ -3,6 +3,8 @@ import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
 import { FirebaseIdentityController } from './firebase-identity.controller';
 import { FirebaseIdentityService, FirebaseTokenVerifier } from './firebase-identity.service';
+import { PhonePasswordController } from './phone-password.controller';
+import { FirebasePasswordGateway, PhonePasswordService } from './phone-password.service';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
 import { RolesGuard } from './guards/roles.guard';
 import {
@@ -12,11 +14,13 @@ import {
 } from './sms/sms.provider';
 
 @Module({
-  controllers: [AuthController, FirebaseIdentityController],
+  controllers: [AuthController, FirebaseIdentityController, PhonePasswordController],
   providers: [
     AuthService,
     FirebaseIdentityService,
     FirebaseTokenVerifier,
+    FirebasePasswordGateway,
+    PhonePasswordService,
     DevSmsProvider,
     ProductionTelecomSmsProvider,
     {

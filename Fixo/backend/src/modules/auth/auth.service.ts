@@ -48,6 +48,7 @@ export interface AuthenticatedUserProfile {
   arrivalAlertsEnabled: boolean;
   rewardPoints: number;
   addresses?: any[];
+  requiresProfileSetup?: boolean;
 }
 
 export interface OtpRequestResponse {
@@ -732,6 +733,7 @@ export class AuthService implements OnModuleInit {
       }
       return {
         id: user.id,
+        requiresProfileSetup: Boolean(user.firebaseUid && (!user.phone || !user.fullName?.trim())),
         phone: user.phone ?? '',
         fullName: user.fullName,
         email: user.email,

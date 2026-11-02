@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../../app/router/app_routes.dart';
 import '../../../../core/l10n/app_locale_controller.dart';
+import '../../../../core/location/free_map_picker.dart';
 import '../../../../core/theme/fixo_colors.dart';
 import '../../../../core/theme/fixo_spacing.dart';
 import '../../../../core/theme/fixo_typography.dart';
@@ -58,35 +59,47 @@ class _CreateBookingPageState extends ConsumerState<CreateBookingPage> {
         return Consumer(
           builder: (ctx, refWatch, _) {
             final state = refWatch.watch(createBookingControllerProvider);
-            final controller =
-                refWatch.read(createBookingControllerProvider.notifier);
+            final controller = refWatch.read(
+              createBookingControllerProvider.notifier,
+            );
 
-            return AddressCreationBottomSheet(
-              zones: state.coverageZones,
-              isLoadingZones: state.isLoadingZones,
-              isSubmitting: state.isCreatingAddress,
-              errorMessage: state.addressCreationError,
+            return AddressMapWrapper(
               isArabic: isArabic,
-              onRetryZones: controller.loadCoverageZones,
-              onSave: (request) async {
-                final created = await controller.createAddress(request);
-                if (created != null && sheetCtx.mounted) {
-                  Navigator.of(sheetCtx).pop();
-                  if (context.mounted) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        backgroundColor: palette.primaryBrand,
-                        content: Text(
-                          isArabic
-                              ? 'تم حفظ العنوان وتحديده بنجاح.'
-                              : 'Address saved and selected.',
-                          style: const TextStyle(color: Colors.white),
+              builder: (point) => AddressCreationBottomSheet(
+                zones: state.coverageZones,
+                isLoadingZones: state.isLoadingZones,
+                isSubmitting: state.isCreatingAddress,
+                errorMessage: state.addressCreationError,
+                isArabic: isArabic,
+                onRetryZones: controller.loadCoverageZones,
+                onSave: (request) async {
+                  final selectedRequest = point == null
+                      ? request
+                      : request.withCoordinates(
+                          point.latitude,
+                          point.longitude,
+                        );
+                  final created = await controller.createAddress(
+                    selectedRequest,
+                  );
+                  if (created != null && sheetCtx.mounted) {
+                    Navigator.of(sheetCtx).pop();
+                    if (context.mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          backgroundColor: palette.primaryBrand,
+                          content: Text(
+                            isArabic
+                                ? 'تم حفظ العنوان وتحديده بنجاح.'
+                                : 'Address saved and selected.',
+                            style: const TextStyle(color: Colors.white),
+                          ),
                         ),
-                      ),
-                    );
+                      );
+                    }
                   }
-                }
-              },
+                },
+              ),
             );
           },
         );
@@ -120,7 +133,7 @@ class _CreateBookingPageState extends ConsumerState<CreateBookingPage> {
                   Text(
                     isArabic ? 'اختر عنوان الخدمة' : 'Select Service Address',
                     style: FixoTypography.headlineSm(
-                      color: palette.primaryBrand,
+                      color: palette.deepForest,
                     ).copyWith(fontWeight: FontWeight.bold),
                   ),
                   IconButton(
@@ -136,13 +149,12 @@ class _CreateBookingPageState extends ConsumerState<CreateBookingPage> {
                   contentPadding: EdgeInsets.zero,
                   leading: Icon(
                     Icons.location_on_rounded,
-                    color:
-                        isSelected ? palette.primaryBrand : palette.mutedText,
+                    color: isSelected ? palette.deepForest : palette.mutedText,
                   ),
                   title: Text(
                     addr.label,
                     style: FixoTypography.labelLg(
-                      color: palette.primaryBrand,
+                      color: palette.deepForest,
                     ).copyWith(fontWeight: FontWeight.bold),
                   ),
                   subtitle: Text(
@@ -206,10 +218,7 @@ class _CreateBookingPageState extends ConsumerState<CreateBookingPage> {
             backgroundColor: palette.cardSurface.withValues(alpha: 0.9),
             elevation: 0,
             leading: IconButton(
-              icon: Icon(
-                Icons.arrow_back_rounded,
-                color: palette.primaryBrand,
-              ),
+              icon: Icon(Icons.arrow_back_rounded, color: palette.deepForest),
               onPressed: () {
                 if (context.canPop()) {
                   context.pop();
@@ -227,7 +236,7 @@ class _CreateBookingPageState extends ConsumerState<CreateBookingPage> {
                   child: Text(
                     isArabic ? 'إنشاء حجز' : 'Create Booking',
                     style: FixoTypography.headlineSm(
-                      color: palette.primaryBrand,
+                      color: palette.deepForest,
                     ).copyWith(fontWeight: FontWeight.bold),
                     overflow: TextOverflow.ellipsis,
                   ),
@@ -250,7 +259,7 @@ class _CreateBookingPageState extends ConsumerState<CreateBookingPage> {
                   Text(
                     isArabic ? 'لم يتم اختيار خدمة' : 'No service selected',
                     style: FixoTypography.headlineSm(
-                      color: palette.primaryBrand,
+                      color: palette.deepForest,
                     ).copyWith(fontWeight: FontWeight.bold),
                     textAlign: TextAlign.center,
                   ),
@@ -295,6 +304,7 @@ class _CreateBookingPageState extends ConsumerState<CreateBookingPage> {
 
     final offering = widget.initialOffering!;
     final preferredPro = widget.initialPreferredPro;
+    final colorScheme = Theme.of(context).colorScheme;
 
     return Directionality(
       textDirection: isArabic ? TextDirection.rtl : TextDirection.ltr,
@@ -304,10 +314,7 @@ class _CreateBookingPageState extends ConsumerState<CreateBookingPage> {
           backgroundColor: palette.cardSurface.withValues(alpha: 0.9),
           elevation: 0,
           leading: IconButton(
-            icon: Icon(
-              Icons.arrow_back_rounded,
-              color: palette.primaryBrand,
-            ),
+            icon: Icon(Icons.arrow_back_rounded, color: palette.deepForest),
             onPressed: () {
               if (context.canPop()) {
                 context.pop();
@@ -325,7 +332,7 @@ class _CreateBookingPageState extends ConsumerState<CreateBookingPage> {
                 child: Text(
                   isArabic ? 'إنشاء حجز' : 'Create Booking',
                   style: FixoTypography.headlineSm(
-                    color: palette.primaryBrand,
+                    color: palette.deepForest,
                   ).copyWith(fontWeight: FontWeight.bold),
                   overflow: TextOverflow.ellipsis,
                 ),
@@ -334,10 +341,7 @@ class _CreateBookingPageState extends ConsumerState<CreateBookingPage> {
           ),
           actions: [
             IconButton(
-              icon: Icon(
-                Icons.help_outline_rounded,
-                color: palette.mutedText,
-              ),
+              icon: Icon(Icons.help_outline_rounded, color: palette.mutedText),
               onPressed: () {
                 ScaffoldMessenger.of(context).showSnackBar(
                   SnackBar(
@@ -382,11 +386,11 @@ class _CreateBookingPageState extends ConsumerState<CreateBookingPage> {
                       isArabic: isArabic,
                       onChangeAddress: state.hasSavedAddresses
                           ? () => _showAddressSelectionModal(
-                                context,
-                                state.addresses,
-                                state.selectedAddress,
-                                isArabic,
-                              )
+                              context,
+                              state.addresses,
+                              state.selectedAddress,
+                              isArabic,
+                            )
                           : null,
                       onAddNewAddress: () => _showCreateAddressSheet(context),
                     ),
@@ -414,6 +418,7 @@ class _CreateBookingPageState extends ConsumerState<CreateBookingPage> {
                       decoration: BoxDecoration(
                         color: palette.cardSurface,
                         borderRadius: FixoRadius.borderRadiusLg,
+                        border: Border.all(color: palette.subtleBorder),
                         boxShadow: [
                           BoxShadow(
                             color: Colors.black.withValues(alpha: 0.04),
@@ -433,7 +438,7 @@ class _CreateBookingPageState extends ConsumerState<CreateBookingPage> {
                                   children: [
                                     Icon(
                                       Icons.edit_note_rounded,
-                                      color: palette.primaryBrand,
+                                      color: palette.deepForest,
                                       size: 20,
                                     ),
                                     const SizedBox(width: FixoSpacing.xs),
@@ -443,7 +448,7 @@ class _CreateBookingPageState extends ConsumerState<CreateBookingPage> {
                                             ? 'وصف المشكلة'
                                             : 'Issue Description',
                                         style: FixoTypography.headlineSm(
-                                          color: palette.primaryBrand,
+                                          color: palette.deepForest,
                                         ).copyWith(fontWeight: FontWeight.bold),
                                         overflow: TextOverflow.ellipsis,
                                       ),
@@ -466,7 +471,9 @@ class _CreateBookingPageState extends ConsumerState<CreateBookingPage> {
                             controller: _issueDescriptionController,
                             maxLines: 3,
                             onChanged: controller.setIssueDescription,
-                            style: FixoTypography.bodyMd(color: palette.inkText),
+                            style: FixoTypography.bodyMd(
+                              color: palette.inkText,
+                            ),
                             decoration: InputDecoration(
                               hintText: isArabic
                                   ? 'صف الأعطال (تسريب مياه، صوت غير معتاد، توقف التبريد)...'
@@ -489,39 +496,91 @@ class _CreateBookingPageState extends ConsumerState<CreateBookingPage> {
                                 ? 'صور توضيحية للعطل (تساعد الفني في تجهيز المعدات)'
                                 : 'Photos of Issue (Helps pro prep equipment)',
                             style: FixoTypography.labelMd(
-                              color: palette.primaryBrand,
+                              color: palette.deepForest,
                             ).copyWith(fontWeight: FontWeight.w600),
                           ),
-                          const SizedBox(height: 6),
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 10,
-                              vertical: 8,
-                            ),
-                            decoration: BoxDecoration(
-                              color: palette.surfaceLow,
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                            child: Row(
-                              children: [
-                                Icon(
-                                  Icons.info_outline_rounded,
-                                  size: 16,
-                                  color: palette.mutedText,
-                                ),
-                                const SizedBox(width: 8),
-                                Expanded(
-                                  child: Text(
-                                    isArabic
-                                        ? 'سيتم تفعيل رفع الصور فور تفعيل التخزين السحابي الآمن.'
-                                        : 'Photo uploads will be enabled once cloud media storage is activated.',
-                                    style: FixoTypography.bodySm(
-                                      color: palette.mutedText,
+                          const SizedBox(height: 8),
+                          Row(
+                            crossAxisAlignment: CrossAxisAlignment.center,
+                            children: [
+                              // Clearly disabled photo upload slot matching Stitch Screen 04
+                              Opacity(
+                                opacity: 0.55,
+                                child: Container(
+                                  constraints: const BoxConstraints(
+                                    minWidth: 68,
+                                    minHeight: 64,
+                                  ),
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 10,
+                                    vertical: 8,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: palette.surfaceLow,
+                                    borderRadius: BorderRadius.circular(10),
+                                    border: Border.all(
+                                      color: palette.subtleBorder,
+                                      width: 1.5,
                                     ),
                                   ),
+                                  child: Column(
+                                    mainAxisSize: MainAxisSize.min,
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      Icon(
+                                        Icons.add_a_photo_outlined,
+                                        size: 20,
+                                        color: palette.mutedText,
+                                      ),
+                                      const SizedBox(height: 2),
+                                      Text(
+                                        isArabic ? '+ قريباً' : '+ Add',
+                                        style:
+                                            FixoTypography.bodySm(
+                                              color: palette.mutedText,
+                                            ).copyWith(
+                                              fontSize: 10,
+                                              fontWeight: FontWeight.w700,
+                                            ),
+                                      ),
+                                    ],
+                                  ),
                                 ),
-                              ],
-                            ),
+                              ),
+                              const SizedBox(width: 10),
+                              Expanded(
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 10,
+                                    vertical: 8,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: palette.surfaceLow,
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                  child: Row(
+                                    children: [
+                                      Icon(
+                                        Icons.info_outline_rounded,
+                                        size: 16,
+                                        color: palette.mutedText,
+                                      ),
+                                      const SizedBox(width: 8),
+                                      Expanded(
+                                        child: Text(
+                                          isArabic
+                                              ? 'سيتم تفعيل رفع الصور فور تفعيل التخزين السحابي الآمن.'
+                                              : 'Photo uploads will be enabled once cloud media storage is activated.',
+                                          style: FixoTypography.bodySm(
+                                            color: palette.mutedText,
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            ],
                           ),
                         ],
                       ),
@@ -541,17 +600,17 @@ class _CreateBookingPageState extends ConsumerState<CreateBookingPage> {
                         key: const Key('booking-error-banner'),
                         padding: const EdgeInsets.all(FixoSpacing.sm),
                         decoration: BoxDecoration(
-                          color: const Color(0xFFFFEBEE),
+                          color: colorScheme.errorContainer,
                           borderRadius: BorderRadius.circular(8),
                           border: Border.all(
-                            color: const Color(0xFFE57373),
+                            color: colorScheme.error.withValues(alpha: 0.4),
                           ),
                         ),
                         child: Row(
                           children: [
-                            const Icon(
+                            Icon(
                               Icons.error_outline_rounded,
-                              color: Color(0xFFC62828),
+                              color: colorScheme.onErrorContainer,
                               size: 20,
                             ),
                             const SizedBox(width: FixoSpacing.xs),
@@ -559,7 +618,7 @@ class _CreateBookingPageState extends ConsumerState<CreateBookingPage> {
                               child: Text(
                                 state.errorMessage!,
                                 style: FixoTypography.bodySm(
-                                  color: const Color(0xFFC62828),
+                                  color: colorScheme.onErrorContainer,
                                 ),
                               ),
                             ),
@@ -582,6 +641,7 @@ class _CreateBookingPageState extends ConsumerState<CreateBookingPage> {
               ),
               decoration: BoxDecoration(
                 color: palette.cardSurface,
+                border: Border(top: BorderSide(color: palette.subtleBorder)),
                 boxShadow: [
                   BoxShadow(
                     color: Colors.black.withValues(alpha: 0.08),
@@ -630,7 +690,8 @@ class _CreateBookingPageState extends ConsumerState<CreateBookingPage> {
                             height: 48,
                             child: ElevatedButton(
                               key: const Key('confirm-booking-draft-btn'),
-                              onPressed: (state.isSubmitting ||
+                              onPressed:
+                                  (state.isSubmitting ||
                                       state.selectedAddress == null)
                                   ? null
                                   : () async {
@@ -638,15 +699,16 @@ class _CreateBookingPageState extends ConsumerState<CreateBookingPage> {
                                           ScaffoldMessenger.of(context);
                                       final navigator = Navigator.of(context);
 
-                                      final success =
-                                          await controller.submitBooking(
-                                        offering: offering,
-                                        preferredPro: preferredPro,
-                                      );
+                                      final success = await controller
+                                          .submitBooking(
+                                            offering: offering,
+                                            preferredPro: preferredPro,
+                                          );
                                       if (success) {
                                         final booking = ref
                                             .read(
-                                                createBookingControllerProvider)
+                                              createBookingControllerProvider,
+                                            )
                                             .successBooking;
                                         final orderCode =
                                             booking?.orderCode ?? 'FX-XXXX';
@@ -656,7 +718,9 @@ class _CreateBookingPageState extends ConsumerState<CreateBookingPage> {
                                             backgroundColor:
                                                 palette.primaryBrand,
                                             content: Text(
-                                              key: const Key('booking-draft-success-snackbar-text'),
+                                              key: const Key(
+                                                'booking-draft-success-snackbar-text',
+                                              ),
                                               isArabic
                                                   ? 'تم تسجيل طلب الحجز #$orderCode بنجاح (مسودة).'
                                                   : 'Booking #$orderCode created in DRAFT status.',
@@ -669,7 +733,8 @@ class _CreateBookingPageState extends ConsumerState<CreateBookingPage> {
 
                                         // Return to caller or pop
                                         if (!context.mounted) return;
-                                        if (booking != null && booking.id.isNotEmpty) {
+                                        if (booking != null &&
+                                            booking.id.isNotEmpty) {
                                           try {
                                             context.go(
                                               '/customer/bookings/${booking.id}/checkout',
@@ -692,8 +757,9 @@ class _CreateBookingPageState extends ConsumerState<CreateBookingPage> {
                                   borderRadius: BorderRadius.circular(12),
                                 ),
                                 elevation: 0,
-                                padding:
-                                    const EdgeInsets.symmetric(horizontal: 16),
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 16,
+                                ),
                               ),
                               child: state.isSubmitting
                                   ? const SizedBox(
@@ -703,8 +769,8 @@ class _CreateBookingPageState extends ConsumerState<CreateBookingPage> {
                                         strokeWidth: 2,
                                         valueColor:
                                             AlwaysStoppedAnimation<Color>(
-                                          Colors.white,
-                                        ),
+                                              Colors.white,
+                                            ),
                                       ),
                                     )
                                   : Row(
@@ -716,10 +782,12 @@ class _CreateBookingPageState extends ConsumerState<CreateBookingPage> {
                                             isArabic
                                                 ? 'تأكيد مسودة الحجز'
                                                 : 'Confirm Booking Draft',
-                                            style: FixoTypography.labelLg(
-                                              color: Colors.white,
-                                            ).copyWith(
-                                                fontWeight: FontWeight.bold),
+                                            style:
+                                                FixoTypography.labelLg(
+                                                  color: Colors.white,
+                                                ).copyWith(
+                                                  fontWeight: FontWeight.bold,
+                                                ),
                                             overflow: TextOverflow.ellipsis,
                                           ),
                                         ),
@@ -731,16 +799,19 @@ class _CreateBookingPageState extends ConsumerState<CreateBookingPage> {
                                           ),
                                           decoration: BoxDecoration(
                                             color: palette.limeAccent,
-                                            borderRadius:
-                                                BorderRadius.circular(6),
+                                            borderRadius: BorderRadius.circular(
+                                              6,
+                                            ),
                                           ),
                                           child: Text(
                                             '${offering.flatPriceEgp} EGP',
-                                            style: FixoTypography.labelMd(
-                                              color: palette.primaryBrand,
-                                            ).copyWith(
-                                              fontWeight: FontWeight.w800,
-                                            ),
+                                            style:
+                                                FixoTypography.labelMd(
+                                                  color: FixoColors
+                                                      .onTertiaryFixed,
+                                                ).copyWith(
+                                                  fontWeight: FontWeight.w800,
+                                                ),
                                           ),
                                         ),
                                       ],

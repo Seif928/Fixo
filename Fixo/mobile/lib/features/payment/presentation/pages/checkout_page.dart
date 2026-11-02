@@ -12,10 +12,7 @@ import '../widgets/checkout_widgets.dart';
 /// Screen 05: Official Stitch Payment / Checkout Page.
 /// Route: `/customer/bookings/:bookingId/checkout`
 class CheckoutPage extends ConsumerWidget {
-  const CheckoutPage({
-    super.key,
-    required this.bookingId,
-  });
+  const CheckoutPage({super.key, required this.bookingId});
 
   final String bookingId;
 
@@ -24,22 +21,18 @@ class CheckoutPage extends ConsumerWidget {
     final state = ref.watch(checkoutControllerProvider(bookingId));
     final controller = ref.read(checkoutControllerProvider(bookingId).notifier);
 
-    final palette =
-        Theme.of(context).extension<FixoPaletteExtension>() ??
-            FixoPaletteExtension.light;
+    final palette = context.fixoPalette;
+    final colorScheme = Theme.of(context).colorScheme;
     final isArabic = Directionality.of(context) == TextDirection.rtl;
 
     return Scaffold(
-      backgroundColor: FixoColors.surfaceBotanical,
+      backgroundColor: palette.canvasBackground,
       appBar: AppBar(
-        backgroundColor: FixoColors.surfaceBotanical,
+        backgroundColor: palette.canvasBackground,
         surfaceTintColor: Colors.transparent,
         elevation: 0,
         leading: IconButton(
-          icon: Icon(
-            Icons.arrow_back_rounded,
-            color: palette.primaryBrand,
-          ),
+          icon: Icon(Icons.arrow_back_rounded, color: palette.deepForest),
           onPressed: () {
             if (context.canPop()) {
               context.pop();
@@ -52,14 +45,14 @@ class CheckoutPage extends ConsumerWidget {
         title: Text(
           isArabic ? 'الدفع' : 'Payment',
           style: FixoTypography.headlineSm(
-            color: palette.primaryBrand,
+            color: palette.deepForest,
           ).copyWith(fontWeight: FontWeight.bold),
         ),
         actions: [
           IconButton(
-            icon: const Icon(
+            icon: Icon(
               Icons.help_outline_rounded,
-              color: FixoColors.onSurfaceVariant,
+              color: palette.mutedText,
               size: 22,
             ),
             onPressed: () {
@@ -81,16 +74,28 @@ class CheckoutPage extends ConsumerWidget {
         ],
         bottom: PreferredSize(
           preferredSize: const Size.fromHeight(1.0),
-          child: Container(
-            color: FixoColors.surfaceContainer,
-            height: 1.0,
-          ),
+          child: Container(color: palette.subtleBorder, height: 1.0),
         ),
       ),
-      body: _buildBody(context, ref, state, controller, palette, isArabic),
-      bottomNavigationBar: state.checkoutSuccess || state.isLoading || state.booking == null
+      body: _buildBody(
+        context,
+        ref,
+        state,
+        controller,
+        palette,
+        colorScheme,
+        isArabic,
+      ),
+      bottomNavigationBar:
+          state.checkoutSuccess || state.isLoading || state.booking == null
           ? null
-          : _buildStickyBottomCTA(context, state, controller, palette, isArabic),
+          : _buildStickyBottomCTA(
+              context,
+              state,
+              controller,
+              palette,
+              isArabic,
+            ),
     );
   }
 
@@ -100,12 +105,13 @@ class CheckoutPage extends ConsumerWidget {
     CheckoutState state,
     CheckoutController controller,
     FixoPaletteExtension palette,
+    ColorScheme colorScheme,
     bool isArabic,
   ) {
     if (state.isLoading) {
-      return const Center(
+      return Center(
         child: CircularProgressIndicator(
-          valueColor: AlwaysStoppedAnimation<Color>(FixoColors.primaryForest),
+          valueColor: AlwaysStoppedAnimation<Color>(palette.deepForest),
         ),
       );
     }
@@ -127,7 +133,7 @@ class CheckoutPage extends ConsumerWidget {
                 state.errorMessage!,
                 textAlign: TextAlign.center,
                 style: FixoTypography.bodyMd(
-                  color: FixoColors.onSurfaceVariant,
+                  color: palette.mutedText,
                 ),
               ),
               const SizedBox(height: FixoSpacing.md),
@@ -150,6 +156,8 @@ class CheckoutPage extends ConsumerWidget {
       return CheckoutConfirmationView(
         booking: state.booking!,
         onReturnHome: () => context.go(AppRoutes.customerHome),
+        onOpenChat: () =>
+            context.push('/customer/orders/${state.booking!.id}/chat'),
       );
     }
 
@@ -165,15 +173,17 @@ class CheckoutPage extends ConsumerWidget {
               margin: const EdgeInsets.all(FixoSpacing.md),
               padding: const EdgeInsets.all(FixoSpacing.sm),
               decoration: BoxDecoration(
-                color: const Color(0xFFFFDAD6),
+                color: colorScheme.errorContainer,
                 borderRadius: BorderRadius.circular(FixoRadius.md),
-                border: Border.all(color: const Color(0xFFBA1A1A)),
+                border: Border.all(
+                  color: colorScheme.error.withValues(alpha: 0.4),
+                ),
               ),
               child: Row(
                 children: [
-                  const Icon(
+                  Icon(
                     Icons.warning_amber_rounded,
-                    color: Color(0xFFBA1A1A),
+                    color: colorScheme.onErrorContainer,
                     size: 20,
                   ),
                   const SizedBox(width: FixoSpacing.xs),
@@ -181,7 +191,7 @@ class CheckoutPage extends ConsumerWidget {
                     child: Text(
                       state.errorMessage!,
                       style: FixoTypography.bodySm(
-                        color: const Color(0xFF410002),
+                        color: colorScheme.onErrorContainer,
                       ),
                     ),
                   ),
@@ -217,9 +227,9 @@ class CheckoutPage extends ConsumerWidget {
         bottom: MediaQuery.of(context).padding.bottom + FixoSpacing.sm,
       ),
       decoration: BoxDecoration(
-        color: FixoColors.surfaceContainerLowest,
-        border: const Border(
-          top: BorderSide(color: FixoColors.surfaceContainer, width: 1.0),
+        color: palette.cardSurface,
+        border: Border(
+          top: BorderSide(color: palette.subtleBorder, width: 1.0),
         ),
         boxShadow: [
           BoxShadow(
@@ -240,7 +250,7 @@ class CheckoutPage extends ConsumerWidget {
                 Text(
                   isArabic ? 'يستحق بعد التنفيذ' : 'Due Upon Completion',
                   style: FixoTypography.labelMd(
-                    color: FixoColors.onSurfaceVariant,
+                    color: palette.mutedText,
                   ),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
@@ -248,7 +258,7 @@ class CheckoutPage extends ConsumerWidget {
                 Text(
                   '${booking.pricing.totalEgp} ${booking.pricing.currency}',
                   style: FixoTypography.priceDisplay(
-                    color: FixoColors.deepestForest,
+                    color: palette.deepForest,
                   ).copyWith(fontWeight: FontWeight.bold),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
@@ -270,8 +280,9 @@ class CheckoutPage extends ConsumerWidget {
                       },
                 style: ElevatedButton.styleFrom(
                   backgroundColor: palette.primaryBrand,
-                  disabledBackgroundColor:
-                      palette.primaryBrand.withValues(alpha: 0.4),
+                  disabledBackgroundColor: palette.primaryBrand.withValues(
+                    alpha: 0.4,
+                  ),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(12),
                   ),

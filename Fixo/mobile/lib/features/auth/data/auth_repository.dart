@@ -49,7 +49,8 @@ class DioAuthRepository implements AuthRepository {
     } on DioException catch (error) {
       throw _mapDioException(
         error,
-        fallback: 'Unable to send SMS verification code. Please check your connection.',
+        fallback:
+            'Unable to send SMS verification code. Please check your connection.',
       );
     }
   }
@@ -112,14 +113,10 @@ class DioAuthRepository implements AuthRepository {
     try {
       final response = await _dio.get<Map<String, dynamic>>('/users/me');
       final data = response.data ?? const <String, dynamic>{};
-      final userJson =
-          (data['user'] as Map<String, dynamic>?) ?? data;
+      final userJson = (data['user'] as Map<String, dynamic>?) ?? data;
       return AuthUser.fromJson(userJson);
     } on DioException catch (error) {
-      throw _mapDioException(
-        error,
-        fallback: 'Failed to load user profile.',
-      );
+      throw _mapDioException(error, fallback: 'Failed to load user profile.');
     }
   }
 
@@ -149,4 +146,3 @@ final authRepositoryProvider = Provider<AuthRepository>((ref) {
   final dio = ref.watch(dioClientProvider);
   return DioAuthRepository(dio);
 });
-

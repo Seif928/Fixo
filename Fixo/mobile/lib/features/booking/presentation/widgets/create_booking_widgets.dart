@@ -1,3 +1,5 @@
+import '../../../../core/location/free_map_picker.dart';
+import '../../../../core/location/address_maps_actions.dart';
 import 'package:flutter/material.dart';
 import '../../../../core/theme/fixo_colors.dart';
 import '../../../../core/theme/fixo_spacing.dart';
@@ -7,10 +9,7 @@ import '../../domain/booking_models.dart';
 
 /// Progress Header Meta: "1 Schedule Service" + "Step 1 of 2" pill
 class BookingProgressHeader extends StatelessWidget {
-  const BookingProgressHeader({
-    super.key,
-    required this.isArabic,
-  });
+  const BookingProgressHeader({super.key, required this.isArabic});
 
   final bool isArabic;
 
@@ -44,7 +43,7 @@ class BookingProgressHeader extends StatelessWidget {
                 child: Text(
                   isArabic ? 'تحديد موعد الخدمة' : 'Schedule Service',
                   style: FixoTypography.headlineSm(
-                    color: palette.primaryBrand,
+                    color: palette.deepForest,
                   ).copyWith(fontWeight: FontWeight.bold),
                   overflow: TextOverflow.ellipsis,
                 ),
@@ -68,7 +67,7 @@ class BookingProgressHeader extends StatelessWidget {
               Text(
                 isArabic ? 'الخطوة ١ من ٢' : 'Step 1 of 2',
                 style: FixoTypography.labelMd(
-                  color: palette.primaryBrand,
+                  color: palette.deepForest,
                 ).copyWith(fontWeight: FontWeight.w600),
               ),
               const SizedBox(width: 6),
@@ -110,6 +109,7 @@ class SelectedServiceCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: palette.cardSurface,
         borderRadius: FixoRadius.borderRadiusLg,
+        border: Border.all(color: palette.subtleBorder),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withValues(alpha: 0.04),
@@ -181,7 +181,7 @@ class SelectedServiceCard extends StatelessWidget {
                           Text(
                             preferredPro!.ratingAvg.toStringAsFixed(2),
                             style: FixoTypography.labelMd(
-                              color: palette.primaryBrand,
+                              color: palette.deepForest,
                             ).copyWith(fontWeight: FontWeight.bold),
                           ),
                           const SizedBox(width: 4),
@@ -207,7 +207,7 @@ class SelectedServiceCard extends StatelessWidget {
                     Text(
                       offering.localizedTitle(isArabic),
                       style: FixoTypography.labelLg(
-                        color: palette.primaryBrand,
+                        color: palette.deepForest,
                       ).copyWith(fontWeight: FontWeight.bold),
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
@@ -217,11 +217,9 @@ class SelectedServiceCard extends StatelessWidget {
                       preferredPro != null
                           ? '${isArabic ? "الفني المسؤول: " : "Lead Pro: "}${preferredPro!.localizedName(isArabic)}'
                           : (isArabic
-                              ? 'الفني: لم يتم التعيين بعد'
-                              : 'Professional: Not yet assigned'),
-                      style: FixoTypography.bodySm(
-                        color: palette.mutedText,
-                      ),
+                                ? 'الفني: لم يتم التعيين بعد'
+                                : 'Professional: Not yet assigned'),
+                      style: FixoTypography.bodySm(color: palette.mutedText),
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
                     ),
@@ -256,11 +254,11 @@ class SelectedServiceCard extends StatelessWidget {
                         child: Text(
                           preferredPro != null
                               ? (isArabic
-                                  ? 'فني مسجل ومعتمد'
-                                  : 'Registered Pro')
+                                    ? 'فني مسجل ومعتمد'
+                                    : 'Registered Pro')
                               : (isArabic
-                                  ? 'خدمة منزلية معلنة'
-                                  : 'Catalog Home Service'),
+                                    ? 'خدمة منزلية معلنة'
+                                    : 'Catalog Home Service'),
                           style: FixoTypography.labelMd(
                             color: FixoColors.secondary,
                           ).copyWith(fontWeight: FontWeight.w600),
@@ -282,9 +280,7 @@ class SelectedServiceCard extends StatelessWidget {
                   ),
                   child: Text(
                     isArabic ? 'تسعير قياسي' : 'Standard Rate',
-                    style: FixoTypography.labelMd(
-                      color: palette.mutedText,
-                    ),
+                    style: FixoTypography.labelMd(color: palette.mutedText),
                   ),
                 ),
               ],
@@ -322,6 +318,7 @@ class ServiceLocationCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: palette.cardSurface,
         borderRadius: FixoRadius.borderRadiusLg,
+        border: Border.all(color: palette.subtleBorder),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withValues(alpha: 0.04),
@@ -341,7 +338,7 @@ class ServiceLocationCard extends StatelessWidget {
                   children: [
                     Icon(
                       Icons.location_on_rounded,
-                      color: palette.primaryBrand,
+                      color: palette.deepForest,
                       size: 20,
                     ),
                     const SizedBox(width: FixoSpacing.xs),
@@ -349,7 +346,7 @@ class ServiceLocationCard extends StatelessWidget {
                       child: Text(
                         isArabic ? 'موقع تقديم الخدمة' : 'Service Location',
                         style: FixoTypography.headlineSm(
-                          color: palette.primaryBrand,
+                          color: palette.deepForest,
                         ).copyWith(fontWeight: FontWeight.bold),
                         overflow: TextOverflow.ellipsis,
                       ),
@@ -396,71 +393,30 @@ class ServiceLocationCard extends StatelessWidget {
           const SizedBox(height: FixoSpacing.sm),
 
           if (selectedAddress != null) ...[
-            // Mini Cairo map preview container
-            Container(
-              height: 100,
-              width: double.infinity,
-              decoration: BoxDecoration(
-                color: palette.surfaceLow,
-                borderRadius: BorderRadius.circular(10),
-                border: Border.all(
-                  color: FixoColors.outline.withValues(alpha: 0.2),
-                ),
-              ),
-              child: Stack(
-                alignment: Alignment.center,
-                children: [
-                  // Subtle Cairo street grid representation
-                  CustomPaint(
-                    size: const Size(double.infinity, 100),
-                    painter: _CairoMapPreviewPainter(
-                      lineColor: FixoColors.outline.withValues(alpha: 0.15),
-                    ),
-                  ),
-                  Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.all(6),
-                        decoration: BoxDecoration(
-                          color: palette.primaryBrand,
-                          shape: BoxShape.circle,
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black.withValues(alpha: 0.2),
-                              blurRadius: 6,
-                            ),
-                          ],
-                        ),
-                        child: Icon(
-                          Icons.home_work_rounded,
-                          color: palette.limeAccent,
-                          size: 20,
-                        ),
-                      ),
-                      const SizedBox(height: 4),
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 8,
-                          vertical: 2,
-                        ),
-                        decoration: BoxDecoration(
-                          color: palette.primaryBrand,
-                          borderRadius: BorderRadius.circular(6),
-                        ),
-                        child: Text(
-                          selectedAddress!.label,
-                          style: FixoTypography.labelMd(
-                            color: palette.limeAccent,
-                          ).copyWith(fontWeight: FontWeight.bold),
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
+            Text(
+              selectedAddress!.label,
+              style: FixoTypography.labelLg(color: palette.deepForest),
             ),
-            const SizedBox(height: FixoSpacing.xs),
+            if (selectedAddress!.latitude != null &&
+                selectedAddress!.longitude != null)
+              ClipRRect(
+                borderRadius: BorderRadius.circular(12),
+                child: SavedLocationMap(
+                  point: ServiceMapPoint(
+                    selectedAddress!.latitude!,
+                    selectedAddress!.longitude!,
+                  ),
+                  isArabic: isArabic,
+                ),
+              )
+            else
+              Text(
+                isArabic
+                    ? 'لا توجد نقطة محفوظة لهذا العنوان.'
+                    : 'No map pin saved for this address.',
+                style: FixoTypography.bodySm(color: palette.mutedText),
+              ),
+            const SizedBox(height: 10),
             Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -477,19 +433,28 @@ class ServiceLocationCard extends StatelessWidget {
                       Text(
                         selectedAddress!.buildingLine,
                         style: FixoTypography.labelLg(
-                          color: palette.primaryBrand,
+                          color: palette.deepForest,
                         ).copyWith(fontWeight: FontWeight.bold),
                       ),
                       Text(
                         selectedAddress!.districtLine,
-                        style: FixoTypography.bodySm(
-                          color: palette.mutedText,
-                        ),
+                        style: FixoTypography.bodySm(color: palette.mutedText),
                       ),
                     ],
                   ),
                 ),
               ],
+            ),
+            const SizedBox(height: 8),
+            AddressMapsActions(
+              address: [
+                selectedAddress!.buildingLine,
+                selectedAddress!.districtLine,
+                if (selectedAddress!.zone != null)
+                  selectedAddress!.zone!.governorate,
+                'Egypt',
+              ].join(', '),
+              isArabic: isArabic,
             ),
           ] else ...[
             // Empty state when customer has no saved address
@@ -522,7 +487,7 @@ class ServiceLocationCard extends StatelessWidget {
                                   ? 'لا يوجد عنوان محفوظ'
                                   : 'No saved address found',
                               style: FixoTypography.labelLg(
-                                color: palette.primaryBrand,
+                                color: palette.deepForest,
                               ).copyWith(fontWeight: FontWeight.bold),
                             ),
                             const SizedBox(height: 2),
@@ -546,7 +511,10 @@ class ServiceLocationCard extends StatelessWidget {
                       child: OutlinedButton.icon(
                         key: const Key('add-first-address-btn'),
                         onPressed: onAddNewAddress,
-                        icon: const Icon(Icons.add_location_alt_rounded, size: 18),
+                        icon: const Icon(
+                          Icons.add_location_alt_rounded,
+                          size: 18,
+                        ),
                         label: Text(
                           isArabic ? 'إضافة عنوان جديد' : 'Add New Address',
                         ),
@@ -563,36 +531,6 @@ class ServiceLocationCard extends StatelessWidget {
   }
 }
 
-class _CairoMapPreviewPainter extends CustomPainter {
-  const _CairoMapPreviewPainter({required this.lineColor});
-  final Color lineColor;
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final paint = Paint()
-      ..color = lineColor
-      ..strokeWidth = 2.0
-      ..style = PaintingStyle.stroke;
-
-    // Diagonal route representing 26th of July Corridor
-    final path = Path()
-      ..moveTo(0, size.height * 0.7)
-      ..lineTo(size.width * 0.45, size.height * 0.35)
-      ..lineTo(size.width, size.height * 0.2);
-    canvas.drawPath(path, paint);
-
-    // Cross street
-    canvas.drawLine(
-      Offset(size.width * 0.3, 0),
-      Offset(size.width * 0.6, size.height),
-      paint,
-    );
-  }
-
-  @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
-}
-
 /// Dynamic 4-Day Horizontal Date Selector (Screen 04)
 class BookingDateSelector extends StatelessWidget {
   const BookingDateSelector({
@@ -606,15 +544,51 @@ class BookingDateSelector extends StatelessWidget {
   final ValueChanged<DateTime> onSelectDate;
   final bool isArabic;
 
-  static const List<String> _daysEn = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
-  static const List<String> _daysAr = ['إثنين', 'ثلاثاء', 'أربعاء', 'خميس', 'جمعة', 'سبت', 'أحد'];
+  static const List<String> _daysEn = [
+    'Mon',
+    'Tue',
+    'Wed',
+    'Thu',
+    'Fri',
+    'Sat',
+    'Sun',
+  ];
+  static const List<String> _daysAr = [
+    'إثنين',
+    'ثلاثاء',
+    'أربعاء',
+    'خميس',
+    'جمعة',
+    'سبت',
+    'أحد',
+  ];
   static const List<String> _monthsEn = [
-    'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-    'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
+    'Jan',
+    'Feb',
+    'Mar',
+    'Apr',
+    'May',
+    'Jun',
+    'Jul',
+    'Aug',
+    'Sep',
+    'Oct',
+    'Nov',
+    'Dec',
   ];
   static const List<String> _monthsAr = [
-    'يناير', 'فبراير', 'مارس', 'أبريل', 'مايو', 'يونيو',
-    'يوليو', 'أغسطس', 'سبتمبر', 'أكتوبر', 'نوفمبر', 'ديسمبر'
+    'يناير',
+    'فبراير',
+    'مارس',
+    'أبريل',
+    'مايو',
+    'يونيو',
+    'يوليو',
+    'أغسطس',
+    'سبتمبر',
+    'أكتوبر',
+    'نوفمبر',
+    'ديسمبر',
   ];
 
   @override
@@ -637,6 +611,7 @@ class BookingDateSelector extends StatelessWidget {
       decoration: BoxDecoration(
         color: palette.cardSurface,
         borderRadius: FixoRadius.borderRadiusLg,
+        border: Border.all(color: palette.subtleBorder),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withValues(alpha: 0.04),
@@ -656,7 +631,7 @@ class BookingDateSelector extends StatelessWidget {
                   children: [
                     Icon(
                       Icons.calendar_today_rounded,
-                      color: palette.primaryBrand,
+                      color: palette.deepForest,
                       size: 20,
                     ),
                     const SizedBox(width: FixoSpacing.xs),
@@ -664,7 +639,7 @@ class BookingDateSelector extends StatelessWidget {
                       child: Text(
                         isArabic ? 'تحديد اليوم' : 'Select Date',
                         style: FixoTypography.headlineSm(
-                          color: palette.primaryBrand,
+                          color: palette.deepForest,
                         ).copyWith(fontWeight: FontWeight.bold),
                         overflow: TextOverflow.ellipsis,
                       ),
@@ -675,16 +650,15 @@ class BookingDateSelector extends StatelessWidget {
               const SizedBox(width: 8),
               Text(
                 '$currentMonthName ${selectedDate.year}',
-                style: FixoTypography.labelMd(
-                  color: palette.mutedText,
-                ),
+                style: FixoTypography.labelMd(color: palette.mutedText),
               ),
             ],
           ),
           const SizedBox(height: FixoSpacing.sm),
           Row(
             children: dates.map((d) {
-              final isSelected = d.year == selectedDate.year &&
+              final isSelected =
+                  d.year == selectedDate.year &&
                   d.month == selectedDate.month &&
                   d.day == selectedDate.day;
 
@@ -725,7 +699,7 @@ class BookingDateSelector extends StatelessWidget {
                               style: FixoTypography.priceDisplay(
                                 color: isSelected
                                     ? palette.limeAccent
-                                    : palette.primaryBrand,
+                                    : palette.deepForest,
                               ).copyWith(fontSize: 20, height: 1.2),
                             ),
                             const SizedBox(height: 2),
@@ -774,6 +748,7 @@ class BookingTimeWindowSelector extends StatelessWidget {
       decoration: BoxDecoration(
         color: palette.cardSurface,
         borderRadius: FixoRadius.borderRadiusLg,
+        border: Border.all(color: palette.subtleBorder),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withValues(alpha: 0.04),
@@ -787,17 +762,13 @@ class BookingTimeWindowSelector extends StatelessWidget {
         children: [
           Row(
             children: [
-              Icon(
-                Icons.schedule_rounded,
-                color: palette.primaryBrand,
-                size: 20,
-              ),
+              Icon(Icons.schedule_rounded, color: palette.deepForest, size: 20),
               const SizedBox(width: FixoSpacing.xs),
               Expanded(
                 child: Text(
                   isArabic ? 'الفترة الزمنية المفضلة' : 'Preferred Time Window',
                   style: FixoTypography.headlineSm(
-                    color: palette.primaryBrand,
+                    color: palette.deepForest,
                   ).copyWith(fontWeight: FontWeight.bold),
                   overflow: TextOverflow.ellipsis,
                 ),
@@ -812,9 +783,7 @@ class BookingTimeWindowSelector extends StatelessWidget {
               return Padding(
                 padding: const EdgeInsets.only(bottom: FixoSpacing.xs),
                 child: Material(
-                  color: isSelected
-                      ? palette.primaryBrand
-                      : palette.surfaceLow,
+                  color: isSelected ? palette.primaryBrand : palette.surfaceLow,
                   borderRadius: BorderRadius.circular(12),
                   elevation: isSelected ? 1 : 0,
                   child: InkWell(
@@ -841,14 +810,15 @@ class BookingTimeWindowSelector extends StatelessWidget {
                                 const SizedBox(width: FixoSpacing.sm),
                                 Expanded(
                                   child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
                                     children: [
                                       Text(
                                         slot.localizedTitle(isArabic),
                                         style: FixoTypography.labelLg(
                                           color: isSelected
                                               ? Colors.white
-                                              : palette.primaryBrand,
+                                              : palette.deepForest,
                                         ).copyWith(fontWeight: FontWeight.bold),
                                         overflow: TextOverflow.ellipsis,
                                       ),
@@ -928,6 +898,7 @@ class BookingFareBreakdownCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: palette.surfaceLow,
         borderRadius: FixoRadius.borderRadiusLg,
+        border: Border.all(color: palette.subtleBorder),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -948,7 +919,7 @@ class BookingFareBreakdownCard extends StatelessWidget {
                       child: Text(
                         isArabic ? 'تفاصيل السعر' : 'Fare Breakdown',
                         style: FixoTypography.headlineSm(
-                          color: palette.primaryBrand,
+                          color: palette.deepForest,
                         ).copyWith(fontWeight: FontWeight.bold),
                         overflow: TextOverflow.ellipsis,
                       ),
@@ -958,10 +929,7 @@ class BookingFareBreakdownCard extends StatelessWidget {
               ),
               const SizedBox(width: 8),
               Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 8,
-                  vertical: 2,
-                ),
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                 decoration: BoxDecoration(
                   color: FixoColors.secondaryContainer.withValues(alpha: 0.5),
                   borderRadius: BorderRadius.circular(12),
@@ -990,7 +958,7 @@ class BookingFareBreakdownCard extends StatelessWidget {
               Text(
                 '$baseInspection EGP',
                 style: FixoTypography.labelLg(
-                  color: palette.primaryBrand,
+                  color: palette.deepForest,
                 ).copyWith(fontWeight: FontWeight.w600),
               ),
             ],
@@ -1010,7 +978,7 @@ class BookingFareBreakdownCard extends StatelessWidget {
               Text(
                 '$serviceFee EGP',
                 style: FixoTypography.labelLg(
-                  color: palette.primaryBrand,
+                  color: palette.deepForest,
                 ).copyWith(fontWeight: FontWeight.w600),
               ),
             ],
@@ -1044,7 +1012,7 @@ class BookingFareBreakdownCard extends StatelessWidget {
                       child: Text(
                         isArabic ? 'مجاناً' : 'WAIVED',
                         style: FixoTypography.labelMd(
-                          color: palette.primaryBrand,
+                          color: FixoColors.onTertiaryFixed,
                         ).copyWith(fontWeight: FontWeight.bold, fontSize: 10),
                       ),
                     ),
@@ -1077,7 +1045,7 @@ class BookingFareBreakdownCard extends StatelessWidget {
                       Text(
                         isArabic ? 'المجموع التقديري' : 'Estimated Total',
                         style: FixoTypography.labelLg(
-                          color: palette.primaryBrand,
+                          color: palette.deepForest,
                         ).copyWith(fontWeight: FontWeight.bold),
                         overflow: TextOverflow.ellipsis,
                       ),
@@ -1099,14 +1067,14 @@ class BookingFareBreakdownCard extends StatelessWidget {
                     Text(
                       '$total',
                       style: FixoTypography.priceDisplay(
-                        color: palette.primaryBrand,
+                        color: palette.deepForest,
                       ),
                     ),
                     const SizedBox(width: 4),
                     Text(
                       'EGP',
                       style: FixoTypography.labelMd(
-                        color: palette.primaryBrand,
+                        color: palette.deepForest,
                       ).copyWith(fontWeight: FontWeight.bold),
                     ),
                   ],
@@ -1161,8 +1129,9 @@ class _AddressCreationBottomSheetState
   @override
   void initState() {
     super.initState();
-    _labelController =
-        TextEditingController(text: widget.isArabic ? 'المنزل' : 'Home');
+    _labelController = TextEditingController(
+      text: widget.isArabic ? 'المنزل' : 'Home',
+    );
     _buildingController = TextEditingController();
     _districtController = TextEditingController();
     _gateNotesController = TextEditingController();
@@ -1222,6 +1191,7 @@ class _AddressCreationBottomSheetState
   @override
   Widget build(BuildContext context) {
     final palette = context.fixoPalette;
+    final colorScheme = Theme.of(context).colorScheme;
     final displayError = _localError ?? widget.errorMessage;
 
     return Directionality(
@@ -1252,14 +1222,16 @@ class _AddressCreationBottomSheetState
                       children: [
                         Icon(
                           Icons.add_location_alt_rounded,
-                          color: palette.primaryBrand,
+                          color: palette.deepForest,
                           size: 22,
                         ),
                         const SizedBox(width: FixoSpacing.xs),
                         Text(
-                          widget.isArabic ? 'إضافة عنوان جديد' : 'Add New Address',
+                          widget.isArabic
+                              ? 'إضافة عنوان جديد'
+                              : 'Add New Address',
                           style: FixoTypography.headlineSm(
-                            color: palette.primaryBrand,
+                            color: palette.deepForest,
                           ).copyWith(fontWeight: FontWeight.bold),
                         ),
                       ],
@@ -1278,15 +1250,17 @@ class _AddressCreationBottomSheetState
                     key: const Key('address-error-banner'),
                     padding: const EdgeInsets.all(FixoSpacing.sm),
                     decoration: BoxDecoration(
-                      color: const Color(0xFFFFEBEE),
+                      color: colorScheme.errorContainer,
                       borderRadius: BorderRadius.circular(8),
-                      border: Border.all(color: const Color(0xFFE57373)),
+                      border: Border.all(
+                        color: colorScheme.error.withValues(alpha: 0.4),
+                      ),
                     ),
                     child: Row(
                       children: [
-                        const Icon(
+                        Icon(
                           Icons.error_outline_rounded,
-                          color: Color(0xFFC62828),
+                          color: colorScheme.onErrorContainer,
                           size: 20,
                         ),
                         const SizedBox(width: FixoSpacing.xs),
@@ -1294,7 +1268,7 @@ class _AddressCreationBottomSheetState
                           child: Text(
                             displayError,
                             style: FixoTypography.bodySm(
-                              color: const Color(0xFFC62828),
+                              color: colorScheme.onErrorContainer,
                             ),
                           ),
                         ),
@@ -1309,8 +1283,9 @@ class _AddressCreationBottomSheetState
                   widget.isArabic
                       ? 'اسم العنوان (مثال: المنزل، العمل)'
                       : 'Address Label (e.g. Home, Work)',
-                  style: FixoTypography.labelMd(color: palette.primaryBrand)
-                      .copyWith(fontWeight: FontWeight.w600),
+                  style: FixoTypography.labelMd(
+                    color: palette.deepForest,
+                  ).copyWith(fontWeight: FontWeight.w600),
                 ),
                 const SizedBox(height: 4),
                 TextFormField(
@@ -1343,8 +1318,9 @@ class _AddressCreationBottomSheetState
                 // Coverage Zone Dropdown
                 Text(
                   widget.isArabic ? 'منطقة التغطية' : 'Coverage Zone',
-                  style: FixoTypography.labelMd(color: palette.primaryBrand)
-                      .copyWith(fontWeight: FontWeight.w600),
+                  style: FixoTypography.labelMd(
+                    color: palette.primaryBrand,
+                  ).copyWith(fontWeight: FontWeight.w600),
                 ),
                 const SizedBox(height: 4),
                 if (widget.isLoadingZones) ...[
@@ -1387,7 +1363,8 @@ class _AddressCreationBottomSheetState
                 ] else ...[
                   DropdownButtonFormField<String>(
                     key: const Key('address-zone-dropdown'),
-                    initialValue: widget.zones.any((z) => z.id == _selectedZoneId)
+                    initialValue:
+                        widget.zones.any((z) => z.id == _selectedZoneId)
                         ? _selectedZoneId
                         : widget.zones.first.id,
                     items: widget.zones.map((zone) {
@@ -1425,8 +1402,9 @@ class _AddressCreationBottomSheetState
                   widget.isArabic
                       ? 'تفاصيل المبنى والشارع'
                       : 'Building & Street Details',
-                  style: FixoTypography.labelMd(color: palette.primaryBrand)
-                      .copyWith(fontWeight: FontWeight.w600),
+                  style: FixoTypography.labelMd(
+                    color: palette.primaryBrand,
+                  ).copyWith(fontWeight: FontWeight.w600),
                 ),
                 const SizedBox(height: 4),
                 TextFormField(
@@ -1461,8 +1439,9 @@ class _AddressCreationBottomSheetState
                 // District & Area Line
                 Text(
                   widget.isArabic ? 'الحي / المنطقة' : 'District / Area',
-                  style: FixoTypography.labelMd(color: palette.primaryBrand)
-                      .copyWith(fontWeight: FontWeight.w600),
+                  style: FixoTypography.labelMd(
+                    color: palette.primaryBrand,
+                  ).copyWith(fontWeight: FontWeight.w600),
                 ),
                 const SizedBox(height: 4),
                 TextFormField(
@@ -1499,8 +1478,9 @@ class _AddressCreationBottomSheetState
                   widget.isArabic
                       ? 'ملاحظات البوابة أو الأمن (اختياري)'
                       : 'Gate Notes / Security (Optional)',
-                  style: FixoTypography.labelMd(color: palette.primaryBrand)
-                      .copyWith(fontWeight: FontWeight.w600),
+                  style: FixoTypography.labelMd(
+                    color: palette.primaryBrand,
+                  ).copyWith(fontWeight: FontWeight.w600),
                 ),
                 const SizedBox(height: 4),
                 TextFormField(
@@ -1557,16 +1537,18 @@ class _AddressCreationBottomSheetState
                             height: 20,
                             child: CircularProgressIndicator(
                               strokeWidth: 2,
-                              valueColor:
-                                  AlwaysStoppedAnimation<Color>(Colors.white),
+                              valueColor: AlwaysStoppedAnimation<Color>(
+                                Colors.white,
+                              ),
                             ),
                           )
                         : Text(
                             widget.isArabic
                                 ? 'حفظ واختيار العنوان'
                                 : 'Save & Select Address',
-                            style: FixoTypography.labelLg(color: Colors.white)
-                                .copyWith(fontWeight: FontWeight.bold),
+                            style: FixoTypography.labelLg(
+                              color: Colors.white,
+                            ).copyWith(fontWeight: FontWeight.bold),
                           ),
                   ),
                 ),

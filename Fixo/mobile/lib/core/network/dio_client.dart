@@ -2,6 +2,7 @@ import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../storage/secure_token_storage.dart';
+import 'session_refresh_interceptor.dart';
 
 /// Resolves the default base URL for the FIXO NestJS backend (`/api/v1`).
 ///
@@ -42,14 +43,48 @@ final dioClientProvider = Provider<Dio>((ref) {
   dio.interceptors.add(
     InterceptorsWrapper(
       onRequest: (options, handler) async {
-        final accessToken = await tokenStorage.readAccessToken();
-        if (accessToken != null && accessToken.isNotEmpty) {
-          options.headers['Authorization'] = 'Bearer $accessToken';
+        final tokens = await tokenStorage.readTokens();
+        final requestOwner = options.extra['fixo_session_user'];
+        if (options.extra['fixo_refresh_retry'] == true &&
+            requestOwner != tokens?.userId) {
+          handler.reject(
+            DioException(
+              requestOptions: options,
+              type: DioExceptionType.cancel,
+              message:
+                  'The account changed before this request could be retried.',
+            ),
+          );
+          return;
+        }
+        if (tokens != null && tokens.accessToken.isNotEmpty) {
+          options.headers['Authorization'] = 'Bearer ${tokens.accessToken}';
+          options.extra['fixo_session_user'] = tokens.userId;
         }
         handler.next(options);
       },
     ),
   );
+
+  final refreshDio = Dio(
+    BaseOptions(
+      baseUrl: resolveDefaultApiBaseUrl(),
+      connectTimeout: const Duration(seconds: 8),
+      receiveTimeout: const Duration(seconds: 12),
+    ),
+  );
+  dio.interceptors.add(
+    SessionRefreshInterceptor(
+      dio,
+      refreshDio,
+      tokenStorage,
+      () => ref.read(sessionExpiredProvider.notifier).state++,
+    ),
+  );
+  ref.onDispose(() {
+    dio.close();
+    refreshDio.close();
+  });
 
   return dio;
 });

@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../app/router/app_routes.dart';
+import '../../../../app/router/customer_tab_navigation.dart';
 import '../../../../core/l10n/app_locale_controller.dart';
 import '../../../../core/theme/fixo_colors.dart';
 import '../../../../core/theme/fixo_spacing.dart';
@@ -11,6 +12,7 @@ import '../../../../core/widgets/fixo_brand_mark.dart';
 import '../../../../core/widgets/fixo_buttons.dart';
 import '../../../../core/widgets/fixo_cards.dart';
 import '../../../auth/presentation/controllers/auth_controller.dart';
+import '../../../chat/presentation/notification_sheet.dart';
 import '../../domain/marketplace_models.dart';
 import '../controllers/customer_home_controller.dart';
 import '../widgets/customer_home_widgets.dart';
@@ -72,10 +74,11 @@ class _CustomerHomePageState extends ConsumerState<CustomerHomePage> {
     return Scaffold(
       backgroundColor: palette.canvasBackground,
       bottomNavigationBar: FixoCustomerBottomNav(
-        currentIndex: homeState.activeBottomTab,
+        currentIndex: 0,
         isArabic: isArabic,
         onTabSelected: (index) {
-          homeNotifier.setActiveBottomTab(index);
+          homeNotifier.setActiveBottomTab(0);
+          navigateCustomerTab(context, index);
         },
       ),
       body: SafeArea(
@@ -228,26 +231,33 @@ class _CustomerHomePageState extends ConsumerState<CustomerHomePage> {
                 child: Text(
                   isArabic ? 'EN' : 'ع',
                   style: FixoTypography.labelMd(
-                    color: palette.primaryBrand,
+                    color: palette.deepForest,
                   ).copyWith(fontWeight: FontWeight.w800),
                 ),
               ),
               IconButton(
                 key: const Key('btn-home-notifications'),
                 tooltip: isArabic ? 'الإشعارات' : 'Notifications',
-                onPressed: () {},
+                onPressed: () => showModalBottomSheet<void>(
+                  context: context,
+                  isScrollControlled: true,
+                  useSafeArea: true,
+                  builder: (_) => const NotificationSheet(),
+                ),
                 icon: Icon(
                   Icons.notifications_none_rounded,
-                  color: palette.primaryBrand,
+                  color: palette.deepForest,
                 ),
               ),
               GestureDetector(
                 key: const Key('btn-home-profile-avatar'),
                 onTap: () async {
-                  // Allow quick sign-out in demo mode when tapping profile avatar
+                  await context.push(AppRoutes.customerProfile);
                 },
-                child: const FixoArtisanAvatar(
-                  identifier: 'Salma Customer',
+                child: FixoArtisanAvatar(
+                  identifier:
+                      ref.watch(authControllerProvider).session?.user.id ??
+                      'FIXO',
                   size: 32,
                 ),
               ),
@@ -268,12 +278,7 @@ class _CustomerHomePageState extends ConsumerState<CustomerHomePage> {
     final activeZone = homeState.activeZone;
 
     return Padding(
-      padding: const EdgeInsets.fromLTRB(
-        FixoSpacing.md,
-        12,
-        FixoSpacing.md,
-        8,
-      ),
+      padding: const EdgeInsets.fromLTRB(FixoSpacing.md, 12, FixoSpacing.md, 8),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -488,11 +493,7 @@ class _CustomerHomePageState extends ConsumerState<CustomerHomePage> {
       child: FixoSurfaceCard(
         child: Column(
           children: [
-            Icon(
-              Icons.search_off_rounded,
-              size: 40,
-              color: palette.mutedText,
-            ),
+            Icon(Icons.search_off_rounded, size: 40, color: palette.mutedText),
             const SizedBox(height: 10),
             Text(
               isArabic
@@ -531,11 +532,13 @@ class _CustomerHomePageState extends ConsumerState<CustomerHomePage> {
   }) {
     final feed = homeState.feed!;
     final selectedCategory = homeState.selectedCategorySlug;
-    final seasonalPromo = (selectedCategory == null ||
+    final seasonalPromo =
+        (selectedCategory == null ||
             feed.seasonalPromo?.categorySlug == selectedCategory)
         ? feed.seasonalPromo
         : null;
-    final bundleOffer = (selectedCategory == null ||
+    final bundleOffer =
+        (selectedCategory == null ||
             feed.bundleOffer?.categorySlug == selectedCategory)
         ? feed.bundleOffer
         : null;
@@ -557,9 +560,8 @@ class _CustomerHomePageState extends ConsumerState<CustomerHomePage> {
             child: SeasonalPromoHeroCard(
               offer: seasonalPromo,
               isArabic: isArabic,
-              onBookNow: () => _navigateToCreateBooking(
-                offering: seasonalPromo,
-              ),
+              onBookNow: () =>
+                  _navigateToCreateBooking(offering: seasonalPromo),
             ),
           ),
 
@@ -640,8 +642,7 @@ class _CustomerHomePageState extends ConsumerState<CustomerHomePage> {
                         isArabic: isArabic,
                         isSelected:
                             homeState.selectedCategorySlug == category.slug,
-                        onTap: () =>
-                            homeNotifier.selectCategory(category.slug),
+                        onTap: () => homeNotifier.selectCategory(category.slug),
                       ),
                     );
                   }).toList(),
@@ -663,9 +664,7 @@ class _CustomerHomePageState extends ConsumerState<CustomerHomePage> {
             child: BundleSaveInspectionCard(
               offer: bundleOffer,
               isArabic: isArabic,
-              onTap: () => _navigateToCreateBooking(
-                offering: bundleOffer,
-              ),
+              onTap: () => _navigateToCreateBooking(offering: bundleOffer),
             ),
           ),
 
@@ -686,9 +685,7 @@ class _CustomerHomePageState extends ConsumerState<CustomerHomePage> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      isArabic
-                          ? 'أفضل فنيي القاهرة تقييماً'
-                          : 'Top Rated Cairo Professionals',
+                      isArabic ? 'الفنيون المتاحون' : 'Available Professionals',
                       style: FixoTypography.headlineSm(
                         color: palette.inkText,
                       ).copyWith(fontWeight: FontWeight.w700),
@@ -756,8 +753,9 @@ class _CustomerHomePageState extends ConsumerState<CustomerHomePage> {
                         isArabic
                             ? 'لا يوجد فنيون متاحون حاليًا.'
                             : 'No professionals available yet.',
-                        style: FixoTypography.labelMd(color: palette.inkText)
-                            .copyWith(fontWeight: FontWeight.w700),
+                        style: FixoTypography.labelMd(
+                          color: palette.inkText,
+                        ).copyWith(fontWeight: FontWeight.w700),
                       ),
                     ),
                   ],
@@ -783,8 +781,8 @@ class _CustomerHomePageState extends ConsumerState<CustomerHomePage> {
                   backgroundColor: FixoColors.primaryForest,
                   content: Text(
                     isArabic
-                        ? 'فريق إدارة المرافق والشركات متاح على مدار الساعة.'
-                        : 'Enterprise facility concierge support is available 24/7.',
+                        ? 'اختار الخدمة، وضيف عنوانك وميعادك، وبعدها أكد الدفع نقداً بعد التنفيذ.'
+                        : 'Choose a service, add your address and time, then confirm cash after service.',
                     style: FixoTypography.bodySm(color: Colors.white),
                   ),
                 ),
@@ -824,4 +822,3 @@ class _CustomerHomePageState extends ConsumerState<CustomerHomePage> {
     );
   }
 }
-

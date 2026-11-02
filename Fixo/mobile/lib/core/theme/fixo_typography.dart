@@ -8,6 +8,7 @@ abstract final class FixoTypography {
   static const String englishFontFamily = 'Manrope';
   static const String arabicFontFamily = 'Cairo';
   static const List<String> fallbackFonts = [
+    'Cairo',
     'Segoe UI',
     'Roboto',
     'Arial',
