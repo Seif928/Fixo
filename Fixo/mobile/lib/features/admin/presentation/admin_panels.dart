@@ -134,6 +134,14 @@ class AdminAuditPanel extends StatelessWidget {
             title: Text(switch (item.action) {
               'OWNER_INITIALIZED' =>
                 ar ? 'تفعيل حساب المالك' : 'Owner access initialized',
+              'BOOKING_DETAILS_ACCESSED' =>
+                ar ? 'عرض تفاصيل حجز' : 'Booking details accessed',
+              'BOOKING_CANCELLED' =>
+                ar
+                    ? 'إلغاء حجز إداريًا'
+                    : 'Booking cancelled by administration',
+              'BOOKING_OFFER_SENT' =>
+                ar ? 'إرسال عرض حجز لفني' : 'Job offer sent to a professional',
               'ADMIN_INVITED' =>
                 ar ? 'منح دعوة للمسؤول الثاني' : 'Second administrator invited',
               'ADMIN_INVITE_ACCEPTED' =>

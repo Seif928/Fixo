@@ -15,7 +15,6 @@ import {
   ApiParam,
   ApiTags,
 } from '@nestjs/swagger';
-import { UserRole } from '@prisma/client';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { FixoJwtPayload } from '../auth/utils/jwt-token.util';
@@ -76,12 +75,7 @@ export class BookingsController {
     @CurrentUser() user: FixoJwtPayload,
     @Param('id') bookingId: string,
   ): Promise<BookingDetailResponse> {
-    const isAdmin = user.role === UserRole.ADMIN;
-    return this.bookingsService.findCustomerBookingById(
-      user.sub,
-      bookingId,
-      isAdmin,
-    );
+    return this.bookingsService.findCustomerBookingById(user.sub, bookingId);
   }
 
   @Post(':bookingId/checkout')
@@ -96,13 +90,7 @@ export class BookingsController {
     @Param('bookingId') bookingId: string,
     @Body() dto: CheckoutBookingDto,
   ): Promise<BookingDetailResponse> {
-    const isAdmin = user.role === UserRole.ADMIN;
-    return this.bookingsService.checkoutBooking(
-      user.sub,
-      bookingId,
-      dto,
-      isAdmin,
-    );
+    return this.bookingsService.checkoutBooking(user.sub, bookingId, dto);
   }
 
   @Get(':bookingId/tracking')
@@ -115,8 +103,7 @@ export class BookingsController {
     @CurrentUser() user: FixoJwtPayload,
     @Param('bookingId') bookingId: string,
   ): Promise<BookingTrackingResponse> {
-    const isAdmin = user.role === UserRole.ADMIN;
-    return this.bookingsService.getBookingTracking(user.sub, bookingId, isAdmin);
+    return this.bookingsService.getBookingTracking(user.sub, bookingId);
   }
 
   @Post(':bookingId/cancel')
@@ -131,13 +118,7 @@ export class BookingsController {
     @Param('bookingId') bookingId: string,
     @Body() dto: CancelBookingDto,
   ): Promise<BookingDetailResponse> {
-    const isAdmin = user.role === UserRole.ADMIN;
-    return this.bookingsService.cancelBooking(
-      user.sub,
-      bookingId,
-      dto,
-      isAdmin,
-    );
+    return this.bookingsService.cancelBooking(user.sub, bookingId, dto);
   }
 
   @Get(':bookingId/receipt')
@@ -150,8 +131,7 @@ export class BookingsController {
     @CurrentUser() user: FixoJwtPayload,
     @Param('bookingId') bookingId: string,
   ): Promise<BookingReceiptResponse> {
-    const isAdmin = user.role === UserRole.ADMIN;
-    return this.bookingsService.getBookingReceipt(user.sub, bookingId, isAdmin);
+    return this.bookingsService.getBookingReceipt(user.sub, bookingId);
   }
 
   @Get(':bookingId/review')
@@ -163,11 +143,9 @@ export class BookingsController {
     @CurrentUser() user: FixoJwtPayload,
     @Param('bookingId') bookingId: string,
   ): Promise<{ review: BookingReviewSummary | null }> {
-    const isAdmin = user.role === UserRole.ADMIN;
     const review = await this.bookingsService.getBookingReview(
       user.sub,
       bookingId,
-      isAdmin,
     );
     return { review };
   }
@@ -216,11 +194,6 @@ export class PrivateUploadsController {
     @CurrentUser() user: FixoJwtPayload,
     @Query('token') token: string,
   ) {
-    const isAdmin = user.role === UserRole.ADMIN;
-    return this.bookingsService.verifyPrivateUploadToken(
-      user.sub,
-      token,
-      isAdmin,
-    );
+    return this.bookingsService.verifyPrivateUploadToken(user.sub, token);
   }
 }

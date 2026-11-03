@@ -43,7 +43,7 @@ dotenv.config({ path: path.resolve(__dirname, '../../../.env') });
  * - Deterministic EGP pricing calculation with 10% platform fee
  * - Address ownership validation and access isolation between customers
  * - Querying by customer ID and tab filtering (active, completed, cancelled)
- * - Administrative access overrides
+ * - No app-role ownership override; private administration is checked separately
  */
 describe('Bookings PostgreSQL Real Database Integration Suite (fixo_test)', () => {
   let moduleRef: TestingModule;
@@ -504,7 +504,6 @@ describe('Bookings PostgreSQL Real Database Integration Suite (fixo_test)', () =
       const detail = await bookingsService.findCustomerBookingById(
         customerUserA.id,
         bookingId,
-        false,
       );
 
       expect(detail.id).toBe(bookingId);
@@ -520,22 +519,17 @@ describe('Bookings PostgreSQL Real Database Integration Suite (fixo_test)', () =
         bookingsService.findCustomerBookingById(
           customerUserB.id,
           bookingId,
-          false,
         ),
       ).rejects.toThrow(
         new ForbiddenException('You do not have access to this booking.'),
       );
     });
 
-    it('permits administrator to access any customer booking detail', async () => {
-      const detail = await bookingsService.findCustomerBookingById(
+    it('requires private admin routes instead of an app role override', async () => {
+      await expect(bookingsService.findCustomerBookingById(
         adminUser.id,
         bookingId,
-        true, // isAdmin
-      );
-
-      expect(detail.id).toBe(bookingId);
-      expect(detail.customerId).toBe(customerUserA.id);
+      )).rejects.toThrow(ForbiddenException);
     });
 
     it('returns NotFoundException (HTTP 404) for non-existent booking ID', async () => {
@@ -543,7 +537,6 @@ describe('Bookings PostgreSQL Real Database Integration Suite (fixo_test)', () =
         bookingsService.findCustomerBookingById(
           customerUserA.id,
           'non-existent-uuid-0000',
-          false,
         ),
       ).rejects.toThrow(NotFoundException);
     });
@@ -596,7 +589,6 @@ describe('Bookings PostgreSQL Real Database Integration Suite (fixo_test)', () =
           customerUserB.id,
           draftBooking.id,
           { paymentMethod: PaymentMethodType.CASH_ON_SERVICE },
-          false,
         ),
       ).rejects.toThrow(ForbiddenException);
 

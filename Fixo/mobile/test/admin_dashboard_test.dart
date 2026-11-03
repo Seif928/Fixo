@@ -74,6 +74,7 @@ void main() {
     bool wrongConfirmationAccount = false,
     bool selfProfessional = false,
     bool corruptDocument = false,
+    bool bookingConflict = false,
     Widget home = const AdminPage(),
     List<RequestOptions>? calls,
   }) async {
@@ -85,6 +86,61 @@ void main() {
     int draftVersion = 1;
     int? publishedVersion, inspection, serviceFee, duration;
     var proStatus = 'PENDING_REVIEW';
+    var bookingStatus = 'PENDING_DISPATCH';
+    Map<String, dynamic> bookingSummary() => {
+      'id': 'booking-fixture',
+      'orderCode': 'FX-FIXTURE',
+      'status': bookingStatus,
+      'scheduledDate': '2026-11-04T00:00:00Z',
+      'timeWindow': 'MORNING_09_12',
+      'totalEgp': 400,
+      'offering': {'titleEn': 'Fixture service', 'titleAr': 'خدمة اختبار'},
+      'address': {
+        'zone': {'nameEn': 'Fixture area', 'nameAr': 'منطقة اختبار'},
+      },
+    };
+    Map<String, dynamic> bookingDetail() => {
+      ...bookingSummary(),
+      'version': 'b' * 64,
+      'pricing': {
+        'baseInspectionEgp': 150,
+        'serviceFeeEgp': 250,
+        'transportFeeEgp': 0,
+        'totalEgp': 400,
+      },
+      'customer': {'fullName': 'Fixture customer', 'phone': '+201023456789'},
+      'proProfile': null,
+      'address': {
+        'label': 'Home',
+        'buildingLine': 'Fixture building',
+        'districtLine': 'Fixture district',
+        'gateNotes': null,
+        'zone': {'nameEn': 'Fixture area', 'nameAr': 'منطقة اختبار'},
+      },
+      'payment': {
+        'id': 'payment-fixture',
+        'method': 'CASH_ON_SERVICE',
+        'status': bookingStatus == 'CANCELLED' ? 'FAILED' : 'PENDING',
+        'amountEgp': 400,
+        'tipEgp': 0,
+        'paidAt': null,
+      },
+      'issueDescription': 'Fixture issue',
+      'completedAt': null,
+      'cancellationReason': null,
+      'history': [
+        {
+          'id': 'event-fixture',
+          'fromStatus': 'DRAFT',
+          'toStatus': bookingStatus,
+          'note': 'Fixture event',
+          'createdAt': '2026-11-03T10:00:00Z',
+        },
+      ],
+      'hasOlderHistory': false,
+      'canCancel': bookingStatus != 'CANCELLED',
+      'canOffer': bookingStatus != 'CANCELLED',
+    };
     final documentTypes = [
       'NATIONAL_ID_FRONT',
       'NATIONAL_ID_BACK',
@@ -146,6 +202,23 @@ void main() {
         InterceptorsWrapper(
           onRequest: (r, h) {
             calls?.add(r);
+            if (bookingConflict &&
+                r.path == '/admin/bookings/booking-fixture/cancel') {
+              h.reject(
+                DioException(
+                  requestOptions: r,
+                  response: Response(
+                    requestOptions: r,
+                    statusCode: 409,
+                    data: {'code': 'BOOKING_VERSION_CONFLICT'},
+                  ),
+                ),
+              );
+              return;
+            }
+            if (r.path == '/admin/bookings/booking-fixture/cancel') {
+              bookingStatus = 'CANCELLED';
+            }
             if (r.path.startsWith('/admin/professionals/') &&
                 r.path.endsWith('/content')) {
               h.resolve(
@@ -198,6 +271,28 @@ void main() {
                 requestOptions: r,
                 statusCode: 200,
                 data: switch (r.path) {
+                  '/admin/bookings' => {
+                    'items': [bookingSummary()],
+                    'meta': {'page': 1, 'total': 1, 'totalPages': 1},
+                  },
+                  '/admin/bookings/booking-fixture' => bookingDetail(),
+                  '/admin/bookings/booking-fixture/candidates' => {
+                    'items': [
+                      {
+                        'id': 'pro-fixture',
+                        'dossierCode': 'FX-PRO-fixture',
+                        'user': {'fullName': 'Fixture professional'},
+                      },
+                    ],
+                    'meta': {'page': 1, 'total': 1, 'totalPages': 1},
+                  },
+                  '/admin/bookings/booking-fixture/cancel' => {
+                    'status': 'CANCELLED',
+                  },
+                  '/admin/bookings/booking-fixture/offer' => {
+                    'offered': true,
+                    'alreadyPending': false,
+                  },
                   '/admin/me' => {
                     'role': owner ? 'OWNER' : 'ADMIN',
                     'canManageMembers': owner,
@@ -783,6 +878,204 @@ void main() {
       matchesGoldenFile('goldens/admin/professional_dossier_desktop.png'),
     );
   });
+  testWidgets(
+    'booking cancellation requires a reason and preserves the actual pricing display',
+    (tester) async {
+      final calls = <RequestOptions>[];
+      await mount(tester, calls: calls);
+      await tester.tap(find.byKey(const Key('admin-nav-bookings')));
+      await tester.pumpAndSettle();
+      await tester.tap(
+        find.byKey(const Key('admin-booking-open-booking-fixture')),
+      );
+      await tester.pumpAndSettle();
+      expect(find.textContaining('400 EGP'), findsWidgets);
+      expect(find.text('Fixture building'), findsOneWidget);
+      await tester.ensureVisible(find.byKey(const Key('admin-booking-cancel')));
+      await tester.tap(find.byKey(const Key('admin-booking-cancel')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const Key('admin-booking-action-submit')));
+      await tester.pumpAndSettle();
+      expect(calls.where((r) => r.path.endsWith('/cancel')), isEmpty);
+      await tester.enterText(
+        find.byKey(const Key('admin-booking-cancel-reason')),
+        'Customer asked to cancel',
+      );
+      await tester.tap(find.byKey(const Key('admin-booking-action-submit')));
+      await tester.pumpAndSettle();
+      final mutation = calls.singleWhere((r) => r.path.endsWith('/cancel'));
+      expect(mutation.data, {
+        'version': 'b' * 64,
+        'reason': 'Customer asked to cancel',
+      });
+      expect(find.text('Cancelled'), findsWidgets);
+      expect(tester.takeException(), isNull);
+    },
+  );
+  testWidgets(
+    'dispatch requires an explicitly selected pro and sends an offer rather than forcing assignment',
+    (tester) async {
+      final calls = <RequestOptions>[];
+      await mount(tester, calls: calls);
+      await tester.tap(find.byKey(const Key('admin-nav-bookings')));
+      await tester.pumpAndSettle();
+      await tester.tap(
+        find.byKey(const Key('admin-booking-open-booking-fixture')),
+      );
+      await tester.pumpAndSettle();
+      await tester.ensureVisible(find.byKey(const Key('admin-booking-offer')));
+      await tester.tap(find.byKey(const Key('admin-booking-offer')));
+      await tester.pumpAndSettle();
+      expect(
+        tester
+            .widget<FilledButton>(
+              find.byKey(const Key('admin-booking-action-submit')),
+            )
+            .onPressed,
+        isNull,
+      );
+      await tester.tap(
+        find.byKey(const Key('admin-booking-candidate-pro-fixture')),
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const Key('admin-booking-action-submit')));
+      await tester.pumpAndSettle();
+      expect(calls.singleWhere((r) => r.path.endsWith('/offer')).data, {
+        'version': 'b' * 64,
+        'proProfileId': 'pro-fixture',
+      });
+      expect(find.text('Confirmed'), findsNothing);
+      expect(tester.takeException(), isNull);
+    },
+  );
+  for (final width in [360.0, 390.0, 412.0]) {
+    testWidgets('Arabic booking details and cancellation fit $width at 1.35x', (
+      tester,
+    ) async {
+      await mount(tester, width: width, arabic: true, dark: true);
+      await tester.tap(find.byTooltip('فتح القائمة'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const Key('admin-nav-bookings')));
+      await tester.pumpAndSettle();
+      await tester.ensureVisible(
+        find.byKey(const Key('admin-booking-open-booking-fixture')),
+      );
+      await tester.tap(
+        find.byKey(const Key('admin-booking-open-booking-fixture')),
+      );
+      await tester.pumpAndSettle();
+      if (width == 390) {
+        await expectLater(
+          find.byType(Overlay).first,
+          matchesGoldenFile('goldens/admin/booking_details_ar_dark.png'),
+        );
+      }
+      await tester.ensureVisible(find.byKey(const Key('admin-booking-cancel')));
+      await tester.tap(find.byKey(const Key('admin-booking-cancel')));
+      await tester.pumpAndSettle();
+      await tester.enterText(
+        find.byKey(const Key('admin-booking-cancel-reason')),
+        'طلب العميل إلغاء الحجز',
+      );
+      expect(tester.takeException(), isNull);
+    });
+  }
+  testWidgets(
+    'booking conflicts require a reload and never claim cancellation succeeded',
+    (tester) async {
+      await mount(tester, bookingConflict: true);
+      await tester.tap(find.byKey(const Key('admin-nav-bookings')));
+      await tester.pumpAndSettle();
+      await tester.tap(
+        find.byKey(const Key('admin-booking-open-booking-fixture')),
+      );
+      await tester.pumpAndSettle();
+      await tester.ensureVisible(find.byKey(const Key('admin-booking-cancel')));
+      await tester.tap(find.byKey(const Key('admin-booking-cancel')));
+      await tester.pumpAndSettle();
+      await tester.enterText(
+        find.byKey(const Key('admin-booking-cancel-reason')),
+        'Cancellation request',
+      );
+      await tester.tap(find.byKey(const Key('admin-booking-action-submit')));
+      await tester.pumpAndSettle();
+      expect(find.textContaining('Reload and check'), findsOneWidget);
+      expect(find.text('Cancelled'), findsNothing);
+      expect(
+        tester
+            .widget<OutlinedButton>(
+              find.byKey(const Key('admin-booking-cancel')),
+            )
+            .onPressed,
+        isNull,
+      );
+    },
+  );
+  testWidgets(
+    'an open booking and pending action stay invalid after logout and restoration',
+    (tester) async {
+      final calls = <RequestOptions>[];
+      final container = await mount(tester, calls: calls);
+      await tester.tap(find.byKey(const Key('admin-nav-bookings')));
+      await tester.pumpAndSettle();
+      await tester.tap(
+        find.byKey(const Key('admin-booking-open-booking-fixture')),
+      );
+      await tester.pumpAndSettle();
+      await tester.ensureVisible(find.byKey(const Key('admin-booking-cancel')));
+      await tester.tap(find.byKey(const Key('admin-booking-cancel')));
+      await tester.pumpAndSettle();
+      await tester.enterText(
+        find.byKey(const Key('admin-booking-cancel-reason')),
+        'Pending private reason',
+      );
+      final auth = container.read(authControllerProvider.notifier) as _Auth;
+      auth.changeAccount();
+      await tester.pumpAndSettle();
+      auth.restoreFixtureAccount();
+      await tester.pumpAndSettle();
+      expect(find.text('Pending private reason'), findsNothing);
+      expect(find.text('Fixture building'), findsNothing);
+      expect(
+        tester
+            .widget<FilledButton>(
+              find.byKey(const Key('admin-booking-action-submit')),
+            )
+            .onPressed,
+        isNull,
+      );
+      expect(calls.where((r) => r.path.endsWith('/cancel')), isEmpty);
+    },
+  );
+  testWidgets(
+    'a pending private decision cannot act after logout and same-account restoration',
+    (tester) async {
+      final calls = <RequestOptions>[];
+      final container = await mount(tester, calls: calls);
+      await tester.tap(find.byKey(const Key('admin-nav-professionals')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const Key('admin-pro-open-pro-fixture')));
+      await tester.pumpAndSettle();
+      await tester.ensureVisible(find.text('Request corrections'));
+      await tester.tap(find.text('Request corrections'));
+      await tester.pumpAndSettle();
+      await tester.enterText(
+        find.byType(TextFormField).last,
+        'Please replace the blurry photo',
+      );
+      final auth = container.read(authControllerProvider.notifier) as _Auth;
+      auth.changeAccount();
+      await tester.pumpAndSettle();
+      auth.restoreFixtureAccount();
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const Key('admin-pro-review-submit')));
+      await tester.pumpAndSettle();
+      expect(
+        calls.where((r) => r.path.endsWith('/review') && r.method == 'PATCH'),
+        isEmpty,
+      );
+    },
+  );
   testWidgets(
     'corrections identify selected documents and require a clear reason',
     (tester) async {

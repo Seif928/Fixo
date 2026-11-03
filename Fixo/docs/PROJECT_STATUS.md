@@ -21,15 +21,15 @@ Updated: 2026-11-03, Africa/Cairo. This is the current scope index, not a claim 
 | All Egypt, lists and optional automatic location | 27governorates,6108offline places, manual fallback, user-scoped selection, optional GPS and free map picker; logo/location interactions repaired | Real permission-denial/device cases still need device coverage; location catalog does not promise technician availability |
 | Search button opens all services | Live paginated catalog with search and real prices | No exhaustive fake catalog or fabricated availability |
 | Arabic/English, light/dark, animation and suitable mobile/Web layout | Shared themes/localization, reduced-motion-aware transitions, responsive administration and wider desktop marketplace grids | Continued screen/device visual QA, especially iPhone, is still open |
-| Separate professional entry, legal name/ID, identity images and criminal record | Professional onboarding, private ID front/back/certificate uploads, wait-for-review lifecycle and document checks | Owner/Admin review UI and conversion of legacy reviewer/document authority are unfinished |
-| Two-person private administration | Owner/Admin membership, Owner-only second-member management, real summary and audit; desktop sidebar/mobile drawer | Professional and booking operational pages are unfinished |
+| Separate professional entry, legal name/ID, identity images and criminal record | Private onboarding and manual Owner/Admin queue, detailed identity/photo review, versioned approval/corrections/suspension; transactional audit; legacy app-role bypasses removed | Real authenticated review journey remains untested by choice; no real professional was approved |
+| Two-person private administration | Owner/Admin membership, Owner-only second-member management, real summary/audit and professional review; desktop sidebar/mobile drawer | Booking operational pages are in progress |
 | More home services, prices controlled by user | 138new private/unpriced drafts in21groups plus8linked existing services; edit/save/versioned explicit publish | Custom service creation and soft deactivation remain open; drafts become bookable only after intentional pricing/publication |
 | Git, Supabase, Firebase and Vercel | Existing free cloud integrations configured; API/Web release deployed and source pushed | Source branch is not merged into the original working branch |
 | Skills | grilling, security-audit and official penetration-testing-with-strix installed | Installing Strix is not running a scan; no paid engine/cloud scan was started |
 
 ## Approved work still open
 
-1. **Complete professional administration:** list/review dossiers, protected document viewing, approve/reject/request corrections, prohibit self-approval, replace legacy app-role reviewer bypasses, transactional audit and access tests. Do not auto-approve real people.
+1. **Professional administration follow-up:** implementation and public release are verified; retain the deferred authenticated/device journey. Keep private images/session invalidation, no self-approval and actual manual review intact. Do not auto-approve real people.
 2. **Complete booking administration:** real booking details/history and permitted state operations, assignment/dispatch controls constrained by eligibility, cash/payment correctness and audit. Preserve historical prices and completed events.
 3. **Notifications and messages:** integration code exists, but actual delivery, permission behavior, foreground/background/logout handling and device/browser receipt still require verification. iPhone/APNs readiness is not established.
 4. **Private booking/review media:** migrate remaining legacy inline/HMAC media paths to owned private objects with bounded decoding/upload/access and failure handling. Professional documents/avatars do not close this separate scope.
@@ -48,10 +48,10 @@ Login field format/empty/length errors are specific, but incorrect phone/passwor
 
 ## Latest verified delivery
 
-- Source release8217fb0; release notes4673c6d, pushed on fixo-admin-profile.
-- API: https://fixo-api.vercel.app, deployment dpl_E7qEa8T3W2g7kYRRjGXTaHVSsA8X.
-- Web: https://fixo-web-blue.vercel.app, deployment dpl_CJi3JsxLFzHKwZ5fjQqYtqPnwmko.
-- 314backend tests/39suites and361Flutter tests passed, with2existing opt-in skips; lint/analyze/backend and Web builds passed. 19focused administration UI checks passed.
+- Source release e3f75dc, pushed on fixo-admin-profile.
+- API: https://fixo-api.vercel.app, deployment dpl_Hfk2G9o2EwVL8wRj4qhR8aVPBMQ6.
+- Web: https://fixo-web-blue.vercel.app, deployment dpl_GUcbjgMgDcDiDwnfWhaV5UQ7XzBe.
+- 321backend tests/40suites and370Flutter tests passed, with2existing opt-in skips; lint/analyze/backend and Web builds passed. 28focused administration UI checks passed. Web main.dart.js SHA256 EF75D0105973524ACB7C8CE3227956CEBEF209BB4EE32C4AE5B6FD5DFEA56170 matched staged and stable artifacts.
 - New private table RLS and actual restricted backend-role reads verified. Public catalog remains8services/6categories;138new drafts have no invented prices. Admin membership initializes only on real verified Owner access.
 - Staged/public API readiness and anonymous admin denial verified. Deployed Web artifact hash equals the tested build; administration SPA fallback and legacy cache retirement verified.
 - These checks do not establish full authenticated E2E, iPhone delivery, all-device notifications or a clean comprehensive security audit.

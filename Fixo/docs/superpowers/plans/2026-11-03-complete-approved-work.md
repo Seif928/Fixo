@@ -6,7 +6,7 @@ Ruling: keep this native Windows plan/ledger instead of Bash bookkeeping, and se
 
 Pre-flight interfaces: AdminAccess provides verified membership/fresh confirmation and a serial authority/audit transaction; ProService currently uses a legacy app-role reviewer bypass. Convert both legacy review/document routes and new admin routes before exposing professional review. Booking/dispatch follow the Booking→ProProfile→JobOffer lock order; review must not acquire Booking locks after ProProfile. Later schedules/complaints/media must preserve that order and historical prices. Private object storage is configured and bounded; do not expose keys, ID images or personal content in logs/audits. Real authenticated UI verification remains user-deferred.
 
-##1Professional administration — verification/release
+##1Professional administration — released e3f75dc
 
 - Test first: ordinary app ADMIN cannot review/read another person's documents; actual Owner/Admin can; self-review, old proof, missing documents and stale dossier snapshots fail without writes/audit. Decision and audit roll back together. All fixtures local/synthetic.
 - Add paginated/searchable professional list and selected dossier details with explicit safe field selection. List omits national ID; detailed identity and document images are private/no-store.
@@ -16,9 +16,15 @@ Pre-flight interfaces: AdminAccess provides verified membership/fresh confirmati
 
 2026-11-03 implementation evidence: private paginated queue/dossier, versioned manual decisions and fresh-proof transactional audit implemented. Legacy app-ADMIN review and document bypasses removed. All three required images must decode and be reviewed before the UI permits approval; selected correction reasons return through the existing professional feedback flow. An open dossier/image permanently clears after logout/account change, even if the same account returns. The ordinary-user membership probe rejects before external Firebase lookup. Backend 321 tests/40 suites passed; full Flutter370 passed with2existing opt-in skips; focused native UI28 passed; analyze0 issues, lint/backend build passed. Clean desktop/Arabic-dark390dp visual snapshots inspected. Web release build and deployment verification pending. Synthetic fixtures/local fixo_test only; no real identity reviewed or approved.
 
-##2Booking administration
+Release evidence: backend/Web builds passed; source e3f75dc pushed. Staged API ready/anonymous professional route401; staged Web hash matched build. Promoted API dpl_Hfk2G9o2EwVL8wRj4qhR8aVPBMQ6 and Web dpl_GUcbjgMgDcDiDwnfWhaV5UQ7XzBe. Stable readiness200, private queue401, public catalog8, /admin shell200/cache retirement and exact Web hash verified. The earlier pending Web-build statement is superseded. Authenticated review remains deferred; no real dossier approved.
+
+##2Booking administration — in progress
 
 Paginated actual bookings/details/status history; constrained cancellation/dispatch/assignment and cash integrity. No fabricated completion/payment transitions. Implement actual permissions and audited state changes; preserve historical pricing and assigned pro eligibility.
+
+Implemented private booking queue/search/status paging, fresh-confirmed details/history without arrival PIN/storage references, versioned pre-service unpaid cancellation and explicit offers to eligible approved online professionals. Sending an offer does not assign a pro; actual professional acceptance was verified over HTTP/SQL. Prices/payment amounts remain unchanged, pending cancellation becomes FAILED without a paidAt, duplicate offers/cancellation do not duplicate audit or history. Rejected/stale/revoked members, coverage/category/self-dispatch, changed snapshots and paid/started work fail closed. Actual database writes roll back if the audit insert fails. Removed every isAdmin argument/ownership bypass from customer booking/media-token services and controllers, with legacy tests updated to require ownership.
+
+Regression: a newly introduced expression-bodied setState returned the list Future after an operation; the two workflow tests reproduced it, then synchronous state assignment fixed it. Also guard pending professional decisions if logout occurs while their confirmation dialog is open. Private booking details/actions clear and stay invalid after logout and restoration. Arabic dark360/390/412 at1.35x, conflict handling and clean golden inspected. Backend329/41suites; focused administration36; Flutter378+2existing opt-in skips; lint/analyze/build passed. Web build/commit/deployment pending. All synthetic/local tests; no real booking was changed.
 
 ##3Notifications, messages and device lifecycle
 

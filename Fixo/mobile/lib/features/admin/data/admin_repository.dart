@@ -4,6 +4,7 @@ import '../../../core/network/dio_client.dart';
 import '../../auth/presentation/controllers/auth_controller.dart';
 import 'admin_catalog_models.dart';
 import 'admin_professional_models.dart';
+import 'admin_booking_models.dart';
 import 'dart:typed_data';
 
 class AdminAccess {
@@ -105,6 +106,71 @@ class AdminRepository {
   final String? _account;
   Options get _options =>
       Options(extra: {if (_account != null) 'fixo_session_user': _account});
+  Future<AdminBookingPage> bookings({
+    int page = 1,
+    String? status,
+    String? search,
+    CancelToken? cancelToken,
+  }) async => AdminBookingPage(
+    (await _dio.get<Map<String, dynamic>>(
+      '/admin/bookings',
+      options: _options,
+      cancelToken: cancelToken,
+      queryParameters: {
+        'page': page,
+        if (status?.isNotEmpty == true) 'status': status,
+        if (search?.isNotEmpty == true) 'search': search,
+      },
+    )).data!,
+  );
+  Future<AdminBookingDetail> booking(
+    String id, {
+    CancelToken? cancelToken,
+  }) async => AdminBookingDetail(
+    (await _dio.get<Map<String, dynamic>>(
+      '/admin/bookings/${Uri.encodeComponent(id)}',
+      options: _options,
+      cancelToken: cancelToken,
+    )).data!,
+  );
+  Future<AdminCandidatePage> bookingCandidates(
+    String id, {
+    int page = 1,
+    CancelToken? cancelToken,
+  }) async => AdminCandidatePage(
+    (await _dio.get<Map<String, dynamic>>(
+      '/admin/bookings/${Uri.encodeComponent(id)}/candidates',
+      options: _options,
+      cancelToken: cancelToken,
+      queryParameters: {'page': page},
+    )).data!,
+  );
+  Future<void> cancelBooking(
+    AdminBookingDetail detail,
+    String reason, {
+    CancelToken? cancelToken,
+  }) async {
+    await _dio.post<void>(
+      '/admin/bookings/${Uri.encodeComponent(detail.summary.id)}/cancel',
+      options: _options,
+      cancelToken: cancelToken,
+      data: {'version': detail.version, 'reason': reason.trim()},
+    );
+  }
+
+  Future<void> offerBooking(
+    AdminBookingDetail detail,
+    String proId, {
+    CancelToken? cancelToken,
+  }) async {
+    await _dio.post<void>(
+      '/admin/bookings/${Uri.encodeComponent(detail.summary.id)}/offer',
+      options: _options,
+      cancelToken: cancelToken,
+      data: {'version': detail.version, 'proProfileId': proId},
+    );
+  }
+
   Future<AdminAccess> access({CancelToken? cancelToken}) async =>
       AdminAccess.fromJson(
         (await _dio.get<Map<String, dynamic>>(
@@ -284,6 +350,9 @@ final adminRepositoryProvider = Provider<AdminRepository>(
 );
 
 final adminCatalogRevisionProvider = StateProvider.autoDispose<int>((ref) => 0);
+final adminBookingsRevisionProvider = StateProvider.autoDispose<int>(
+  (ref) => 0,
+);
 final adminProfessionalsRevisionProvider = StateProvider.autoDispose<int>(
   (ref) => 0,
 );

@@ -63,7 +63,7 @@ class _State extends ConsumerState<AdminProDossierDialog> {
       barrierDismissible: false,
       builder: (_) => AdminConfirmationDialog(ar: widget.ar),
     );
-    if (mounted && result == true) _reload();
+    if (mounted && !_sessionChanged && result == true) _reload();
   }
 
   Future<void> _view(AdminProfessionalDocument doc) async {
@@ -80,6 +80,7 @@ class _State extends ConsumerState<AdminProDossierDialog> {
       ),
     );
     if (mounted &&
+        !_sessionChanged &&
         reviewed == true &&
         ref.read(authControllerProvider).session?.user.id == _owner) {
       setState(() => _viewed.add(doc.id));
@@ -106,6 +107,7 @@ class _State extends ConsumerState<AdminProDossierDialog> {
     );
     if (decision == null ||
         !mounted ||
+        _sessionChanged ||
         _owner == null ||
         ref.read(authControllerProvider).session?.user.id != _owner) {
       return;

@@ -110,7 +110,7 @@ describe('BookingsController (Unit Tests)', () => {
     expect(res).toEqual(expectedResponse);
   });
 
-  it('GET /:id forwards customer ID, booking ID, and isAdmin=false for customers', async () => {
+  it('GET /:id forwards the customer identity and booking ID', async () => {
     const bookingId = 'bk-target-123';
     const expectedResponse: any = { id: bookingId };
     serviceMock.findCustomerBookingById!.mockResolvedValue(expectedResponse);
@@ -120,12 +120,11 @@ describe('BookingsController (Unit Tests)', () => {
     expect(serviceMock.findCustomerBookingById).toHaveBeenCalledWith(
       mockCustomerJwt.sub,
       bookingId,
-      false,
     );
     expect(res).toEqual(expectedResponse);
   });
 
-  it('GET /:id forwards isAdmin=true when caller has ADMIN role', async () => {
+  it('GET /:id never forwards an app ADMIN ownership override', async () => {
     const bookingId = 'bk-target-123';
     const expectedResponse: any = { id: bookingId };
     serviceMock.findCustomerBookingById!.mockResolvedValue(expectedResponse);
@@ -135,13 +134,12 @@ describe('BookingsController (Unit Tests)', () => {
     expect(serviceMock.findCustomerBookingById).toHaveBeenCalledWith(
       mockAdminJwt.sub,
       bookingId,
-      true,
     );
     expect(res).toEqual(expectedResponse);
   });
 
   describe('POST /:bookingId/checkout', () => {
-    it('forwards customer ID, booking ID, dto, and isAdmin=false for customers', async () => {
+    it('forwards customer identity and checkout data', async () => {
       const bookingId = 'bk-target-123';
       const dto: CheckoutBookingDto = {
         paymentMethod: PaymentMethodType.CASH_ON_SERVICE,
@@ -162,12 +160,11 @@ describe('BookingsController (Unit Tests)', () => {
         mockCustomerJwt.sub,
         bookingId,
         dto,
-        false,
       );
       expect(res).toEqual(expectedResponse);
     });
 
-    it('forwards isAdmin=true when caller has ADMIN role', async () => {
+    it('never grants an app ADMIN checkout override', async () => {
       const bookingId = 'bk-target-123';
       const dto: CheckoutBookingDto = {
         paymentMethod: PaymentMethodType.CASH_ON_SERVICE,
@@ -188,7 +185,6 @@ describe('BookingsController (Unit Tests)', () => {
         mockAdminJwt.sub,
         bookingId,
         dto,
-        true,
       );
       expect(res).toEqual(expectedResponse);
     });

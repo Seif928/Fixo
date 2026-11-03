@@ -225,7 +225,7 @@ export class BookingsService {
       return booking;
     });
 
-    return this.mapBookingDetail(createdBooking, customerId, false);
+    return this.mapBookingDetail(createdBooking, customerId);
   }
 
   /**
@@ -266,7 +266,7 @@ export class BookingsService {
 
     return {
       bookings: bookings.map((b) =>
-        this.mapBookingDetail(b, customerId, false),
+        this.mapBookingDetail(b, customerId),
       ),
       total,
       limit,
@@ -276,13 +276,12 @@ export class BookingsService {
 
   /**
    * Retrieves a single booking by ID.
-   * Enforces strict customer ownership isolation unless the caller is an ADMIN
-   * or the assigned professional on the booking.
+   * Allows only the customer or the assigned professional. Administration has
+   * separate membership-guarded endpoints and never receives the arrival PIN.
    */
   async findCustomerBookingById(
     userId: string,
     bookingId: string,
-    isAdmin = false,
   ): Promise<BookingDetailResponse> {
     const booking = await this.prisma.booking.findUnique({
       where: { id: bookingId },
@@ -296,11 +295,11 @@ export class BookingsService {
     }
 
     const isAssignedPro = booking.proProfile?.user?.id === userId;
-    if (!isAdmin && booking.customerId !== userId && !isAssignedPro) {
+    if (booking.customerId !== userId && !isAssignedPro) {
       throw new ForbiddenException('You do not have access to this booking.');
     }
 
-    return this.mapBookingDetail(booking, userId, isAdmin);
+    return this.mapBookingDetail(booking, userId);
   }
 
   /**
@@ -308,7 +307,7 @@ export class BookingsService {
    *
    * Rules enforced:
    * 1. Rejects unsupported digital methods (`INSTAPAY_SANDBOX`, `VODAFONE_CASH_SANDBOX`, `CARD_SANDBOX`) with 400.
-   * 2. Verifies booking exists (404) and caller is owner or ADMIN (403).
+   * 2. Verifies booking exists (404) and caller is the owning customer (403).
    * 3. Uses row-level lock (`SELECT ... FOR UPDATE`) inside a single Prisma transaction to guarantee
    *    race-safe idempotency:
    *    - If already `PENDING_DISPATCH` with a `CASH_ON_SERVICE` `PaymentRecord`, returns existing state without duplicating rows or status events.
@@ -319,7 +318,6 @@ export class BookingsService {
     userId: string,
     bookingId: string,
     dto: CheckoutBookingDto,
-    isAdmin = false,
   ): Promise<BookingDetailResponse> {
     // 1. Strictly enforce Cash on Service only in Phase 4A
     if (dto.paymentMethod !== PaymentMethodType.CASH_ON_SERVICE) {
@@ -328,7 +326,7 @@ export class BookingsService {
       );
     }
 
-    // 2. Verify booking exists and belongs to the customer (or caller is ADMIN)
+    // 2. Verify booking exists and belongs to the customer.
     const initialBooking = await this.prisma.booking.findUnique({
       where: { id: bookingId },
       include: this.bookingInclude,
@@ -340,7 +338,7 @@ export class BookingsService {
       );
     }
 
-    if (!isAdmin && initialBooking.customerId !== userId) {
+    if (initialBooking.customerId !== userId) {
       throw new ForbiddenException('You do not have access to this booking.');
     }
 
@@ -350,7 +348,7 @@ export class BookingsService {
       initialBooking.payment &&
       initialBooking.payment.method === PaymentMethodType.CASH_ON_SERVICE
     ) {
-      return this.mapBookingDetail(initialBooking, userId, isAdmin);
+      return this.mapBookingDetail(initialBooking, userId);
     }
 
     if (initialBooking.status !== BookingStatus.DRAFT) {
@@ -437,7 +435,7 @@ export class BookingsService {
       initialBooking.proProfileId,
     );
 
-    return this.findCustomerBookingById(userId, bookingId, isAdmin);
+    return this.findCustomerBookingById(userId, bookingId);
   }
 
   /**
@@ -448,7 +446,6 @@ export class BookingsService {
   async getBookingTracking(
     userId: string,
     bookingId: string,
-    isAdmin = false,
   ): Promise<BookingTrackingResponse> {
     const booking = await this.prisma.booking.findUnique({
       where: { id: bookingId },
@@ -462,15 +459,15 @@ export class BookingsService {
     }
 
     const isAssignedPro = booking.proProfile?.user?.id === userId;
-    if (!isAdmin && booking.customerId !== userId && !isAssignedPro) {
+    if (booking.customerId !== userId && !isAssignedPro) {
       throw new ForbiddenException('You do not have access to this booking.');
     }
 
-    const mappedBooking = this.mapBookingDetail(booking, userId, isAdmin);
+    const mappedBooking = this.mapBookingDetail(booking, userId);
     const milestones = this.buildTrackingMilestones(mappedBooking);
 
     const canCancel =
-      (booking.customerId === userId || isAdmin) &&
+      booking.customerId === userId &&
       CANCELLABLE_BOOKING_STATUSES.includes(booking.status);
     const canChat = Boolean(booking.proProfileId);
     const canReview =
@@ -499,7 +496,6 @@ export class BookingsService {
     userId: string,
     bookingId: string,
     dto: CancelBookingDto,
-    isAdmin = false,
   ): Promise<BookingDetailResponse> {
     const existing = await this.prisma.booking.findUnique({
       where: { id: bookingId },
@@ -512,14 +508,14 @@ export class BookingsService {
       );
     }
 
-    if (!isAdmin && existing.customerId !== userId) {
+    if (existing.customerId !== userId) {
       throw new ForbiddenException(
         'You do not have access to cancel this booking.',
       );
     }
 
     if (existing.status === BookingStatus.CANCELLED) {
-      return this.mapBookingDetail(existing, userId, isAdmin);
+      return this.mapBookingDetail(existing, userId);
     }
 
     if (!CANCELLABLE_BOOKING_STATUSES.includes(existing.status)) {
@@ -607,7 +603,7 @@ export class BookingsService {
       await this.pushService.notify(existing.proProfile.user.id, bookingId);
     }
 
-    return this.findCustomerBookingById(userId, bookingId, isAdmin);
+    return this.findCustomerBookingById(userId, bookingId);
   }
 
   /**
@@ -616,7 +612,6 @@ export class BookingsService {
   async getBookingReceipt(
     userId: string,
     bookingId: string,
-    isAdmin = false,
   ): Promise<BookingReceiptResponse> {
     const booking = await this.prisma.booking.findUnique({
       where: { id: bookingId },
@@ -630,7 +625,7 @@ export class BookingsService {
     }
 
     const isAssignedPro = booking.proProfile?.user?.id === userId;
-    if (!isAdmin && booking.customerId !== userId && !isAssignedPro) {
+    if (booking.customerId !== userId && !isAssignedPro) {
       throw new ForbiddenException(
         'You do not have access to this booking receipt.',
       );
@@ -728,7 +723,6 @@ export class BookingsService {
   async getBookingReview(
     userId: string,
     bookingId: string,
-    isAdmin = false,
   ): Promise<BookingReviewSummary | null> {
     const booking = await this.prisma.booking.findUnique({
       where: { id: bookingId },
@@ -745,7 +739,7 @@ export class BookingsService {
     }
 
     const isAssignedPro = booking.proProfile?.userId === userId;
-    if (!isAdmin && booking.customerId !== userId && !isAssignedPro) {
+    if (booking.customerId !== userId && !isAssignedPro) {
       throw new ForbiddenException(
         'You do not have access to this booking review.',
       );
@@ -967,9 +961,9 @@ export class BookingsService {
     };
   }
 
-  verifyPrivateUploadToken(userId: string, token: string, isAdmin = false) {
+  verifyPrivateUploadToken(userId: string, token: string) {
     const claims = verifyPrivateUploadAccessToken(token);
-    if (!isAdmin && claims.ownerUserId !== userId) {
+    if (claims.ownerUserId !== userId) {
       throw new ForbiddenException(
         'You do not have permission to access this private upload.',
       );
@@ -1236,10 +1230,9 @@ export class BookingsService {
   private mapBookingDetail(
     booking: any,
     viewerUserId?: string,
-    isAdmin = false,
   ): BookingDetailResponse {
     const canSeeArrivalPin =
-      !viewerUserId || isAdmin || booking.customerId === viewerUserId;
+      !viewerUserId || booking.customerId === viewerUserId;
 
     const visibleEvents = Array.isArray(booking.statusEvents)
       ? booking.statusEvents.filter(

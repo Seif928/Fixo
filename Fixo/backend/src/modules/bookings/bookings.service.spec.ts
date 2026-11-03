@@ -432,7 +432,7 @@ describe('BookingsService (Unit Tests)', () => {
 
       // Other customer requesting booking belonging to mockCustomerId
       await expect(
-        service.findCustomerBookingById(mockOtherCustomerId, 'bk-target-1', false),
+        service.findCustomerBookingById(mockOtherCustomerId, 'bk-target-1'),
       ).rejects.toThrow(new ForbiddenException('You do not have access to this booking.'));
     });
 
@@ -442,24 +442,19 @@ describe('BookingsService (Unit Tests)', () => {
       const result = await service.findCustomerBookingById(
         mockCustomerId,
         'bk-target-1',
-        false,
       );
       expect(result.id).toBe('bk-target-1');
       expect(result.orderCode).toBe('FX-1122');
       expect(result.customerId).toBe(mockCustomerId);
     });
 
-    it('permits administrator to access any customer booking', async () => {
+    it('requires booking ownership even for an app administrator', async () => {
       prismaMock.booking.findUnique.mockResolvedValue(mockDetailRecord);
 
-      // Admin with different user ID can access
-      const result = await service.findCustomerBookingById(
+      await expect(service.findCustomerBookingById(
         'admin-user-01',
         'bk-target-1',
-        true,
-      );
-      expect(result.id).toBe('bk-target-1');
-      expect(result.customerId).toBe(mockCustomerId);
+      )).rejects.toThrow(ForbiddenException);
     });
   });
 
@@ -529,7 +524,7 @@ describe('BookingsService (Unit Tests)', () => {
       prismaMock.booking.findUnique.mockResolvedValue(mockDraftBooking);
 
       await expect(
-        service.checkoutBooking(mockOtherCustomerId, 'bk-checkout-1', cashCheckoutDto, false),
+        service.checkoutBooking(mockOtherCustomerId, 'bk-checkout-1', cashCheckoutDto),
       ).rejects.toThrow(ForbiddenException);
     });
 

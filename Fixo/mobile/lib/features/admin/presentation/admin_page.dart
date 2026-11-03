@@ -11,8 +11,9 @@ import 'admin_members_panel.dart';
 import 'admin_panels.dart';
 import 'admin_catalog_panel.dart';
 import 'admin_professionals_panel.dart';
+import 'admin_bookings_panel.dart';
 
-enum _Section { overview, professionals, catalog, members, audit }
+enum _Section { overview, professionals, bookings, catalog, members, audit }
 
 class AdminPage extends ConsumerStatefulWidget {
   const AdminPage({super.key});
@@ -122,6 +123,7 @@ class _AdminPageState extends ConsumerState<AdminPage> {
               leading: Icon(switch (section) {
                 _Section.overview => Icons.grid_view_rounded,
                 _Section.professionals => Icons.badge_outlined,
+                _Section.bookings => Icons.receipt_long_outlined,
                 _Section.catalog => Icons.home_repair_service_outlined,
                 _Section.members => Icons.admin_panel_settings_outlined,
                 _Section.audit => Icons.history_rounded,
@@ -129,6 +131,7 @@ class _AdminPageState extends ConsumerState<AdminPage> {
               title: Text(switch (section) {
                 _Section.overview => ar ? 'نظرة عامة' : 'Overview',
                 _Section.professionals => ar ? 'الفنيون' : 'Professionals',
+                _Section.bookings => ar ? 'الحجوزات' : 'Bookings',
                 _Section.catalog => ar ? 'الخدمات' : 'Services',
                 _Section.members => ar ? 'المسؤولون' : 'Administrators',
                 _Section.audit => ar ? 'سجل التغييرات' : 'Activity log',
@@ -182,6 +185,10 @@ class _AdminPageState extends ConsumerState<AdminPage> {
         ? _Section.overview
         : _selected;
     final panel = switch (selected) {
+      _Section.bookings => AdminBookingsPanel(
+        key: ValueKey('bookings-$account'),
+        ar: ar,
+      ),
       _Section.professionals => AdminProfessionalsPanel(
         key: ValueKey('professionals-$account'),
         ar: ar,
