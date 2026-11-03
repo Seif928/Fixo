@@ -54,6 +54,12 @@ import {
     JwtAuthGuard,
     RolesGuard,
   ],
-  exports: [AuthService, JwtAuthGuard, RolesGuard, SMS_PROVIDER],
+  exports: [
+    AuthService,
+    FirebaseSessionPolicy,
+    JwtAuthGuard,
+    RolesGuard,
+    SMS_PROVIDER,
+  ],
 })
 export class AuthModule {}

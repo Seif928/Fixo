@@ -12,6 +12,13 @@ export class FirebaseSessionPolicy {
     uid: string,
     authenticationTime: number | undefined,
   ): Promise<void> {
+    await this.readVerifiedAccount(uid, authenticationTime);
+  }
+
+  async readVerifiedAccount(
+    uid: string,
+    authenticationTime: number | undefined,
+  ): Promise<{ uid: string; email: string | null }> {
     if (
       !uid ||
       !Number.isSafeInteger(authenticationTime) ||
@@ -93,6 +100,7 @@ export class FirebaseSessionPolicy {
           'This account session has ended. Sign in again.',
         );
       }
+      return { uid, email: record.email ?? null };
     } catch (error) {
       if (
         error instanceof UnauthorizedException ||

@@ -596,6 +596,7 @@ export class AuthService implements OnModuleInit {
         phone: user.phone,
         role: user.role,
         type: 'access',
+        ...(firebaseAuthTime ? { firebaseAuthTime } : {}),
       },
       this.accessSecret,
       AuthService.ACCESS_TOKEN_TTL_SECONDS,

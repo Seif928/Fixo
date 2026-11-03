@@ -4,6 +4,7 @@ import { FirebaseTokenVerifier } from './firebase-identity.service';
 const verifyIdToken = jest.fn();
 const providerSessions = {
   assertValid: jest.fn().mockResolvedValue(undefined),
+  readVerifiedAccount: jest.fn(),
 };
 jest.mock('firebase-admin/auth', () => ({
   getAuth: () => ({ verifyIdToken }),
