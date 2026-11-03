@@ -11,6 +11,7 @@ import {
   Post,
   Put,
   UseGuards,
+  Req,
 } from '@nestjs/common';
 import {
   ApiBearerAuth,
@@ -18,11 +19,8 @@ import {
   ApiParam,
   ApiTags,
 } from '@nestjs/swagger';
-import { UserRole } from '@prisma/client';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
-import { Roles } from '../auth/decorators/roles.decorator';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
-import { RolesGuard } from '../auth/guards/roles.guard';
 import { FixoJwtPayload } from '../auth/utils/jwt-token.util';
 import {
   ProAdvanceJobStatusDto,
@@ -34,10 +32,11 @@ import {
   ProSkillsUpdateDto,
 } from './dto/pro.dto';
 import { ProService } from './pro.service';
+import { AdminAccessGuard, AdminRequest } from '../admin/admin-access.guard';
 
 @ApiTags('Professional Workflows (Screens 11–16)')
 @ApiBearerAuth()
-@UseGuards(JwtAuthGuard, RolesGuard)
+@UseGuards(JwtAuthGuard)
 @Controller('pro')
 export class ProController {
   constructor(private readonly proService: ProService) {}
@@ -64,7 +63,7 @@ export class ProController {
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
     summary:
-      'Step 1 of 4: Save personal details, synthetic 14-digit National ID, primary zone, and transport mode (Screen 11)',
+      'Step 1 of 4: Save legal name and 14-digit National ID for private manual review (Screen 11)',
   })
   async savePersonalDetails(
     @CurrentUser() user: FixoJwtPayload,
@@ -100,29 +99,34 @@ export class ProController {
   }
 
   @Get('onboarding/documents/:docId/access')
+  @Header('Cache-Control', 'private, no-store')
   @ApiParam({ name: 'docId', description: 'Verification Document UUID' })
   @ApiOperation({
     summary:
-      'Get authenticated access to a private verification document (restricted to owner or ADMIN)',
+      'Get authenticated access to an owned private verification document',
   })
   async getDocumentAccess(
     @CurrentUser() user: FixoJwtPayload,
     @Param('docId') docId: string,
   ) {
-    const isAdmin = user.role === UserRole.ADMIN;
-    return this.proService.getVerificationDocumentAccess(
-      user.sub,
-      docId,
-      isAdmin,
-    );
+    return this.proService.getVerificationDocumentAccess(user.sub, docId);
   }
 
   @Get('onboarding/documents/:docId/content')
   @Header('Cache-Control', 'private, no-store')
   @Header('X-Content-Type-Options', 'nosniff')
-  async getDocumentContent(@CurrentUser() user: FixoJwtPayload, @Param('docId') docId: string) {
-    const content = await this.proService.getVerificationDocumentContent(user.sub, docId, user.role === UserRole.ADMIN);
-    return new StreamableFile(content.bytes, { type: content.mimeType, disposition: 'attachment; filename="verification-document"' });
+  async getDocumentContent(
+    @CurrentUser() user: FixoJwtPayload,
+    @Param('docId') docId: string,
+  ) {
+    const content = await this.proService.getVerificationDocumentContent(
+      user.sub,
+      docId,
+    );
+    return new StreamableFile(content.bytes, {
+      type: content.mimeType,
+      disposition: 'attachment; filename="verification-document"',
+    });
   }
 
   @Post('onboarding/submit')
@@ -145,20 +149,19 @@ export class ProController {
   }
 
   @Patch('admin/profiles/:proProfileId/review')
-  @Roles(UserRole.ADMIN)
+  @UseGuards(AdminAccessGuard)
   @ApiParam({ name: 'proProfileId', description: 'ProProfile UUID' })
   @ApiOperation({
     summary:
-      'Authorized ADMIN reviewer endpoint to approve, request action, or suspend a professional profile',
+      'Private Owner/Admin reviewer endpoint with dossier version and transactional audit',
   })
   async adminReviewProfile(
-    @CurrentUser() user: FixoJwtPayload,
+    @Req() request: AdminRequest,
     @Param('proProfileId') proProfileId: string,
     @Body() dto: ProAdminReviewDto,
   ) {
     return this.proService.adminReviewProProfile(
-      user.sub,
-      user.role,
+      request.adminActor!,
       proProfileId,
       dto,
     );

@@ -34,6 +34,7 @@ import { BookingsService } from '../bookings/bookings.service';
 import { ProModule } from './pro.module';
 import { ProService } from './pro.service';
 import { PrivateStorageService } from '../media/private-storage.service';
+import { dossierReviewVersion } from './dossier-review-version';
 const sharp: typeof import('sharp').default = require('sharp');
 
 dotenv.config({ path: path.resolve(__dirname, '../../../.env') });
@@ -142,7 +143,17 @@ describe('Pro Workflows PostgreSQL Real Database Integration Suite (fixo_test)',
       data: {
         phone: '+201060001099',
         fullName: 'FIXO Operations Admin',
+        email: 'pro-reviewer-fixture@example.test',
         role: UserRole.ADMIN,
+      },
+    });
+
+    await prisma.adminMembership.create({
+      data: {
+        slot: 1,
+        email: adminReviewerUser.email,
+        userId: adminReviewerUser.id,
+        role: 'OWNER',
       },
     });
 
@@ -268,7 +279,6 @@ describe('Pro Workflows PostgreSQL Real Database Integration Suite (fixo_test)',
         proService.getVerificationDocumentAccess(
           customerUser.id,
           uploadedDocId,
-          false,
         ),
       ).rejects.toThrow(ForbiddenException);
 
@@ -276,7 +286,6 @@ describe('Pro Workflows PostgreSQL Real Database Integration Suite (fixo_test)',
       const ownerAccess = await proService.getVerificationDocumentAccess(
         proApplicantUser.id,
         uploadedDocId,
-        false,
       );
       expect(ownerAccess.downloadPath).toBe(
         `/api/v1/pro/onboarding/documents/${uploadedDocId}/content`,
@@ -308,8 +317,11 @@ describe('Pro Workflows PostgreSQL Real Database Integration Suite (fixo_test)',
       // Applicant cannot self-approve via admin review endpoint
       await expect(
         proService.adminReviewProProfile(
-          proApplicantUser.id,
-          UserRole.CUSTOMER,
+          {
+            userId: proApplicantUser.id,
+            role: 'ADMIN',
+            authTime: Math.floor(Date.now() / 1000),
+          },
           applicantProfileId,
           { status: 'APPROVED' },
         ),
@@ -317,11 +329,21 @@ describe('Pro Workflows PostgreSQL Real Database Integration Suite (fixo_test)',
 
       // Authorized ADMIN reviewer approves the dossier
       const approved = await proService.adminReviewProProfile(
-        adminReviewerUser.id,
-        UserRole.ADMIN,
+        {
+          userId: adminReviewerUser.id,
+          role: 'OWNER',
+          authTime: Math.floor(Date.now() / 1000),
+        },
         applicantProfileId,
         {
           status: 'APPROVED',
+          reviewVersion: dossierReviewVersion(
+            await prisma.proProfile.findUniqueOrThrow({
+              where: { id: applicantProfileId },
+              include: { documents: true },
+            }),
+          ),
+          confirmDocumentsReviewed: true,
           reviewerNote: 'Verified synthetic dossier for dispatch.',
         },
       );

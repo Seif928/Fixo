@@ -36,6 +36,8 @@ import { PushService } from '../communications/push.service';
 import { addressCoverageWhere } from '../services/coverage-policy';
 import { ensureDispatchOffer, jobOfferDetailsInclude } from './dispatch-offers';
 import { readCairoEarnings } from './cairo-earnings';
+import { AdminAccessService, AdminActor } from '../admin/admin-access.service';
+import { dossierReviewVersion } from './dossier-review-version';
 import {
   ProAdvanceJobStatusDto,
   ProAdminReviewDto,
@@ -60,6 +62,7 @@ export class ProService {
     private readonly prisma: PrismaService,
     @Optional() private readonly pushService?: PushService,
     @Optional() private readonly privateStorage?: PrivateStorageService,
+    @Optional() private readonly adminAccess?: AdminAccessService,
   ) {}
 
   private readonly logger = new Logger(ProService.name);
@@ -437,46 +440,73 @@ export class ProService {
   }
 
   /**
-   * Generates a short-lived authenticated access payload for a private verification document.
-   * Strictly restricted to the owning user or an ADMIN reviewer.
+   * Private access metadata restricted to the owning user.
+   * Administration uses the separate verified-membership endpoint.
    */
-  private async authorizedDocument(
-    userId: string,
-    docId: string,
-    isAdmin: boolean,
-  ) {
+  private async authorizedDocument(userId: string, docId: string) {
     const doc = await this.prisma.proVerificationDocument.findUnique({
       where: { id: docId },
       include: { proProfile: { select: { id: true, userId: true } } },
     });
     if (!doc)
       throw new NotFoundException('Verification document was not found.');
-    if (!isAdmin && doc.proProfile.userId !== userId)
+    if (doc.proProfile.userId !== userId)
       throw new ForbiddenException(
         'This private document belongs to another account.',
       );
     return doc;
   }
 
-  async getVerificationDocumentAccess(
-    userId: string,
-    docId: string,
-    isAdmin = false,
-  ) {
-    const doc = await this.authorizedDocument(userId, docId, isAdmin);
+  async getVerificationDocumentAccess(userId: string, docId: string) {
+    const doc = await this.authorizedDocument(userId, docId);
     return {
       ...this.mapDocumentSummary(doc),
       downloadPath: `/api/v1/pro/onboarding/documents/${encodeURIComponent(doc.id)}/content`,
     };
   }
 
-  async getVerificationDocumentContent(
-    userId: string,
+  async getVerificationDocumentContent(userId: string, docId: string) {
+    const doc = await this.authorizedDocument(userId, docId);
+    return this.documentBytes(doc);
+  }
+
+  async getReviewDocumentContent(
+    actor: AdminActor,
+    proProfileId: string,
     docId: string,
-    isAdmin = false,
   ) {
-    const doc = await this.authorizedDocument(userId, docId, isAdmin);
+    if (!this.adminAccess)
+      throw new ForbiddenException('Administration access is unavailable.');
+    const doc = await this.adminAccess.mutate(
+      actor,
+      false,
+      'PRO_DOCUMENT_ACCESS_GRANTED',
+      docId,
+      async (tx) => {
+        const value = await tx.proVerificationDocument.findUnique({
+          where: { id: docId },
+        });
+        if (!value || value.proProfileId !== proProfileId)
+          throw new NotFoundException('Verification document was not found.');
+        return { value, details: { proProfileId, docType: value.docType } };
+      },
+    );
+    // Storage I/O stays outside the authority transaction and its database locks.
+    return this.documentBytes(doc);
+  }
+
+  private async documentBytes(doc: {
+    storageKey: string;
+    proProfileId: string;
+  }) {
     const parts = doc.storageKey.split('::');
+    if (
+      !['image/jpeg', 'image/png', 'image/webp', 'application/pdf'].includes(
+        parts[2],
+      )
+    ) {
+      throw new NotFoundException('Private document content was not found.');
+    }
     if (
       parts[0] === 'obj' &&
       parts[3]?.startsWith(`documents/${doc.proProfileId}/`)
@@ -648,7 +678,7 @@ export class ProService {
               ? profile.reviewerNote ||
                 'Action required: please re-upload clear documents'
               : status === ProVerificationStatus.PENDING_REVIEW
-                ? 'Under manual review by FIXO Vetting Team (1–2 business days)'
+                ? 'Waiting for manual review by the FIXO administration team'
                 : 'Submit your dossier to begin manual vetting',
         subtitleAr:
           status === ProVerificationStatus.APPROVED
@@ -657,7 +687,7 @@ export class ProService {
               ? profile.reviewerNote ||
                 'مطلوب إجراء: يرجى إعادة رفع المستندات بوضوح'
               : status === ProVerificationStatus.PENDING_REVIEW
-                ? 'قيد المراجعة اليدوية من فريق فيكسو (١–٢ يوم عمل)'
+                ? 'بانتظار المراجعة اليدوية من إدارة فيكسو'
                 : 'أرسل الملف لبدء المراجعة اليدوية',
         state:
           status === ProVerificationStatus.APPROVED
@@ -700,121 +730,181 @@ export class ProService {
 
   /**
    * Authorized Reviewer Endpoint (`PATCH /pro/admin/profiles/:proProfileId/review`).
-   * Strictly requires `UserRole.ADMIN`. Never callable by a customer or pro to self-approve.
+   * Requires verified two-person membership and an atomic authority/audit check.
    */
   async adminReviewProProfile(
-    adminUserId: string,
-    adminRole: UserRole,
+    actor: AdminActor,
     proProfileId: string,
     dto: ProAdminReviewDto,
   ) {
-    if (adminRole !== UserRole.ADMIN) {
+    if (
+      !this.adminAccess ||
+      !actor ||
+      !['OWNER', 'ADMIN'].includes(actor.role)
+    ) {
       throw new ForbiddenException(
-        'Only an authorized ADMIN reviewer can approve or update professional verification status.',
+        'Only an authorized administration member can review a professional dossier.',
       );
     }
 
-    const updated = await this.prisma.$transaction(async (tx) => {
-      if (this.prisma.isDatabaseConnected()) {
-        await tx.$queryRaw`SELECT id FROM "ProProfile" WHERE id = ${proProfileId} FOR UPDATE`;
-      }
-      const profile = await tx.proProfile.findUnique({
-        where: { id: proProfileId },
-        include: { documents: true },
-      });
-      if (!profile)
-        throw new NotFoundException('Professional profile was not found.');
-      if (dto.status === 'APPROVED') {
-        if (
-          profile.verificationStatus !== ProVerificationStatus.PENDING_REVIEW &&
-          profile.verificationStatus !== ProVerificationStatus.APPROVED
-        ) {
-          throw new BadRequestException(
-            'Only a submitted dossier can be approved.',
-          );
+    return this.adminAccess.mutate(
+      actor,
+      false,
+      'PRO_PROFILE_REVIEWED',
+      proProfileId,
+      async (tx) => {
+        if (this.prisma.isDatabaseConnected()) {
+          await tx.$queryRaw`SELECT id FROM "ProProfile" WHERE id = ${proProfileId} FOR UPDATE`;
         }
-        const missing = REQUIRED_PRO_DOC_TYPES.filter(
-          (type) =>
-            !profile.documents.some(
-              (doc) =>
-                doc.docType === type &&
-                Boolean(doc.storageKey) &&
-                doc.status !== DocumentStatus.REJECTED,
-            ),
-        );
-        if (missing.length)
-          throw new BadRequestException(
-            'All three required private documents must be uploaded before approval.',
+        const profile = await tx.proProfile.findUnique({
+          where: { id: proProfileId },
+          include: { documents: true },
+        });
+        if (!profile)
+          throw new NotFoundException('Professional profile was not found.');
+        if (profile.userId === actor.userId)
+          throw new ForbiddenException(
+            'You cannot review your own professional dossier.',
           );
         if (
-          dto.documentDecisions?.some(
-            (decision) =>
-              REQUIRED_PRO_DOC_TYPES.includes(decision.docType) &&
-              decision.status === 'REJECTED',
-          )
+          new Set((dto.documentDecisions ?? []).map((d) => d.docType)).size !==
+          (dto.documentDecisions?.length ?? 0)
         ) {
-          throw new BadRequestException(
-            'A dossier with rejected required documents cannot be approved.',
-          );
+          throw new BadRequestException('Choose each document only once.');
         }
-      }
+        if (dto.reviewVersion !== dossierReviewVersion(profile))
+          throw new ConflictException({
+            code: 'PRO_REVIEW_VERSION_CONFLICT',
+            message:
+              'This dossier changed. Reload and review the current documents.',
+          });
+        if (
+          dto.status !== 'APPROVED' &&
+          (dto.reviewerNote?.trim().length ?? 0) < 3
+        )
+          throw new BadRequestException(
+            'Explain the corrections or suspension in the reviewer note.',
+          );
+        if (dto.status === 'APPROVED') {
+          if (dto.confirmDocumentsReviewed !== true)
+            throw new BadRequestException(
+              'Confirm that the required documents were reviewed.',
+            );
+          if (
+            profile.verificationStatus !==
+              ProVerificationStatus.PENDING_REVIEW &&
+            profile.verificationStatus !== ProVerificationStatus.APPROVED
+          ) {
+            throw new BadRequestException(
+              'Only a submitted dossier can be approved.',
+            );
+          }
+          const missing = REQUIRED_PRO_DOC_TYPES.filter(
+            (type) =>
+              !profile.documents.some(
+                (doc) =>
+                  doc.docType === type &&
+                  Boolean(doc.storageKey) &&
+                  doc.status !== DocumentStatus.REJECTED,
+              ),
+          );
+          if (missing.length)
+            throw new BadRequestException(
+              'All three required private documents must be uploaded before approval.',
+            );
+          if (
+            dto.documentDecisions?.some(
+              (decision) =>
+                REQUIRED_PRO_DOC_TYPES.includes(decision.docType) &&
+                decision.status === 'REJECTED',
+            )
+          ) {
+            throw new BadRequestException(
+              'A dossier with rejected required documents cannot be approved.',
+            );
+          }
+          if (
+            !profile.legalName?.trim() ||
+            !/^\d{14}$/.test(profile.nationalIdSynthetic) ||
+            !profile.primaryCategoryId ||
+            !profile.primaryZoneId ||
+            !profile.toolkitCommitmentConfirmed
+          ) {
+            throw new BadRequestException(
+              'Complete the legal identity, skills and coverage before approval.',
+            );
+          }
+        }
 
-      if (dto.documentDecisions && dto.documentDecisions.length > 0) {
-        for (const decision of dto.documentDecisions) {
+        if (dto.documentDecisions && dto.documentDecisions.length > 0) {
+          for (const decision of dto.documentDecisions) {
+            await tx.proVerificationDocument.updateMany({
+              where: {
+                proProfileId: profile.id,
+                docType: decision.docType,
+              },
+              data: {
+                status: decision.status as DocumentStatus,
+                reviewerComment:
+                  decision.status === 'REJECTED'
+                    ? decision.rejectionReason?.trim() ||
+                      dto.reviewerNote?.trim() ||
+                      'Document rejected by reviewer'
+                    : null,
+              },
+            });
+          }
+        }
+        if (dto.status === 'APPROVED') {
           await tx.proVerificationDocument.updateMany({
             where: {
               proProfileId: profile.id,
-              docType: decision.docType,
+              docType: { in: REQUIRED_PRO_DOC_TYPES },
             },
             data: {
-              status: decision.status as DocumentStatus,
-              reviewerComment:
-                decision.status === 'REJECTED'
-                  ? decision.rejectionReason?.trim() ||
-                    'Document rejected by reviewer'
-                  : null,
+              status: DocumentStatus.VERIFIED,
+              reviewerComment: null,
             },
           });
         }
-      } else if (dto.status === 'APPROVED') {
-        await tx.proVerificationDocument.updateMany({
-          where: { proProfileId: profile.id },
+
+        const nextProfile = await tx.proProfile.update({
+          where: { id: profile.id },
           data: {
-            status: DocumentStatus.VERIFIED,
-            reviewerComment: null,
+            verificationStatus: dto.status as ProVerificationStatus,
+            reviewerNote: dto.reviewerNote?.trim() || null,
+            ...(dto.status !== 'APPROVED' ? { isOnline: false } : {}),
           },
+          include: this.proProfileInclude,
         });
-      }
 
-      const nextProfile = await tx.proProfile.update({
-        where: { id: profile.id },
-        data: {
-          verificationStatus: dto.status as ProVerificationStatus,
-          reviewerNote:
-            dto.reviewerNote?.trim() || `Reviewed by admin ${adminUserId}`,
-          ...(dto.status !== 'APPROVED' ? { isOnline: false } : {}),
-        },
-        include: this.proProfileInclude,
-      });
+        if (dto.status !== 'APPROVED') {
+          await tx.jobOffer.updateMany({
+            where: { proProfileId: profile.id, status: JobOfferStatus.PENDING },
+            data: { status: JobOfferStatus.EXPIRED, respondedAt: new Date() },
+          });
+        }
 
-      if (dto.status !== 'APPROVED') {
-        await tx.jobOffer.updateMany({
-          where: { proProfileId: profile.id, status: JobOfferStatus.PENDING },
-          data: { status: JobOfferStatus.EXPIRED, respondedAt: new Date() },
-        });
-      }
+        if (dto.status === 'APPROVED') {
+          await tx.user.update({
+            where: { id: profile.userId },
+            data: { role: UserRole.PRO },
+          });
+        }
 
-      if (dto.status === 'APPROVED') {
-        await tx.user.update({
-          where: { id: profile.userId },
-          data: { role: UserRole.PRO },
-        });
-      }
-
-      return nextProfile;
-    });
-
-    return this.mapProProfile(updated);
+        return {
+          value: this.mapProProfile(nextProfile),
+          details: {
+            fromStatus: profile.verificationStatus,
+            toStatus: dto.status,
+            documentDecisions: (dto.documentDecisions ?? []).map((d) => ({
+              docType: d.docType,
+              status: d.status,
+            })),
+          },
+        };
+      },
+    );
   }
 
   /**

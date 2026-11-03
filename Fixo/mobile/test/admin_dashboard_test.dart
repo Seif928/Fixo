@@ -14,6 +14,7 @@ import 'package:fixo_mobile/features/auth/presentation/controllers/auth_controll
 import 'package:fixo_mobile/app/router/app_router.dart';
 import 'package:fixo_mobile/app/router/app_routes.dart';
 import 'package:fixo_mobile/features/auth/presentation/pages/phone_password_page.dart';
+import 'dart:ui' as ui;
 
 class _Auth extends AuthController {
   @override
@@ -35,11 +36,23 @@ class _Auth extends AuthController {
     ),
   );
   void changeAccount() => state = const AuthState();
+  void restoreFixtureAccount() => state = build();
 }
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
+  late List<int> documentPhoto;
   setUpAll(() async {
+    final recorder = ui.PictureRecorder();
+    ui.Canvas(recorder).drawRect(
+      const ui.Rect.fromLTWH(0, 0, 32, 32),
+      ui.Paint()..color = const ui.Color(0xff173f35),
+    );
+    final image = await recorder.endRecording().toImage(32, 32);
+    documentPhoto = (await image.toByteData(
+      format: ui.ImageByteFormat.png,
+    ))!.buffer.asUint8List();
+    image.dispose();
     for (final font in [
       ('Manrope', 'manrope/Manrope.ttf'),
       ('Cairo', 'cairo/Cairo.ttf'),
@@ -59,6 +72,8 @@ void main() {
     bool failedSummary = false,
     bool needsConfirmation = false,
     bool wrongConfirmationAccount = false,
+    bool selfProfessional = false,
+    bool corruptDocument = false,
     Widget home = const AdminPage(),
     List<RequestOptions>? calls,
   }) async {
@@ -69,6 +84,47 @@ void main() {
     String? invitedEmail;
     int draftVersion = 1;
     int? publishedVersion, inspection, serviceFee, duration;
+    var proStatus = 'PENDING_REVIEW';
+    final documentTypes = [
+      'NATIONAL_ID_FRONT',
+      'NATIONAL_ID_BACK',
+      'CRIMINAL_RECORD_CERT',
+    ];
+    Map<String, dynamic> professional() => {
+      'id': 'pro-fixture',
+      'dossierCode': 'FX-PRO-fixture',
+      'legalName': 'Fixture Legal Pro',
+      'displayName': 'Fixture',
+      'nationalId': '00000000000000',
+      'phone': '+201023456789',
+      'email': 'fixture@example.test',
+      'verificationStatus': proStatus,
+      'reviewerNote': null,
+      'category': {'nameEn': 'Fixture trade', 'nameAr': 'حرفة اختبار'},
+      'coverageZones': [
+        {
+          'id': 'fixture-zone',
+          'nameEn': 'Fixture area',
+          'nameAr': 'منطقة اختبار',
+        },
+      ],
+      'reviewVersion': 'a' * 64,
+      'canReview': !selfProfessional,
+      'toolkitCommitmentConfirmed': true,
+      'isOnline': false,
+      'documents': [
+        for (final type in documentTypes)
+          {
+            'id': type,
+            'docType': type,
+            'status': 'PENDING',
+            'fileName': 'fixture.png',
+            'mimeType': 'image/png',
+            'fileSizeBytes': 68,
+            'uploadedAt': '2026-11-03T10:00:00Z',
+          },
+      ],
+    };
     Map<String, dynamic> draft() => {
       'id': 'draft-fixture',
       'version': draftVersion,
@@ -90,6 +146,23 @@ void main() {
         InterceptorsWrapper(
           onRequest: (r, h) {
             calls?.add(r);
+            if (r.path.startsWith('/admin/professionals/') &&
+                r.path.endsWith('/content')) {
+              h.resolve(
+                Response(
+                  requestOptions: r,
+                  statusCode: 200,
+                  data: corruptDocument ? <int>[1, 2, 3, 4] : documentPhoto,
+                  headers: Headers.fromMap({
+                    'content-type': ['image/png'],
+                  }),
+                ),
+              );
+              return;
+            }
+            if (r.path == '/admin/professionals/pro-fixture/review') {
+              proStatus = (r.data as Map)['status'] as String;
+            }
             if (r.path == '/admin/member' && r.method == 'PUT') {
               invitedEmail = (r.data as Map)['email'] as String;
             }
@@ -136,6 +209,22 @@ void main() {
                     'pendingReviews': 3,
                     'activeBookings': 4,
                     'collectedCashEgp': 2250,
+                  },
+                  '/admin/professionals' => {
+                    'items': [
+                      {
+                        'id': 'pro-fixture',
+                        'dossierCode': 'FX-PRO-fixture',
+                        'legalName': 'Fixture Legal Pro',
+                        'verificationStatus': proStatus,
+                        'documentCount': 3,
+                      },
+                    ],
+                    'meta': {'page': 1, 'total': 1, 'totalPages': 1},
+                  },
+                  '/admin/professionals/pro-fixture' => professional(),
+                  '/admin/professionals/pro-fixture/review' => {
+                    'verificationStatus': proStatus,
                   },
                   '/admin/catalog' => {
                     'items': [draft()],
@@ -213,6 +302,7 @@ void main() {
       UncontrolledProviderScope(
         container: container,
         child: MaterialApp(
+          debugShowCheckedModeBanner: false,
           locale: arabic ? const Locale('ar') : const Locale('en'),
           supportedLocales: const [Locale('en'), Locale('ar')],
           localizationsDelegates: GlobalMaterialLocalizations.delegates,
@@ -453,6 +543,155 @@ void main() {
     );
   });
   testWidgets(
+    'professional approval requires viewing all three private images and explicit confirmation',
+    (tester) async {
+      final calls = <RequestOptions>[];
+      await mount(tester, calls: calls);
+      await tester.tap(find.byKey(const Key('admin-nav-professionals')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const Key('admin-pro-open-pro-fixture')));
+      await tester.pumpAndSettle();
+      expect(
+        tester
+            .widget<FilledButton>(find.byKey(const Key('admin-pro-approve')))
+            .onPressed,
+        isNull,
+      );
+      for (final type in [
+        'NATIONAL_ID_FRONT',
+        'NATIONAL_ID_BACK',
+        'CRIMINAL_RECORD_CERT',
+      ]) {
+        final doc = find.byKey(Key('admin-pro-document-$type'));
+        await tester.ensureVisible(doc);
+        await tester.tap(doc);
+        await tester.pumpAndSettle();
+        // Wait for the real synthetic image codec, not an arbitrary clock delay.
+        final image = find.byType(Image).last;
+        await tester.runAsync(
+          () => precacheImage(
+            tester.widget<Image>(image).image,
+            tester.element(image),
+          ).timeout(const Duration(seconds: 5)),
+        );
+        await tester.pumpAndSettle();
+        expect(
+          tester
+              .widget<FilledButton>(
+                find.byKey(const Key('admin-document-reviewed')),
+              )
+              .onPressed,
+          isNotNull,
+        );
+        await tester.tap(find.byKey(const Key('admin-document-reviewed')));
+        await tester.pumpAndSettle();
+      }
+      await tester.ensureVisible(find.byKey(const Key('admin-pro-approve')));
+      expect(
+        tester
+            .widget<FilledButton>(find.byKey(const Key('admin-pro-approve')))
+            .onPressed,
+        isNotNull,
+      );
+      await tester.tap(find.byKey(const Key('admin-pro-approve')));
+      await tester.pumpAndSettle();
+      expect(calls.where((r) => r.method == 'PATCH'), isEmpty);
+      await tester.tap(find.byKey(const Key('admin-pro-review-confirmation')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const Key('admin-pro-review-submit')));
+      await tester.pumpAndSettle();
+      final review = calls.singleWhere((r) => r.method == 'PATCH');
+      expect(review.data, containsPair('reviewVersion', 'a' * 64));
+      expect(review.data, containsPair('confirmDocumentsReviewed', true));
+      expect(review.path, '/admin/professionals/pro-fixture/review');
+    },
+  );
+  testWidgets(
+    'an administrator cannot approve their own professional dossier',
+    (tester) async {
+      final calls = <RequestOptions>[];
+      await mount(tester, selfProfessional: true, calls: calls);
+      await tester.tap(find.byKey(const Key('admin-nav-professionals')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const Key('admin-pro-open-pro-fixture')));
+      await tester.pumpAndSettle();
+      expect(
+        find.text('You cannot review your own professional dossier.'),
+        findsOneWidget,
+      );
+      expect(find.byKey(const Key('admin-pro-approve')), findsNothing);
+      expect(calls.where((r) => r.method == 'PATCH'), isEmpty);
+    },
+  );
+  testWidgets(
+    'private dossier and document cannot revive after logout and a new login',
+    (tester) async {
+      final container = await mount(tester);
+      await tester.tap(find.byKey(const Key('admin-nav-professionals')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const Key('admin-pro-open-pro-fixture')));
+      await tester.pumpAndSettle();
+      final doc = find.byKey(const Key('admin-pro-document-NATIONAL_ID_FRONT'));
+      await tester.ensureVisible(doc);
+      await tester.tap(doc);
+      await tester.pumpAndSettle();
+      final image = find.byType(Image).last;
+      await tester.runAsync(
+        () => precacheImage(
+          tester.widget<Image>(image).image,
+          tester.element(image),
+        ).timeout(const Duration(seconds: 5)),
+      );
+      await tester.pumpAndSettle();
+      final auth = container.read(authControllerProvider.notifier) as _Auth;
+      auth.changeAccount();
+      await tester.pumpAndSettle();
+      expect(find.textContaining('00000000000000'), findsNothing);
+      auth.restoreFixtureAccount();
+      await tester.pumpAndSettle();
+      expect(find.textContaining('00000000000000'), findsNothing);
+      expect(
+        tester
+            .widget<FilledButton>(
+              find.byKey(const Key('admin-document-reviewed')),
+            )
+            .onPressed,
+        isNull,
+      );
+    },
+  );
+  testWidgets('corrupt private image never enables photo review confirmation', (
+    tester,
+  ) async {
+    await mount(tester, corruptDocument: true);
+    await tester.tap(find.byKey(const Key('admin-nav-professionals')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('admin-pro-open-pro-fixture')));
+    await tester.pumpAndSettle();
+    final doc = find.byKey(const Key('admin-pro-document-NATIONAL_ID_FRONT'));
+    await tester.ensureVisible(doc);
+    await tester.tap(doc);
+    await tester.pumpAndSettle();
+    final image = find.byType(Image).last;
+    await tester.runAsync(
+      () => precacheImage(
+        tester.widget<Image>(image).image,
+        tester.element(image),
+        onError: (_, _) {},
+      ).timeout(const Duration(seconds: 5)),
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('Could not display the document photo.'), findsOneWidget);
+    expect(
+      tester
+          .widget<FilledButton>(
+            find.byKey(const Key('admin-document-reviewed')),
+          )
+          .onPressed,
+      isNull,
+    );
+  });
+  testWidgets(
     'catalog saves actual prices as a private draft and publishes only after preview confirmation',
     (tester) async {
       final calls = <RequestOptions>[];
@@ -498,4 +737,86 @@ void main() {
     );
     expect(tester.takeException(), isNull);
   });
+  for (final width in [360.0, 390.0, 412.0]) {
+    testWidgets('Arabic professional dossier and photo fit $width at 1.35x', (
+      tester,
+    ) async {
+      await mount(tester, width: width, arabic: true, dark: true);
+      await tester.tap(find.byTooltip('فتح القائمة'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const Key('admin-nav-professionals')));
+      await tester.pumpAndSettle();
+      await tester.ensureVisible(
+        find.byKey(const Key('admin-pro-open-pro-fixture')),
+      );
+      await tester.tap(find.byKey(const Key('admin-pro-open-pro-fixture')));
+      await tester.pumpAndSettle();
+      if (width == 390) {
+        await expectLater(
+          find.byType(Overlay).first,
+          matchesGoldenFile('goldens/admin/professional_dossier_ar_dark.png'),
+        );
+      }
+      final doc = find.byKey(const Key('admin-pro-document-NATIONAL_ID_FRONT'));
+      await tester.ensureVisible(doc);
+      await tester.tap(doc);
+      await tester.pumpAndSettle();
+      final image = find.byType(Image).last;
+      await tester.runAsync(
+        () => precacheImage(
+          tester.widget<Image>(image).image,
+          tester.element(image),
+        ).timeout(const Duration(seconds: 5)),
+      );
+      await tester.pumpAndSettle();
+      expect(tester.takeException(), isNull);
+    });
+  }
+  testWidgets('desktop professional dossier visual review', (tester) async {
+    await mount(tester);
+    await tester.tap(find.byKey(const Key('admin-nav-professionals')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('admin-pro-open-pro-fixture')));
+    await tester.pumpAndSettle();
+    await expectLater(
+      find.byType(Overlay).first,
+      matchesGoldenFile('goldens/admin/professional_dossier_desktop.png'),
+    );
+  });
+  testWidgets(
+    'corrections identify selected documents and require a clear reason',
+    (tester) async {
+      final calls = <RequestOptions>[];
+      await mount(tester, calls: calls);
+      await tester.tap(find.byKey(const Key('admin-nav-professionals')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const Key('admin-pro-open-pro-fixture')));
+      await tester.pumpAndSettle();
+      final corrections = find.widgetWithText(
+        OutlinedButton,
+        'Request corrections',
+      );
+      await tester.ensureVisible(corrections);
+      await tester.tap(corrections);
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const Key('admin-pro-review-submit')));
+      await tester.pumpAndSettle();
+      expect(calls.where((r) => r.method == 'PATCH'), isEmpty);
+      await tester.enterText(
+        find.byKey(const Key('admin-pro-review-note')),
+        'Upload a clearer back photo.',
+      );
+      await tester.tap(
+        find.byKey(const Key('admin-pro-correction-doc-NATIONAL_ID_BACK')),
+      );
+      await tester.tap(find.byKey(const Key('admin-pro-review-submit')));
+      await tester.pumpAndSettle();
+      expect(
+        calls.singleWhere((r) => r.method == 'PATCH').data,
+        containsPair('documentDecisions', [
+          {'docType': 'NATIONAL_ID_BACK', 'status': 'REJECTED'},
+        ]),
+      );
+    },
+  );
 }

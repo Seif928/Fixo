@@ -118,6 +118,7 @@ describe('Private two-person admin access (guarded PostgreSQL)', () => {
     expect(await (db as any).adminMembership.count()).toBe(0);
     expect((await request(null, '/summary')).status).toBe(401);
     expect((await request(outsider, '/summary')).status).toBe(403);
+    expect(policy.readVerifiedAccount).not.toHaveBeenCalled();
   });
   it('keeps unpriced catalog drafts private and publishes only a validated saved version atomically', async () => {
     expect((await request(owner, '/catalog')).status).toBe(200);

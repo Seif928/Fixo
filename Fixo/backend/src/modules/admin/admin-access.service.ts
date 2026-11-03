@@ -52,11 +52,28 @@ export class AdminAccessService {
       throw new ForbiddenException(
         'Administration access is not available for this account.',
       );
+    const email = user.email.trim().toLowerCase();
+    const candidate = await this.db.adminMembership.findUnique({
+      where: { email },
+    });
+    const configuredOwner = process.env.FIXO_OWNER_EMAIL?.trim().toLowerCase();
+    // A candidate lookup grants nothing; it avoids privileged provider calls for
+    // ordinary profile views. Actual identity and authority are still rechecked.
+    if (
+      (!candidate && configuredOwner !== email) ||
+      (candidate &&
+        (!candidate.isActive ||
+          (candidate.expiresAt && candidate.expiresAt <= new Date()) ||
+          (candidate.userId && candidate.userId !== user.id)))
+    ) {
+      throw new ForbiddenException(
+        'Administration access is not available for this account.',
+      );
+    }
     const identity = await this.provider.readVerifiedAccount(
       user.firebaseUid,
       time,
     );
-    const email = user.email.trim().toLowerCase();
     if (
       identity.uid !== user.firebaseUid ||
       identity.email?.trim().toLowerCase() !== email
@@ -116,9 +133,7 @@ export class AdminAccessService {
     ownerOnly: boolean,
     action: string,
     entityId: string,
-    operation: (
-      tx: Prisma.TransactionClient,
-    ) => Promise<{
+    operation: (tx: Prisma.TransactionClient) => Promise<{
       value: T;
       details: Prisma.InputJsonValue;
       recordAudit?: boolean;

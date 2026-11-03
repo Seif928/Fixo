@@ -10,6 +10,7 @@ import {
 import { Transform, Type } from 'class-transformer';
 import {
   ArrayMinSize,
+  ArrayMaxSize,
   IsArray,
   IsBoolean,
   IsEnum,
@@ -226,6 +227,13 @@ export class ProAdminDocDecisionDto {
 }
 
 export class ProAdminReviewDto {
+  @IsString()
+  @Matches(/^[a-f0-9]{64}$/)
+  reviewVersion?: string;
+
+  @IsOptional()
+  @IsBoolean()
+  confirmDocumentsReviewed?: boolean;
   @ApiProperty({
     description: 'Authorized reviewer decision',
     enum: [
@@ -259,6 +267,7 @@ export class ProAdminReviewDto {
   @IsArray()
   @ValidateNested({ each: true })
   @Type(() => ProAdminDocDecisionDto)
+  @ArrayMaxSize(4)
   documentDecisions?: ProAdminDocDecisionDto[];
 }
 

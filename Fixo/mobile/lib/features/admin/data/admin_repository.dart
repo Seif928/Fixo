@@ -3,6 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/network/dio_client.dart';
 import '../../auth/presentation/controllers/auth_controller.dart';
 import 'admin_catalog_models.dart';
+import 'admin_professional_models.dart';
+import 'dart:typed_data';
 
 class AdminAccess {
   const AdminAccess(this.role, this.needsConfirmation);
@@ -189,6 +191,87 @@ class AdminRepository {
       data: {'version': draft.version},
     );
   }
+
+  Future<AdminProfessionalPage> professionals({
+    int page = 1,
+    String? status,
+    String? search,
+    CancelToken? cancelToken,
+  }) async => AdminProfessionalPage.fromJson(
+    (await _dio.get<Map<String, dynamic>>(
+      '/admin/professionals',
+      options: _options,
+      cancelToken: cancelToken,
+      queryParameters: {
+        'page': page,
+        if (status?.isNotEmpty == true) 'status': status,
+        if (search?.isNotEmpty == true) 'search': search,
+      },
+    )).data!,
+  );
+  Future<AdminProfessionalDetail> professional(
+    String id, {
+    CancelToken? cancelToken,
+  }) async => AdminProfessionalDetail.fromJson(
+    (await _dio.get<Map<String, dynamic>>(
+      '/admin/professionals/${Uri.encodeComponent(id)}',
+      options: _options,
+      cancelToken: cancelToken,
+    )).data!,
+  );
+  Future<AdminPrivateDocument> professionalDocument(
+    String profileId,
+    String docId, {
+    CancelToken? cancelToken,
+  }) async {
+    final response = await _dio.get<List<int>>(
+      '/admin/professionals/${Uri.encodeComponent(profileId)}/documents/${Uri.encodeComponent(docId)}/content',
+      options: _options.copyWith(responseType: ResponseType.bytes),
+      cancelToken: cancelToken,
+    );
+    final bytes = response.data;
+    final mime = response.headers
+        .value('content-type')
+        ?.split(';')
+        .first
+        .trim();
+    if (bytes == null ||
+        bytes.isEmpty ||
+        bytes.length > 2 * 1024 * 1024 ||
+        ![
+          'image/jpeg',
+          'image/png',
+          'image/webp',
+          'application/pdf',
+        ].contains(mime)) {
+      throw const FormatException('Private document unavailable.');
+    }
+    return AdminPrivateDocument(Uint8List.fromList(bytes), mime!);
+  }
+
+  Future<void> reviewProfessional(
+    AdminProfessionalDetail detail,
+    String status,
+    String note, {
+    required bool confirmed,
+    List<String> rejectedTypes = const [],
+  }) async {
+    await _dio.patch<void>(
+      '/admin/professionals/${Uri.encodeComponent(detail.summary.id)}/review',
+      options: _options,
+      data: {
+        'status': status,
+        'reviewVersion': detail.reviewVersion,
+        'confirmDocumentsReviewed': confirmed,
+        if (note.trim().isNotEmpty) 'reviewerNote': note.trim(),
+        if (rejectedTypes.isNotEmpty)
+          'documentDecisions': [
+            for (final type in rejectedTypes)
+              {'docType': type, 'status': 'REJECTED'},
+          ],
+      },
+    );
+  }
 }
 
 final adminRepositoryProvider = Provider<AdminRepository>(
@@ -201,6 +284,9 @@ final adminRepositoryProvider = Provider<AdminRepository>(
 );
 
 final adminCatalogRevisionProvider = StateProvider.autoDispose<int>((ref) => 0);
+final adminProfessionalsRevisionProvider = StateProvider.autoDispose<int>(
+  (ref) => 0,
+);
 
 // Token changes also invalidate permissions after account confirmation/refresh.
 final adminAccessProvider = FutureProvider.autoDispose<AdminAccess>((

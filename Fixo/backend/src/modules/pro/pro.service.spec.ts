@@ -6,6 +6,8 @@ import {
 import { ProVerificationStatus, TransportMode, UserRole } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import { ProService } from './pro.service';
+import { AdminAccessService } from '../admin/admin-access.service';
+import { dossierReviewVersion } from './dossier-review-version';
 
 describe('ProService (Unit Tests)', () => {
   let service: ProService;
@@ -64,7 +66,20 @@ describe('ProService (Unit Tests)', () => {
       $transaction: jest.fn(async (cb) => cb(prismaMock)),
     };
 
-    service = new ProService(prismaMock as unknown as PrismaService);
+    service = new ProService(
+      prismaMock as unknown as PrismaService,
+      undefined,
+      undefined,
+      {
+        mutate: async (
+          _actor: unknown,
+          _owner: unknown,
+          _action: unknown,
+          _id: unknown,
+          operation: any,
+        ) => (await operation(prismaMock)).value,
+      } as unknown as AdminAccessService,
+    );
   });
 
   it('returns fallback catalog options when database is disconnected', async () => {
@@ -103,11 +118,15 @@ describe('ProService (Unit Tests)', () => {
     ).rejects.toThrow(BadRequestException);
   });
 
-  it('rejects adminReviewProProfile when caller role is not ADMIN', async () => {
+  it('rejects review without server administration authority', async () => {
     await expect(
-      service.adminReviewProProfile('user-1', UserRole.PRO, 'pro-1', {
-        status: 'APPROVED',
-      }),
+      service.adminReviewProProfile(
+        { userId: 'user-1', role: 'PRO', authTime: 0 } as any,
+        'pro-1',
+        {
+          status: 'APPROVED',
+        },
+      ),
     ).rejects.toThrow(ForbiddenException);
   });
 
@@ -118,6 +137,7 @@ describe('ProService (Unit Tests)', () => {
       documents: [],
       coverageZones: [],
       verificationStatus: ProVerificationStatus.PENDING_REVIEW,
+      updatedAt: new Date(0),
     };
     prismaMock.proProfile.findUnique.mockResolvedValue(profile);
     prismaMock.proProfile.update.mockResolvedValue({
@@ -125,9 +145,15 @@ describe('ProService (Unit Tests)', () => {
       verificationStatus: ProVerificationStatus.APPROVED,
     });
     await expect(
-      service.adminReviewProProfile('reviewer-1', UserRole.ADMIN, 'pro-1', {
-        status: 'APPROVED',
-      }),
+      service.adminReviewProProfile(
+        { userId: 'reviewer-1', role: 'OWNER', authTime: Date.now() / 1000 },
+        'pro-1',
+        {
+          status: 'APPROVED',
+          reviewVersion: dossierReviewVersion(profile),
+          confirmDocumentsReviewed: true,
+        },
+      ),
     ).rejects.toThrow(BadRequestException);
     expect(prismaMock.proProfile.update).not.toHaveBeenCalled();
   });

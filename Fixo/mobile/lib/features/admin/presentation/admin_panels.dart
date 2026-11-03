@@ -146,6 +146,16 @@ class AdminAuditPanel extends StatelessWidget {
                 ar ? 'تعديل مسودة خدمة' : 'Service draft updated',
               'CATALOG_PUBLISHED' =>
                 ar ? 'نشر خدمة وسعرها' : 'Service and price published',
+              'PRO_DOSSIER_ACCESSED' =>
+                ar ? 'فتح ملف فني للمراجعة' : 'Professional dossier accessed',
+              'PRO_DOCUMENT_ACCESS_GRANTED' =>
+                ar
+                    ? 'السماح بعرض مستند خاص'
+                    : 'Private document access granted',
+              'PRO_PROFILE_REVIEWED' =>
+                ar
+                    ? 'تسجيل قرار مراجعة فني'
+                    : 'Professional review decision recorded',
               _ => ar ? 'تغيير إداري' : 'Administration change',
             }),
             subtitle: Text(
