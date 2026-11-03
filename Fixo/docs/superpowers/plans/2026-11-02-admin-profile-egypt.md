@@ -1,5 +1,7 @@
 # FIXO Admin, Media and Egypt Coverage Implementation Plan
 
+> Current scope/status index: ../../PROJECT_STATUS.md (2026-11-03). This file is a chronological ledger; later milestones supersede older unchecked tasks and deployment notes. The user reiterated that all previously approved work remains in scope. Do not reduce the outstanding work to only professional review and booking administration.
+
 > Execute inline with superpowers:executing-plans, task by task. User forbids subagents/Teamwork.
 
 **Goal:** Working personal photos, Egypt-wide manual/GPS location, protected owner/admin operations and repaired lifecycle behavior.
