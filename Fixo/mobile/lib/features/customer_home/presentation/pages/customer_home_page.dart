@@ -13,11 +13,13 @@ import '../../../../core/widgets/fixo_brand_mark.dart';
 import '../../../../core/widgets/fixo_buttons.dart';
 import '../../../../core/widgets/fixo_cards.dart';
 import '../../../auth/presentation/controllers/auth_controller.dart';
+import '../../../profile/presentation/profile_avatar.dart';
 import '../../../chat/presentation/notification_sheet.dart';
 import '../../domain/marketplace_models.dart';
 import '../../data/marketplace_repository.dart';
 import '../controllers/customer_home_controller.dart';
 import '../widgets/customer_home_widgets.dart';
+import '../widgets/service_catalog_sheet.dart';
 
 /// Native Flutter implementation of live Stitch Screen 03 (`03 — Customer Home`,
 /// ID `ba52cf458e2a49b191b6912ea76117fa`).
@@ -31,12 +33,33 @@ class CustomerHomePage extends ConsumerStatefulWidget {
 class _CustomerHomePageState extends ConsumerState<CustomerHomePage> {
   late final TextEditingController _searchController;
 
+  Future<void> _browseServices() async {
+    final owner = ref.read(authControllerProvider).session?.user.id;
+    final selected = await showModalBottomSheet<ServiceOfferModel>(
+      context: context,
+      showDragHandle: true,
+      useSafeArea: true,
+      isScrollControlled: true,
+      constraints: const BoxConstraints(maxWidth: 600),
+      builder: (_) => ServiceCatalogSheet(
+        isArabic: ref.read(appLocaleProvider).languageCode == 'ar',
+      ),
+    );
+    if (!mounted ||
+        selected == null ||
+        owner != ref.read(authControllerProvider).session?.user.id) {
+      return;
+    }
+    _navigateToCreateBooking(offering: selected);
+  }
+
   Future<void> _chooseArea() async {
     final userId = ref.read(authControllerProvider).session?.user.id;
     final area = await showServiceAreaPicker(
       context,
       isArabic: ref.read(appLocaleProvider).languageCode == 'ar',
       initial: ref.read(customerHomeControllerProvider).selectedArea,
+      startWithGovernorates: true,
     );
     if (!mounted ||
         area == null ||
@@ -122,8 +145,9 @@ class _CustomerHomePageState extends ConsumerState<CustomerHomePage> {
                                 label: arabic
                                     ? 'تعذر تحميل الخدمات، أعد المحاولة'
                                     : 'Could not load services. Retry',
-                                onPressed: () =>
-                                    setSheetState(() => request = load()),
+                                onPressed: () => setSheetState(() {
+                                  request = load();
+                                }),
                               ),
                             );
                           }
@@ -298,60 +322,71 @@ class _CustomerHomePageState extends ConsumerState<CustomerHomePage> {
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           Flexible(
-            child: InkWell(
-              onTap: _chooseArea,
-              borderRadius: FixoRadius.borderRadiusSm,
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  const FixoBrandMark(showSubtitle: false, iconBoxSize: 32),
-                  const SizedBox(width: 8),
-                  Flexible(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            const Icon(
-                              Icons.location_on_outlined,
-                              size: 14,
-                              color: FixoColors.secondary,
-                            ),
-                            const SizedBox(width: 2),
-                            Flexible(
-                              child: Text(
-                                homeState.selectedArea == null
-                                    ? (isArabic
-                                          ? 'اختار مكانك'
-                                          : 'Choose your area')
-                                    : (isArabic
-                                          ? homeState
-                                                .selectedArea!
-                                                .governorateAr
-                                          : homeState
-                                                .selectedArea!
-                                                .governorateEn),
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                style: FixoTypography.labelMd(
-                                  color: palette.mutedText,
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const FixoBrandMark(
+                  key: Key('home-brand'),
+                  showSubtitle: false,
+                  iconBoxSize: 28,
+                ),
+                const SizedBox(width: 8),
+                Flexible(
+                  child: InkWell(
+                    key: const Key('home-governorate-picker'),
+                    onTap: _chooseArea,
+                    borderRadius: FixoRadius.borderRadiusSm,
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(
+                        vertical: 12,
+                        horizontal: 2,
+                      ),
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              const Icon(
+                                Icons.location_on_outlined,
+                                size: 14,
+                                color: FixoColors.secondary,
+                              ),
+                              const SizedBox(width: 2),
+                              Flexible(
+                                child: Text(
+                                  homeState.selectedArea == null
+                                      ? (isArabic
+                                            ? 'اختار مكانك'
+                                            : 'Choose your area')
+                                      : (isArabic
+                                            ? homeState
+                                                  .selectedArea!
+                                                  .governorateAr
+                                            : homeState
+                                                  .selectedArea!
+                                                  .governorateEn),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: FixoTypography.labelMd(
+                                    color: palette.mutedText,
+                                  ),
                                 ),
                               ),
-                            ),
-                            const Icon(
-                              Icons.keyboard_arrow_down_rounded,
-                              size: 15,
-                              color: FixoColors.outline,
-                            ),
-                          ],
-                        ),
-                      ],
+                              const Icon(
+                                Icons.keyboard_arrow_down_rounded,
+                                size: 15,
+                                color: FixoColors.outline,
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
                     ),
                   ),
-                ],
-              ),
+                ),
+              ],
             ),
           ),
           Row(
@@ -391,10 +426,21 @@ class _CustomerHomePageState extends ConsumerState<CustomerHomePage> {
                 onTap: () async {
                   await context.push(AppRoutes.customerProfile);
                 },
-                child: FixoArtisanAvatar(
-                  identifier:
-                      ref.watch(authControllerProvider).session?.user.id ??
-                      'FIXO',
+                child: ProfileAvatar(
+                  userId:
+                      ref.watch(authControllerProvider).session?.user.id ?? '',
+                  hasAvatar:
+                      ref
+                          .watch(authControllerProvider)
+                          .session
+                          ?.user
+                          .hasAvatar ??
+                      false,
+                  version: ref
+                      .watch(authControllerProvider)
+                      .session
+                      ?.user
+                      .avatarVersion,
                   size: 32,
                 ),
               ),
@@ -528,15 +574,18 @@ class _CustomerHomePageState extends ConsumerState<CustomerHomePage> {
                     borderRadius: FixoRadius.borderRadiusSm,
                     child: InkWell(
                       key: const Key('btn-search-filters'),
-                      onTap: homeNotifier.clearFilters,
+                      onTap: _browseServices,
                       borderRadius: FixoRadius.borderRadiusSm,
-                      child: SizedBox(
-                        width: 34,
-                        height: 34,
-                        child: Icon(
-                          Icons.tune_rounded,
-                          size: 18,
-                          color: palette.primaryBrand,
+                      child: Tooltip(
+                        message: isArabic ? 'كل الخدمات' : 'All services',
+                        child: SizedBox(
+                          width: 44,
+                          height: 44,
+                          child: Icon(
+                            Icons.tune_rounded,
+                            size: 18,
+                            color: palette.deepForest,
+                          ),
                         ),
                       ),
                     ),
@@ -561,8 +610,8 @@ class _CustomerHomePageState extends ConsumerState<CustomerHomePage> {
           const SizedBox(height: 16),
           Text(
             isArabic
-                ? 'جارٍ تحميل خدمات القاهرة والجيزة...'
-                : 'Loading Cairo & Giza marketplace services...',
+                ? 'جارٍ تحميل الخدمات المتاحة...'
+                : 'Loading available services...',
             textAlign: TextAlign.center,
             style: FixoTypography.bodyMd(color: palette.mutedText),
           ),

@@ -29,6 +29,7 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:fixo_mobile/core/time/app_clock.dart';
 
 class _FakeAuthRepository implements AuthRepository {
   @override
@@ -423,6 +424,7 @@ Future<Widget> _buildTestHarness({
 
   return ProviderScope(
     overrides: [
+      appNowProvider.overrideWithValue(() => DateTime(2026, 11, 2)),
       appPreferencesProvider.overrideWithValue(prefs),
       secureTokenStorageProvider.overrideWithValue(tokenStorage),
       authRepositoryProvider.overrideWithValue(_FakeAuthRepository()),
@@ -724,10 +726,7 @@ void main() {
           final enBtnFinder = find.byKey(const Key('confirm-checkout-btn'));
           expect(enBtnFinder, findsOneWidget);
           expect(tester.getSize(enBtnFinder).width, greaterThanOrEqualTo(300));
-          expect(
-            find.text('Confirm Booking (Pay Cash Later)'),
-            findsOneWidget,
-          );
+          expect(find.text('Confirm Booking (Pay Cash Later)'), findsOneWidget);
           expect(find.text('Scheduled Service'), findsOneWidget);
           expect(find.text('Verified Service'), findsNothing);
 
@@ -747,10 +746,7 @@ void main() {
           final arBtnFinder = find.byKey(const Key('confirm-checkout-btn'));
           expect(arBtnFinder, findsOneWidget);
           expect(tester.getSize(arBtnFinder).width, greaterThanOrEqualTo(300));
-          expect(
-            find.text('تأكيد الحجز (دفع نقدي لاحقاً)'),
-            findsOneWidget,
-          );
+          expect(find.text('تأكيد الحجز (دفع نقدي لاحقاً)'), findsOneWidget);
           expect(find.text('خدمة مجدولة'), findsOneWidget);
           expect(find.text('خدمة معتمدة'), findsNothing);
         },

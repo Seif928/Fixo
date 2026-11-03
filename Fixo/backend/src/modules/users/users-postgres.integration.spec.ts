@@ -60,9 +60,7 @@ describe('Users & Customer Addresses PostgreSQL Real Database Integration Suite 
 
   beforeAll(async () => {
     // 1. Fail-closed safety validation: target MUST be local fixo_test on port 5432
-    testDbUrl =
-      process.env.TEST_DATABASE_URL ??
-      'postgresql://fixo_user:fixo_dev_password@localhost:5432/fixo_test?schema=public';
+    testDbUrl = process.env.TEST_DATABASE_URL!;
 
     validateTestDatabaseTarget(testDbUrl);
 
@@ -163,7 +161,9 @@ describe('Users & Customer Addresses PostgreSQL Real Database Integration Suite 
 
   afterAll(async () => {
     if (prisma && prisma.isDatabaseConnected()) {
-      await safeCleanupBookingTestTables(prisma, { testDatabaseUrl: testDbUrl });
+      await safeCleanupBookingTestTables(prisma, {
+        testDatabaseUrl: testDbUrl,
+      });
       await prisma.coverageZone.deleteMany({
         where: { slug: 'inactive-test-zone' },
       });
@@ -519,7 +519,10 @@ describe('Users & Customer Addresses PostgreSQL Real Database Integration Suite 
         isDefault: false,
       };
 
-      const result = await usersController.createAddress(mockJwtA, roguePayload);
+      const result = await usersController.createAddress(
+        mockJwtA,
+        roguePayload,
+      );
 
       // Must be owned by Customer A, NOT Customer B
       expect(result.userId).toBe(customerUserA.id);
@@ -548,7 +551,9 @@ describe('Users & Customer Addresses PostgreSQL Real Database Integration Suite 
       expect(Array.isArray(response.user.addresses)).toBe(true);
       expect(response.user.addresses!.length).toBeGreaterThanOrEqual(1);
 
-      const defaultAddr = response.user.addresses!.find((a: any) => a.isDefault);
+      const defaultAddr = response.user.addresses!.find(
+        (a: any) => a.isDefault,
+      );
       expect(defaultAddr).toBeDefined();
       expect(defaultAddr.zone).toBeDefined();
       expect(defaultAddr.zone.slug).toBeDefined();
@@ -570,6 +575,78 @@ describe('Users & Customer Addresses PostgreSQL Real Database Integration Suite 
       expect(response.total).toBe(response.addresses.length);
       expect(response.addresses[0].isDefault).toBe(true); // First item is default
       expect(response.addresses[0].zone?.nameEn).toBeDefined();
+    });
+  });
+
+  describe('editable profile', () => {
+    it('updates only the authenticated display name and preserves reviewed legal identity', async () => {
+      const dossier = await prisma.proProfile.create({
+        data: {
+          userId: customerUserA.id,
+          dossierCode: 'FX-EDIT-TEST',
+          nationalIdSynthetic: '12345678901234',
+          legalName: 'Reviewed Legal Identity',
+        },
+      });
+      const response = await fetch(`${baseUrl}/users/me/profile`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${customerTokenA}`,
+        },
+        body: JSON.stringify({ fullName: '  Updated Display Name  ' }),
+      });
+      expect(response.status).toBe(200);
+      const data = await response.json();
+      expect(data.fullName).toBe('Updated Display Name');
+      expect(data).not.toHaveProperty('firebaseUid');
+      expect(
+        (
+          await prisma.proProfile.findUniqueOrThrow({
+            where: { id: dossier.id },
+          })
+        ).legalName,
+      ).toBe('Reviewed Legal Identity');
+      expect(
+        (
+          await prisma.user.findUniqueOrThrow({
+            where: { id: customerUserB.id },
+          })
+        ).fullName,
+      ).toBe(customerUserB.fullName);
+    });
+    it('rejects identity/role injection and invalid names without writing', async () => {
+      for (const body of [
+        { fullName: ' ', userId: customerUserB.id },
+        { fullName: 'Injected', role: 'ADMIN' },
+        { fullName: 'x' },
+        { fullName: 'bad\nname' },
+      ]) {
+        const response = await fetch(`${baseUrl}/users/me/profile`, {
+          method: 'PATCH',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${customerTokenA}`,
+          },
+          body: JSON.stringify(body),
+        });
+        expect(response.status).toBe(400);
+      }
+      expect(
+        (
+          await prisma.user.findUniqueOrThrow({
+            where: { id: customerUserA.id },
+          })
+        ).fullName,
+      ).toBe('Updated Display Name');
+    });
+    it('rejects unauthenticated profile changes', async () => {
+      const response = await fetch(`${baseUrl}/users/me/profile`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ fullName: 'Anonymous' }),
+      });
+      expect(response.status).toBe(401);
     });
   });
 });

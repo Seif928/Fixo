@@ -18,6 +18,10 @@ void main() {
       {'verificationStatus': 'DRAFT', 'primaryCategoryId': 'cat-test'},
       '/pro/onboarding/documents',
     ),
+    'name and ID saved without an invented zone': (
+      {'verificationStatus': 'DRAFT', 'nationalIdSynthetic': '12345678901234'},
+      '/pro/onboarding/skills',
+    ),
     'under review': (
       {'verificationStatus': 'PENDING_REVIEW'},
       '/pro/onboarding/status',

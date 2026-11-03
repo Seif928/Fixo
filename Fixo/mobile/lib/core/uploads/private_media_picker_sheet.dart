@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
 import '../theme/fixo_colors.dart';
 import 'device_media_picker.dart';
+import 'suggested_avatar.dart';
 export 'device_media_picker.dart' show PickedPrivateMedia;
 
 /// OS access is requested only after the user chooses a source.
@@ -17,8 +18,10 @@ class PrivateMediaPickerSheet extends ConsumerStatefulWidget {
     required this.rationaleAr,
     required this.defaultFilePrefix,
     this.isSyntheticIdentitySpecimen = false,
+    this.allowSuggestedAvatars = false,
   });
   final bool isArabic, isSyntheticIdentitySpecimen;
+  final bool allowSuggestedAvatars;
   final String titleEn, titleAr, rationaleEn, rationaleAr, defaultFilePrefix;
 
   static Future<PickedPrivateMedia?> show(
@@ -30,6 +33,7 @@ class PrivateMediaPickerSheet extends ConsumerStatefulWidget {
     required String rationaleAr,
     required String defaultFilePrefix,
     bool isSyntheticIdentitySpecimen = false,
+    bool allowSuggestedAvatars = false,
   }) => showModalBottomSheet<PickedPrivateMedia>(
     context: context,
     isScrollControlled: true,
@@ -42,6 +46,7 @@ class PrivateMediaPickerSheet extends ConsumerStatefulWidget {
       rationaleAr: rationaleAr,
       defaultFilePrefix: defaultFilePrefix,
       isSyntheticIdentitySpecimen: isSyntheticIdentitySpecimen,
+      allowSuggestedAvatars: allowSuggestedAvatars,
     ),
   );
 
@@ -54,6 +59,29 @@ class _PrivateMediaPickerSheetState
     extends ConsumerState<PrivateMediaPickerSheet> {
   bool _busy = false;
   String? _error;
+  bool _showAvatars = false;
+
+  Future<void> _chooseAvatar(int index) async {
+    if (_busy) return;
+    setState(() {
+      _busy = true;
+      _error = null;
+    });
+    try {
+      final selected = await renderSuggestedAvatar(index);
+      if (mounted) Navigator.pop(context, selected);
+    } catch (_) {
+      if (mounted) {
+        setState(
+          () => _error = widget.isArabic
+              ? 'تعذر اختيار الأفاتار. حاول تاني.'
+              : 'Could not select this avatar. Please retry.',
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
 
   Future<void> _pick(ImageSource source) async {
     if (_busy) return;
@@ -145,6 +173,55 @@ class _PrivateMediaPickerSheetState
               label: Text(ar ? 'اختيار صورة من الجهاز' : 'Choose a photo'),
             ),
             const SizedBox(height: 12),
+            if (widget.allowSuggestedAvatars) ...[
+              OutlinedButton.icon(
+                key: const Key('choose-suggested-avatar'),
+                onPressed: _busy
+                    ? null
+                    : () => setState(() => _showAvatars = !_showAvatars),
+                icon: const Icon(Icons.face_retouching_natural),
+                label: Text(
+                  ar ? 'اختار من ٢٤ أفاتار جاهز' : 'Choose from 24 avatars',
+                ),
+              ),
+              if (_showAvatars) ...[
+                const SizedBox(height: 12),
+                LayoutBuilder(
+                  builder: (context, constraints) {
+                    final side = ((constraints.maxWidth - 30) / 4).clamp(
+                      40.0,
+                      76.0,
+                    );
+                    return Wrap(
+                      spacing: 10,
+                      runSpacing: 10,
+                      alignment: WrapAlignment.center,
+                      children: List.generate(
+                        suggestedAvatarCount,
+                        (index) => Tooltip(
+                          message: ar
+                              ? 'أفاتار ${index + 1}'
+                              : 'Avatar ${index + 1}',
+                          child: Semantics(
+                            button: true,
+                            label: ar
+                                ? 'أفاتار ${index + 1}'
+                                : 'Avatar ${index + 1}',
+                            child: InkWell(
+                              key: Key('suggested-avatar-$index'),
+                              onTap: _busy ? null : () => _chooseAvatar(index),
+                              customBorder: const CircleBorder(),
+                              child: SuggestedAvatar(index: index, size: side),
+                            ),
+                          ),
+                        ),
+                      ),
+                    );
+                  },
+                ),
+              ],
+              const SizedBox(height: 12),
+            ],
             Text(
               ar
                   ? 'JPEG أو PNG أو WebP · حتى ٢ ميجابايت'

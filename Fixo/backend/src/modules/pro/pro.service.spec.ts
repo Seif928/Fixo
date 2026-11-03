@@ -95,6 +95,7 @@ describe('ProService (Unit Tests)', () => {
   it('rejects non-14-digit synthetic National ID on Screen 11', async () => {
     await expect(
       service.upsertPersonalDetails('user-1', {
+        fullName: 'Test Applicant',
         nationalIdSynthetic: '12345',
         primaryZoneId: 'zone-new-cairo',
         transportMode: TransportMode.MOTORCYCLE,

@@ -189,16 +189,17 @@ describe('Pro Workflows PostgreSQL Real Database Integration Suite (fixo_test)',
         {
           fullName: 'Karim HVAC Master',
           nationalIdSynthetic: '29104150102345',
-          primaryZoneId: zoneCairo.id,
-          transportMode: TransportMode.WORK_VAN,
-          vehicleDescription: 'Silver Chevrolet N300 Van',
-          vehiclePlateAr: 'ق هـ ر ٨٤٢١',
         },
       );
 
       expect(step1.dossierCode).toMatch(/^FX-PRO-\d{4}$/);
       expect(step1.verificationStatus).toBe(ProVerificationStatus.DRAFT);
       expect(step1.step1Complete).toBe(true);
+      expect(step1.primaryZoneId).toBeNull();
+      expect(step1.transportMode).toBeNull();
+      expect(step1.vehicleDescription).toBeNull();
+      expect(step1.coverageZones).toHaveLength(0);
+      expect(step1.fullName).toBe('Karim HVAC Master');
       expect(step1.step2Complete).toBe(false);
       applicantProfileId = step1.id;
 
@@ -223,6 +224,7 @@ describe('Pro Workflows PostgreSQL Real Database Integration Suite (fixo_test)',
 
       expect(step2.step1Complete).toBe(true);
       expect(step2.step2Complete).toBe(true);
+      expect(step2.primaryZoneId).toBe(zoneCairo.id);
       expect(step2.step3Complete).toBe(false);
       expect(step2.subSkills).toHaveLength(2);
     });

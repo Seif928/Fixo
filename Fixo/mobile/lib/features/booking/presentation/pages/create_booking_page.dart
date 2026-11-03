@@ -1,5 +1,6 @@
 import '../../../customer_home/presentation/controllers/customer_home_controller.dart';
 import 'package:flutter/material.dart';
+import '../../../../core/time/app_clock.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../../app/router/app_routes.dart';
@@ -455,6 +456,7 @@ class _CreateBookingPageState extends ConsumerState<CreateBookingPage> {
                         // Date Picker Group
                         BookingDateSelector(
                           selectedDate: state.selectedDate,
+                          today: ref.read(appNowProvider)(),
                           onSelectDate: controller.selectDate,
                           isArabic: isArabic,
                         ),

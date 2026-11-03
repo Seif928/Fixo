@@ -25,6 +25,7 @@ class FakePhoneAccess extends EmailAccessService {
   FakePhoneAccess() : super(Dio());
   int logins = 0, setups = 0;
   int? googleFailureStatus;
+  int? phoneFailureStatus;
   String? savedPhone;
   @override
   Future<AuthSession?> signInWithGoogle() async {
@@ -55,6 +56,16 @@ class FakePhoneAccess extends EmailAccessService {
   Future<AuthSession> signInWithPhone(String phone, String password) async {
     logins++;
     savedPhone = phone;
+    if (phoneFailureStatus != null) {
+      final request = RequestOptions(path: '/auth/phone-password');
+      throw DioException(
+        requestOptions: request,
+        response: Response(
+          requestOptions: request,
+          statusCode: phoneFailureStatus,
+        ),
+      );
+    }
     return const AuthSession(
       accessToken: 'test-access',
       refreshToken: 'test-refresh',
@@ -105,8 +116,15 @@ class _Avatars extends AvatarRepository {
 void main() {
   late FakePhoneAccess access;
   late _Avatars avatars;
-  Future<void> pump(WidgetTester tester, {bool professional = false}) async {
-    SharedPreferences.setMockInitialValues({'fixo.entry.pro': professional});
+  Future<void> pump(
+    WidgetTester tester, {
+    bool professional = false,
+    bool arabic = false,
+  }) async {
+    SharedPreferences.setMockInitialValues({
+      'fixo.entry.pro': professional,
+      'fixo.locale': arabic ? 'ar' : 'en',
+    });
     final preferences = await SharedPreferences.getInstance();
     access = FakePhoneAccess();
     avatars = _Avatars();
@@ -197,6 +215,53 @@ void main() {
     expect(access.savedPhone, '+201023456789');
     expect(find.text('Signed in'), findsOneWidget);
   });
+  for (final arabic in [false, true]) {
+    testWidgets(
+      'field errors and rejected credentials stay distinct (${arabic ? "ar" : "en"})',
+      (tester) async {
+        await pump(tester, arabic: arabic);
+        final phone = find.byKey(const Key('phone-password-number'));
+        final password = find.byKey(const Key('phone-password-secret'));
+        final submit = find.byKey(const Key('phone-password-submit'));
+        await tester.enterText(phone, '123');
+        await tester.enterText(password, 'test-password');
+        await tester.ensureVisible(submit);
+        await tester.tap(submit);
+        await tester.pumpAndSettle();
+        expect(
+          find.text(EgyptPhoneValidator.validate('123', isArabic: arabic)!),
+          findsOneWidget,
+        );
+        expect(access.logins, 0);
+
+        await tester.enterText(phone, '01023456789');
+        await tester.enterText(password, '');
+        await tester.ensureVisible(submit);
+        await tester.tap(submit);
+        await tester.pumpAndSettle();
+        expect(
+          find.text(arabic ? 'أدخل كلمة المرور.' : 'Enter your password.'),
+          findsOneWidget,
+        );
+        expect(access.logins, 0);
+
+        access.phoneFailureStatus = 401;
+        await tester.enterText(password, 'wrong-password');
+        await tester.ensureVisible(submit);
+        await tester.tap(submit);
+        await tester.pumpAndSettle();
+        final message = arabic
+            ? 'رقم الموبايل أو كلمة المرور غير صحيحة. راجعهم أو استخدم «نسيت كلمة المرور؟».'
+            : 'Incorrect phone number or password. Check both or use "Forgot password?".';
+        expect(find.text(message), findsOneWidget);
+        expect(access.logins, 1);
+        await tester.enterText(password, 'corrected-password');
+        await tester.pumpAndSettle();
+        expect(find.text(message), findsNothing);
+      },
+    );
+  }
+
   testWidgets('Google verification failures never accuse the phone or password', (
     tester,
   ) async {

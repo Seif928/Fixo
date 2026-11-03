@@ -250,6 +250,7 @@ model ProProfile {
   userId                     String                @unique
   dossierCode                String                @unique
   nationalIdSynthetic        String
+  legalName                  String?
   primaryCategoryId          String?
   primaryZoneId              String?
   specialtyEn                String?
@@ -260,7 +261,7 @@ model ProProfile {
   badgeAr                    String?
   estimatedPriceEgp          Int                   @default(250)
   reviewsCount               Int                   @default(0)
-  transportMode              TransportMode         @default(MOTORCYCLE)
+  transportMode              TransportMode?
   experienceTier             ExperienceTier        @default(MASTER_8_PLUS_Y)
   acceptsStandardRateCard    Boolean               @default(true)
   toolkitCommitmentConfirmed Boolean               @default(false)

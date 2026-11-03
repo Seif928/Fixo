@@ -75,8 +75,8 @@ class _PhonePasswordPageState extends ConsumerState<PhonePasswordPage> {
       if (error is DioException && error.response?.statusCode == 401) {
         message = error.requestOptions.path == '/auth/phone-password'
             ? (_ar
-                  ? 'رقم الهاتف أو كلمة المرور غير صحيحين.'
-                  : 'Invalid phone or password.')
+                  ? 'رقم الموبايل أو كلمة المرور غير صحيحة. راجعهم أو استخدم «نسيت كلمة المرور؟».'
+                  : 'Incorrect phone number or password. Check both or use "Forgot password?".')
             : (_ar
                   ? 'تعذّر التحقق من تسجيل الدخول. تابع بحساب جوجل وحاول مرة أخرى.'
                   : 'Your sign-in could not be verified. Continue with Google and try again.');
@@ -97,6 +97,10 @@ class _PhonePasswordPageState extends ConsumerState<PhonePasswordPage> {
     } finally {
       if (mounted) setState(() => _busy = false);
     }
+  }
+
+  void _clearSignInError(String _) {
+    if (_error != null) setState(() => _error = null);
   }
 
   Future<void> _accept(AuthSession session) async {
@@ -124,6 +128,7 @@ class _PhonePasswordPageState extends ConsumerState<PhonePasswordPage> {
       rationaleAr:
           'اختار صورة لحسابك على FIXO. تقدر تغيرها من البروفايل بعدين.',
       defaultFilePrefix: 'avatar',
+      allowSuggestedAvatars: true,
     );
     if (mounted && selected != null) setState(() => _photo = selected);
   }
@@ -459,6 +464,7 @@ class _PhonePasswordPageState extends ConsumerState<PhonePasswordPage> {
                           TextFormField(
                             key: const Key('phone-password-number'),
                             controller: _phone,
+                            onChanged: _clearSignInError,
                             enabled: !_busy,
                             textDirection: TextDirection.ltr,
                             keyboardType: TextInputType.phone,
@@ -487,6 +493,7 @@ class _PhonePasswordPageState extends ConsumerState<PhonePasswordPage> {
                           TextFormField(
                             key: const Key('phone-password-secret'),
                             controller: _password,
+                            onChanged: _clearSignInError,
                             enabled: !_busy,
                             obscureText: _obscure,
                             autofillHints: [
@@ -519,14 +526,24 @@ class _PhonePasswordPageState extends ConsumerState<PhonePasswordPage> {
                                 ),
                               ),
                             ),
-                            validator: (v) =>
-                                (v?.isEmpty ?? true) ||
-                                    (setup && v!.length < 12) ||
-                                    (v?.length ?? 0) > 128
-                                ? (ar
-                                      ? 'أدخل كلمة المرور؛ للحساب الجديد 12 حرفاً على الأقل.'
-                                      : 'Enter your password; new accounts require at least 12 characters.')
-                                : null,
+                            validator: (v) {
+                              if (v == null || v.isEmpty) {
+                                return ar
+                                    ? 'أدخل كلمة المرور.'
+                                    : 'Enter your password.';
+                              }
+                              if (setup && v.length < 12) {
+                                return ar
+                                    ? 'كلمة المرور لازم تكون 12 حرفاً على الأقل.'
+                                    : 'Use at least 12 characters for your password.';
+                              }
+                              if (v.length > 128) {
+                                return ar
+                                    ? 'كلمة المرور لازم تكون 128 حرفاً أو أقل.'
+                                    : 'Your password must be 128 characters or fewer.';
+                              }
+                              return null;
+                            },
                           ),
                           if (setup) ...[
                             const SizedBox(height: 16),
@@ -742,8 +759,8 @@ class _PhonePasswordPageState extends ConsumerState<PhonePasswordPage> {
                               Flexible(
                                 child: Text(
                                   ar
-                                      ? 'خدمات القاهرة والجيزة'
-                                      : 'Cairo & Giza Services',
+                                      ? 'اختار محافظتك في مصر'
+                                      : 'Choose your governorate in Egypt',
                                   style: FixoTypography.bodySm(
                                     color: palette.mutedText,
                                     locale: locale,

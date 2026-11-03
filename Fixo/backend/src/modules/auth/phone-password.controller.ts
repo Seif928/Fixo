@@ -1,4 +1,11 @@
-import { Body, Controller, HttpCode, Post, UseGuards } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  HttpCode,
+  Patch,
+  Post,
+  UseGuards,
+} from '@nestjs/common';
 import { Transform } from 'class-transformer';
 import { IsString, Matches, MaxLength, MinLength } from 'class-validator';
 import { CurrentUser } from './decorators/current-user.decorator';
@@ -13,14 +20,35 @@ export class PhonePasswordDto extends PhoneAliasDto {
   @IsString() @MinLength(1) @MaxLength(128) password!: string;
 }
 export class FirstProfileDto extends PhoneAliasDto {
-  @Transform(({ value }: { value: unknown }) => typeof value === 'string' ? value.trim() : value)
-  @IsString() @MinLength(2) @MaxLength(100) @Matches(/^[^\x00-\x1f\x7f]+$/) fullName!: string;
+  @Transform(({ value }: { value: unknown }) =>
+    typeof value === 'string' ? value.trim() : value,
+  )
+  @IsString()
+  @MinLength(2)
+  @MaxLength(100)
+  @Matches(/^[^\x00-\x1f\x7f]+$/)
+  fullName!: string;
 }
 @Controller('auth')
 export class PhonePasswordController {
   constructor(private readonly service: PhonePasswordService) {}
-  @Post('phone-password') @HttpCode(200)
-  signIn(@Body() dto: PhonePasswordDto) { return this.service.signIn(dto); }
-  @Post('first-profile') @HttpCode(200) @UseGuards(JwtAuthGuard)
-  complete(@CurrentUser() user: FixoJwtPayload, @Body() dto: FirstProfileDto) { return this.service.completeProfile(user.sub, dto); }
+  @Post('phone-password')
+  @HttpCode(200)
+  signIn(@Body() dto: PhonePasswordDto) {
+    return this.service.signIn(dto);
+  }
+  @Patch('phone-alias')
+  @UseGuards(JwtAuthGuard)
+  changePhone(
+    @CurrentUser() user: FixoJwtPayload,
+    @Body() dto: PhonePasswordDto,
+  ) {
+    return this.service.changePhone(user.sub, dto);
+  }
+  @Post('first-profile')
+  @HttpCode(200)
+  @UseGuards(JwtAuthGuard)
+  complete(@CurrentUser() user: FixoJwtPayload, @Body() dto: FirstProfileDto) {
+    return this.service.completeProfile(user.sub, dto);
+  }
 }

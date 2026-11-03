@@ -89,7 +89,7 @@ class _ProVerificationDocsPageState
       rationaleEn:
           'Upload clear photos of the front and back of your ID and your criminal record certificate. Only you and authorized FIXO reviewers can access them.',
       rationaleAr:
-          'مستندات التحقق القومي والجنائي مشفرة بالكامل وخاصة، وتراجع حصرياً من قِبل لجان التوثيق المعتمدة في فيكسو.',
+          'ارفع صور واضحة لوش البطاقة وضهرها والفيش الجنائي. تقدر تشوفها أنت ومراجعو FIXO المصرح لهم فقط.',
       defaultFilePrefix: 'pro_${docType.toLowerCase()}',
     );
 

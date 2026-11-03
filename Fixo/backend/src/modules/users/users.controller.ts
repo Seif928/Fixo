@@ -6,6 +6,7 @@ import {
   HttpStatus,
   NotFoundException,
   Post,
+  Patch,
   UseGuards,
 } from '@nestjs/common';
 import {
@@ -28,6 +29,7 @@ import {
 } from './dto/address-response.dto';
 import { CreateAddressDto } from './dto/create-address.dto';
 import { UsersService } from './users.service';
+import { UpdateProfileDto } from './dto/update-profile.dto';
 
 @ApiTags('users')
 @ApiBearerAuth()
@@ -38,6 +40,20 @@ export class UsersController {
     private readonly prisma: PrismaService,
     private readonly usersService: UsersService,
   ) {}
+
+  @Patch('me/profile')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.CUSTOMER, UserRole.PRO, UserRole.ADMIN)
+  @ApiOperation({ summary: 'Update the authenticated display name' })
+  async updateProfile(
+    @CurrentUser() actor: FixoJwtPayload,
+    @Body() dto: UpdateProfileDto,
+  ) {
+    await this.usersService.updateDisplayName(actor.sub, dto.fullName);
+    const user = await this.authService.findUserById(actor.sub);
+    if (!user) throw new NotFoundException('Account not found.');
+    return user;
+  }
 
   @Get('me')
   @UseGuards(JwtAuthGuard, RolesGuard)
@@ -55,7 +71,9 @@ export class UsersController {
     if (!profile) {
       throw new NotFoundException('Authenticated user profile not found.');
     }
-    const addresses = await this.usersService.findUserAddresses(currentUser.sub);
+    const addresses = await this.usersService.findUserAddresses(
+      currentUser.sub,
+    );
 
     return {
       user: {
@@ -116,11 +134,12 @@ export class UsersController {
   async getAddresses(
     @CurrentUser() currentUser: FixoJwtPayload,
   ): Promise<CustomerAddressListResponse> {
-    const addresses = await this.usersService.findUserAddresses(currentUser.sub);
+    const addresses = await this.usersService.findUserAddresses(
+      currentUser.sub,
+    );
     return {
       addresses,
       total: addresses.length,
     };
   }
 }
-

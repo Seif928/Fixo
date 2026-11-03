@@ -17,6 +17,7 @@ import '../../customer_home/presentation/widgets/customer_home_widgets.dart';
 import '../../../core/uploads/private_media_picker_sheet.dart';
 import '../data/avatar_repository.dart';
 import 'profile_avatar.dart';
+import 'profile_details_dialog.dart';
 
 /// Screen 10: live Stitch profile/alerts cards, with persisted real preferences.
 class ProfilePage extends ConsumerStatefulWidget {
@@ -29,6 +30,27 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
   late Future<Map<String, dynamic>> _profile;
   bool _saving = false;
   bool get _ar => ref.read(appLocaleProvider).languageCode == 'ar';
+
+  Future<void> _editDetails(String initialValue, {bool isPhone = false}) async {
+    final owner = ref.read(authControllerProvider).session?.user.id;
+    final saved = await showDialog<bool>(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => ProfileDetailsDialog(
+        initialValue: initialValue,
+        isPhone: isPhone,
+        isArabic: _ar,
+      ),
+    );
+    if (saved == true &&
+        mounted &&
+        owner == ref.read(authControllerProvider).session?.user.id) {
+      setState(() {
+        _profile = _load();
+      });
+    }
+  }
+
   @override
   void initState() {
     super.initState();
@@ -50,15 +72,17 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
       await action();
     } catch (_) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              _ar
-                  ? 'تعذر حفظ الإعداد. حاول مرة أخرى.'
-                  : 'Could not save this setting. Please retry.',
+        ScaffoldMessenger.of(context)
+          ..hideCurrentSnackBar()
+          ..showSnackBar(
+            SnackBar(
+              content: Text(
+                _ar
+                    ? 'تعذر حفظ الإعداد. حاول مرة أخرى.'
+                    : 'Could not save this setting. Please retry.',
+              ),
             ),
-          ),
-        );
+          );
       }
     } finally {
       if (mounted) setState(() => _saving = false);
@@ -75,6 +99,8 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
   }
 
   Future<void> _editPhoto() async {
+    final userId = ref.read(authControllerProvider).session?.user.id;
+    if (userId == null) return;
     final selected = await PrivateMediaPickerSheet.show(
       context,
       isArabic: _ar,
@@ -84,17 +110,36 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
           'Choose a new profile photo. Your current photo stays until the upload succeeds.',
       rationaleAr: 'اختار صورة جديدة. الصورة الحالية هتفضل لحد ما الرفع ينجح.',
       defaultFilePrefix: 'avatar',
+      allowSuggestedAvatars: true,
     );
-    if (selected == null || !mounted) return;
-    final userId = ref.read(authControllerProvider).session?.user.id;
+    if (selected == null ||
+        !mounted ||
+        ref.read(authControllerProvider).session?.user.id != userId) {
+      return;
+    }
     await _save(() async {
       final version = await ref.read(avatarRepositoryProvider).upload(selected);
       if (!mounted) return;
       final currentUser = ref.read(authControllerProvider).session?.user;
-      if (userId != null && currentUser?.id == userId) {
-        await ref.read(authControllerProvider.notifier).acceptUpdatedProfile(currentUser!.withAvatar(version));
+      if (currentUser?.id == userId) {
+        await ref
+            .read(authControllerProvider.notifier)
+            .acceptUpdatedProfile(currentUser!.withAvatar(version));
       }
-      if (mounted) setState(() => _profile = _load());
+      if (mounted && currentUser?.id == userId) {
+        setState(() {
+          _profile = _load();
+        });
+        ScaffoldMessenger.of(context)
+          ..hideCurrentSnackBar()
+          ..showSnackBar(
+            SnackBar(
+              content: Text(
+                _ar ? 'تم تحديث صورة الحساب.' : 'Profile photo updated.',
+              ),
+            ),
+          );
+      }
     });
   }
 
@@ -212,23 +257,59 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
                           Row(
                             crossAxisAlignment: CrossAxisAlignment.center,
                             children: [
-                              SizedBox(width: 88, height: 88, child: Stack(
-                                children: [
-                                  PositionedDirectional(start: 0, top: 0, child: ProfileAvatar(
-                                    userId: user['id'] as String? ?? '',
-                                    hasAvatar: user['hasAvatar'] == true,
-                                    version: user['avatarVersion'] as String?,
-                                    size: 80,
-                                  )),
-                                  PositionedDirectional(end: 0, bottom: 0, child: IconButton.filled(
-                                    key: const Key('profile-change-photo'),
-                                    onPressed: _saving ? null : _editPhoto,
-                                    tooltip: ar ? 'تغيير الصورة' : 'Change photo',
-                                    style: IconButton.styleFrom(minimumSize: const Size(48, 48), backgroundColor: palette.primaryBrand, foregroundColor: palette.limeAccent),
-                                    icon: const Icon(Icons.photo_camera_outlined, size: 21),
-                                  )),
-                                ],
-                              )),
+                              SizedBox(
+                                width: 88,
+                                height: 88,
+                                child: Stack(
+                                  children: [
+                                    PositionedDirectional(
+                                      start: 0,
+                                      top: 0,
+                                      child: Tooltip(
+                                        message: ar
+                                            ? 'تغيير الصورة'
+                                            : 'Change photo',
+                                        child: InkWell(
+                                          key: const Key(
+                                            'profile-photo-button',
+                                          ),
+                                          onTap: _saving ? null : _editPhoto,
+                                          customBorder: const CircleBorder(),
+                                          child: ProfileAvatar(
+                                            userId: user['id'] as String? ?? '',
+                                            hasAvatar:
+                                                user['hasAvatar'] == true,
+                                            version:
+                                                user['avatarVersion']
+                                                    as String?,
+                                            size: 80,
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                    PositionedDirectional(
+                                      end: 0,
+                                      bottom: 0,
+                                      child: IconButton.filled(
+                                        key: const Key('profile-change-photo'),
+                                        onPressed: _saving ? null : _editPhoto,
+                                        tooltip: ar
+                                            ? 'تغيير الصورة'
+                                            : 'Change photo',
+                                        style: IconButton.styleFrom(
+                                          minimumSize: const Size(48, 48),
+                                          backgroundColor: palette.primaryBrand,
+                                          foregroundColor: palette.limeAccent,
+                                        ),
+                                        icon: const Icon(
+                                          Icons.photo_camera_outlined,
+                                          size: 21,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
                               const SizedBox(width: FixoSpacing.md),
                               Expanded(
                                 child: Column(
@@ -257,11 +338,31 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
                                       ),
                                     ),
                                     const SizedBox(height: 6),
-                                    Text(
-                                      fullName,
-                                      style: textTheme.headlineSmall?.copyWith(
-                                        fontWeight: FontWeight.w800,
-                                      ),
+                                    Row(
+                                      children: [
+                                        Expanded(
+                                          child: Text(
+                                            fullName,
+                                            style: textTheme.headlineSmall
+                                                ?.copyWith(
+                                                  fontWeight: FontWeight.w800,
+                                                ),
+                                          ),
+                                        ),
+                                        IconButton(
+                                          key: const Key('profile-edit-name'),
+                                          tooltip: ar
+                                              ? 'تعديل الاسم'
+                                              : 'Edit name',
+                                          onPressed: _saving
+                                              ? null
+                                              : () => _editDetails(fullName),
+                                          icon: const Icon(
+                                            Icons.edit_outlined,
+                                            size: 20,
+                                          ),
+                                        ),
+                                      ],
                                     ),
                                   ],
                                 ),
@@ -314,6 +415,20 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
                                       color: palette.inkText,
                                       fontWeight: FontWeight.w700,
                                     ),
+                                  ),
+                                ),
+                                IconButton(
+                                  key: const Key('profile-edit-phone'),
+                                  tooltip: ar
+                                      ? 'تغيير رقم الدخول'
+                                      : 'Change sign-in phone',
+                                  onPressed: _saving
+                                      ? null
+                                      : () =>
+                                            _editDetails(phone, isPhone: true),
+                                  icon: const Icon(
+                                    Icons.edit_outlined,
+                                    size: 20,
                                   ),
                                 ),
                               ],
@@ -711,6 +826,7 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
               ),
               borderRadius: FixoRadius.borderRadiusLg,
               child: TextButton.icon(
+                key: const Key('profile-sign-out'),
                 style: TextButton.styleFrom(foregroundColor: FixoColors.error),
                 onPressed: _saving
                     ? null

@@ -146,10 +146,18 @@ export class ProService {
   }
 
   /**
-   * Screen 11 (Step 1 of 4): Personal Details, Synthetic 14-digit National ID,
-   * Primary Coverage Zone, and Transport Mode (`POST /pro/onboarding/personal`).
+   * Screen 11 (Step 1 of 4): legal name and 14-digit National ID.
+   * Legacy clients may still send optional transport and primary zone fields.
    */
   async upsertPersonalDetails(userId: string, dto: ProPersonalDetailsDto) {
+    if (
+      !dto.fullName?.trim() ||
+      dto.fullName.trim().length < 3 ||
+      dto.fullName.trim().length > 120 ||
+      /[\x00-\x1f\x7f]/.test(dto.fullName)
+    ) {
+      throw new BadRequestException('Enter your full legal name.');
+    }
     if (!/^\d{14}$/.test(dto.nationalIdSynthetic.trim())) {
       throw new BadRequestException(
         'nationalIdSynthetic must be an exact 14-digit number.',
@@ -164,11 +172,13 @@ export class ProService {
         where: { userId },
       });
       if (existing) this.assertDossierEditable(existing.verificationStatus);
-      const zone = await tx.coverageZone.findUnique({
-        where: { id: dto.primaryZoneId },
-      });
+      const zone = dto.primaryZoneId
+        ? await tx.coverageZone.findUnique({
+            where: { id: dto.primaryZoneId },
+          })
+        : null;
 
-      if (!zone || !zone.isActive) {
+      if (dto.primaryZoneId && (!zone || !zone.isActive)) {
         throw new NotFoundException(
           `Active coverage zone "${dto.primaryZoneId}" was not found.`,
         );
@@ -189,12 +199,19 @@ export class ProService {
             where: { userId },
             data: {
               nationalIdSynthetic: dto.nationalIdSynthetic.trim(),
-              primaryZoneId: zone.id,
+              ...(dto.fullName?.trim()
+                ? { legalName: dto.fullName.trim() }
+                : {}),
+              ...(zone ? { primaryZoneId: zone.id } : {}),
               transportMode: dto.transportMode,
-              vehicleDescription: dto.vehicleDescription?.trim() || null,
-              vehiclePlateAr: dto.vehiclePlateAr?.trim() || null,
-              zonesLabelEn: existing?.zonesLabelEn || zone.nameEn,
-              zonesLabelAr: existing?.zonesLabelAr || zone.nameAr,
+              ...(dto.vehicleDescription !== undefined
+                ? { vehicleDescription: dto.vehicleDescription.trim() || null }
+                : {}),
+              ...(dto.vehiclePlateAr !== undefined
+                ? { vehiclePlateAr: dto.vehiclePlateAr.trim() || null }
+                : {}),
+              zonesLabelEn: existing?.zonesLabelEn || zone?.nameEn || null,
+              zonesLabelAr: existing?.zonesLabelAr || zone?.nameAr || null,
             },
             include: this.proProfileInclude,
           })
@@ -203,16 +220,17 @@ export class ProService {
               userId,
               dossierCode,
               nationalIdSynthetic: dto.nationalIdSynthetic.trim(),
-              primaryZoneId: zone.id,
-              transportMode: dto.transportMode,
+              legalName: dto.fullName?.trim() || null,
+              primaryZoneId: zone?.id ?? null,
+              transportMode: dto.transportMode ?? null,
               vehicleDescription: dto.vehicleDescription?.trim() || null,
               vehiclePlateAr: dto.vehiclePlateAr?.trim() || null,
-              zonesLabelEn: zone.nameEn,
-              zonesLabelAr: zone.nameAr,
+              zonesLabelEn: zone?.nameEn ?? null,
+              zonesLabelAr: zone?.nameAr ?? null,
               verificationStatus: ProVerificationStatus.DRAFT,
-              coverageZones: {
-                connect: [{ id: zone.id }],
-              },
+              ...(zone
+                ? { coverageZones: { connect: [{ id: zone.id }] } }
+                : {}),
             },
             include: this.proProfileInclude,
           });
@@ -236,7 +254,7 @@ export class ProService {
 
       if (!existing) {
         throw new BadRequestException(
-          'Please complete Step 1 (Personal & Transport Details) before configuring skills.',
+          'Please complete Step 1 (Personal Details) before configuring skills.',
         );
       }
 
@@ -292,6 +310,11 @@ export class ProService {
         where: { userId },
         data: {
           primaryCategoryId: category.id,
+          primaryZoneId:
+            existing.primaryZoneId &&
+            uniqueZoneIds.includes(existing.primaryZoneId)
+              ? existing.primaryZoneId
+              : uniqueZoneIds[0],
           experienceTier: dto.experienceTier,
           acceptsStandardRateCard: dto.acceptsStandardRateCard,
           toolkitCommitmentConfirmed: dto.toolkitCommitmentConfirmed,
@@ -503,14 +526,15 @@ export class ProService {
         );
       }
 
-      if (!profile.nationalIdSynthetic || !profile.primaryZoneId) {
+      if (!profile.nationalIdSynthetic) {
         throw new BadRequestException(
-          'Step 1 (Personal & Transport Details) is incomplete.',
+          'Step 1 (Personal Details) is incomplete.',
         );
       }
 
       if (
         !profile.primaryCategoryId ||
+        !profile.primaryZoneId ||
         profile.coverageZones.length === 0 ||
         !profile.toolkitCommitmentConfirmed
       ) {
@@ -1586,9 +1610,7 @@ export class ProService {
       : [];
 
     const uploadedDocTypes = new Set(docs.map((d: any) => d.docType));
-    const step1Complete = Boolean(
-      profile.nationalIdSynthetic && profile.primaryZoneId,
-    );
+    const step1Complete = Boolean(profile.nationalIdSynthetic);
     const step2Complete = Boolean(
       profile.primaryCategoryId &&
         Array.isArray(profile.coverageZones) &&
@@ -1603,6 +1625,7 @@ export class ProService {
       id: profile.id,
       userId: profile.userId,
       dossierCode: profile.dossierCode,
+      fullName: profile.legalName ?? profile.user?.fullName ?? null,
       nationalIdSynthetic: profile.nationalIdSynthetic,
       primaryCategoryId: profile.primaryCategoryId ?? null,
       primaryZoneId: profile.primaryZoneId ?? null,

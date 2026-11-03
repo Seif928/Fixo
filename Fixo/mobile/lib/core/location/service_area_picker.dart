@@ -10,17 +10,28 @@ Future<SelectedServiceArea?> showServiceAreaPicker(
   BuildContext context, {
   required bool isArabic,
   SelectedServiceArea? initial,
+  bool startWithGovernorates = false,
 }) => showModalBottomSheet<SelectedServiceArea>(
   context: context,
   isScrollControlled: true,
   useSafeArea: true,
   constraints: const BoxConstraints(maxWidth: 600),
-  builder: (_) => ServiceAreaPicker(isArabic: isArabic, initial: initial),
+  builder: (_) => ServiceAreaPicker(
+    isArabic: isArabic,
+    initial: initial,
+    startWithGovernorates: startWithGovernorates,
+  ),
 );
 
 class ServiceAreaPicker extends ConsumerStatefulWidget {
-  const ServiceAreaPicker({super.key, required this.isArabic, this.initial});
+  const ServiceAreaPicker({
+    super.key,
+    required this.isArabic,
+    this.initial,
+    this.startWithGovernorates = false,
+  });
   final bool isArabic;
+  final bool startWithGovernorates;
   final SelectedServiceArea? initial;
   @override
   ConsumerState<ServiceAreaPicker> createState() => _ServiceAreaPickerState();
@@ -82,6 +93,7 @@ class _ServiceAreaPickerState extends ConsumerState<ServiceAreaPicker> {
     setState(() {
       _detectionEpoch++;
       _detecting = false;
+      _locationError = null;
       _governorate = gov;
       _selection = SelectedServiceArea(
         zoneSlug: gov.slug!,
@@ -185,7 +197,9 @@ class _ServiceAreaPickerState extends ConsumerState<ServiceAreaPicker> {
                             (g) => g.slug == widget.initial?.zoneSlug,
                           );
                           if (matches.isNotEmpty) {
-                            _governorate = matches.first;
+                            if (!widget.startWithGovernorates) {
+                              _governorate = matches.first;
+                            }
                             _selection = widget.initial;
                             _manual.text = ar
                                 ? widget.initial!.localityAr

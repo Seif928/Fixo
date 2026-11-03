@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../customer_home/domain/marketplace_models.dart';
 import '../../data/booking_repository.dart';
 import '../../domain/booking_models.dart';
+import '../../../../core/time/app_clock.dart';
 
 /// State of the Create Booking screen (Screen 04).
 class CreateBookingState {
@@ -84,19 +85,21 @@ class CreateBookingState {
 
 /// Controller managing booking draft creation, address loading, slot selection, and submission.
 class CreateBookingController extends StateNotifier<CreateBookingState> {
-  CreateBookingController(this._repository)
-      : super(CreateBookingState(
-          selectedDate: _computeDefaultScheduledDate(),
+  CreateBookingController(this._repository, {DateTime? today})
+    : super(
+        CreateBookingState(
+          selectedDate: _computeDefaultScheduledDate(today),
           isLoadingAddresses: true,
-        )) {
+        ),
+      ) {
     loadAddresses();
     loadCoverageZones();
   }
 
   final BookingRepository _repository;
 
-  static DateTime _computeDefaultScheduledDate() {
-    final now = DateTime.now();
+  static DateTime _computeDefaultScheduledDate(DateTime? today) {
+    final now = today ?? DateTime.now();
     return DateTime(now.year, now.month, now.day + 1);
   }
 
@@ -133,20 +136,16 @@ class CreateBookingController extends StateNotifier<CreateBookingState> {
     state = state.copyWith(isLoadingZones: true);
     try {
       final zones = await _repository.getCoverageZones();
-      state = state.copyWith(
-        isLoadingZones: false,
-        coverageZones: zones,
-      );
+      state = state.copyWith(isLoadingZones: false, coverageZones: zones);
     } catch (_) {
-      state = state.copyWith(
-        isLoadingZones: false,
-        coverageZones: const [],
-      );
+      state = state.copyWith(isLoadingZones: false, coverageZones: const []);
     }
   }
 
   /// Creates and selects a new delivery address via `POST /api/v1/users/me/addresses`.
-  Future<CustomerAddressModel?> createAddress(CreateAddressRequest request) async {
+  Future<CustomerAddressModel?> createAddress(
+    CreateAddressRequest request,
+  ) async {
     state = state.copyWith(
       isCreatingAddress: true,
       clearAddressCreationError: true,
@@ -214,24 +213,15 @@ class CreateBookingController extends StateNotifier<CreateBookingState> {
   }
 
   void selectAddress(CustomerAddressModel address) {
-    state = state.copyWith(
-      selectedAddress: address,
-      clearError: true,
-    );
+    state = state.copyWith(selectedAddress: address, clearError: true);
   }
 
   void selectDate(DateTime date) {
-    state = state.copyWith(
-      selectedDate: date,
-      clearError: true,
-    );
+    state = state.copyWith(selectedDate: date, clearError: true);
   }
 
   void selectTimeWindow(String window) {
-    state = state.copyWith(
-      selectedTimeWindow: window,
-      clearError: true,
-    );
+    state = state.copyWith(selectedTimeWindow: window, clearError: true);
   }
 
   void setIssueDescription(String text) {
@@ -274,17 +264,15 @@ class CreateBookingController extends StateNotifier<CreateBookingState> {
       preferredProId: preferredPro?.id,
       scheduledDate: scheduledDateStr,
       timeWindow: state.selectedTimeWindow,
-      issueDescription:
-          state.issueDescription.isNotEmpty ? state.issueDescription : null,
+      issueDescription: state.issueDescription.isNotEmpty
+          ? state.issueDescription
+          : null,
       issuePhotoUrls: state.issuePhotoUrls,
     );
 
     try {
       final booking = await _repository.createBooking(request);
-      state = state.copyWith(
-        isSubmitting: false,
-        successBooking: booking,
-      );
+      state = state.copyWith(isSubmitting: false, successBooking: booking);
       return true;
     } on DioException catch (e) {
       String message =
@@ -297,25 +285,20 @@ class CreateBookingController extends StateNotifier<CreateBookingState> {
           message = serverMsg.join(', ');
         }
       }
-      state = state.copyWith(
-        isSubmitting: false,
-        errorMessage: message,
-      );
+      state = state.copyWith(isSubmitting: false, errorMessage: message);
       return false;
     } catch (e) {
-      state = state.copyWith(
-        isSubmitting: false,
-        errorMessage: e.toString(),
-      );
+      state = state.copyWith(isSubmitting: false, errorMessage: e.toString());
       return false;
     }
   }
 }
 
 final createBookingControllerProvider =
-    StateNotifierProvider.autoDispose<CreateBookingController, CreateBookingState>(
-  (ref) {
-    final repo = ref.watch(bookingRepositoryProvider);
-    return CreateBookingController(repo);
-  },
-);
+    StateNotifierProvider.autoDispose<
+      CreateBookingController,
+      CreateBookingState
+    >((ref) {
+      final repo = ref.watch(bookingRepositoryProvider);
+      return CreateBookingController(repo, today: ref.read(appNowProvider)());
+    });

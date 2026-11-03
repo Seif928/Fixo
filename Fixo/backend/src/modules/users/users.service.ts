@@ -2,16 +2,30 @@ import {
   BadRequestException,
   Injectable,
   NotFoundException,
+  ServiceUnavailableException,
 } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
-import {
-  CustomerAddressResponse,
-} from './dto/address-response.dto';
+import { CustomerAddressResponse } from './dto/address-response.dto';
 import { CreateAddressDto } from './dto/create-address.dto';
 
 @Injectable()
 export class UsersService {
   constructor(private readonly prisma: PrismaService) {}
+
+  async updateDisplayName(userId: string, fullName: string) {
+    if (!this.prisma.isDatabaseConnected())
+      throw new ServiceUnavailableException(
+        'Profile changes require database persistence.',
+      );
+    const name = fullName.trim();
+    if (name.length < 2 || name.length > 100 || /[\x00-\x1f\x7f]/.test(name))
+      throw new BadRequestException('Enter a valid name.');
+    // Only the public display name changes; ProProfile.legalName stays reviewed.
+    await this.prisma.user.update({
+      where: { id: userId },
+      data: { fullName: name },
+    });
+  }
 
   /**
    * Formats a Prisma CustomerAddress record with its associated CoverageZone
@@ -82,9 +96,7 @@ export class UsersService {
       },
     });
     if (!zone) {
-      throw new NotFoundException(
-        `Coverage zone "${dto.zoneId}" not found.`,
-      );
+      throw new NotFoundException(`Coverage zone "${dto.zoneId}" not found.`);
     }
     if (!zone.isActive) {
       throw new BadRequestException(
@@ -172,4 +184,3 @@ export class UsersService {
     return addresses.map((addr) => this.formatAddressResponse(addr));
   }
 }
-

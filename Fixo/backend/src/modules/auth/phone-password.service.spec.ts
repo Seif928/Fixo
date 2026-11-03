@@ -26,13 +26,11 @@ describe('Phone alias and Firebase password authentication', () => {
     db.$transaction = jest.fn((callback) => callback(db));
     gateway = { signIn: jest.fn().mockResolvedValue('signed-id-token') };
     verifier = {
-      verify: jest
-        .fn()
-        .mockResolvedValue({
-          uid: 'google-uid',
-          email_verified: true,
-          auth_time: 1234,
-        }),
+      verify: jest.fn().mockResolvedValue({
+        uid: 'google-uid',
+        email_verified: true,
+        auth_time: 1234,
+      }),
     };
     sessions = {
       issueVerifiedUserSession: jest
@@ -107,4 +105,54 @@ describe('Phone alias and Firebase password authentication', () => {
     ).rejects.toThrow(ConflictException);
     expect(db.user.update).not.toHaveBeenCalled();
   });
+
+  it('changes an alias only after a fresh password proof for the same identity and revokes previous refresh sessions', async () => {
+    const now = Math.floor(Date.now() / 1000);
+    verifier.verify.mockResolvedValue({
+      uid: account.firebaseUid,
+      email_verified: true,
+      auth_time: now,
+    });
+    db.refreshToken = { updateMany: jest.fn().mockResolvedValue({ count: 2 }) };
+    await (service as any).changePhone(account.id, {
+      phone: '01123456789',
+      password: 'current-test-password',
+    });
+    expect(gateway.signIn).toHaveBeenCalledWith(
+      account.email,
+      'current-test-password',
+    );
+    expect(db.user.update).toHaveBeenCalledWith({
+      where: { id: account.id },
+      data: { phone: '+201123456789' },
+    });
+    expect(db.refreshToken.updateMany).toHaveBeenCalledWith({
+      where: { userId: account.id, revokedAt: null },
+      data: { revokedAt: expect.any(Date) },
+    });
+    expect(sessions.issueVerifiedUserSession).toHaveBeenCalledWith(
+      account.id,
+      now,
+    );
+  });
+  it.each(['different identity', 'unverified email', 'old proof'])(
+    'refuses phone changes with %s',
+    async (reason) => {
+      verifier.verify.mockResolvedValue({
+        uid:
+          reason === 'different identity' ? 'another-uid' : account.firebaseUid,
+        email_verified: reason !== 'unverified email',
+        auth_time:
+          reason === 'old proof' ? 1234 : Math.floor(Date.now() / 1000),
+      });
+      await expect(
+        (service as any).changePhone(account.id, {
+          phone: '01123456789',
+          password: 'current-test-password',
+        }),
+      ).rejects.toThrow(UnauthorizedException);
+      expect(db.user.update).not.toHaveBeenCalled();
+      expect(sessions.issueVerifiedUserSession).not.toHaveBeenCalled();
+    },
+  );
 });

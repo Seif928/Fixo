@@ -78,6 +78,64 @@ export class PhonePasswordService {
     return this.sessions.issueVerifiedUserSession(user.id, identity.auth_time);
   }
 
+  async changePhone(userId: string, dto: { phone: string; password: string }) {
+    if (!this.prisma.isDatabaseConnected())
+      throw new ServiceUnavailableException(
+        'Phone changes require database persistence.',
+      );
+    const phone = normalizeEgyptPhone(dto.phone);
+    const account = await this.prisma.user.findUnique({
+      where: { id: userId },
+    });
+    if (!account?.firebaseUid || !account.email)
+      throw new UnauthorizedException('Confirm your linked account first.');
+    const token = await this.gateway.signIn(account.email, dto.password);
+    const identity = await this.verifier.verify(token);
+    const now = Math.floor(Date.now() / 1000);
+    if (
+      identity.uid !== account.firebaseUid ||
+      identity.email_verified !== true ||
+      !Number.isFinite(identity.auth_time) ||
+      identity.auth_time < now - 300 ||
+      identity.auth_time > now + 30
+    ) {
+      throw new UnauthorizedException(
+        'A fresh account confirmation is required.',
+      );
+    }
+    try {
+      await this.prisma.$transaction(async (tx) => {
+        await tx.$queryRaw`SELECT id FROM "User" WHERE id = ${userId} FOR UPDATE`;
+        const current = await tx.user.findUnique({ where: { id: userId } });
+        if (
+          !current ||
+          current.firebaseUid !== account.firebaseUid ||
+          current.email !== account.email ||
+          current.phone !== account.phone
+        ) {
+          throw new ConflictException('Your account changed. Please retry.');
+        }
+        await tx.user.update({ where: { id: userId }, data: { phone } });
+        await tx.refreshToken.updateMany({
+          where: { userId, revokedAt: null },
+          data: { revokedAt: new Date() },
+        });
+      });
+    } catch (error) {
+      if (
+        error &&
+        typeof error === 'object' &&
+        'code' in error &&
+        error.code === 'P2002'
+      )
+        throw new ConflictException(
+          'This phone cannot be used for this account.',
+        );
+      throw error;
+    }
+    return this.sessions.issueVerifiedUserSession(userId, identity.auth_time);
+  }
+
   async completeProfile(
     actor: string,
     dto: { fullName: string; phone: string },

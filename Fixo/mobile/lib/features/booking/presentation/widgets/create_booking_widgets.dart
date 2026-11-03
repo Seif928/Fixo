@@ -538,9 +538,11 @@ class BookingDateSelector extends StatelessWidget {
     required this.selectedDate,
     required this.onSelectDate,
     required this.isArabic,
+    this.today,
   });
 
   final DateTime selectedDate;
+  final DateTime? today;
   final ValueChanged<DateTime> onSelectDate;
   final bool isArabic;
 
@@ -594,7 +596,7 @@ class BookingDateSelector extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final palette = context.fixoPalette;
-    final now = DateTime.now();
+    final now = today ?? DateTime.now();
 
     // Generate 4 consecutive days starting from tomorrow
     final dates = List.generate(

@@ -139,8 +139,8 @@ class FakeProRepository implements ProRepository {
   Future<ProProfileModel> savePersonalDetails({
     String? fullName,
     required String nationalIdSynthetic,
-    required String primaryZoneId,
-    required String transportMode,
+    String? primaryZoneId,
+    String? transportMode,
     String? vehicleDescription,
     String? vehiclePlateAr,
   }) async {
@@ -518,8 +518,9 @@ void main() {
         expect(find.text('FIXO Pro Onboarding'), findsOneWidget);
         expect(find.text('Step 1 of 4'), findsOneWidget);
         expect(find.text('National ID (14 digits)'), findsOneWidget);
-        expect(find.text('Primary Coverage Zone'), findsOneWidget);
-        expect(find.text('Motorcycle'), findsOneWidget);
+        expect(find.text('Primary Coverage Zone'), findsNothing);
+        expect(find.text('Motorcycle'), findsNothing);
+        expect(find.byType(TextFormField), findsNWidgets(2));
 
         // Tap submit and verify 14-digit validation
         final submitBtn = find.text('Continue to Skills & Coverage');

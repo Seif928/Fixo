@@ -7,7 +7,7 @@ import {
   ProVerificationStatus,
   TransportMode,
 } from '@prisma/client';
-import { Type } from 'class-transformer';
+import { Transform, Type } from 'class-transformer';
 import {
   ArrayMinSize,
   IsArray,
@@ -22,21 +22,27 @@ import {
   Max,
   MaxLength,
   Min,
+  MinLength,
   ValidateNested,
 } from 'class-validator';
 
 export class ProPersonalDetailsDto {
-  @ApiPropertyOptional({
-    description: 'Full legal name (updates User.fullName if provided)',
+  @ApiProperty({
+    description: 'Full legal name matching the private identity photos',
     example: 'Mahmoud El-Masry',
   })
-  @IsOptional()
+  @Transform(({ value }: { value: unknown }) =>
+    typeof value === 'string' ? value.trim() : value,
+  )
   @IsString()
+  @MinLength(3)
   @MaxLength(120)
-  fullName?: string;
+  @Matches(/^[^\x00-\x1f\x7f]+$/)
+  fullName!: string;
 
   @ApiProperty({
-    description: '14-digit synthetic Egyptian National ID number for demo/verification',
+    description:
+      '14-digit Egyptian National ID number matching the private identity photos',
     example: '29205140102938',
   })
   @IsNotEmpty()
@@ -46,25 +52,27 @@ export class ProPersonalDetailsDto {
   })
   nationalIdSynthetic: string;
 
-  @ApiProperty({
+  @ApiPropertyOptional({
     description: 'Primary coverage zone ID',
     example: 'zone-new-cairo',
   })
-  @IsNotEmpty()
+  @IsOptional()
   @IsString()
-  primaryZoneId: string;
+  @IsNotEmpty()
+  primaryZoneId?: string;
 
-  @ApiProperty({
+  @ApiPropertyOptional({
     description: 'Primary transport mode for service calls',
     enum: TransportMode,
     example: TransportMode.MOTORCYCLE,
   })
-  @IsNotEmpty()
+  @IsOptional()
   @IsEnum(TransportMode)
-  transportMode: TransportMode;
+  transportMode?: TransportMode;
 
   @ApiPropertyOptional({
-    description: 'Optional vehicle description shown to customers during dispatch',
+    description:
+      'Optional vehicle description shown to customers during dispatch',
     example: 'White Bajaj Boxer 150',
   })
   @IsOptional()
@@ -256,7 +264,8 @@ export class ProAdminReviewDto {
 
 export class ProAvailabilityDto {
   @ApiProperty({
-    description: 'Whether the approved professional is online for dispatch offers',
+    description:
+      'Whether the approved professional is online for dispatch offers',
     example: true,
   })
   @IsBoolean()

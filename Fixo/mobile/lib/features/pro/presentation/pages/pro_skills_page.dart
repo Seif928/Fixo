@@ -90,10 +90,6 @@ class _ProSkillsPageState extends ConsumerState<ProSkillsPage> {
           }
         }
 
-        if (_selectedZoneIds.isEmpty && catalog.zones.isNotEmpty) {
-          _selectedZoneIds.add(catalog.zones.first.id);
-        }
-
         _loading = false;
       });
     } catch (e) {
@@ -110,7 +106,9 @@ class _ProSkillsPageState extends ConsumerState<ProSkillsPage> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
-            ar ? 'يرجى اختيار التخصص الأساسي' : 'Please select a primary trade category',
+            ar
+                ? 'يرجى اختيار التخصص الأساسي'
+                : 'Please select a primary trade category',
           ),
         ),
       );
@@ -120,7 +118,9 @@ class _ProSkillsPageState extends ConsumerState<ProSkillsPage> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
-            ar ? 'يرجى اختيار منطقة تغطية واحدة على الأقل' : 'Please select at least one coverage zone',
+            ar
+                ? 'يرجى اختيار منطقة تغطية واحدة على الأقل'
+                : 'Please select at least one coverage zone',
           ),
         ),
       );
@@ -265,7 +265,9 @@ class _ProSkillsPageState extends ConsumerState<ProSkillsPage> {
 
                         if (_errorMessage != null)
                           Container(
-                            margin: const EdgeInsets.only(bottom: FixoSpacing.md),
+                            margin: const EdgeInsets.only(
+                              bottom: FixoSpacing.md,
+                            ),
                             padding: const EdgeInsets.all(FixoSpacing.sm),
                             decoration: BoxDecoration(
                               color: FixoColors.errorContainer,
@@ -287,7 +289,9 @@ class _ProSkillsPageState extends ConsumerState<ProSkillsPage> {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(
-                                ar ? 'مجال الحرفة الأساسي' : 'Primary Trade Specialty',
+                                ar
+                                    ? 'مجال الحرفة الأساسي'
+                                    : 'Primary Trade Specialty',
                                 style: FixoTypography.headlineSm(
                                   color: palette.deepForest,
                                 ).copyWith(fontWeight: FontWeight.bold),
@@ -297,18 +301,22 @@ class _ProSkillsPageState extends ConsumerState<ProSkillsPage> {
                                 ar
                                     ? 'اختر مجالك الرئيسي لاستقبال طلبات الزبائن المناسبة لخبرتك'
                                     : 'Select your primary trade to receive relevant job offers',
-                                style: FixoTypography.bodySm(color: palette.mutedText),
+                                style: FixoTypography.bodySm(
+                                  color: palette.mutedText,
+                                ),
                               ),
                               const SizedBox(height: 12),
                               Wrap(
                                 spacing: 8,
                                 runSpacing: 8,
                                 children: _categories.map((cat) {
-                                  final isSelected = _selectedCategoryId == cat.id;
+                                  final isSelected =
+                                      _selectedCategoryId == cat.id;
                                   return ChoiceChip(
                                     label: Text(cat.localizedName(ar)),
                                     selected: isSelected,
-                                    selectedColor: FixoColors.secondaryContainer,
+                                    selectedColor:
+                                        FixoColors.secondaryContainer,
                                     labelStyle: FixoTypography.labelMd(
                                       color: isSelected
                                           ? FixoColors.primaryForest
@@ -331,7 +339,9 @@ class _ProSkillsPageState extends ConsumerState<ProSkillsPage> {
                                 Divider(height: 1, color: palette.subtleBorder),
                                 const SizedBox(height: 12),
                                 Text(
-                                  ar ? 'المهارات التفصيلية' : 'Detailed Skills & Services',
+                                  ar
+                                      ? 'المهارات التفصيلية'
+                                      : 'Detailed Skills & Services',
                                   style: FixoTypography.labelMd(
                                     color: palette.deepForest,
                                   ).copyWith(fontWeight: FontWeight.w700),
@@ -341,12 +351,13 @@ class _ProSkillsPageState extends ConsumerState<ProSkillsPage> {
                                   spacing: 8,
                                   runSpacing: 8,
                                   children: filteredSubSkills.map((sub) {
-                                    final isSelected =
-                                        _selectedSubSkillIds.contains(sub.id);
+                                    final isSelected = _selectedSubSkillIds
+                                        .contains(sub.id);
                                     return FilterChip(
                                       label: Text(ar ? sub.nameAr : sub.nameEn),
                                       selected: isSelected,
-                                      selectedColor: FixoColors.secondaryContainer,
+                                      selectedColor:
+                                          FixoColors.secondaryContainer,
                                       labelStyle: FixoTypography.bodySm(
                                         color: isSelected
                                             ? FixoColors.primaryForest
@@ -415,11 +426,13 @@ class _ProSkillsPageState extends ConsumerState<ProSkillsPage> {
                                             children: [
                                               Text(
                                                 tier.localizedLabel(ar),
-                                                style: FixoTypography.labelMd(
-                                                  color: palette.deepForest,
-                                                ).copyWith(
-                                                  fontWeight: FontWeight.w700,
-                                                ),
+                                                style:
+                                                    FixoTypography.labelMd(
+                                                      color: palette.deepForest,
+                                                    ).copyWith(
+                                                      fontWeight:
+                                                          FontWeight.w700,
+                                                    ),
                                               ),
                                               if (tier.descAr != null) ...[
                                                 const SizedBox(height: 2),
@@ -442,7 +455,9 @@ class _ProSkillsPageState extends ConsumerState<ProSkillsPage> {
                               }),
                               const Divider(height: 24),
                               Text(
-                                ar ? 'مناطق التغطية في القاهرة الكبرى' : 'Coverage Zones (Cairo & Giza)',
+                                ar
+                                    ? 'اختار مناطق شغلك في مصر'
+                                    : 'Choose your service areas in Egypt',
                                 style: FixoTypography.labelMd(
                                   color: palette.deepForest,
                                 ).copyWith(fontWeight: FontWeight.w700),
@@ -452,12 +467,14 @@ class _ProSkillsPageState extends ConsumerState<ProSkillsPage> {
                                 spacing: 8,
                                 runSpacing: 8,
                                 children: _zones.map((zone) {
-                                  final isSelected =
-                                      _selectedZoneIds.contains(zone.id);
+                                  final isSelected = _selectedZoneIds.contains(
+                                    zone.id,
+                                  );
                                   return FilterChip(
                                     label: Text(zone.localizedName(ar)),
                                     selected: isSelected,
-                                    selectedColor: FixoColors.secondaryContainer,
+                                    selectedColor:
+                                        FixoColors.secondaryContainer,
                                     onSelected: (val) {
                                       setState(() {
                                         if (val) {
@@ -485,7 +502,9 @@ class _ProSkillsPageState extends ConsumerState<ProSkillsPage> {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(
-                                ar ? 'بطاقة الأسعار والالتزام المهني' : 'Rate Card & Quality Commitments',
+                                ar
+                                    ? 'بطاقة الأسعار والالتزام المهني'
+                                    : 'Rate Card & Quality Commitments',
                                 style: FixoTypography.headlineSm(
                                   color: palette.deepForest,
                                 ).copyWith(fontWeight: FontWeight.bold),
@@ -493,7 +512,9 @@ class _ProSkillsPageState extends ConsumerState<ProSkillsPage> {
                               const SizedBox(height: 8),
                               SwitchListTile(
                                 title: Text(
-                                  ar ? 'الموافقة على تسعيرة فيكسو الموحدة' : 'Accept FIXO Standard Rate Card',
+                                  ar
+                                      ? 'الموافقة على تسعيرة فيكسو الموحدة'
+                                      : 'Accept FIXO Standard Rate Card',
                                   style: FixoTypography.labelMd(
                                     color: palette.deepForest,
                                   ).copyWith(fontWeight: FontWeight.w700),
@@ -502,11 +523,14 @@ class _ProSkillsPageState extends ConsumerState<ProSkillsPage> {
                                   ar
                                       ? '١٥٠ ج.م حد أدنى للمعاينة وكشف العطل + تكلفة الإصلاح المعتمدة.'
                                       : '150 EGP standard inspection fee + itemized service pricing.',
-                                  style: FixoTypography.bodySm(color: palette.mutedText),
+                                  style: FixoTypography.bodySm(
+                                    color: palette.mutedText,
+                                  ),
                                 ),
                                 value: _acceptsStandardRateCard,
-                                onChanged: (val) =>
-                                    setState(() => _acceptsStandardRateCard = val),
+                                onChanged: (val) => setState(
+                                  () => _acceptsStandardRateCard = val,
+                                ),
                               ),
                               const Divider(height: 16),
                               CheckboxListTile(
@@ -522,11 +546,14 @@ class _ProSkillsPageState extends ConsumerState<ProSkillsPage> {
                                   ar
                                       ? 'الالتزام بشنطة العدة الكاملة ومعدات السلامة المهنية شرط أساسي لاعتماد الحساب.'
                                       : 'Complete toolkit and safety gear are mandatory for account activation.',
-                                  style: FixoTypography.bodySm(color: palette.mutedText),
+                                  style: FixoTypography.bodySm(
+                                    color: palette.mutedText,
+                                  ),
                                 ),
                                 value: _toolkitCommitted,
-                                onChanged: (val) =>
-                                    setState(() => _toolkitCommitted = val ?? false),
+                                onChanged: (val) => setState(
+                                  () => _toolkitCommitted = val ?? false,
+                                ),
                               ),
                             ],
                           ),
@@ -549,12 +576,20 @@ class _ProSkillsPageState extends ConsumerState<ProSkillsPage> {
                                   height: 20,
                                   child: CircularProgressIndicator(
                                     strokeWidth: 2,
-                                    valueColor: AlwaysStoppedAnimation(Colors.white),
+                                    valueColor: AlwaysStoppedAnimation(
+                                      Colors.white,
+                                    ),
                                   ),
                                 )
-                              : Icon(ar ? Icons.arrow_back_rounded : Icons.arrow_forward_rounded),
+                              : Icon(
+                                  ar
+                                      ? Icons.arrow_back_rounded
+                                      : Icons.arrow_forward_rounded,
+                                ),
                           label: Text(
-                            ar ? 'المتابعة لرفع مستندات التحقق' : 'Continue to Document Upload',
+                            ar
+                                ? 'المتابعة لرفع مستندات التحقق'
+                                : 'Continue to Document Upload',
                             style: FixoTypography.labelLg(
                               color: Colors.white,
                             ).copyWith(fontWeight: FontWeight.bold),

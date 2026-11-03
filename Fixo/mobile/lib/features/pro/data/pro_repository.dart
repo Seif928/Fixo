@@ -48,12 +48,12 @@ class ProRepository {
     }
   }
 
-  /// Saves Step 1: Personal Details & Transportation (`POST /api/v1/pro/onboarding/personal`).
+  /// Saves Step 1: name and National ID. Legacy optional transport is supported.
   Future<ProProfileModel> savePersonalDetails({
     String? fullName,
     required String nationalIdSynthetic,
-    required String primaryZoneId,
-    required String transportMode,
+    String? primaryZoneId,
+    String? transportMode,
     String? vehicleDescription,
     String? vehiclePlateAr,
   }) async {
@@ -63,8 +63,8 @@ class ProRepository {
         if (fullName != null && fullName.trim().isNotEmpty)
           'fullName': fullName.trim(),
         'nationalIdSynthetic': nationalIdSynthetic.trim(),
-        'primaryZoneId': primaryZoneId,
-        'transportMode': transportMode,
+        'primaryZoneId': ?primaryZoneId,
+        'transportMode': ?transportMode,
         if (vehicleDescription != null && vehicleDescription.trim().isNotEmpty)
           'vehicleDescription': vehicleDescription.trim(),
         if (vehiclePlateAr != null && vehiclePlateAr.trim().isNotEmpty)

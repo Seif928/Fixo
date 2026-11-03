@@ -35,7 +35,8 @@ class _ProAccountEntryPageState extends ConsumerState<ProAccountEntryPage> {
         _ =>
           profile?.primaryCategoryId != null
               ? AppRoutes.proVerificationDocs
-              : profile?.primaryZoneId != null
+              : profile?.nationalIdSynthetic?.isNotEmpty == true ||
+                    profile?.primaryZoneId != null
               ? AppRoutes.proSkills
               : AppRoutes.proSignUp,
       };
