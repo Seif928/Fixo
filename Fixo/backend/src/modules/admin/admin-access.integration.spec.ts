@@ -114,6 +114,115 @@ describe('Private two-person admin access (guarded PostgreSQL)', () => {
     expect((await request(null)).status).toBe(401);
     expect((await request(outsider)).status).toBe(403);
     expect(await (db as any).adminMembership.count()).toBe(0);
+    expect((await request(null, '/summary')).status).toBe(401);
+    expect((await request(outsider, '/summary')).status).toBe(403);
+  });
+  it('summarizes persisted records and counts only collected cash, excluding drafts and unsettled payments', async () => {
+    const key = randomUUID();
+    const category = await db.serviceCategory.create({
+      data: {
+        slug: key,
+        nameEn: 'Fixture',
+        nameAr: 'اختبار',
+        subtitleEn: 'Fixture',
+        subtitleAr: 'اختبار',
+        iconName: 'build',
+        startingPriceEgp: 10,
+      },
+    });
+    const zone = await db.coverageZone.create({
+      data: {
+        slug: key,
+        nameEn: 'Fixture',
+        nameAr: 'اختبار',
+        governorate: 'Cairo',
+      },
+    });
+    const offering = await db.serviceOffering.create({
+      data: {
+        categoryId: category.id,
+        slug: key,
+        titleEn: 'Fixture',
+        titleAr: 'اختبار',
+        descriptionEn: 'Fixture',
+        descriptionAr: 'اختبار',
+        baseInspectionEgp: 10,
+        serviceFeeEgp: 90,
+      },
+    });
+    const address = await db.customerAddress.create({
+      data: {
+        userId: owner.id,
+        zoneId: zone.id,
+        label: 'Fixture',
+        buildingLine: 'Fixture',
+        districtLine: 'Fixture',
+      },
+    });
+    try {
+      const baseline = await (await request(owner, '/summary')).json();
+      await db.proProfile.create({
+        data: {
+          userId: friend.id,
+          dossierCode: key,
+          nationalIdSynthetic: '00000000000000',
+          verificationStatus: 'PENDING_REVIEW',
+        },
+      });
+      const statuses = [
+        'DRAFT',
+        'PENDING_DISPATCH',
+        'IN_PROGRESS',
+        'COMPLETED',
+        'CANCELLED',
+      ] as const;
+      for (const [i, status] of statuses.entries()) {
+        await db.booking.create({
+          data: {
+            orderCode: `${key}-${i}`,
+            customerId: owner.id,
+            offeringId: offering.id,
+            addressId: address.id,
+            status,
+            scheduledDate: new Date(),
+            timeWindow: 'MORNING_09_12',
+            issuePhotoUrls: [],
+            baseInspectionEgp: 10,
+            serviceFeeEgp: 90,
+            totalEgp: 100,
+            platformFeeEgp: 10,
+            netArtisanEgp: 90,
+            arrivalPinCode: '1234',
+            payment: {
+              create: {
+                amountEgp: 100,
+                tipEgp: 20,
+                method: i === 4 ? 'CARD_MEEZA_SANDBOX' : 'CASH_ON_SERVICE',
+                status: i === 0 ? 'PENDING' : 'PAID',
+                paidAt: i === 1 ? null : new Date(),
+              },
+            },
+          },
+        });
+      }
+      const response = await request(owner, '/summary');
+      expect(response.status).toBe(200);
+      expect(response.headers.get('cache-control')).toContain('no-store');
+      const value = await response.json();
+      expect(value.users).toBe(baseline.users);
+      expect(value.professionals).toBe(baseline.professionals + 1);
+      expect(value.pendingReviews).toBe(baseline.pendingReviews + 1);
+      expect(value.activeBookings).toBe(baseline.activeBookings + 2);
+      expect(value.collectedCashEgp).toBe(baseline.collectedCashEgp + 200);
+      await request(owner, '/member', 'PUT', { email: friend.email });
+      expect((await request(friend, '/summary')).status).toBe(200);
+    } finally {
+      await db.booking.deleteMany({ where: { offeringId: offering.id } });
+      await db.customerAddress.delete({ where: { id: address.id } });
+      await db.serviceOffering.delete({ where: { id: offering.id } });
+      await db.serviceCategory.delete({ where: { id: category.id } });
+      await db.coverageZone.delete({ where: { id: zone.id } });
+    }
   });
   it('bootstraps exactly one owner under concurrent verified requests without changing app role', async () => {
     const responses = await Promise.all([request(owner), request(owner)]);

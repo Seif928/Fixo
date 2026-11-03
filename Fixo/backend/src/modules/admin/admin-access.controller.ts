@@ -41,6 +41,11 @@ export class AdminAccessController {
   members(@Req() request: AdminRequest) {
     return this.access.members(request.adminActor!);
   }
+  @Get('summary')
+  @Header('Cache-Control', 'private, no-store')
+  summary() {
+    return this.access.summary();
+  }
   @Put('member')
   invite(@Req() request: AdminRequest, @Body() dto: InviteAdminDto) {
     return this.access.invite(request.adminActor!, dto.email);

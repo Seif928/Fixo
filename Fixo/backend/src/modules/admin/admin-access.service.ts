@@ -204,4 +204,46 @@ export class AdminAccessService {
       }),
     };
   }
+  async summary() {
+    // One consistent database snapshot; never infer collections from booking totals.
+    return this.db.$transaction(
+      async (tx) => {
+        const users = await tx.user.count();
+        const professionals = await tx.proProfile.count();
+        const pendingReviews = await tx.proProfile.count({
+          where: { verificationStatus: 'PENDING_REVIEW' },
+        });
+        const activeBookings = await tx.booking.count({
+          where: {
+            status: {
+              in: [
+                'PENDING_DISPATCH',
+                'OFFERED_TO_PRO',
+                'CONFIRMED',
+                'PRO_EN_ROUTE',
+                'ARRIVED',
+                'IN_PROGRESS',
+              ],
+            },
+          },
+        });
+        const cash = await tx.paymentRecord.aggregate({
+          where: {
+            method: 'CASH_ON_SERVICE',
+            status: 'PAID',
+            paidAt: { not: null },
+          },
+          _sum: { amountEgp: true },
+        });
+        return {
+          users,
+          professionals,
+          pendingReviews,
+          activeBookings,
+          collectedCashEgp: cash._sum.amountEgp ?? 0,
+        };
+      },
+      { isolationLevel: Prisma.TransactionIsolationLevel.RepeatableRead },
+    );
+  }
 }

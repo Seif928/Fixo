@@ -2,6 +2,8 @@
 ///
 /// Do not add unapproved top-level routes outside the 16-screen handoff.
 abstract final class AppRoutes {
+  // Private administration, explicitly approved by the project owner.
+  static const String admin = '/admin';
   // Customer Flow (01–10)
   static const String onboarding = '/onboarding'; // 01_onboarding
   static const String phoneAuth = '/auth/phone'; // 02_phone_auth_otp

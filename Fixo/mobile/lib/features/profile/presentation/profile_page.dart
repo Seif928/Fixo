@@ -18,6 +18,7 @@ import '../../../core/uploads/private_media_picker_sheet.dart';
 import '../data/avatar_repository.dart';
 import 'profile_avatar.dart';
 import 'profile_details_dialog.dart';
+import '../../admin/presentation/admin_page.dart';
 
 /// Screen 10: live Stitch profile/alerts cards, with persisted real preferences.
 class ProfilePage extends ConsumerStatefulWidget {
@@ -438,6 +439,7 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
                     ),
                     const SizedBox(height: FixoSpacing.md),
 
+                    const AdminProfileEntry(),
                     // 2. Stitch Screen 10 "Earn With FIXO Pro" Partner Banner
                     InkWell(
                       onTap: () {

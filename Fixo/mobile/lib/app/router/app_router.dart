@@ -11,6 +11,7 @@ import '../../features/auth/presentation/pages/email_auth_page.dart';
 import '../../features/auth/presentation/pages/phone_password_page.dart';
 import '../../features/chat/presentation/chat_page.dart';
 import '../../features/profile/presentation/profile_page.dart';
+import '../../features/admin/presentation/admin_page.dart';
 import '../../features/booking/presentation/pages/create_booking_page.dart';
 import '../../features/booking/presentation/pages/order_tracking_page.dart';
 import '../../features/booking/presentation/pages/orders_page.dart';
@@ -90,7 +91,7 @@ GoRouter createAppRouter({
 
       // Protect customer and pro routes when unauthenticated
       if (!authed &&
-          (path.startsWith('/customer') || path.startsWith('/pro'))) {
+          (path.startsWith('/customer') || path.startsWith('/pro') || path.startsWith('/admin'))) {
         return authPath;
       }
 
@@ -102,6 +103,11 @@ GoRouter createAppRouter({
       return null;
     },
     routes: <RouteBase>[
+      _motionRoute(
+        path: AppRoutes.admin,
+        name: 'admin',
+        builder: (_, _) => const AdminPage(),
+      ),
       _motionRoute(
         path: AppRoutes.proEntry,
         name: 'proEntry',
