@@ -254,7 +254,12 @@ class _CustomerHomePageState extends ConsumerState<CustomerHomePage> {
                   padding: const EdgeInsets.only(bottom: 32),
                   child: Center(
                     child: ConstrainedBox(
-                      constraints: const BoxConstraints(maxWidth: 600),
+                      key: const Key('home-marketplace-layout'),
+                      constraints: BoxConstraints(
+                        maxWidth: MediaQuery.sizeOf(context).width >= 1000
+                            ? 1200
+                            : 600,
+                      ),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [
@@ -816,7 +821,13 @@ class _CustomerHomePageState extends ConsumerState<CustomerHomePage> {
             child: LayoutBuilder(
               builder: (context, constraints) {
                 final spacing = 12.0;
-                final itemWidth = (constraints.maxWidth - spacing) / 2;
+                final columns = constraints.maxWidth >= 1000
+                    ? 4
+                    : constraints.maxWidth >= 760
+                    ? 3
+                    : 2;
+                final itemWidth =
+                    (constraints.maxWidth - spacing * (columns - 1)) / columns;
 
                 return Wrap(
                   spacing: spacing,
@@ -905,18 +916,27 @@ class _CustomerHomePageState extends ConsumerState<CustomerHomePage> {
         if (professionals.isNotEmpty)
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: FixoSpacing.md),
-            child: Column(
-              children: [
-                for (int i = 0; i < professionals.length; i++) ...[
-                  if (i > 0) const SizedBox(height: 12),
-                  RecommendedProCard(
-                    professional: professionals[i],
-                    isArabic: isArabic,
-                    onBookSlot: () =>
-                        _chooseProfessionalService(professionals[i]),
-                  ),
-                ],
-              ],
+            child: LayoutBuilder(
+              builder: (context, constraints) {
+                final columns = constraints.maxWidth >= 850 ? 2 : 1;
+                final width =
+                    (constraints.maxWidth - 12 * (columns - 1)) / columns;
+                return Wrap(
+                  spacing: 12,
+                  runSpacing: 12,
+                  children: [
+                    for (final pro in professionals)
+                      SizedBox(
+                        width: width,
+                        child: RecommendedProCard(
+                          professional: pro,
+                          isArabic: isArabic,
+                          onBookSlot: () => _chooseProfessionalService(pro),
+                        ),
+                      ),
+                  ],
+                );
+              },
             ),
           )
         else

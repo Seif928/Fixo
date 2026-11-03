@@ -9,8 +9,9 @@ import '../data/admin_repository.dart';
 import 'admin_confirmation_dialog.dart';
 import 'admin_members_panel.dart';
 import 'admin_panels.dart';
+import 'admin_catalog_panel.dart';
 
-enum _Section { overview, members, audit }
+enum _Section { overview, catalog, members, audit }
 
 class AdminPage extends ConsumerStatefulWidget {
   const AdminPage({super.key});
@@ -119,11 +120,13 @@ class _AdminPageState extends ConsumerState<AdminPage> {
               selectedColor: Theme.of(context).colorScheme.onPrimaryContainer,
               leading: Icon(switch (section) {
                 _Section.overview => Icons.grid_view_rounded,
+                _Section.catalog => Icons.home_repair_service_outlined,
                 _Section.members => Icons.admin_panel_settings_outlined,
                 _Section.audit => Icons.history_rounded,
               }),
               title: Text(switch (section) {
                 _Section.overview => ar ? 'نظرة عامة' : 'Overview',
+                _Section.catalog => ar ? 'الخدمات' : 'Services',
                 _Section.members => ar ? 'المسؤولون' : 'Administrators',
                 _Section.audit => ar ? 'سجل التغييرات' : 'Activity log',
               }),
@@ -176,6 +179,11 @@ class _AdminPageState extends ConsumerState<AdminPage> {
         ? _Section.overview
         : _selected;
     final panel = switch (selected) {
+      _Section.catalog => AdminCatalogPanel(
+        key: ValueKey('catalog-$account'),
+        ar: ar,
+        needsConfirmation: current.needsConfirmation,
+      ),
       _Section.overview => _async(
         ref.watch(adminSummaryProvider),
         (data) => AdminSummaryPanel(summary: data, ar: ar),

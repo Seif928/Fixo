@@ -67,6 +67,24 @@ void main() {
     addTearDown(tester.view.resetPhysicalSize);
     addTearDown(tester.view.resetDevicePixelRatio);
     String? invitedEmail;
+    int draftVersion = 1;
+    int? publishedVersion, inspection, serviceFee, duration;
+    Map<String, dynamic> draft() => {
+      'id': 'draft-fixture',
+      'version': draftVersion,
+      'publishedVersion': publishedVersion,
+      'slug': 'home-test',
+      'categorySlug': 'cleaning',
+      'categoryNameEn': 'Cleaning',
+      'categoryNameAr': 'التنظيف',
+      'titleEn': 'Fixture cleaning service',
+      'titleAr': 'خدمة تنظيف للاختبار',
+      'descriptionEn': 'Fixture description',
+      'descriptionAr': 'وصف الخدمة للاختبار',
+      'baseInspectionEgp': inspection,
+      'serviceFeeEgp': serviceFee,
+      'estimatedDurationMins': duration,
+    };
     final dio = Dio()
       ..interceptors.add(
         InterceptorsWrapper(
@@ -79,6 +97,16 @@ void main() {
               invitedEmail = null;
             }
             if (r.path == '/auth/phone-password') needsConfirmation = false;
+            if (r.path == '/admin/catalog/draft-fixture' && r.method == 'PUT') {
+              final data = r.data as Map;
+              inspection = data['baseInspectionEgp'] as int?;
+              serviceFee = data['serviceFeeEgp'] as int?;
+              duration = data['estimatedDurationMins'] as int?;
+              draftVersion++;
+            }
+            if (r.path == '/admin/catalog/draft-fixture/publish') {
+              publishedVersion = draftVersion;
+            }
             if ((denied && r.path == '/admin/me') ||
                 (failedSummary && r.path == '/admin/summary')) {
               h.reject(
@@ -109,6 +137,19 @@ void main() {
                     'activeBookings': 4,
                     'collectedCashEgp': 2250,
                   },
+                  '/admin/catalog' => {
+                    'items': [draft()],
+                    'categories': [
+                      {
+                        'categorySlug': 'cleaning',
+                        'categoryNameEn': 'Cleaning',
+                        'categoryNameAr': 'التنظيف',
+                      },
+                    ],
+                    'meta': {'page': 1, 'total': 1, 'totalPages': 1},
+                  },
+                  '/admin/catalog/draft-fixture' ||
+                  '/admin/catalog/draft-fixture/publish' => draft(),
                   '/admin/members' => [
                     {
                       'slot': 1,
@@ -253,6 +294,29 @@ void main() {
     expect(find.byKey(const Key('admin-nav-members')), findsNothing);
     expect(calls.where((r) => r.path == '/admin/members'), isEmpty);
   });
+  for (final width in [360.0, 390.0, 412.0]) {
+    testWidgets('Arabic catalog and draft editor fit $width at 1.35x', (
+      tester,
+    ) async {
+      await mount(tester, width: width, arabic: true, dark: true);
+      await tester.tap(find.byTooltip('فتح القائمة'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const Key('admin-nav-catalog')));
+      await tester.pumpAndSettle();
+      expect(find.text('السعر لسه مش محدد'), findsOneWidget);
+      await tester.ensureVisible(
+        find.byKey(const Key('admin-edit-draft-fixture')),
+      );
+      await tester.tap(find.byKey(const Key('admin-edit-draft-fixture')));
+      await tester.pumpAndSettle();
+      await tester.ensureVisible(find.byKey(const Key('admin-draft-duration')));
+      await tester.enterText(
+        find.byKey(const Key('admin-draft-duration')),
+        '٦٠',
+      );
+      expect(tester.takeException(), isNull);
+    });
+  }
   testWidgets('denied access never loads private data', (tester) async {
     final calls = <RequestOptions>[];
     await mount(tester, denied: true, calls: calls);
@@ -388,6 +452,40 @@ void main() {
       matchesGoldenFile('goldens/admin/desktop_overview.png'),
     );
   });
+  testWidgets(
+    'catalog saves actual prices as a private draft and publishes only after preview confirmation',
+    (tester) async {
+      final calls = <RequestOptions>[];
+      await mount(tester, calls: calls);
+      await tester.tap(find.byKey(const Key('admin-nav-catalog')));
+      await tester.pumpAndSettle();
+      expect(find.text('Price not set'), findsOneWidget);
+      expect(find.text('0 EGP'), findsNothing);
+      await tester.tap(find.byKey(const Key('admin-edit-draft-fixture')));
+      await tester.pumpAndSettle();
+      for (final field in [
+        ('inspection', '150'),
+        ('service-fee', '250'),
+        ('duration', '60'),
+      ]) {
+        final finder = find.byKey(Key('admin-draft-${field.$1}'));
+        await tester.ensureVisible(finder);
+        await tester.enterText(finder, field.$2);
+      }
+      await tester.tap(find.byKey(const Key('admin-draft-save')));
+      await tester.pumpAndSettle();
+      expect(calls.where((r) => r.method == 'POST'), isEmpty);
+      await tester.tap(find.byKey(const Key('admin-publish-draft-fixture')));
+      await tester.pumpAndSettle();
+      expect(find.text('400 EGP'), findsWidgets);
+      expect(calls.where((r) => r.method == 'POST'), isEmpty);
+      await tester.tap(find.byKey(const Key('admin-publish-confirm')));
+      await tester.pumpAndSettle();
+      final publish = calls.singleWhere((r) => r.method == 'POST');
+      expect(publish.data, {'version': 2});
+      expect(find.text('Published'), findsOneWidget);
+    },
+  );
   testWidgets('Arabic mobile member management visual review', (tester) async {
     await mount(tester, width: 390, arabic: true, dark: true);
     await tester.tap(find.byTooltip('فتح القائمة'));

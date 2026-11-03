@@ -142,6 +142,10 @@ class AdminAuditPanel extends StatelessWidget {
                 ar
                     ? 'إلغاء صلاحيات المسؤول الثاني'
                     : 'Second administrator access revoked',
+              'CATALOG_DRAFT_UPDATED' =>
+                ar ? 'تعديل مسودة خدمة' : 'Service draft updated',
+              'CATALOG_PUBLISHED' =>
+                ar ? 'نشر خدمة وسعرها' : 'Service and price published',
               _ => ar ? 'تغيير إداري' : 'Administration change',
             }),
             subtitle: Text(

@@ -35,25 +35,26 @@ enum AdminAccessRole {
 }
 
 model AdminMembership {
-  slot      Int @id
-  email     String @unique
-  userId    String? @unique
+  slot      Int             @id
+  email     String          @unique
+  userId    String?         @unique
   role      AdminAccessRole
-  isActive  Boolean @default(true)
+  isActive  Boolean         @default(true)
   expiresAt DateTime?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  user User? @relation(fields: [userId], references: [id], onDelete: Restrict)
+  createdAt DateTime        @default(now())
+  updatedAt DateTime        @updatedAt
+  user      User?           @relation(fields: [userId], references: [id], onDelete: Restrict)
 }
 
 model AdminAuditLog {
-  id String @id @default(uuid())
+  id          String   @id @default(uuid())
   actorUserId String?
-  action String
-  entityId String
-  details Json
-  createdAt DateTime @default(now())
-  actor User? @relation(fields: [actorUserId], references: [id], onDelete: SetNull)
+  action      String
+  entityId    String
+  details     Json
+  createdAt   DateTime @default(now())
+  actor       User?    @relation(fields: [actorUserId], references: [id], onDelete: SetNull)
+
   @@index([createdAt, id])
 }
 
@@ -146,15 +147,15 @@ model User {
   createdAt            DateTime @default(now())
   updatedAt            DateTime @updatedAt
 
-  proProfile    ProProfile?
-  addresses     CustomerAddress[]
-  bookings      Booking[]         @relation("CustomerBookings")
-  refreshTokens RefreshToken[]
-  sentMessages  ChatMessage[]
-  reviews       Review[]
-  pushDevices   PushDevice[]
+  proProfile      ProProfile?
+  addresses       CustomerAddress[]
+  bookings        Booking[]         @relation("CustomerBookings")
+  refreshTokens   RefreshToken[]
+  sentMessages    ChatMessage[]
+  reviews         Review[]
+  pushDevices     PushDevice[]
   adminMembership AdminMembership?
-  adminAuditLogs AdminAuditLog[]
+  adminAuditLogs  AdminAuditLog[]
 }
 
 model PushDevice {
@@ -271,8 +272,34 @@ model ServiceOffering {
   isSeasonalPromo       Boolean @default(false)
   isBundle              Boolean @default(false)
 
-  category ServiceCategory @relation(fields: [categoryId], references: [id])
-  bookings Booking[]
+  category   ServiceCategory    @relation(fields: [categoryId], references: [id])
+  bookings   Booking[]
+  adminDraft AdminCatalogDraft?
+}
+
+// Incomplete prices stay private and cannot enter customer booking payloads.
+model AdminCatalogDraft {
+  id                    String           @id @default(uuid())
+  slug                  String           @unique
+  categorySlug          String
+  categoryNameEn        String
+  categoryNameAr        String
+  categoryIcon          String
+  titleEn               String
+  titleAr               String
+  descriptionEn         String
+  descriptionAr         String
+  baseInspectionEgp     Int?
+  serviceFeeEgp         Int?
+  estimatedDurationMins Int?
+  version               Int              @default(1)
+  publishedVersion      Int?
+  offeringId            String?          @unique
+  createdAt             DateTime         @default(now())
+  updatedAt             DateTime         @updatedAt
+  offering              ServiceOffering? @relation(fields: [offeringId], references: [id], onDelete: Restrict)
+
+  @@index([categorySlug, slug])
 }
 
 model ProProfile {

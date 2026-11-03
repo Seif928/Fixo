@@ -467,6 +467,35 @@ Future<Widget> _buildTestHarness({
 }
 
 void main() {
+  testWidgets(
+    'marketplace uses a wide desktop grid and preserves the narrow mobile layout',
+    (tester) async {
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+      for (final width in [390.0, 1280.0]) {
+        tester.view.physicalSize = Size(width, 900);
+        tester.view.devicePixelRatio = 1;
+        await tester.pumpWidget(
+          await _buildTestHarness(
+            child: const CustomerHomePage(),
+            locale: const Locale('en'),
+            themeMode: ThemeMode.light,
+            textScale: 1.35,
+          ),
+        );
+        await tester.pumpAndSettle();
+        final size = tester.getSize(
+          find.byKey(const Key('home-marketplace-layout')),
+        );
+        expect(
+          size.width,
+          width < 1000 ? lessThanOrEqualTo(600) : greaterThan(900),
+        );
+        expect(tester.takeException(), isNull);
+        await tester.pumpWidget(const SizedBox.shrink());
+      }
+    },
+  );
   const widths = <double>[360.0, 390.0, 412.0];
   const locales = <Locale>[Locale('en'), Locale('ar')];
   const themeModes = <ThemeMode>[ThemeMode.light, ThemeMode.dark];

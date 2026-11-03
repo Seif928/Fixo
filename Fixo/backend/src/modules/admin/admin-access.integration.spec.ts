@@ -13,6 +13,8 @@ import { AuthService } from '../auth/auth.service';
 import { FirebaseSessionPolicy } from '../auth/firebase-session-policy.service';
 import { AdminAccessModule } from './admin-access.module';
 import { AdminAccessService } from './admin-access.service';
+import { CATALOG_DRAFTS, seedAdminCatalogDrafts } from './admin-catalog.seed';
+import { PrismaClient } from '@prisma/client';
 
 dotenv.config({ path: path.resolve(__dirname, '../../../.env') });
 describe('Private two-person admin access (guarded PostgreSQL)', () => {
@@ -116,6 +118,191 @@ describe('Private two-person admin access (guarded PostgreSQL)', () => {
     expect(await (db as any).adminMembership.count()).toBe(0);
     expect((await request(null, '/summary')).status).toBe(401);
     expect((await request(outsider, '/summary')).status).toBe(403);
+  });
+  it('keeps unpriced catalog drafts private and publishes only a validated saved version atomically', async () => {
+    expect((await request(owner, '/catalog')).status).toBe(200);
+    expect((await request(outsider, '/catalog')).status).toBe(403);
+    const slug = `catalog-fixture-${randomUUID()}`;
+    const drafts = (db as any).adminCatalogDraft;
+    const draft = await drafts.create({
+      data: {
+        slug,
+        categorySlug: slug,
+        categoryNameEn: 'Fixture',
+        categoryNameAr: 'اختبار',
+        categoryIcon: 'build',
+        titleEn: 'Fixture service',
+        titleAr: 'خدمة اختبار',
+        descriptionEn: 'Fixture description',
+        descriptionAr: 'وصف اختبار',
+      },
+    });
+    try {
+      expect(
+        await db.serviceOffering.findUnique({ where: { slug } }),
+      ).toBeNull();
+      const auditBefore = await db.adminAuditLog.count();
+      expect(
+        (
+          await request(owner, `/catalog/${draft.id}/publish`, 'POST', {
+            version: 1,
+          })
+        ).status,
+      ).toBe(400);
+      expect(await db.adminAuditLog.count()).toBe(auditBefore);
+      expect(
+        (
+          await request(owner, `/catalog/${draft.id}`, 'PUT', {
+            version: 1,
+            baseInspectionEgp: -1,
+          })
+        ).status,
+      ).toBe(400);
+      expect(
+        (
+          await request(
+            owner,
+            `/catalog/${draft.id}`,
+            'PUT',
+            {
+              version: 1,
+              baseInspectionEgp: 150,
+              serviceFeeEgp: 250,
+              estimatedDurationMins: 60,
+            },
+            1000,
+          )
+        ).status,
+      ).toBe(403);
+      const saved = await request(owner, `/catalog/${draft.id}`, 'PUT', {
+        version: 1,
+        baseInspectionEgp: 150,
+        serviceFeeEgp: 250,
+        estimatedDurationMins: 60,
+      });
+      expect(saved.status).toBe(200);
+      expect((await saved.json()).version).toBe(2);
+      expect(
+        (
+          await request(owner, `/catalog/${draft.id}/publish`, 'POST', {
+            version: 1,
+          })
+        ).status,
+      ).toBe(409);
+      const published = await request(
+        owner,
+        `/catalog/${draft.id}/publish`,
+        'POST',
+        { version: 2 },
+      );
+      expect(published.status).toBe(201);
+      expect((await published.json()).publishedVersion).toBe(2);
+      expect(
+        (
+          await request(owner, `/catalog/${draft.id}/publish`, 'POST', {
+            version: 2,
+          })
+        ).status,
+      ).toBe(201);
+      expect(await db.serviceOffering.count({ where: { slug } })).toBe(1);
+      expect(
+        (await db.serviceOffering.findUniqueOrThrow({ where: { slug } }))
+          .flatPriceEgp,
+      ).toBe(400);
+      await request(owner, '/member', 'PUT', { email: friend.email });
+      expect(
+        (
+          await request(friend, `/catalog/${draft.id}`, 'PUT', {
+            version: 2,
+            serviceFeeEgp: 300,
+          })
+        ).status,
+      ).toBe(200);
+      expect(
+        (await db.serviceOffering.findUniqueOrThrow({ where: { slug } }))
+          .serviceFeeEgp,
+      ).toBe(250);
+      expect(
+        (
+          await request(friend, `/catalog/${draft.id}/publish`, 'POST', {
+            version: 3,
+          })
+        ).status,
+      ).toBe(201);
+      expect(
+        (await db.serviceOffering.findUniqueOrThrow({ where: { slug } }))
+          .flatPriceEgp,
+      ).toBe(450);
+      const page = await (
+        await request(owner, `/catalog?search=${slug}`)
+      ).json();
+      expect(page.meta.total).toBe(1);
+      expect(page.items[0].publishedVersion).toBe(3);
+      const audits = await db.adminAuditLog.findMany({
+        where: { entityId: draft.id },
+      });
+      expect(
+        audits.filter((e) => e.action === 'CATALOG_PUBLISHED'),
+      ).toHaveLength(2);
+      expect(JSON.stringify(audits)).not.toContain('password');
+    } finally {
+      await drafts.delete({ where: { id: draft.id } });
+      await db.serviceOffering.deleteMany({ where: { slug } });
+      await db.serviceCategory.deleteMany({ where: { slug } });
+    }
+  });
+  it('seeds drafts idempotently, imports actual existing offers and never overwrites edits or public data', async () => {
+    const before = await db.adminCatalogDraft.findMany({
+      select: { id: true },
+    });
+    const publicCount = await db.serviceOffering.count();
+    try {
+      await seedAdminCatalogDrafts(db as unknown as PrismaClient);
+      const first = await db.adminCatalogDraft.count();
+      expect(first).toBeGreaterThanOrEqual(CATALOG_DRAFTS.length);
+      const edited = await db.adminCatalogDraft.findUniqueOrThrow({
+        where: { slug: CATALOG_DRAFTS[0].slug },
+      });
+      await db.adminCatalogDraft.update({
+        where: { id: edited.id },
+        data: { titleEn: 'Operator custom title', serviceFeeEgp: 321 },
+      });
+      const repeat = await seedAdminCatalogDrafts(
+        db as unknown as PrismaClient,
+      );
+      expect(repeat.count).toBe(0);
+      expect(await db.adminCatalogDraft.count()).toBe(first);
+      expect(
+        (
+          await db.adminCatalogDraft.findUniqueOrThrow({
+            where: { id: edited.id },
+          })
+        ).titleEn,
+      ).toBe('Operator custom title');
+      expect(
+        (
+          await db.adminCatalogDraft.findUniqueOrThrow({
+            where: { id: edited.id },
+          })
+        ).serviceFeeEgp,
+      ).toBe(321);
+      expect(await db.serviceOffering.count()).toBe(publicCount);
+      const secondPage = await (await request(owner, '/catalog?page=2')).json();
+      expect(secondPage.items).toHaveLength(20);
+      expect(secondPage.meta.page).toBe(2);
+      expect(secondPage.categories.length).toBeGreaterThanOrEqual(21);
+      for (const offer of await db.serviceOffering.findMany()) {
+        const linked = await db.adminCatalogDraft.findUniqueOrThrow({
+          where: { offeringId: offer.id },
+        });
+        expect(linked.baseInspectionEgp).toBe(offer.baseInspectionEgp);
+        expect(linked.publishedVersion).toBe(1);
+      }
+    } finally {
+      await db.adminCatalogDraft.deleteMany({
+        where: { id: { notIn: before.map((d) => d.id) } },
+      });
+    }
   });
   it('summarizes persisted records and counts only collected cash, excluding drafts and unsettled payments', async () => {
     const key = randomUUID();

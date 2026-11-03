@@ -17,10 +17,12 @@ User decisions: administration inside FIXO; Owner manages membership, Owner and 
 
 User chose home maintenance, appliances, moving, cleaning, gardens and pest control. New services are private drafts; the owner sets actual prices and publishes through administration. No invented prices and no new public/bookable services until explicit publication. Keep existing services and bookings unchanged. Add native responsive catalog management for Owner/Admin, validated draft updates and versioned publication with an atomic audit. Use a separate draft table so incomplete pricing never enters public offering DTOs. Seed a curated bilingual catalog idempotently without overwriting edits. Extend mobile/desktop checks and genuine public isolation tests. Paid quotations/inspection workflow was not selected.
 
-- [ ] Add private catalog draft persistence/RLS and curated bilingual draft data.
-- [ ] Guard catalog list/edit/publish using the existing two-person authority, fresh proof and same-transaction audit; reject stale publication versions.
-- [ ] Implement responsive search/category filtering, editing and explicit publication; preview actual customer pricing before confirmation.
-- [ ] Verify draft isolation, pricing/version constraints, idempotency, responsive UI and existing regressions; then migrate/seed/deploy to the existing free projects.
+- [x] Private draft table/RLS and138curated bilingual service drafts in21groups; existing8offers imported as linked published records. Explicit idempotent seeding preserves operator edits.
+- [x] Catalog list/edit/publish uses two-person authority, fresh proof and same-transaction audit. Publication is version-bound, duplicate-safe, and leaves live prices unchanged when only a draft is saved.
+- [x] Responsive search/category filters, draft editor and explicit publication preview. Wider desktop marketplace category/professional grids preserve the narrow mobile layout.
+- [x] Verification:314backend tests/39suites,361Flutter tests with2existing skips,19admin UI checks, lint/analyze/builds. Local PostgreSQL checks cover privacy, null pricing, stale versions, duplicate publication, Owner/Admin scope, pagination and preservation.
+- [x] After an explicit additional user approval, both live migrations applied to fixo-dev; verified all3tables use RLS/backend-only policy, anonymous/authenticated SELECT revoked;138private drafts/8linked offers/21groups, public8offers/6categories, no initialized admin members. Server Owner email configured. No billing enabled.
+- [ ] Upload and verify staged deployments, promote existing aliases, push the tested work branch, and record release identifiers. Authenticated live UI testing remains user-deferred.
 
 ## Subsequent decisions and increments
 

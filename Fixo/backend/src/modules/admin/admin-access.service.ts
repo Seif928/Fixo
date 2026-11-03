@@ -118,7 +118,11 @@ export class AdminAccessService {
     entityId: string,
     operation: (
       tx: Prisma.TransactionClient,
-    ) => Promise<{ value: T; details: Prisma.InputJsonValue }>,
+    ) => Promise<{
+      value: T;
+      details: Prisma.InputJsonValue;
+      recordAudit?: boolean;
+    }>,
   ) {
     this.fresh(actor);
     return this.db.$transaction(async (tx) => {
@@ -131,14 +135,15 @@ export class AdminAccessService {
           'Your administration permission has ended.',
         );
       const result = await operation(tx);
-      await tx.adminAuditLog.create({
-        data: {
-          actorUserId: actor.userId,
-          action,
-          entityId,
-          details: result.details,
-        },
-      });
+      if (result.recordAudit !== false)
+        await tx.adminAuditLog.create({
+          data: {
+            actorUserId: actor.userId,
+            action,
+            entityId,
+            details: result.details,
+          },
+        });
       return result.value;
     });
   }

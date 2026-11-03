@@ -2,6 +2,7 @@ import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/network/dio_client.dart';
 import '../../auth/presentation/controllers/auth_controller.dart';
+import 'admin_catalog_models.dart';
 
 class AdminAccess {
   const AdminAccess(this.role, this.needsConfirmation);
@@ -153,6 +154,41 @@ class AdminRepository {
   Future<void> revoke() async {
     await _dio.delete<void>('/admin/member', options: _options);
   }
+
+  Future<AdminCatalogPageModel> catalog({
+    int page = 1,
+    String? search,
+    String? category,
+    CancelToken? cancelToken,
+  }) async => AdminCatalogPageModel.fromJson(
+    (await _dio.get<Map<String, dynamic>>(
+      '/admin/catalog',
+      options: _options,
+      cancelToken: cancelToken,
+      queryParameters: {
+        'page': page,
+        if (search?.isNotEmpty == true) 'search': search,
+        if (category?.isNotEmpty == true) 'category': category,
+      },
+    )).data!,
+  );
+  Future<AdminCatalogDraft> saveDraft(
+    AdminCatalogDraft draft,
+    Map<String, dynamic> fields,
+  ) async => AdminCatalogDraft.fromJson(
+    (await _dio.put<Map<String, dynamic>>(
+      '/admin/catalog/${Uri.encodeComponent(draft.id)}',
+      options: _options,
+      data: {...fields, 'version': draft.version},
+    )).data!,
+  );
+  Future<void> publishDraft(AdminCatalogDraft draft) async {
+    await _dio.post<void>(
+      '/admin/catalog/${Uri.encodeComponent(draft.id)}/publish',
+      options: _options,
+      data: {'version': draft.version},
+    );
+  }
 }
 
 final adminRepositoryProvider = Provider<AdminRepository>(
@@ -163,6 +199,8 @@ final adminRepositoryProvider = Provider<AdminRepository>(
     ),
   ),
 );
+
+final adminCatalogRevisionProvider = StateProvider.autoDispose<int>((ref) => 0);
 
 // Token changes also invalidate permissions after account confirmation/refresh.
 final adminAccessProvider = FutureProvider.autoDispose<AdminAccess>((
