@@ -17,6 +17,7 @@ import {
 import { AuthModule } from './auth.module';
 import { AuthService } from './auth.service';
 import { FirebaseTokenVerifier } from './firebase-identity.service';
+import { FirebaseSessionPolicy } from './firebase-session-policy.service';
 import {
   FirebasePasswordGateway,
   PhonePasswordService,
@@ -46,6 +47,8 @@ describe('Password-confirmed phone changes (guarded local PostgreSQL)', () => {
       .useValue(gateway)
       .overrideProvider(FirebaseTokenVerifier)
       .useValue(verifier)
+      .overrideProvider(FirebaseSessionPolicy)
+      .useValue({ assertValid: jest.fn().mockResolvedValue(undefined) })
       .compile();
     app = module.createNestApplication();
     app.setGlobalPrefix('api/v1');
@@ -82,13 +85,11 @@ describe('Password-confirmed phone changes (guarded local PostgreSQL)', () => {
       },
     });
     gateway.signIn.mockReset().mockResolvedValue('fixture-provider-token');
-    verifier.verify
-      .mockReset()
-      .mockResolvedValue({
-        uid: actor.firebaseUid,
-        email_verified: true,
-        auth_time: Math.floor(Date.now() / 1000),
-      });
+    verifier.verify.mockReset().mockResolvedValue({
+      uid: actor.firebaseUid,
+      email_verified: true,
+      auth_time: Math.floor(Date.now() / 1000),
+    });
     session = await auth.issueVerifiedUserSession(
       actor.id,
       Math.floor(Date.now() / 1000),
@@ -130,6 +131,10 @@ describe('Password-confirmed phone changes (guarded local PostgreSQL)', () => {
     expect(updated.user.id).toBe(actor.id);
     expect(updated.user.phone).toBe(next);
     expect(auth.verifyAccessToken(updated.accessToken).sub).toBe(actor.id);
+    // A signed-out old device must not revoke the freshly renewed session.
+    await expect(
+      auth.refreshTokens({ refreshToken: session.refreshToken }),
+    ).rejects.toThrow(UnauthorizedException);
     expect(
       await prisma.refreshToken.count({
         where: { userId: actor.id, revokedAt: null },
@@ -148,6 +153,10 @@ describe('Password-confirmed phone changes (guarded local PostgreSQL)', () => {
     expect(
       (await prisma.user.findUniqueOrThrow({ where: { id: other.id } })).phone,
     ).toBe(other.phone);
+    expect(
+      (await auth.refreshTokens({ refreshToken: updated.refreshToken })).user
+        .phone,
+    ).toBe(next);
     await expect(
       service.signIn({
         phone: actor.phone,

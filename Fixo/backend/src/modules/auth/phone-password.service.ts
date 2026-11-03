@@ -105,6 +105,9 @@ export class PhonePasswordService {
     }
     try {
       await this.prisma.$transaction(async (tx) => {
+        // Serialize with refresh rotation so old devices cannot mint a surviving
+        // replacement between alias change and intentional session revocation.
+        await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${'fixo_refresh_lock:' + userId}))`;
         await tx.$queryRaw`SELECT id FROM "User" WHERE id = ${userId} FOR UPDATE`;
         const current = await tx.user.findUnique({ where: { id: userId } });
         if (
@@ -118,7 +121,7 @@ export class PhonePasswordService {
         await tx.user.update({ where: { id: userId }, data: { phone } });
         await tx.refreshToken.updateMany({
           where: { userId, revokedAt: null },
-          data: { revokedAt: new Date() },
+          data: { revokedAt: new Date(), expiresAt: new Date() },
         });
       });
     } catch (error) {

@@ -479,7 +479,11 @@ export class AuthService implements OnModuleInit {
               where: { tokenHash: oldTokenHash },
             });
 
-            if (existing && existing.revokedAt !== null) {
+            if (
+              existing &&
+              existing.revokedAt !== null &&
+              existing.expiresAt.getTime() > Date.now()
+            ) {
               // Replay Attack Detected: Trigger Family Revocation!
               // CRITICAL: DO NOT throw inside transaction! Let this transaction COMMIT the revocations to disk!
               await tx.refreshToken.updateMany({

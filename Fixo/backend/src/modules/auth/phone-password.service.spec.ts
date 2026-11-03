@@ -22,6 +22,7 @@ describe('Phone alias and Firebase password authentication', () => {
         update: jest.fn().mockResolvedValue(account),
       },
       $queryRaw: jest.fn().mockResolvedValue([{ id: 'customer' }]),
+      $executeRaw: jest.fn().mockResolvedValue(1),
     };
     db.$transaction = jest.fn((callback) => callback(db));
     gateway = { signIn: jest.fn().mockResolvedValue('signed-id-token') };
@@ -128,7 +129,7 @@ describe('Phone alias and Firebase password authentication', () => {
     });
     expect(db.refreshToken.updateMany).toHaveBeenCalledWith({
       where: { userId: account.id, revokedAt: null },
-      data: { revokedAt: expect.any(Date) },
+      data: { revokedAt: expect.any(Date), expiresAt: expect.any(Date) },
     });
     expect(sessions.issueVerifiedUserSession).toHaveBeenCalledWith(
       account.id,
