@@ -18,7 +18,7 @@ Pre-flight interfaces: AdminAccess provides verified membership/fresh confirmati
 
 Release evidence: backend/Web builds passed; source e3f75dc pushed. Staged API ready/anonymous professional route401; staged Web hash matched build. Promoted API dpl_Hfk2G9o2EwVL8wRj4qhR8aVPBMQ6 and Web dpl_GUcbjgMgDcDiDwnfWhaV5UQ7XzBe. Stable readiness200, private queue401, public catalog8, /admin shell200/cache retirement and exact Web hash verified. The earlier pending Web-build statement is superseded. Authenticated review remains deferred; no real dossier approved.
 
-##2Booking administration — in progress
+##2Booking administration — released12a9a6c
 
 Paginated actual bookings/details/status history; constrained cancellation/dispatch/assignment and cash integrity. No fabricated completion/payment transitions. Implement actual permissions and audited state changes; preserve historical pricing and assigned pro eligibility.
 
@@ -26,7 +26,9 @@ Implemented private booking queue/search/status paging, fresh-confirmed details/
 
 Regression: a newly introduced expression-bodied setState returned the list Future after an operation; the two workflow tests reproduced it, then synchronous state assignment fixed it. Also guard pending professional decisions if logout occurs while their confirmation dialog is open. Private booking details/actions clear and stay invalid after logout and restoration. Arabic dark360/390/412 at1.35x, conflict handling and clean golden inspected. Backend329/41suites; focused administration36; Flutter378+2existing opt-in skips; lint/analyze/build passed. Web build/commit/deployment pending. All synthetic/local tests; no real booking was changed.
 
-##3Notifications, messages and device lifecycle
+Release evidence: Web/backend builds passed; source12a9a6c pushed. API dpl_CaB3VZ2FVnzqvy3KPXebvGYAJSUC and Web dpl_8AxwApUSdFLAbjtNAdcxwA5GXkVT staged then promoted. Stable database readiness200; booking list/detail/candidates and professional queue401 anonymously; public catalog remains8. Staged/stable Web SHA256 0F2FFBC67FD31298461508B1E80B2751ED7EC0FF8A78408B3C48E9C98F6D03BF matches the build, /admin shell and cache retirement passed. Earlier pending-build/commit/deployment text is superseded. Actual authenticated operational testing remains deferred. No real booking or dossier changed.
+
+##3Notifications, messages and device lifecycle — next
 
 Review/complete foreground/background/logout behavior and permission requests; tests and available-device checks. Add Android picker lost-data recovery and monotonic offer resume timing. Record genuinely unavailable iOS/APNs/device verification rather than fabricating success.
 
