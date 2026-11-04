@@ -21,11 +21,7 @@ import '../widgets/booking_receipt_sheet.dart';
 /// compliment tags, attach a private completed-work photo, add an optional
 /// 100%-to-artisan tip in EGP, and view the official receipt.
 class ReviewPage extends ConsumerStatefulWidget {
-  const ReviewPage({
-    super.key,
-    required this.orderId,
-    this.initialBooking,
-  });
+  const ReviewPage({super.key, required this.orderId, this.initialBooking});
 
   final String orderId;
   final BookingDetailModel? initialBooking;
@@ -110,9 +106,8 @@ class _ReviewPageState extends ConsumerState<ReviewPage> {
       titleAr: 'إرفاق صورة للعمل بعد الإتمام',
       rationaleEn:
           'Used only to attach a private photo of the completed service to your review.',
-      rationaleAr:
-          'يُستخدم فقط لإرفاق صورة خاصة للعمل المكتمل مع تقييمك.',
-      defaultFilePrefix: 'review-work',
+      rationaleAr: 'يُستخدم فقط لإرفاق صورة خاصة للعمل المكتمل مع تقييمك.',
+      defaultFilePrefix: 'review-work:${widget.orderId}',
     );
     if (picked == null || !mounted) return;
 
@@ -162,9 +157,7 @@ class _ReviewPageState extends ConsumerState<ReviewPage> {
             rating: _rating,
             tags: _selectedTags.toList(),
             comment: _commentController.text.trim(),
-            photoUrls: _uploadedPhotos
-                .map((p) => p.privateDataUri)
-                .toList(),
+            photoUrls: _uploadedPhotos.map((p) => p.privateDataUri).toList(),
             tipAmountEgp: _selectedTipEgp,
           );
       if (!mounted) return;
@@ -206,12 +199,12 @@ class _ReviewPageState extends ConsumerState<ReviewPage> {
   }
 
   String _ratingDescription(int stars, bool ar) => switch (stars) {
-        5 => ar ? '٥.٠ — حرفية ممتازة!' : '5.0 — Exceptional Craftsmanship!',
-        4 => ar ? '٤.٠ — خدمة جيدة جداً' : '4.0 — Very Good Service',
-        3 => ar ? '٣.٠ — خدمة مقبولة' : '3.0 — Satisfactory Service',
-        2 => ar ? '٢.٠ — دون المتوقع' : '2.0 — Below Expectations',
-        _ => ar ? '١.٠ — تجربة غير مرضية' : '1.0 — Needs Improvement',
-      };
+    5 => ar ? '٥.٠ — حرفية ممتازة!' : '5.0 — Exceptional Craftsmanship!',
+    4 => ar ? '٤.٠ — خدمة جيدة جداً' : '4.0 — Very Good Service',
+    3 => ar ? '٣.٠ — خدمة مقبولة' : '3.0 — Satisfactory Service',
+    2 => ar ? '٢.٠ — دون المتوقع' : '2.0 — Below Expectations',
+    _ => ar ? '١.٠ — تجربة غير مرضية' : '1.0 — Needs Improvement',
+  };
 
   @override
   Widget build(BuildContext context) {
@@ -264,30 +257,28 @@ class _ReviewPageState extends ConsumerState<ReviewPage> {
           child: _loading
               ? const Center(child: CircularProgressIndicator())
               : _booking == null
-                  ? Center(
-                      child: Padding(
-                        padding: const EdgeInsets.all(FixoSpacing.lg),
-                        child: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Text(
-                              ar
-                                  ? 'تعذّر تحميل بيانات الحجز.'
-                                  : 'Could not load booking details.',
-                              style: FixoTypography.bodyMd(
-                                color: palette.inkText,
-                              ),
-                            ),
-                            const SizedBox(height: 12),
-                            FilledButton(
-                              onPressed: _loadBooking,
-                              child: Text(ar ? 'إعادة المحاولة' : 'Retry'),
-                            ),
-                          ],
+              ? Center(
+                  child: Padding(
+                    padding: const EdgeInsets.all(FixoSpacing.lg),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          ar
+                              ? 'تعذّر تحميل بيانات الحجز.'
+                              : 'Could not load booking details.',
+                          style: FixoTypography.bodyMd(color: palette.inkText),
                         ),
-                      ),
-                    )
-                  : _buildReviewBody(context, _booking!, ar, inset),
+                        const SizedBox(height: 12),
+                        FilledButton(
+                          onPressed: _loadBooking,
+                          child: Text(ar ? 'إعادة المحاولة' : 'Retry'),
+                        ),
+                      ],
+                    ),
+                  ),
+                )
+              : _buildReviewBody(context, _booking!, ar, inset),
         ),
       ),
     );
@@ -313,7 +304,12 @@ class _ReviewPageState extends ConsumerState<ReviewPage> {
     if (_submittedReview != null) {
       final rev = _submittedReview!;
       return ListView(
-        padding: EdgeInsets.fromLTRB(inset, FixoSpacing.md, inset, FixoSpacing.xl),
+        padding: EdgeInsets.fromLTRB(
+          inset,
+          FixoSpacing.md,
+          inset,
+          FixoSpacing.xl,
+        ),
         children: [
           FixoSurfaceCard(
             key: const Key('submitted-review-summary-card'),
@@ -409,7 +405,9 @@ class _ReviewPageState extends ConsumerState<ReviewPage> {
                     isArabic: ar,
                   ),
                   icon: const Icon(Icons.receipt_long_outlined),
-                  label: Text(ar ? 'عرض الإيصال الرسمي' : 'View Official Receipt'),
+                  label: Text(
+                    ar ? 'عرض الإيصال الرسمي' : 'View Official Receipt',
+                  ),
                 ),
                 const SizedBox(height: 10),
                 FilledButton(
@@ -473,7 +471,12 @@ class _ReviewPageState extends ConsumerState<ReviewPage> {
 
     // Active Review Submission Form for COMPLETED Booking (Screen 09)
     return ListView(
-      padding: EdgeInsets.fromLTRB(inset, FixoSpacing.md, inset, FixoSpacing.xl),
+      padding: EdgeInsets.fromLTRB(
+        inset,
+        FixoSpacing.md,
+        inset,
+        FixoSpacing.xl,
+      ),
       children: [
         // 1. Completed Service & Pro Summary Card
         FixoSurfaceCard(
@@ -532,7 +535,9 @@ class _ReviewPageState extends ConsumerState<ReviewPage> {
           child: Column(
             children: [
               Text(
-                ar ? 'كيف كانت تجربتك مع الفني؟' : 'How was your service experience?',
+                ar
+                    ? 'كيف كانت تجربتك مع الفني؟'
+                    : 'How was your service experience?',
                 textAlign: TextAlign.center,
                 style: FixoTypography.headlineSm(
                   color: palette.deepForest,
@@ -699,9 +704,7 @@ class _ReviewPageState extends ConsumerState<ReviewPage> {
             ),
             child: Text(
               _error!,
-              style: FixoTypography.bodySm(
-                color: FixoColors.onErrorContainer,
-              ),
+              style: FixoTypography.bodySm(color: FixoColors.onErrorContainer),
             ),
           ),
         ],
@@ -734,4 +737,3 @@ class _ReviewPageState extends ConsumerState<ReviewPage> {
     );
   }
 }
-

@@ -250,9 +250,34 @@ class AdminRepository {
       data: {...fields, 'version': draft.version},
     )).data!,
   );
+  Future<AdminCatalogDraft> createDraft(Map<String, dynamic> data) async =>
+      AdminCatalogDraft.fromJson(
+        (await _dio.post<Map<String, dynamic>>(
+          '/admin/catalog',
+          options: _options,
+          data: data,
+        )).data!,
+      );
+
   Future<void> publishDraft(AdminCatalogDraft draft) async {
     await _dio.post<void>(
       '/admin/catalog/${Uri.encodeComponent(draft.id)}/publish',
+      options: _options,
+      data: {'version': draft.version},
+    );
+  }
+
+  Future<void> deactivateService(AdminCatalogDraft draft) async {
+    await _dio.post<void>(
+      '/admin/catalog/${Uri.encodeComponent(draft.id)}/deactivate',
+      options: _options,
+      data: {'version': draft.version},
+    );
+  }
+
+  Future<void> reactivateService(AdminCatalogDraft draft) async {
+    await _dio.post<void>(
+      '/admin/catalog/${Uri.encodeComponent(draft.id)}/reactivate',
       options: _options,
       data: {'version': draft.version},
     );

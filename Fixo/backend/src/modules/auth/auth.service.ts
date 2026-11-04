@@ -781,7 +781,7 @@ export class AuthService implements OnModuleInit {
   async findUserById(id: string): Promise<AuthenticatedUserProfile | null> {
     if (this.prisma.isDatabaseConnected()) {
       const user = await this.prisma.user.findUnique({ where: { id } });
-      if (!user) {
+      if (!user || user.isDeleted) {
         return null;
       }
       return {

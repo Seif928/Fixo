@@ -21,6 +21,8 @@ abstract final class AppRoutes {
       '/customer/orders/:orderId/review'; // 09_rate_review
   static const String customerProfile =
       '/customer/profile'; // 10_profile_notifications
+  static const String favorites = '/customer/favorites';
+  static const String myComplaints = '/customer/complaints';
 
   // Professional Flow (11–16)
   static const String proEntry =
@@ -34,6 +36,7 @@ abstract final class AppRoutes {
   static const String proVerificationStatus =
       '/pro/onboarding/status'; // 14_verification_status
   static const String proDashboard = '/pro/dashboard'; // 15_pro_dashboard
+  static const String proSchedule = '/pro/schedule';
   static const String incomingJobRequest =
       '/pro/jobs/:jobId/incoming'; // 16_incoming_job_request
 }

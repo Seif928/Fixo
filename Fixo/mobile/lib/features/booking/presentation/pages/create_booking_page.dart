@@ -51,6 +51,7 @@ class _CreateBookingPageState extends ConsumerState<CreateBookingPage> {
   }
 
   Future<void> _pickAndUploadPhoto(bool isArabic) async {
+    if (widget.initialOffering == null) return;
     final picked = await PrivateMediaPickerSheet.show(
       context,
       isArabic: isArabic,
@@ -60,7 +61,7 @@ class _CreateBookingPageState extends ConsumerState<CreateBookingPage> {
           'Issue photos are stored securely and only accessible to assigned technicians for equipment preparation.',
       rationaleAr:
           'يتم تخزين صور الأعطال بشكل آمن وخاص ومشاركتها مع الفني المعتمد فقط لتجهيز المعدات وقطع الغيار.',
-      defaultFilePrefix: 'fixo_issue',
+      defaultFilePrefix: 'fixo_issue:${widget.initialOffering!.id}',
     );
     if (picked == null || !mounted) return;
 

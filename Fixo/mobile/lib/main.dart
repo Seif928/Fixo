@@ -8,6 +8,7 @@ import 'core/l10n/app_locale_controller.dart';
 import 'app/app.dart';
 import 'features/auth/presentation/controllers/auth_controller.dart';
 import 'core/notifications/device_push_service.dart';
+import 'core/uploads/device_media_picker.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -27,6 +28,7 @@ Future<void> main() async {
     UncontrolledProviderScope(container: container, child: const FixoApp()),
   );
   WidgetsBinding.instance.addPostFrameCallback((_) {
+    container.read(deviceMediaPickerProvider).prepareRecovery();
     container.read(devicePushProvider).resume();
   });
 }

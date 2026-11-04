@@ -270,6 +270,7 @@ export class ServicesService {
       // Database-connected mode: Offerings come EXCLUSIVELY from PostgreSQL.
       // Never substitute in-memory/demo data when connected.
       const rows = await this.prisma.serviceOffering.findMany({
+        where: { isActive: true },
         include: { category: true },
       });
       return rows.map((row) => ({

@@ -673,6 +673,63 @@ class _ProDashboardPageState extends ConsumerState<ProDashboardPage> {
                             const SizedBox(height: FixoSpacing.md),
                           ],
 
+                          // Working Hours & Leaves Entry Card
+                          Padding(
+                            padding: const EdgeInsets.only(bottom: FixoSpacing.md),
+                            child: FixoSurfaceCard(
+                              padding: const EdgeInsets.all(FixoSpacing.md),
+                              borderRadius: FixoRadius.borderRadiusLg,
+                              child: Row(
+                              children: [
+                                Container(
+                                  padding: const EdgeInsets.all(10),
+                                  decoration: BoxDecoration(
+                                    color: palette.primaryBrand.withValues(alpha: 0.1),
+                                    shape: BoxShape.circle,
+                                  ),
+                                  child: Icon(
+                                    Icons.calendar_month_outlined,
+                                    color: palette.primaryBrand,
+                                    size: 24,
+                                  ),
+                                ),
+                                const SizedBox(width: FixoSpacing.md),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        ar
+                                            ? 'مواعيد العمل والإجازات'
+                                            : 'Working Hours & Leaves',
+                                        style: FixoTypography.bodyLg(
+                                          color: palette.deepForest,
+                                        ).copyWith(fontWeight: FontWeight.bold),
+                                      ),
+                                      const SizedBox(height: 2),
+                                      Text(
+                                        ar
+                                            ? 'ضبط أوقات الدوام الأسبوعية وتثبيت الإجازات'
+                                            : 'Manage weekly working shifts & leave periods',
+                                        style: FixoTypography.labelSm(
+                                          color: palette.mutedText,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                IconButton(
+                                  icon: Icon(
+                                    ar ? Icons.chevron_left : Icons.chevron_right,
+                                    color: palette.primaryBrand,
+                                  ),
+                                  onPressed: () => context.push(AppRoutes.proSchedule),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+
                           // Assigned Jobs Schedule
                           FixoSurfaceCard(
                             padding: const EdgeInsets.all(FixoSpacing.md),

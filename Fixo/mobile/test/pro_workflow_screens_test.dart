@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -21,6 +22,9 @@ class FakeProRepository implements ProRepository {
   int reviewsCount = 38;
   String currentStatus = 'APPROVED';
   int acceptCallCount = 0;
+  int getOfferCallCount = 0;
+  int offerRemainingSeconds = 45;
+  Future<JobOfferModel>? nextOfferResponse;
   int declineCallCount = 0;
   String? lastDeclinedReason;
   String? lastAdvancedStatus;
@@ -388,13 +392,17 @@ class FakeProRepository implements ProRepository {
 
   @override
   Future<JobOfferModel> getJobOfferById(String offerId) async {
-    return const JobOfferModel(
+    getOfferCallCount++;
+    final pending = nextOfferResponse;
+    nextOfferResponse = null;
+    if (pending != null) return pending;
+    return JobOfferModel(
       id: 'offer-8899',
       bookingId: 'bk-8899',
       orderCode: 'FX-8899',
       status: 'OFFERED',
       expiresAt: '2026-11-02T12:00:00Z',
-      remainingSeconds: 45,
+      remainingSeconds: offerRemainingSeconds,
       serviceTitleEn: 'AC Deep Wash',
       serviceTitleAr: 'تنظيف عميق للتكييف',
       categoryNameEn: 'Air Conditioning',
@@ -470,10 +478,13 @@ Widget buildTestableScreen({
   Locale locale = const Locale('en'),
   ThemeMode themeMode = ThemeMode.light,
   double textScale = 1.0,
+  Duration Function()? offerClock,
 }) {
   return ProviderScope(
     overrides: [
       proRepositoryProvider.overrideWithValue(fakeRepo),
+      if (offerClock != null)
+        jobOfferClockProvider.overrideWithValue(offerClock),
       appLocaleProvider.overrideWith(() => _FakeLocaleNotifier(locale)),
     ],
     child: MaterialApp(
@@ -638,6 +649,8 @@ void main() {
         expect(find.text('400 EGP'), findsOneWidget); // Gross
         expect(find.text('- 60 EGP'), findsOneWidget); // 15% platform fee
         expect(find.text('340 EGP'), findsOneWidget); // Net guaranteed
+        expect(find.textContaining('15%'), findsNothing);
+        expect(find.textContaining('AFTERNOON_13_16'), findsNothing);
 
         // Tap Accept
         final acceptBtn = find.text('Accept Job Offer');
@@ -651,6 +664,164 @@ void main() {
       },
     );
 
+    testWidgets(
+      'incoming offer revalidates after resume before allowing acceptance',
+      (tester) async {
+        await tester.binding.setSurfaceSize(const Size(390, 844));
+        await tester.pumpWidget(
+          buildTestableScreen(
+            screen: const IncomingJobPage(jobOfferId: 'offer-8899'),
+            fakeRepo: fakeRepo,
+          ),
+        );
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 100));
+        expect(fakeRepo.getOfferCallCount, 1);
+        final pending = Completer<JobOfferModel>();
+        fakeRepo.nextOfferResponse = pending.future;
+        tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.paused);
+        await tester.pump();
+        tester.binding.handleAppLifecycleStateChanged(
+          AppLifecycleState.resumed,
+        );
+        await tester.pump();
+        expect(fakeRepo.getOfferCallCount, 2);
+        expect(find.text('Accept Job Offer'), findsNothing);
+        final expiredRepo = FakeProRepository()..offerRemainingSeconds = 0;
+        pending.complete(await expiredRepo.getJobOfferById('offer-8899'));
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 100));
+        final accept = find.byKey(const Key('pro-offer-accept'));
+        expect(accept, findsOneWidget);
+        expect(tester.widget<FilledButton>(accept).onPressed, isNull);
+        expect(fakeRepo.acceptCallCount, 0);
+        await tester.pumpWidget(const SizedBox());
+      },
+    );
+    testWidgets('a delayed timer cannot let an expired offer accept on tap', (
+      tester,
+    ) async {
+      var elapsed = Duration.zero;
+      await tester.binding.setSurfaceSize(const Size(390, 844));
+      await tester.pumpWidget(
+        buildTestableScreen(
+          screen: const IncomingJobPage(jobOfferId: 'offer-8899'),
+          fakeRepo: fakeRepo,
+          offerClock: () => elapsed,
+        ),
+      );
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 100));
+      final accept = find.text('Accept Job Offer');
+      await tester.ensureVisible(accept);
+      await tester.pump();
+      elapsed = const Duration(seconds: 46);
+      await tester.tap(accept);
+      await tester.pump();
+      expect(fakeRepo.acceptCallCount, 0);
+      expect(find.text('Offer has expired'), findsOneWidget);
+      await tester.pumpWidget(const SizedBox());
+    });
+    testWidgets(
+      'a failed resume refresh hides old offer actions and provides retry',
+      (tester) async {
+        await tester.binding.setSurfaceSize(const Size(390, 844));
+        await tester.pumpWidget(
+          buildTestableScreen(
+            screen: const IncomingJobPage(jobOfferId: 'offer-8899'),
+            fakeRepo: fakeRepo,
+          ),
+        );
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 100));
+        final pending = Completer<JobOfferModel>();
+        fakeRepo.nextOfferResponse = pending.future;
+        tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.paused);
+        await tester.pump();
+        tester.binding.handleAppLifecycleStateChanged(
+          AppLifecycleState.resumed,
+        );
+        await tester.pump();
+        pending.completeError(StateError('Fixture connection failure'));
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 100));
+        expect(find.text('Accept Job Offer'), findsNothing);
+        expect(find.text('Retry'), findsOneWidget);
+        fakeRepo.offerRemainingSeconds = 0;
+        await tester.tap(find.text('Retry'));
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 100));
+        expect(fakeRepo.getOfferCallCount, 3);
+        expect(find.text('Offer has expired'), findsOneWidget);
+        await tester.pumpWidget(const SizedBox());
+      },
+    );
+    testWidgets(
+      'an older offer read cannot replace the latest resume response',
+      (tester) async {
+        final old = Completer<JobOfferModel>();
+        fakeRepo.nextOfferResponse = old.future;
+        await tester.binding.setSurfaceSize(const Size(390, 844));
+        await tester.pumpWidget(
+          buildTestableScreen(
+            screen: const IncomingJobPage(jobOfferId: 'offer-8899'),
+            fakeRepo: fakeRepo,
+          ),
+        );
+        await tester.pump();
+        final fresh = Completer<JobOfferModel>();
+        fakeRepo.nextOfferResponse = fresh.future;
+        tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.paused);
+        await tester.pump();
+        tester.binding.handleAppLifecycleStateChanged(
+          AppLifecycleState.resumed,
+        );
+        await tester.pump();
+        fresh.complete(
+          await (FakeProRepository()..offerRemainingSeconds = 0)
+              .getJobOfferById('offer-8899'),
+        );
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 100));
+        old.complete(await FakeProRepository().getJobOfferById('offer-8899'));
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 100));
+        expect(find.text('Offer has expired'), findsOneWidget);
+        expect(fakeRepo.getOfferCallCount, 2);
+        expect(
+          tester
+              .widget<FilledButton>(find.byKey(const Key('pro-offer-accept')))
+              .onPressed,
+          isNull,
+        );
+        await tester.pumpWidget(const SizedBox());
+      },
+    );
+    for (final width in [360.0, 390.0, 412.0]) {
+      for (final locale in [const Locale('en'), const Locale('ar')]) {
+        for (final dark in [false, true]) {
+          testWidgets(
+            'incoming offer fits $width ${locale.languageCode} dark=$dark at 1.35x',
+            (tester) async {
+              await tester.binding.setSurfaceSize(Size(width, 844));
+              await tester.pumpWidget(
+                buildTestableScreen(
+                  screen: const IncomingJobPage(jobOfferId: 'offer-8899'),
+                  fakeRepo: fakeRepo,
+                  locale: locale,
+                  themeMode: dark ? ThemeMode.dark : ThemeMode.light,
+                  textScale: 1.35,
+                ),
+              );
+              await tester.pump();
+              await tester.pump(const Duration(milliseconds: 100));
+              expect(tester.takeException(), isNull);
+              await tester.pumpWidget(const SizedBox());
+            },
+          );
+        }
+      }
+    }
     testWidgets(
       'Responsive Matrix: Screen 15 ProDashboard renders across 360dp, 390dp, 412dp viewports with 1.35x text scale in Arabic and Dark Theme',
       (tester) async {

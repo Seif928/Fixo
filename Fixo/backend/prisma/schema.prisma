@@ -144,6 +144,8 @@ model User {
   preferredLocale      String   @default("en")
   arrivalAlertsEnabled Boolean  @default(true)
   rewardPoints         Int      @default(0)
+  isDeleted            Boolean  @default(false)
+  deletedAt            DateTime?
   createdAt            DateTime @default(now())
   updatedAt            DateTime @updatedAt
 
@@ -153,9 +155,13 @@ model User {
   refreshTokens   RefreshToken[]
   sentMessages    ChatMessage[]
   reviews         Review[]
-  pushDevices     PushDevice[]
-  adminMembership AdminMembership?
-  adminAuditLogs  AdminAuditLog[]
+  pushDevices           PushDevice[]
+  adminMembership       AdminMembership?
+  adminAuditLogs        AdminAuditLog[]
+  favoriteServices      FavoriteService[]
+  favoriteProfessionals FavoriteProfessional[]
+  complaints            Complaint[]            @relation("CustomerComplaints")
+  resolvedComplaints    Complaint[]            @relation("ResolvedComplaints")
 }
 
 model PushDevice {
@@ -271,10 +277,12 @@ model ServiceOffering {
   estimatedDurationMins Int     @default(60)
   isSeasonalPromo       Boolean @default(false)
   isBundle              Boolean @default(false)
+  isActive              Boolean @default(true)
 
   category   ServiceCategory    @relation(fields: [categoryId], references: [id])
   bookings   Booking[]
   adminDraft AdminCatalogDraft?
+  favorites  FavoriteService[]
 }
 
 // Incomplete prices stay private and cannot enter customer booking payloads.
@@ -295,6 +303,7 @@ model AdminCatalogDraft {
   version               Int              @default(1)
   publishedVersion      Int?
   offeringId            String?          @unique
+  isActive              Boolean          @default(true)
   createdAt             DateTime         @default(now())
   updatedAt             DateTime         @updatedAt
   offering              ServiceOffering? @relation(fields: [offeringId], references: [id], onDelete: Restrict)
@@ -342,6 +351,9 @@ model ProProfile {
   bookings        Booking[]
   jobOffers       JobOffer[]
   reviews         Review[]
+  favoritedBy     FavoriteProfessional[]
+  weeklySchedules ProWeeklySchedule[]
+  leaves          ProLeave[]
 }
 
 model ProVerificationDocument {
@@ -391,6 +403,7 @@ model Booking {
   payment      PaymentRecord?
   messages     ChatMessage[]
   review       Review?
+  complaints   Complaint[]
 }
 
 model BookingStatusEvent {
@@ -465,4 +478,128 @@ model Review {
   booking    Booking    @relation(fields: [bookingId], references: [id], onDelete: Cascade)
   customer   User       @relation(fields: [customerId], references: [id])
   proProfile ProProfile @relation(fields: [proProfileId], references: [id])
+}
+
+model FavoriteService {
+  id         String          @id @default(uuid())
+  userId     String
+  offeringId String
+  createdAt  DateTime        @default(now())
+
+  user     User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  offering ServiceOffering @relation(fields: [offeringId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, offeringId])
+  @@index([userId, createdAt])
+}
+
+model FavoriteProfessional {
+  id           String     @id @default(uuid())
+  userId       String
+  proProfileId String
+  createdAt    DateTime   @default(now())
+
+  user       User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  proProfile ProProfile @relation(fields: [proProfileId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, proProfileId])
+  @@index([userId, createdAt])
+}
+
+
+enum ComplaintCategory {
+  SERVICE_QUALITY
+  BEHAVIOR
+  DELAY
+  OVERCHARGING
+  PROPERTY_DAMAGE
+  OTHER
+}
+
+enum ComplaintStatus {
+  OPEN
+  IN_REVIEW
+  RESOLVED
+  REJECTED
+}
+
+model Complaint {
+  id           String            @id @default(uuid())
+  bookingId    String
+  customerId   String
+  category     ComplaintCategory
+  description  String
+  photoUrls    String[]
+  status       ComplaintStatus   @default(OPEN)
+  adminNotes   String?
+  resolvedAt   DateTime?
+  resolvedById String?
+  createdAt    DateTime          @default(now())
+  updatedAt    DateTime          @updatedAt
+
+  booking    Booking @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  customer   User    @relation("CustomerComplaints", fields: [customerId], references: [id], onDelete: Cascade)
+  resolvedBy User?   @relation("ResolvedComplaints", fields: [resolvedById], references: [id], onDelete: SetNull)
+
+  @@index([customerId, createdAt])
+  @@index([bookingId])
+  @@index([status])
+}
+
+
+enum DayOfWeek {
+  SUNDAY
+  MONDAY
+  TUESDAY
+  WEDNESDAY
+  THURSDAY
+  FRIDAY
+  SATURDAY
+}
+
+enum LeaveReason {
+  VACATION
+  SICK
+  EMERGENCY
+  PERSONAL
+}
+
+enum LeaveStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  CANCELLED
+}
+
+model ProWeeklySchedule {
+  id           String    @id @default(uuid())
+  proProfileId String
+  dayOfWeek    DayOfWeek
+  startMinute  Int       @default(540)
+  endMinute    Int       @default(1080)
+  isActive     Boolean   @default(true)
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  proProfile ProProfile @relation(fields: [proProfileId], references: [id], onDelete: Cascade)
+
+  @@unique([proProfileId, dayOfWeek])
+  @@index([proProfileId])
+}
+
+model ProLeave {
+  id           String      @id @default(uuid())
+  proProfileId String
+  startDate    DateTime
+  endDate      DateTime
+  reason       LeaveReason @default(PERSONAL)
+  notes        String?
+  status       LeaveStatus @default(APPROVED)
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
+
+  proProfile ProProfile @relation(fields: [proProfileId], references: [id], onDelete: Cascade)
+
+  @@index([proProfileId, startDate, endDate])
+  @@index([proProfileId, status])
 }

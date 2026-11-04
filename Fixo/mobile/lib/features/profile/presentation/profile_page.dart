@@ -16,6 +16,7 @@ import '../../chat/presentation/notification_sheet.dart';
 import '../../customer_home/presentation/widgets/customer_home_widgets.dart';
 import '../../../core/uploads/private_media_picker_sheet.dart';
 import '../data/avatar_repository.dart';
+import '../data/account_deletion_repository.dart';
 import 'profile_avatar.dart';
 import 'profile_details_dialog.dart';
 import '../../admin/presentation/admin_page.dart';
@@ -31,6 +32,94 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
   late Future<Map<String, dynamic>> _profile;
   bool _saving = false;
   bool get _ar => ref.read(appLocaleProvider).languageCode == 'ar';
+
+  Future<void> _confirmDeleteAccount() async {
+    final ar = _ar;
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Row(
+          children: [
+            Icon(Icons.warning_amber_rounded, color: FixoColors.error),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                ar ? 'حذف الحساب نهائيًا' : 'Delete Account Permanently',
+              ),
+            ),
+          ],
+        ),
+        content: Text(
+          ar
+              ? 'هل أنت متأكد من رغبتك في حذف حسابك؟ سيتم إلغاء تفعيل حسابك وحذف جميع عناوينك المسجلة وأجهزتك فورًا، مع الاحتفاظ الآمن بسجلات الفواتير السابقة لأغراض الضرائب والمحاسبة.'
+              : 'Are you sure you want to permanently delete your account? Your personal data, delivery addresses, and push notifications will be wiped immediately.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: Text(ar ? 'إلغاء' : 'Cancel'),
+          ),
+          ElevatedButton(
+            key: const Key('confirm-delete-account-button'),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: FixoColors.error,
+              foregroundColor: Colors.white,
+            ),
+            onPressed: () => Navigator.of(ctx).pop(true),
+            child: Text(ar ? 'تأكيد الحذف' : 'Delete Permanently'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true) return;
+
+    try {
+      setState(() => _saving = true);
+      await ref.read(accountDeletionRepositoryProvider).deleteAccount();
+      await ref.read(authControllerProvider.notifier).logout();
+      if (!mounted) return;
+      context.go('/auth/phone');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            ar
+                ? 'تم حذف الحساب والبيانات الشخصية بنجاح'
+                : 'Account and personal data deleted successfully',
+          ),
+        ),
+      );
+    } on AccountDeletionException catch (e) {
+      if (!mounted) return;
+      setState(() => _saving = false);
+      showDialog<void>(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          title: Text(ar ? 'تعذر حذف الحساب' : 'Cannot Delete Account'),
+          content: Text(
+            ar
+                ? 'لا يمكن حذف الحساب لوجود حجوزات جارية أو معلقة. يرجى إتمام الحجوزات أو إلغاؤها أولاً.'
+                : e.message,
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(ctx).pop(),
+              child: Text(ar ? 'حسنًا' : 'OK'),
+            ),
+          ],
+        ),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _saving = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(e.toString()),
+          backgroundColor: FixoColors.error,
+        ),
+      );
+    }
+  }
 
   Future<void> _editDetails(String initialValue, {bool isPhone = false}) async {
     final owner = ref.read(authControllerProvider).session?.user.id;
@@ -583,6 +672,45 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
                               ),
                             ),
                           ),
+                          ListTile(
+                            key: const Key('profile-favorites-tile'),
+                            leading: Container(
+                              width: 36,
+                              height: 36,
+                              decoration: BoxDecoration(
+                                color: palette.primaryBrand.withValues(alpha: 0.15),
+                                shape: BoxShape.circle,
+                              ),
+                              alignment: Alignment.center,
+                              child: Icon(
+                                Icons.favorite_rounded,
+                                color: palette.primaryBrand,
+                                size: 20,
+                              ),
+                            ),
+                            title: Text(
+                              ar ? 'المفضلة' : 'Saved Favorites',
+                              style: textTheme.titleSmall?.copyWith(
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                            subtitle: Text(
+                              ar
+                                  ? 'الخدمات والفنيون المفضلون لديك'
+                                  : 'Your favorite services and technicians',
+                              style: textTheme.bodySmall?.copyWith(
+                                color: palette.mutedText,
+                              ),
+                            ),
+                            trailing: Icon(
+                              ar
+                                  ? Icons.chevron_left_rounded
+                                  : Icons.chevron_right_rounded,
+                              color: palette.mutedText,
+                            ),
+                            onTap: () => context.push(AppRoutes.favorites),
+                          ),
+                          Divider(height: 1, color: palette.subtleBorder),
                           SwitchListTile(
                             title: Text(
                               ar
@@ -840,6 +968,26 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
                       }),
                 icon: const Icon(Icons.logout_rounded),
                 label: Text(ar ? 'تسجيل الخروج' : 'Sign out'),
+              ),
+            ),
+            const SizedBox(height: FixoSpacing.sm),
+            FixoSurfaceCard(
+              padding: const EdgeInsets.symmetric(
+                horizontal: FixoSpacing.md,
+                vertical: FixoSpacing.xs,
+              ),
+              borderRadius: FixoRadius.borderRadiusLg,
+              child: TextButton.icon(
+                key: const Key('profile-delete-account'),
+                style: TextButton.styleFrom(
+                  foregroundColor: Colors.grey.shade600,
+                ),
+                onPressed: _saving ? null : _confirmDeleteAccount,
+                icon: const Icon(Icons.delete_forever_outlined, size: 20),
+                label: Text(
+                  ar ? 'حذف الحساب والبيانات الشخصية' : 'Delete account & privacy data',
+                  style: const TextStyle(fontSize: 13),
+                ),
               ),
             ),
             const SizedBox(height: FixoSpacing.lg),

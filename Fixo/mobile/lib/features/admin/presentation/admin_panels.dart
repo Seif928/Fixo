@@ -150,10 +150,16 @@ class AdminAuditPanel extends StatelessWidget {
                 ar
                     ? 'إلغاء صلاحيات المسؤول الثاني'
                     : 'Second administrator access revoked',
+              'CATALOG_DRAFT_CREATED' =>
+                ar ? 'إنشاء مسودة خدمة جديدة' : 'Service draft created',
               'CATALOG_DRAFT_UPDATED' =>
                 ar ? 'تعديل مسودة خدمة' : 'Service draft updated',
               'CATALOG_PUBLISHED' =>
                 ar ? 'نشر خدمة وسعرها' : 'Service and price published',
+              'CATALOG_SERVICE_DEACTIVATED' =>
+                ar ? 'تعطيل خدمة منشورة' : 'Published service deactivated',
+              'CATALOG_SERVICE_REACTIVATED' =>
+                ar ? 'إعادة تفعيل خدمة' : 'Service reactivated',
               'PRO_DOSSIER_ACCESSED' =>
                 ar ? 'فتح ملف فني للمراجعة' : 'Professional dossier accessed',
               'PRO_DOCUMENT_ACCESS_GRANTED' =>

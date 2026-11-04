@@ -6,6 +6,7 @@ import '../../auth/presentation/controllers/auth_controller.dart';
 import '../data/admin_catalog_models.dart';
 import '../data/admin_repository.dart';
 import 'admin_confirmation_dialog.dart';
+import 'admin_create_draft_dialog.dart';
 import 'admin_draft_dialog.dart';
 
 class AdminCatalogPanel extends ConsumerStatefulWidget {
@@ -69,6 +70,38 @@ class _State extends ConsumerState<AdminCatalogPanel> {
       barrierDismissible: false,
       builder: (_) => AdminConfirmationDialog(ar: widget.ar),
     );
+  }
+
+  Future<void> _createDraft() async {
+    if (_busy || widget.needsConfirmation) return;
+    final owner = ref.read(authControllerProvider).session?.user.id;
+    setState(() => _busy = true);
+    final created = await showDialog<AdminCatalogDraft>(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => AdminCreateDraftDialog(
+        ar: widget.ar,
+        categories: _categories,
+      ),
+    );
+    if (!mounted ||
+        ref.read(authControllerProvider).session?.user.id != owner) {
+      return;
+    }
+    setState(() => _busy = false);
+    if (created != null) {
+      ScaffoldMessenger.of(context)
+        ..hideCurrentSnackBar()
+        ..showSnackBar(
+          SnackBar(
+            content: Text(
+              widget.ar
+                  ? 'تم إنشاء مسودة الخدمة بنجاح.'
+                  : 'Service draft created successfully.',
+            ),
+          ),
+        );
+    }
   }
 
   Future<void> _edit(AdminCatalogDraft draft) async {
@@ -192,6 +225,174 @@ class _State extends ConsumerState<AdminCatalogPanel> {
     }
   }
 
+  Future<void> _deactivate(AdminCatalogDraft draft) async {
+    if (_busy || widget.needsConfirmation || !draft.isPublishedActive) return;
+    final owner = ref.read(authControllerProvider).session?.user.id;
+    final ar = widget.ar;
+    final yes = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        scrollable: true,
+        title: Text(
+          ar ? 'تعطيل الخدمة المنشورة' : 'Deactivate published service',
+        ),
+        content: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              ar ? draft.titleAr : draft.titleEn,
+              style: Theme.of(context).textTheme.titleMedium,
+            ),
+            const SizedBox(height: 16),
+            Text(
+              ar
+                  ? 'الخدمة ستختفي من قوائم البحث للعملاء ولن يمكن حجزها كطلب جديد. الحجوزات السابقة وسجلات الأسعار تظل محفوظة وقابلة للتشغيل.'
+                  : 'This service will disappear from public search and cannot be booked as a new order. Historical bookings and pricing records remain preserved and operable.',
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: Text(ar ? 'إلغاء' : 'Cancel'),
+          ),
+          FilledButton(
+            key: const Key('admin-deactivate-confirm'),
+            style: FilledButton.styleFrom(
+              backgroundColor: Theme.of(context).colorScheme.error,
+              foregroundColor: Theme.of(context).colorScheme.onError,
+            ),
+            onPressed: () => Navigator.pop(context, true),
+            child: Text(ar ? 'تأكيد التعطيل' : 'Confirm deactivation'),
+          ),
+        ],
+      ),
+    );
+    if (yes != true ||
+        !mounted ||
+        owner == null ||
+        ref.read(authControllerProvider).session?.user.id != owner) {
+      return;
+    }
+    setState(() {
+      _busy = true;
+      _error = null;
+      _reauth = false;
+    });
+    try {
+      await ref.read(adminRepositoryProvider).deactivateService(draft);
+      if (!mounted ||
+          ref.read(authControllerProvider).session?.user.id != owner) {
+        return;
+      }
+      ref.invalidate(adminAuditProvider);
+      ref.invalidate(adminSummaryProvider);
+      ScaffoldMessenger.of(context)
+        ..hideCurrentSnackBar()
+        ..showSnackBar(
+          SnackBar(
+            content: Text(
+              ar
+                  ? 'تم تعطيل الخدمة بنجاح.'
+                  : 'Service deactivated successfully.',
+            ),
+          ),
+        );
+      _reload();
+    } catch (error) {
+      if (mounted) {
+        setState(() {
+          _error = catalogError(error, ar);
+          _reauth = needsAdminConfirmation(error);
+        });
+      }
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  Future<void> _reactivate(AdminCatalogDraft draft) async {
+    if (_busy || widget.needsConfirmation || !draft.isDeactivated) return;
+    final owner = ref.read(authControllerProvider).session?.user.id;
+    final ar = widget.ar;
+    final yes = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        scrollable: true,
+        title: Text(ar ? 'إعادة تفعيل الخدمة' : 'Reactivate service'),
+        content: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              ar ? draft.titleAr : draft.titleEn,
+              style: Theme.of(context).textTheme.titleMedium,
+            ),
+            const SizedBox(height: 16),
+            Text(
+              ar
+                  ? 'ستعود الخدمة للظهور للعملاء في البحث والتطبيق وتصبح متاحة للحجز بالأسعار المحفوظة.'
+                  : 'The service will reappear in customer search and become available for booking with its saved pricing.',
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: Text(ar ? 'إلغاء' : 'Cancel'),
+          ),
+          FilledButton(
+            key: const Key('admin-reactivate-confirm'),
+            onPressed: () => Navigator.pop(context, true),
+            child: Text(ar ? 'تأكيد التفعيل' : 'Confirm reactivation'),
+          ),
+        ],
+      ),
+    );
+    if (yes != true ||
+        !mounted ||
+        owner == null ||
+        ref.read(authControllerProvider).session?.user.id != owner) {
+      return;
+    }
+    setState(() {
+      _busy = true;
+      _error = null;
+      _reauth = false;
+    });
+    try {
+      await ref.read(adminRepositoryProvider).reactivateService(draft);
+      if (!mounted ||
+          ref.read(authControllerProvider).session?.user.id != owner) {
+        return;
+      }
+      ref.invalidate(adminAuditProvider);
+      ref.invalidate(adminSummaryProvider);
+      ScaffoldMessenger.of(context)
+        ..hideCurrentSnackBar()
+        ..showSnackBar(
+          SnackBar(
+            content: Text(
+              ar
+                  ? 'تمت إعادة تفعيل الخدمة بنجاح.'
+                  : 'Service reactivated successfully.',
+            ),
+          ),
+        );
+      _reload();
+    } catch (error) {
+      if (mounted) {
+        setState(() {
+          _error = catalogError(error, ar);
+          _reauth = needsAdminConfirmation(error);
+        });
+      }
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
   Widget _card(AdminCatalogDraft draft) {
     final ar = widget.ar;
     return Card(
@@ -213,7 +414,9 @@ class _State extends ConsumerState<AdminCatalogPanel> {
             const SizedBox(height: 12),
             Chip(
               avatar: Icon(
-                draft.publishedVersion == null
+                draft.isDeactivated
+                    ? Icons.pause_circle_outline
+                    : draft.isDraftOnly
                     ? Icons.edit_note
                     : draft.hasChanges
                     ? Icons.pending_outlined
@@ -221,7 +424,9 @@ class _State extends ConsumerState<AdminCatalogPanel> {
                 size: 18,
               ),
               label: Text(
-                draft.publishedVersion == null
+                draft.isDeactivated
+                    ? (ar ? 'معطل' : 'Deactivated')
+                    : draft.isDraftOnly
                     ? (ar ? 'مسودة خاصة' : 'Private draft')
                     : draft.hasChanges
                     ? (ar ? 'تعديلات غير منشورة' : 'Unpublished changes')
@@ -254,7 +459,7 @@ class _State extends ConsumerState<AdminCatalogPanel> {
                   icon: const Icon(Icons.edit_outlined),
                   label: Text(ar ? 'تعديل' : 'Edit'),
                 ),
-                if (draft.hasChanges)
+                if (draft.hasChanges && !draft.isDeactivated)
                   FilledButton.icon(
                     key: Key('admin-publish-${draft.id}'),
                     onPressed:
@@ -264,9 +469,27 @@ class _State extends ConsumerState<AdminCatalogPanel> {
                     icon: const Icon(Icons.publish_outlined),
                     label: Text(ar ? 'مراجعة النشر' : 'Review publication'),
                   ),
+                if (draft.isPublishedActive)
+                  OutlinedButton.icon(
+                    key: Key('admin-deactivate-${draft.id}'),
+                    onPressed: _busy || widget.needsConfirmation
+                        ? null
+                        : () => _deactivate(draft),
+                    icon: const Icon(Icons.pause_circle_outline),
+                    label: Text(ar ? 'تعطيل' : 'Deactivate'),
+                  ),
+                if (draft.isDeactivated)
+                  FilledButton.icon(
+                    key: Key('admin-reactivate-${draft.id}'),
+                    onPressed: _busy || widget.needsConfirmation
+                        ? null
+                        : () => _reactivate(draft),
+                    icon: const Icon(Icons.play_circle_outline),
+                    label: Text(ar ? 'إعادة التفعيل' : 'Reactivate'),
+                  ),
               ],
             ),
-            if (!draft.publishable)
+            if (!draft.publishable && !draft.isDeactivated)
               Padding(
                 padding: const EdgeInsets.only(top: 8),
                 child: Text(
@@ -298,6 +521,13 @@ class _State extends ConsumerState<AdminCatalogPanel> {
           ar
               ? 'المسودات خاصة بالإدارة. احفظ التفاصيل والأسعار، وبعدها راجع النشر لإتاحتها للعملاء.'
               : 'Drafts are private to administration. Save details and prices, then review publication to make them available to customers.',
+        ),
+        const SizedBox(height: 16),
+        FilledButton.icon(
+          key: const Key('admin-create-draft-btn'),
+          onPressed: _busy || widget.needsConfirmation ? null : _createDraft,
+          icon: const Icon(Icons.add),
+          label: Text(ar ? 'إضافة خدمة مخصصة' : 'Add custom service'),
         ),
         if (widget.needsConfirmation || _reauth)
           Padding(

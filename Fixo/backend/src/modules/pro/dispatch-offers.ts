@@ -1,6 +1,7 @@
 import {
   BookingStatus,
   JobOfferStatus,
+  LeaveStatus,
   ProVerificationStatus,
 } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
@@ -55,6 +56,16 @@ export async function ensureDispatchOffer(
       ].some((z) => coversServiceArea(z, booking.address.zone))
     )
       return null;
+
+    const activeLeave = await tx.proLeave.findFirst({
+      where: {
+        proProfileId,
+        status: LeaveStatus.APPROVED,
+        startDate: { lte: booking.scheduledDate },
+        endDate: { gte: booking.scheduledDate },
+      },
+    });
+    if (activeLeave) return null;
     const existing = await tx.jobOffer.findFirst({
       where: { bookingId, proProfileId },
       orderBy: { createdAt: 'desc' },

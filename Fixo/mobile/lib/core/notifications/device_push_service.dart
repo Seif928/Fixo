@@ -100,9 +100,7 @@ class DevicePushService {
     try {
       final owner = (await storage.readTokens())?.userId;
       if (owner == null || owner.isEmpty) return PushOptInResult.unavailable;
-      final response = await dio.get<Map<String, dynamic>>(
-        '/users/me/push-status',
-      );
+      final response = await dio.get<Map<String, dynamic>>('/users/me/push-status', options: Options(extra: {'fixo_session_user': owner}));
       final status = response.data ?? {};
       final vapid = status['webVapidKey'] as String?;
       if (status['configured'] != true ||
@@ -155,17 +153,10 @@ class DevicePushService {
         (await storage.readTokens())?.userId != owner) {
       return false;
     }
-    final result = await dio.post<Map<String, dynamic>>(
-      '/users/me/push-devices',
-      data: {'token': token, 'platform': client.platform},
-    );
+    final result = await dio.post<Map<String, dynamic>>('/users/me/push-devices', data: {'token': token, 'platform': client.platform}, options: Options(extra: {'fixo_session_user': owner}));
     final id = result.data?['id'];
     if (id is! String || id.isEmpty) return false;
-    if (generation != _generation ||
-        (await storage.readTokens())?.userId != owner) {
-      await client.deleteToken();
-      return false;
-    }
+    if (generation != _generation || (await storage.readTokens())?.userId != owner) { return false; }
     await preferences?.setString('fixo.push.device.$owner', id);
     return true;
   }
@@ -186,16 +177,15 @@ class DevicePushService {
     _refresh = null;
     final owner = (await storage.readTokens())?.userId;
     final id = preferences?.getString('fixo.push.device.$owner');
-    try {
-      if (id != null) {
-        await dio.delete('/users/me/push-devices/${Uri.encodeComponent(id)}');
-      }
-    } finally {
-      // Invalidating the FCM token also prevents future delivery if the API is offline.
-      if (id != null) {
-        await client.deleteToken();
-        await preferences?.remove('fixo.push.device.$owner');
-      }
+    await client.deleteToken();
+    if (owner != null) {
+      await preferences?.remove('fixo.push.device.$owner');
+    }
+    if (id != null) {
+      await dio.delete(
+        '/users/me/push-devices/${Uri.encodeComponent(id)}',
+        options: Options(extra: {'fixo_session_user': owner}),
+      );
     }
   }
 

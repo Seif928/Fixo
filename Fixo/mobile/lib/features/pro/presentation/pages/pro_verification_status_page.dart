@@ -52,28 +52,28 @@ class _ProVerificationStatusPageState
   }
 
   String _statusLabel(String status, bool ar) => switch (status) {
-        'APPROVED' => ar ? 'معتمد ومفعل' : 'Approved & Activated',
-        'PENDING_REVIEW' => ar ? 'قيد المراجعة والتدقيق' : 'Under Review',
-        'ACTION_REQUIRED' => ar ? 'مطلوب استكمال مستندات' : 'Action Required',
-        'SUSPENDED' => ar ? 'حساب موقوف مؤقتاً' : 'Suspended',
-        _ => ar ? 'مسودة ملف' : 'Draft Dossier',
-      };
+    'APPROVED' => ar ? 'معتمد ومفعل' : 'Approved & Activated',
+    'PENDING_REVIEW' => ar ? 'قيد المراجعة والتدقيق' : 'Under Review',
+    'ACTION_REQUIRED' => ar ? 'مطلوب استكمال مستندات' : 'Action Required',
+    'SUSPENDED' => ar ? 'حساب موقوف مؤقتاً' : 'Suspended',
+    _ => ar ? 'مسودة ملف' : 'Draft Dossier',
+  };
 
   Color _statusColor(String status) => switch (status) {
-        'APPROVED' => FixoColors.primaryForest,
-        'PENDING_REVIEW' => const Color(0xFFC05621), // Warm Amber
-        'ACTION_REQUIRED' => FixoColors.error,
-        'SUSPENDED' => FixoColors.error,
-        _ => FixoColors.onSurfaceVariant,
-      };
+    'APPROVED' => FixoColors.primaryForest,
+    'PENDING_REVIEW' => const Color(0xFFC05621), // Warm Amber
+    'ACTION_REQUIRED' => FixoColors.error,
+    'SUSPENDED' => FixoColors.error,
+    _ => FixoColors.onSurfaceVariant,
+  };
 
   Color _statusBgColor(String status) => switch (status) {
-        'APPROVED' => FixoColors.secondaryContainer,
-        'PENDING_REVIEW' => const Color(0xFFFEEBC8),
-        'ACTION_REQUIRED' => FixoColors.errorContainer,
-        'SUSPENDED' => FixoColors.errorContainer,
-        _ => const Color(0xFFE2E8F0),
-      };
+    'APPROVED' => FixoColors.secondaryContainer,
+    'PENDING_REVIEW' => const Color(0xFFFEEBC8),
+    'ACTION_REQUIRED' => FixoColors.errorContainer,
+    'SUSPENDED' => FixoColors.errorContainer,
+    _ => const Color(0xFFE2E8F0),
+  };
 
   @override
   Widget build(BuildContext context) {
@@ -133,7 +133,9 @@ class _ProVerificationStatusPageState
                       children: [
                         if (_errorMessage != null)
                           Container(
-                            margin: const EdgeInsets.only(bottom: FixoSpacing.md),
+                            margin: const EdgeInsets.only(
+                              bottom: FixoSpacing.md,
+                            ),
                             padding: const EdgeInsets.all(FixoSpacing.sm),
                             decoration: BoxDecoration(
                               color: FixoColors.errorContainer,
@@ -167,8 +169,8 @@ class _ProVerificationStatusPageState
                                     status.isApproved
                                         ? Icons.verified_rounded
                                         : status.isPendingReview
-                                            ? Icons.hourglass_top_rounded
-                                            : Icons.info_outline_rounded,
+                                        ? Icons.hourglass_top_rounded
+                                        : Icons.info_outline_rounded,
                                     color: _statusColor(status.status),
                                     size: 34,
                                   ),
@@ -189,7 +191,9 @@ class _ProVerificationStatusPageState
                                   decoration: BoxDecoration(
                                     color: palette.surfaceLow,
                                     borderRadius: FixoRadius.borderRadiusPill,
-                                    border: Border.all(color: palette.subtleBorder),
+                                    border: Border.all(
+                                      color: palette.subtleBorder,
+                                    ),
                                   ),
                                   child: Text(
                                     '${ar ? 'رقم ملف الاعتماد:' : 'Dossier Code:'} #${status.dossierCode}',
@@ -218,9 +222,12 @@ class _ProVerificationStatusPageState
                                         Expanded(
                                           child: Text(
                                             status.reviewerNote!,
-                                            style: FixoTypography.bodySm(
-                                              color: palette.deepForest,
-                                            ).copyWith(fontWeight: FontWeight.w600),
+                                            style:
+                                                FixoTypography.bodySm(
+                                                  color: palette.deepForest,
+                                                ).copyWith(
+                                                  fontWeight: FontWeight.w600,
+                                                ),
                                           ),
                                         ),
                                       ],
@@ -240,7 +247,9 @@ class _ProVerificationStatusPageState
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Text(
-                                  ar ? 'مراحل التحقق والاعتماد' : 'Vetting & Verification Milestones',
+                                  ar
+                                      ? 'مراحل التحقق والاعتماد'
+                                      : 'Vetting & Verification Milestones',
                                   style: FixoTypography.headlineSm(
                                     color: palette.deepForest,
                                   ).copyWith(fontWeight: FontWeight.bold),
@@ -248,13 +257,16 @@ class _ProVerificationStatusPageState
                                 const SizedBox(height: 12),
                                 ...status.milestones.map((milestone) {
                                   final isDone = milestone.status == 'DONE';
-                                  final isCurrent = milestone.status == 'CURRENT';
-                                  final isRejected = milestone.status == 'REJECTED';
+                                  final isCurrent =
+                                      milestone.status == 'CURRENT';
+                                  final isRejected =
+                                      milestone.status == 'REJECTED';
 
                                   return Padding(
                                     padding: const EdgeInsets.only(bottom: 12),
                                     child: Row(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
                                       children: [
                                         Container(
                                           width: 28,
@@ -263,17 +275,17 @@ class _ProVerificationStatusPageState
                                             color: isDone
                                                 ? FixoColors.primaryForest
                                                 : isCurrent
-                                                    ? FixoColors.secondaryContainer
-                                                    : isRejected
-                                                        ? FixoColors.errorContainer
-                                                        : palette.surfaceLow,
+                                                ? FixoColors.secondaryContainer
+                                                : isRejected
+                                                ? FixoColors.errorContainer
+                                                : palette.surfaceLow,
                                             shape: BoxShape.circle,
                                             border: Border.all(
                                               color: isDone
                                                   ? FixoColors.primaryForest
                                                   : isCurrent
-                                                      ? FixoColors.secondary
-                                                      : palette.subtleBorder,
+                                                  ? FixoColors.secondary
+                                                  : palette.subtleBorder,
                                             ),
                                           ),
                                           alignment: Alignment.center,
@@ -285,27 +297,41 @@ class _ProVerificationStatusPageState
                                                 )
                                               : Text(
                                                   '${milestone.stepNumber}',
-                                                  style: FixoTypography.labelSm(
-                                                    color: isCurrent
-                                                        ? FixoColors.primaryForest
-                                                        : palette.mutedText,
-                                                  ).copyWith(fontWeight: FontWeight.bold),
+                                                  style:
+                                                      FixoTypography.labelSm(
+                                                        color: isCurrent
+                                                            ? FixoColors
+                                                                  .primaryForest
+                                                            : palette.mutedText,
+                                                      ).copyWith(
+                                                        fontWeight:
+                                                            FontWeight.bold,
+                                                      ),
                                                 ),
                                         ),
                                         const SizedBox(width: 12),
                                         Expanded(
                                           child: Column(
-                                            crossAxisAlignment: CrossAxisAlignment.start,
+                                            crossAxisAlignment:
+                                                CrossAxisAlignment.start,
                                             children: [
                                               Text(
-                                                ar ? milestone.titleAr : milestone.titleEn,
-                                                style: FixoTypography.labelMd(
-                                                  color: palette.deepForest,
-                                                ).copyWith(fontWeight: FontWeight.w700),
+                                                ar
+                                                    ? milestone.titleAr
+                                                    : milestone.titleEn,
+                                                style:
+                                                    FixoTypography.labelMd(
+                                                      color: palette.deepForest,
+                                                    ).copyWith(
+                                                      fontWeight:
+                                                          FontWeight.w700,
+                                                    ),
                                               ),
                                               const SizedBox(height: 2),
                                               Text(
-                                                ar ? milestone.descAr : milestone.descEn,
+                                                ar
+                                                    ? milestone.descAr
+                                                    : milestone.descEn,
                                                 style: FixoTypography.bodySm(
                                                   color: palette.mutedText,
                                                 ),
@@ -332,10 +358,13 @@ class _ProVerificationStatusPageState
                                   borderRadius: FixoRadius.borderRadiusMd,
                                 ),
                               ),
-                              onPressed: () => context.go(AppRoutes.proDashboard),
+                              onPressed: () =>
+                                  context.go(AppRoutes.proDashboard),
                               icon: const Icon(Icons.dashboard_rounded),
                               label: Text(
-                                ar ? 'الانتقال إلى لوحة الفني' : 'Go to Pro Dashboard',
+                                ar
+                                    ? 'الانتقال إلى لوحة الفني'
+                                    : 'Go to Pro Dashboard',
                                 style: FixoTypography.labelLg(
                                   color: Colors.white,
                                 ).copyWith(fontWeight: FontWeight.bold),
@@ -354,7 +383,9 @@ class _ProVerificationStatusPageState
                                   context.push(AppRoutes.proVerificationDocs),
                               icon: const Icon(Icons.edit_document),
                               label: Text(
-                                ar ? 'تعديل واستكمال المستندات' : 'Update Verification Documents',
+                                ar
+                                    ? 'تعديل واستكمال المستندات'
+                                    : 'Update Verification Documents',
                                 style: FixoTypography.labelLg(
                                   color: Colors.white,
                                 ).copyWith(fontWeight: FontWeight.bold),
@@ -368,10 +399,13 @@ class _ProVerificationStatusPageState
                                   borderRadius: FixoRadius.borderRadiusMd,
                                 ),
                               ),
-                              onPressed: () => context.go(AppRoutes.customerHome),
+                              onPressed: () =>
+                                  context.go(AppRoutes.customerHome),
                               icon: const Icon(Icons.home_outlined),
                               label: Text(
-                                ar ? 'العودة للرئيسية أثناء المراجعة' : 'Return to Home during review',
+                                ar
+                                    ? 'العودة للرئيسية أثناء المراجعة'
+                                    : 'Return to Home during review',
                               ),
                             ),
                         ],

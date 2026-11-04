@@ -14,6 +14,8 @@ import '../../../customer_home/presentation/widgets/customer_home_widgets.dart';
 import '../../data/booking_repository.dart';
 import '../../domain/booking_models.dart';
 import '../widgets/booking_receipt_sheet.dart';
+import '../../data/repeat_booking_repository.dart';
+import '../../../complaints/presentation/pages/complaint_submission_dialog.dart';
 
 /// Live Stitch Screen 08; the Chat tab lists the user's actual booking threads.
 class OrdersPage extends ConsumerStatefulWidget {
@@ -342,6 +344,60 @@ class _OrdersPageState extends ConsumerState<OrdersPage> {
     );
   }
 
+  Future<void> _repeatBooking(String bookingId, bool isArabic) async {
+    showDialog<void>(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => const Center(child: CircularProgressIndicator()),
+    );
+
+    try {
+      final repo = ref.read(repeatBookingRepositoryProvider);
+      final quote = await repo.getRepeatQuote(bookingId);
+      if (!mounted) return;
+      Navigator.of(context, rootNavigator: true).pop();
+
+      context.push(
+        AppRoutes.createBooking,
+        extra: {
+          'offering': quote.toServiceOfferModel(),
+          if (quote.toProfessionalCardModel() != null)
+            'preferredPro': quote.toProfessionalCardModel(),
+        },
+      );
+    } on RepeatBookingException catch (e) {
+      if (!mounted) return;
+      Navigator.of(context, rootNavigator: true).pop();
+
+      showDialog<void>(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          title: Text(isArabic ? 'الخدمة غير متوفرة' : 'Service Unavailable'),
+          content: Text(e.localizedMessage(isArabic)),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(ctx).pop(),
+              child: Text(isArabic ? 'حسناً' : 'OK'),
+            ),
+          ],
+        ),
+      );
+    } catch (_) {
+      if (!mounted) return;
+      Navigator.of(context, rootNavigator: true).pop();
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            isArabic
+                ? 'تعذر تجهيز طلب التكرار. يرجى إعادة المحاولة.'
+                : 'Could not prepare repeat booking. Please retry.',
+          ),
+        ),
+      );
+    }
+  }
+
   Widget _card(BuildContext context, BookingDetailModel booking, bool ar) {
     final title = booking.offering[ar ? 'titleAr' : 'titleEn'] as String?;
     final date = DateTime.tryParse(booking.scheduledDate);
@@ -601,6 +657,45 @@ class _OrdersPageState extends ConsumerState<OrdersPage> {
                             label: Text(ar ? 'الإيصال' : 'Receipt'),
                           ),
                         ],
+                        if (isCompleted || isCancelled)
+                          OutlinedButton.icon(
+                            key: Key('booking-repeat-${booking.id}'),
+                            style: OutlinedButton.styleFrom(
+                              minimumSize: const Size(0, 40),
+                              foregroundColor: palette.deepForest,
+                              side: BorderSide(color: palette.subtleBorder),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: FixoRadius.borderRadiusMd,
+                              ),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 12,
+                                vertical: 8,
+                              ),
+                            ),
+                            onPressed: () => _repeatBooking(booking.id, ar),
+                            icon: const Icon(Icons.replay_rounded, size: 16),
+                            label: Text(ar ? 'احجز مرة أخرى' : 'Book again'),
+                          ),
+                        if (isCompleted || isCancelled)
+                          TextButton.icon(
+                            key: Key('booking-complaint-${booking.id}'),
+                            style: TextButton.styleFrom(
+                              minimumSize: const Size(0, 40),
+                              foregroundColor: palette.coralUrgent,
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 10,
+                                vertical: 8,
+                              ),
+                            ),
+                            onPressed: () => ComplaintSubmissionDialog.show(
+                              context,
+                              bookingId: booking.id,
+                              orderCode: booking.orderCode,
+                              serviceTitle: text,
+                            ),
+                            icon: const Icon(Icons.report_problem_outlined, size: 16),
+                            label: Text(ar ? 'تقديم بلاغ' : 'Report issue'),
+                          ),
                       ],
                     ],
                     if (booking.proProfile != null)
@@ -636,3 +731,4 @@ class _OrdersPageState extends ConsumerState<OrdersPage> {
     );
   }
 }
+

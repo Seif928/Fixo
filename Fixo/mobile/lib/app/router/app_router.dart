@@ -11,6 +11,8 @@ import '../../features/auth/presentation/pages/email_auth_page.dart';
 import '../../features/auth/presentation/pages/phone_password_page.dart';
 import '../../features/chat/presentation/chat_page.dart';
 import '../../features/profile/presentation/profile_page.dart';
+import '../../features/favorites/presentation/pages/favorites_page.dart';
+import '../../features/complaints/presentation/pages/my_complaints_page.dart';
 import '../../features/admin/presentation/admin_page.dart';
 import '../../features/booking/presentation/pages/create_booking_page.dart';
 import '../../features/booking/presentation/pages/order_tracking_page.dart';
@@ -27,6 +29,7 @@ import '../../features/pro/presentation/pages/pro_signup_page.dart';
 import '../../features/pro/presentation/pages/pro_skills_page.dart';
 import '../../features/pro/presentation/pages/pro_verification_docs_page.dart';
 import '../../features/pro/presentation/pages/pro_verification_status_page.dart';
+import '../../features/pro/presentation/pages/pro_schedule_page.dart';
 import 'app_routes.dart';
 
 /// Listenable bridge that notifies `GoRouter` whenever `authControllerProvider`
@@ -125,6 +128,16 @@ GoRouter createAppRouter({
         path: AppRoutes.customerProfile,
         name: 'customerProfile',
         builder: (_, _) => const ProfilePage(),
+      ),
+      _motionRoute(
+        path: AppRoutes.favorites,
+        name: 'favorites',
+        builder: (_, _) => const FavoritesPage(),
+      ),
+      _motionRoute(
+        path: AppRoutes.myComplaints,
+        name: 'myComplaints',
+        builder: (_, _) => const MyComplaintsPage(),
       ),
       _motionRoute(
         path: AppRoutes.customerChat,
@@ -227,6 +240,11 @@ GoRouter createAppRouter({
         builder: (context, state) => const ProDashboardPage(),
       ),
       _motionRoute(
+        path: AppRoutes.proSchedule,
+        name: 'proSchedule',
+        builder: (context, state) => const ProSchedulePage(),
+      ),
+      _motionRoute(
         path: AppRoutes.incomingJobRequest,
         name: 'incomingJobRequest',
         builder: (context, state) {
@@ -269,3 +287,4 @@ GoRoute _motionRoute({
         ),
   ),
 );
+

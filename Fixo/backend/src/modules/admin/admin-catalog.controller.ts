@@ -67,6 +67,82 @@ export class CatalogQueryDto {
   @IsOptional() @Transform(trim) @IsString() @MaxLength(100) search?: string;
   @IsOptional() @Transform(trim) @IsString() @MaxLength(100) category?: string;
 }
+
+export class CreateCatalogDraftDto {
+  @Transform(trim)
+  @IsString()
+  @MinLength(1)
+  @MaxLength(160)
+  titleEn!: string;
+
+  @Transform(trim)
+  @IsString()
+  @MinLength(1)
+  @MaxLength(160)
+  titleAr!: string;
+
+  @Transform(trim)
+  @IsString()
+  @MinLength(1)
+  @MaxLength(1600)
+  descriptionEn!: string;
+
+  @Transform(trim)
+  @IsString()
+  @MinLength(1)
+  @MaxLength(1600)
+  descriptionAr!: string;
+
+  @Transform(trim)
+  @IsString()
+  @MinLength(1)
+  @MaxLength(100)
+  categorySlug!: string;
+
+  @IsOptional()
+  @Transform(trim)
+  @IsString()
+  @MaxLength(100)
+  categoryNameEn?: string;
+
+  @IsOptional()
+  @Transform(trim)
+  @IsString()
+  @MaxLength(100)
+  categoryNameAr?: string;
+
+  @IsOptional()
+  @Transform(trim)
+  @IsString()
+  @MaxLength(100)
+  categoryIcon?: string;
+
+  @IsOptional()
+  @Transform(trim)
+  @IsString()
+  @MinLength(1)
+  @MaxLength(120)
+  slug?: string;
+
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  @Max(1000000)
+  baseInspectionEgp?: number | null;
+
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  @Max(1000000)
+  serviceFeeEgp?: number | null;
+
+  @IsOptional()
+  @IsInt()
+  @Min(5)
+  @Max(1440)
+  estimatedDurationMins?: number | null;
+}
+
 @Controller('admin/catalog')
 @UseGuards(JwtAuthGuard, AdminAccessGuard)
 export class AdminCatalogController {
@@ -76,7 +152,18 @@ export class AdminCatalogController {
   list(@Query() query: CatalogQueryDto) {
     return this.catalog.list(query);
   }
+
+  @Post()
+  @Header('Cache-Control', 'private, no-store')
+  createDraft(
+    @Req() request: AdminRequest,
+    @Body() dto: CreateCatalogDraftDto,
+  ) {
+    return this.catalog.createDraft(request.adminActor!, dto);
+  }
+
   @Put(':id')
+  @Header('Cache-Control', 'private, no-store')
   update(
     @Req() request: AdminRequest,
     @Param('id') id: string,
@@ -84,12 +171,34 @@ export class AdminCatalogController {
   ) {
     return this.catalog.update(request.adminActor!, id, dto);
   }
+
   @Post(':id/publish')
+  @Header('Cache-Control', 'private, no-store')
   publish(
     @Req() request: AdminRequest,
     @Param('id') id: string,
     @Body() dto: CatalogVersionDto,
   ) {
     return this.catalog.publish(request.adminActor!, id, dto.version);
+  }
+
+  @Post(':id/deactivate')
+  @Header('Cache-Control', 'private, no-store')
+  deactivate(
+    @Req() request: AdminRequest,
+    @Param('id') id: string,
+    @Body() dto: CatalogVersionDto,
+  ) {
+    return this.catalog.deactivate(request.adminActor!, id, dto.version);
+  }
+
+  @Post(':id/reactivate')
+  @Header('Cache-Control', 'private, no-store')
+  reactivate(
+    @Req() request: AdminRequest,
+    @Param('id') id: string,
+    @Body() dto: CatalogVersionDto,
+  ) {
+    return this.catalog.reactivate(request.adminActor!, id, dto.version);
   }
 }

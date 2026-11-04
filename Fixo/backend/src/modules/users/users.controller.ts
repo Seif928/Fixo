@@ -142,4 +142,23 @@ export class UsersController {
       total: addresses.length,
     };
   }
+
+  @Post('me/delete-account')
+  @HttpCode(HttpStatus.OK)
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.CUSTOMER, UserRole.PRO, UserRole.ADMIN)
+  @ApiOperation({
+    summary: 'Self-service account deletion and data anonymization',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Account successfully deleted and anonymized',
+  })
+  @ApiResponse({
+    status: 409,
+    description: 'Active bookings or jobs exist',
+  })
+  async deleteAccount(@CurrentUser() currentUser: FixoJwtPayload) {
+    return this.usersService.deleteAccount(currentUser.sub);
+  }
 }

@@ -12,10 +12,28 @@ String catalogError(Object error, bool ar) {
         ? 'أكد حسابك قبل حفظ التغيير.'
         : 'Confirm your account before saving.';
   }
-  if (error is DioException && error.response?.statusCode == 409) {
-    return ar
-        ? 'الخدمة اتعدّلت. اقفل النافذة وحدّث القائمة قبل المحاولة تاني.'
-        : 'This service changed. Close this window and reload the list before retrying.';
+  if (error is DioException) {
+    final data = error.response?.data;
+    if (data is Map) {
+      if (data['code'] == 'ADMIN_CATALOG_SLUG_EXISTS') {
+        return ar
+            ? 'الرمز التعريفي مستخدم لخدمة تانية. اختر اسماً أو رمزاً مختلفاً.'
+            : 'A service or draft with this slug already exists.';
+      }
+      if (data['code'] == 'ADMIN_CATALOG_PRICING_REQUIRED') {
+        return ar
+            ? 'حدّد المعاينة وسعر الخدمة والمدة بإجمالي أكبر من الصفر قبل النشر.'
+            : 'Set inspection, service price and duration with a positive total before publishing.';
+      }
+      if (data['message'] is String) {
+        return data['message'] as String;
+      }
+    }
+    if (error.response?.statusCode == 409) {
+      return ar
+          ? 'الخدمة اتعدّلت. اقفل النافذة وحدّث القائمة قبل المحاولة تاني.'
+          : 'This service changed. Close this window and reload the list before retrying.';
+    }
   }
   return ar
       ? 'تعذر تأكيد حفظ التغيير. حدّث القائمة وحاول تاني.'

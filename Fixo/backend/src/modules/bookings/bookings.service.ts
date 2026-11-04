@@ -150,6 +150,12 @@ export class BookingsService {
       );
     }
 
+    if (offering.isActive === false) {
+      throw new BadRequestException(
+        'Selected service offering is not currently active.',
+      );
+    }
+
     if (!offering.category.isActive) {
       throw new BadRequestException(
         'Selected service offering category is not currently active.',
