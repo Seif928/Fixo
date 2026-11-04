@@ -1,4 +1,5 @@
 import {
+  ArrayMaxSize,
   IsArray,
   IsEnum,
   IsInt,
@@ -28,6 +29,8 @@ export class CreateComplaintDto {
   @IsOptional()
   @IsArray()
   @IsString({ each: true })
+  @ArrayMaxSize(5)
+  @MaxLength(500, { each: true })
   photoUrls?: string[];
 }
 

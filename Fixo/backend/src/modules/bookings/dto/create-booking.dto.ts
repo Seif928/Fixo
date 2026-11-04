@@ -1,6 +1,7 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { TimeWindow } from '@prisma/client';
 import {
+  ArrayMaxSize,
   IsArray,
   IsDateString,
   IsEnum,
@@ -71,7 +72,9 @@ export class CreateBookingDto {
   })
   @IsOptional()
   @IsArray()
+  @ArrayMaxSize(5)
   @IsString({ each: true })
+  @MaxLength(500, { each: true })
   issuePhotoUrls?: string[];
 }
 
