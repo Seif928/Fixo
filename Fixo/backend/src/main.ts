@@ -9,10 +9,11 @@ async function bootstrap() {
 
   app.useBodyParser('json', { limit: '3mb' });
   app.setGlobalPrefix('api/v1');
+  // Bearer-token API: no cookies, so credentials stay disabled.
   app.enableCors({
-    origin: true,
+    origin: '*',
     methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',
-    credentials: true,
+    credentials: false,
   });
 
   app.use((_req: any, res: any, next: any) => {

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../../../../core/theme/fixo_colors.dart';
 import '../../../../core/theme/fixo_spacing.dart';
 import '../../../../core/theme/fixo_typography.dart';
+import '../../../../core/widgets/fixo_tilt_3d.dart';
 import '../../domain/marketplace_models.dart';
 
 /// Maps Stitch Material Symbol names to native Flutter `IconData`.
@@ -151,7 +152,14 @@ class SeasonalPromoHeroCard extends StatelessWidget {
   final VoidCallback onBookNow;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context) => FixoTilt3D(
+    maxTilt: 0.07,
+    glareOpacity: 0.16,
+    borderRadius: FixoRadius.borderRadiusLg,
+    child: _card(context),
+  );
+
+  Widget _card(BuildContext context) {
     final palette = context.fixoPalette;
 
     return Container(
@@ -319,7 +327,13 @@ class ServiceCategoryGridTile extends StatelessWidget {
   final VoidCallback onTap;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context) => FixoTilt3D(
+    maxTilt: 0.14,
+    borderRadius: FixoRadius.borderRadiusLg,
+    child: _card(context),
+  );
+
+  Widget _card(BuildContext context) {
     final palette = context.fixoPalette;
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
@@ -537,7 +551,14 @@ class RecommendedProCard extends StatelessWidget {
   final VoidCallback onBookSlot;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context) => FixoTilt3D(
+    maxTilt: 0.06,
+    glareOpacity: 0.14,
+    borderRadius: FixoRadius.borderRadiusLg,
+    child: _card(context),
+  );
+
+  Widget _card(BuildContext context) {
     final palette = context.fixoPalette;
     final isFastResponder = professional.isFastResponder;
     final isDark = Theme.of(context).brightness == Brightness.dark;

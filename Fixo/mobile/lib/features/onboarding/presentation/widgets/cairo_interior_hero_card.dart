@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import '../../../../core/theme/fixo_colors.dart';
 import '../../../../core/theme/fixo_spacing.dart';
 import '../../../../core/theme/fixo_typography.dart';
-
+import '../../../../core/widgets/fixo_tilt_3d.dart';
 /// Native Flutter hero showcase card for Screen 01 (`01_onboarding`).
 ///
 /// Replaces the external hotlinked Google image from `01_onboarding/code.html`
@@ -15,7 +15,15 @@ class CairoInteriorHeroCard extends StatelessWidget {
   final bool isArabic;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context) => FixoTilt3D(
+    maxTilt: 0.06,
+    glareOpacity: 0.15,
+    borderRadius: FixoRadius.borderRadiusLg,
+    child: _card(context),
+  );
+
+
+  Widget _card(BuildContext context) {
     final palette = context.fixoPalette;
     final locale = isArabic ? const Locale('ar') : const Locale('en');
 
