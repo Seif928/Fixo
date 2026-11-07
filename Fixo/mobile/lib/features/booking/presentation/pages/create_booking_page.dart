@@ -16,6 +16,7 @@ import '../../data/booking_repository.dart';
 import '../../domain/booking_models.dart';
 import '../controllers/create_booking_controller.dart';
 import '../widgets/create_booking_widgets.dart';
+import '../widgets/appliance_3d_inspection_widget.dart';
 
 /// Screen 04: Create Booking (`04 — Create Booking`)
 ///
@@ -527,6 +528,21 @@ class _CreateBookingPageState extends ConsumerState<CreateBookingPage> {
                                     ),
                                   ),
                                 ],
+                              ),
+                              const SizedBox(height: FixoSpacing.xs),
+                              // 3D Interactive Defect Pinning Canvas
+                              Appliance3DInspectionWidget(
+                                key: const Key('appliance-3d-inspection'),
+                                categorySlug: offering.categorySlug,
+                                isArabic: isArabic,
+                                onPinSelected: (diagnosticDetail) {
+                                  final currentText = _issueDescriptionController.text.trim();
+                                  final newText = currentText.isEmpty
+                                      ? diagnosticDetail
+                                      : '$currentText - $diagnosticDetail';
+                                  _issueDescriptionController.text = newText;
+                                  controller.setIssueDescription(newText);
+                                },
                               ),
                               const SizedBox(height: FixoSpacing.xs),
                               TextField(

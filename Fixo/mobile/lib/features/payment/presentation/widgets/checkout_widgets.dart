@@ -3,6 +3,7 @@ import '../../../../core/theme/fixo_colors.dart';
 import '../../../../core/theme/fixo_spacing.dart';
 import '../../../../core/theme/fixo_typography.dart';
 import '../../../booking/domain/booking_models.dart';
+import 'holographic_receipt_card.dart';
 
 /// Top micro-banner providing cash-on-service order reassurance.
 class CheckoutReassuranceBanner extends StatelessWidget {
@@ -944,6 +945,14 @@ class CheckoutConfirmationView extends StatelessWidget {
                 color: palette.deepForest,
               ).copyWith(fontWeight: FontWeight.bold),
             ),
+          ),
+          const SizedBox(height: FixoSpacing.md),
+
+          // 3D Holographic Celebratory Booking Receipt Card
+          Holographic3DReceiptCard(
+            key: const Key('holographic-3d-receipt-card'),
+            booking: booking,
+            isArabic: isArabic,
           ),
           const SizedBox(height: FixoSpacing.lg),
 

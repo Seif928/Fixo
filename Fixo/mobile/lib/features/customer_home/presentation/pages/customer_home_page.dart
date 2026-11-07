@@ -19,6 +19,7 @@ import '../../domain/marketplace_models.dart';
 import '../../data/marketplace_repository.dart';
 import '../controllers/customer_home_controller.dart';
 import '../widgets/customer_home_widgets.dart';
+import '../widgets/interactive_3d_home_scene.dart';
 import '../widgets/service_catalog_sheet.dart';
 
 /// Native Flutter implementation of live Stitch Screen 03 (`03 — Customer Home`,
@@ -740,6 +741,14 @@ class _CustomerHomePageState extends ConsumerState<CustomerHomePage> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
+        // 0. Interactive 3D Residence Cutaway
+        Interactive3DHomeScene(
+          key: const Key('interactive-3d-home-scene'),
+          isArabic: isArabic,
+          selectedCategorySlug: selectedCategory,
+          onSelectCategory: homeNotifier.selectCategory,
+        ),
+
         // 1. Featured Seasonal Promo Card (Flat 350 EGP)
         if (seasonalPromo != null)
           Padding(

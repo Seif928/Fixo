@@ -15,6 +15,7 @@ import '../../../customer_home/presentation/widgets/customer_home_widgets.dart';
 import '../../data/booking_repository.dart';
 import '../../domain/booking_models.dart';
 import '../widgets/booking_receipt_sheet.dart';
+import '../widgets/isometric_3d_tracking_canvas.dart';
 
 /// Screen 06: Live Order Tracking (`06 — Live Order Tracking`)
 ///
@@ -42,6 +43,7 @@ class _OrderTrackingPageState extends ConsumerState<OrderTrackingPage> {
   bool _cancelling = false;
   String? _error;
   Timer? _pollTimer;
+  bool _use3DView = true;
 
   @override
   void initState() {
@@ -414,7 +416,49 @@ class _OrderTrackingPageState extends ConsumerState<OrderTrackingPage> {
                   ],
                 ),
               ),
-              if (hasValidCoords)
+              Padding(
+                padding: const EdgeInsets.fromLTRB(FixoSpacing.md, 10, FixoSpacing.md, 6),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      ar ? 'منظور التتبع الحي' : 'Live Tracking View',
+                      style: FixoTypography.labelMd(color: palette.deepForest).copyWith(fontWeight: FontWeight.bold),
+                    ),
+                    SegmentedButton<bool>(
+                      segments: [
+                        ButtonSegment<bool>(
+                          value: true,
+                          label: Text(ar ? '3D مجسم' : '3D Radar'),
+                          icon: const Icon(Icons.view_in_ar_rounded, size: 14),
+                        ),
+                        ButtonSegment<bool>(
+                          value: false,
+                          label: Text(ar ? '2D خريطة' : '2D Map'),
+                          icon: const Icon(Icons.map_outlined, size: 14),
+                        ),
+                      ],
+                      selected: {_use3DView},
+                      onSelectionChanged: (vals) => setState(() => _use3DView = vals.first),
+                      style: const ButtonStyle(
+                        visualDensity: VisualDensity.compact,
+                        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              if (_use3DView)
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: FixoSpacing.md),
+                  child: Isometric3DTrackingCanvas(
+                    isArabic: ar,
+                    status: booking.status,
+                    addressLabel: (addr['label'] as String?) ?? (ar ? 'عنوان العميل' : 'Customer Address'),
+                    technicianName: ((booking.proProfile?['user'] as Map<String, dynamic>?)?['fullName'] as String?) ?? (ar ? 'فني فيكسو المعتمد' : 'Assigned Technician'),
+                  ),
+                )
+              else if (hasValidCoords)
                 ClipRRect(
                   child: SavedLocationMap(
                     point: ServiceMapPoint(lat, lng),

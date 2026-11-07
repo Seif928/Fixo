@@ -3,6 +3,7 @@ import '../../../../core/theme/fixo_colors.dart';
 import '../../../../core/theme/fixo_spacing.dart';
 import '../../../../core/theme/fixo_typography.dart';
 import '../../../../core/widgets/fixo_tilt_3d.dart';
+import '../../../../core/widgets/fixo_holographic_pro_badge.dart';
 import '../../domain/marketplace_models.dart';
 
 /// Maps Stitch Material Symbol names to native Flutter `IconData`.
@@ -676,7 +677,13 @@ class RecommendedProCard extends StatelessWidget {
             runSpacing: 8,
             children: [
               if (professional.localizedBadge(isArabic).trim().isNotEmpty)
-                Container(
+                !isFastResponder
+                    ? FixoHolographicProBadge(
+                        isArabic: isArabic,
+                        badgeText: professional.localizedBadge(isArabic),
+                        isCompact: true,
+                      )
+                    : Container(
                   padding: const EdgeInsets.symmetric(
                     horizontal: 10,
                     vertical: 5,
