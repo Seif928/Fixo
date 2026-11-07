@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../../../core/theme/fixo_colors.dart';
 import '../../../../core/theme/fixo_spacing.dart';
 import '../../../../core/theme/fixo_typography.dart';
+import '../../../../core/widgets/fixo_liquid_glass_layer.dart';
 
 /// Interactive Micro-Architectural 3D Home Scene for FIXO.
 ///
@@ -99,34 +100,18 @@ class _Interactive3DHomeSceneState extends State<Interactive3DHomeScene>
     final palette = context.fixoPalette;
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
-    return Container(
-      margin: const EdgeInsets.symmetric(
-        horizontal: FixoSpacing.md,
+    return LiquidGlassLayer(
+      margin: EdgeInsets.symmetric(
+        horizontal: FixoAdaptive.horizontalMargin(context),
         vertical: 8,
       ),
-      decoration: BoxDecoration(
-        color: isDark ? const Color(0xFF14241F) : Colors.white,
-        borderRadius: FixoRadius.borderRadiusLg,
-        border: Border.all(
-          color: isDark
-              ? palette.subtleBorder.withValues(alpha: 0.3)
-              : palette.subtleBorder,
-          width: 1.2,
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: palette.deepForest.withValues(alpha: isDark ? 0.35 : 0.06),
-            blurRadius: 18,
-            offset: const Offset(0, 6),
-          ),
-        ],
-      ),
-      child: ClipRRect(
-        borderRadius: FixoRadius.borderRadiusLg,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            // Top Bar: 3D Badge + Status
+      borderRadius: FixoRadius.borderRadiusLg,
+      blurSigma: 24.0,
+      specularIntensity: 0.35,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          // Top Bar: 3D Badge + Status
             Padding(
               padding: const EdgeInsets.fromLTRB(14, 12, 14, 6),
               child: Row(
@@ -346,8 +331,7 @@ class _Interactive3DHomeSceneState extends State<Interactive3DHomeScene>
             ),
           ],
         ),
-      ),
-    );
+      );
   }
 }
 

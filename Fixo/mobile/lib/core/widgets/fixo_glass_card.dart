@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../theme/fixo_colors.dart';
 import '../theme/fixo_spacing.dart';
 import 'fixo_tilt_3d.dart';
+export 'fixo_liquid_glass_layer.dart';
 
 /// Premium floating glassmorphism card for FIXO.
 ///

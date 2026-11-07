@@ -91,3 +91,67 @@ abstract final class FixoShadows {
   ];
 }
 
+/// Adaptive layout ergonomics providing calibrated margins and insets
+/// tailored across iPhone, Android, and Desktop/Web viewports.
+abstract final class FixoAdaptive {
+  static const double desktopBreakpoint = 1000.0;
+  static const double tabletBreakpoint = 600.0;
+  static const double standardPhoneWidth = 390.0;
+  static const double compactPhoneWidth = 360.0;
+
+  static bool isDesktop(BuildContext context) =>
+      MediaQuery.sizeOf(context).width >= desktopBreakpoint;
+
+  static bool isTablet(BuildContext context) {
+    final width = MediaQuery.sizeOf(context).width;
+    return width >= tabletBreakpoint && width < desktopBreakpoint;
+  }
+
+  static bool isMobile(BuildContext context) =>
+      MediaQuery.sizeOf(context).width < tabletBreakpoint;
+
+  /// Optimal horizontal margin calibrated for the active device:
+  /// - Desktop / Web: 32.0 (spacious breathing room)
+  /// - Tablet: 24.0
+  /// - Standard iPhone / Android (>=375dp): 16.0 (Apple HIG standard)
+  /// - Compact Android (<375dp): 12.0 (prevents edge crampedness)
+  static double horizontalMargin(BuildContext context) {
+    final width = MediaQuery.sizeOf(context).width;
+    if (width >= desktopBreakpoint) return 32.0;
+    if (width >= tabletBreakpoint) return 24.0;
+    if (width >= 375.0) return FixoSpacing.md;
+    return FixoSpacing.gutterMobile;
+  }
+
+  /// Page padding taking into account device horizontal margins.
+  static EdgeInsets pagePadding(BuildContext context, {double vertical = 12.0}) {
+    return EdgeInsets.symmetric(
+      horizontal: horizontalMargin(context),
+      vertical: vertical,
+    );
+  }
+
+  /// Maximum readable container width for desktop/web:
+  /// Returns 1200 on desktop, 600 on tablet/foldables, and infinity on mobile.
+  static double maxContentWidth(BuildContext context) {
+    final width = MediaQuery.sizeOf(context).width;
+    if (width >= desktopBreakpoint) return 1200.0;
+    if (width >= tabletBreakpoint) return 680.0;
+    return double.infinity;
+  }
+
+  /// Safe bottom inset protecting against iPhone Home Indicator bar (~34dp)
+  /// and Android gesture navigation bar (~16-24dp).
+  static double bottomSafeInset(BuildContext context, {double extra = 12.0}) {
+    final bottomPadding = MediaQuery.paddingOf(context).bottom;
+    return bottomPadding > 0 ? bottomPadding + extra : extra;
+  }
+
+  /// Safe top inset protecting against iPhone Dynamic Island (~59dp),
+  /// iOS notch (~47dp), and Android punch-hole cameras.
+  static double topSafeInset(BuildContext context, {double extra = 8.0}) {
+    final topPadding = MediaQuery.paddingOf(context).top;
+    return topPadding > 0 ? topPadding + extra : extra;
+  }
+}
+

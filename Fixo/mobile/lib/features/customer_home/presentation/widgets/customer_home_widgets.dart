@@ -4,6 +4,7 @@ import '../../../../core/theme/fixo_spacing.dart';
 import '../../../../core/theme/fixo_typography.dart';
 import '../../../../core/widgets/fixo_tilt_3d.dart';
 import '../../../../core/widgets/fixo_holographic_pro_badge.dart';
+import '../../../../core/widgets/fixo_liquid_glass_layer.dart';
 import '../../domain/marketplace_models.dart';
 
 /// Maps Stitch Material Symbol names to native Flutter `IconData`.
@@ -871,13 +872,13 @@ class FixoCustomerBottomNav extends StatelessWidget {
       ),
     ];
 
-    return Container(
+    return LiquidGlassLayer(
       key: const Key('customer-bottom-nav'),
-      decoration: BoxDecoration(
-        color: palette.cardSurface.withValues(alpha: 0.96),
-        border: Border(top: BorderSide(color: palette.subtleBorder, width: 1)),
-        boxShadow: FixoShadows.level2Interactive,
-      ),
+      borderRadius: BorderRadius.zero,
+      blurSigma: 24.0,
+      specularIntensity: 0.25,
+      borderWidth: 1.0,
+      enableInteractiveCaustics: false,
       child: SafeArea(
         top: false,
         child: SizedBox(

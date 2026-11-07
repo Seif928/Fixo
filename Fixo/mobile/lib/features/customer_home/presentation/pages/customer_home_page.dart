@@ -464,8 +464,9 @@ class _CustomerHomePageState extends ConsumerState<CustomerHomePage> {
     required bool isArabic,
     required FixoPaletteExtension palette,
   }) {
+    final hMargin = FixoAdaptive.horizontalMargin(context);
     return Padding(
-      padding: const EdgeInsets.fromLTRB(FixoSpacing.md, 12, FixoSpacing.md, 8),
+      padding: EdgeInsets.fromLTRB(hMargin, 12, hMargin, 8),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
