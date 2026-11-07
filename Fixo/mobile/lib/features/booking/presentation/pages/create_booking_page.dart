@@ -530,6 +530,45 @@ class _CreateBookingPageState extends ConsumerState<CreateBookingPage> {
                                 ],
                               ),
                               const SizedBox(height: FixoSpacing.xs),
+                              Container(
+                                margin: const EdgeInsets.only(bottom: 6),
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 10,
+                                  vertical: 5,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: palette.surfaceLow,
+                                  borderRadius: BorderRadius.circular(
+                                    FixoRadius.pill,
+                                  ),
+                                  border: Border.all(
+                                    color: palette.subtleBorder,
+                                  ),
+                                ),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    const Icon(
+                                      Icons.view_in_ar_rounded,
+                                      size: 14,
+                                      color: FixoColors.primaryForest,
+                                    ),
+                                    const SizedBox(width: 6),
+                                    Flexible(
+                                      child: Text(
+                                        isArabic
+                                            ? 'مجسم 3D تفاعلي: حدد مكان العطل بالضغط على النقطة'
+                                            : 'Interactive 3D: Tap a pin to diagnose the issue',
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                        style: FixoTypography.labelSm(
+                                          color: palette.deepForest,
+                                        ).copyWith(fontWeight: FontWeight.w700),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
                               // 3D Interactive Defect Pinning Canvas
                               Appliance3DInspectionWidget(
                                 key: const Key('appliance-3d-inspection'),

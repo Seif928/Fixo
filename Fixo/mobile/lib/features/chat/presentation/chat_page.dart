@@ -775,86 +775,89 @@ class _ChatPageState extends ConsumerState<ChatPage>
                 ),
               ),
             // Stitch Screen 07 Pill Composer Bar
-            Container(
-              padding: const EdgeInsets.fromLTRB(12, 8, 12, 12),
-              decoration: BoxDecoration(
-                color: palette.surfaceLow,
-                border: Border(top: BorderSide(color: palette.subtleBorder)),
-              ),
+            SafeArea(
+              top: false,
               child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+                padding: const EdgeInsets.fromLTRB(12, 8, 12, 8),
                 decoration: BoxDecoration(
-                  color: palette.cardSurface,
-                  borderRadius: BorderRadius.circular(28),
-                  border: Border.all(color: palette.subtleBorder),
-                  boxShadow: FixoShadows.level1CardResting,
+                  color: palette.surfaceLow,
+                  border: Border(top: BorderSide(color: palette.subtleBorder)),
                 ),
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.end,
-                  children: [
-                    Tooltip(
-                      message: _ar
-                          ? 'إرفاق الصور سيتوفر قريبًا'
-                          : 'Photo attachments coming soon',
-                      child: Padding(
-                        padding: const EdgeInsets.only(bottom: 4, left: 4, right: 4),
-                        child: CircleAvatar(
-                          radius: 18,
-                          backgroundColor: palette.surfaceContainer,
-                          child: Icon(
-                            Icons.add_rounded,
-                            size: 20,
-                            color: palette.mutedText.withValues(alpha: 0.6),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: palette.cardSurface,
+                    borderRadius: BorderRadius.circular(28),
+                    border: Border.all(color: palette.subtleBorder),
+                    boxShadow: FixoShadows.level1CardResting,
+                  ),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    children: [
+                      Tooltip(
+                        message: _ar
+                            ? 'إرفاق الصور سيتوفر قريبًا'
+                            : 'Photo attachments coming soon',
+                        child: Padding(
+                          padding: const EdgeInsets.only(bottom: 4, left: 4, right: 4),
+                          child: CircleAvatar(
+                            radius: 18,
+                            backgroundColor: palette.surfaceContainer,
+                            child: Icon(
+                              Icons.add_rounded,
+                              size: 20,
+                              color: palette.mutedText.withValues(alpha: 0.6),
+                            ),
                           ),
                         ),
                       ),
-                    ),
-                    Expanded(
-                      child: TextField(
-                        controller: _text,
-                        enabled: _writable && !_sending,
-                        maxLength: 2000,
-                        maxLines: 4,
-                        minLines: 1,
-                        onChanged: (_) => setState(() {}),
-                        style: FixoTypography.bodyMd(color: palette.inkText),
-                        decoration: InputDecoration(
-                          counterText: '',
-                          filled: false,
-                          hintText: _ar ? 'اكتب رسالة…' : 'Type a message…',
-                          border: InputBorder.none,
-                          enabledBorder: InputBorder.none,
-                          focusedBorder: InputBorder.none,
-                          disabledBorder: InputBorder.none,
-                          contentPadding: const EdgeInsets.symmetric(
-                            horizontal: 8,
-                            vertical: 10,
+                      Expanded(
+                        child: TextField(
+                          controller: _text,
+                          enabled: _writable && !_sending,
+                          maxLength: 2000,
+                          maxLines: 4,
+                          minLines: 1,
+                          onChanged: (_) => setState(() {}),
+                          style: FixoTypography.bodyMd(color: palette.inkText),
+                          decoration: InputDecoration(
+                            counterText: '',
+                            filled: false,
+                            hintText: _ar ? 'اكتب رسالة…' : 'Type a message…',
+                            border: InputBorder.none,
+                            enabledBorder: InputBorder.none,
+                            focusedBorder: InputBorder.none,
+                            disabledBorder: InputBorder.none,
+                            contentPadding: const EdgeInsets.symmetric(
+                              horizontal: 8,
+                              vertical: 10,
+                            ),
                           ),
                         ),
                       ),
-                    ),
-                    const SizedBox(width: 4),
-                    IconButton.filled(
-                      key: const Key('send-chat-message'),
-                      tooltip: _ar ? 'إرسال' : 'Send',
-                      style: IconButton.styleFrom(
-                        backgroundColor: FixoColors.primaryForest,
-                        foregroundColor: palette.limeAccent,
-                        disabledBackgroundColor: palette.surfaceContainer,
+                      const SizedBox(width: 4),
+                      IconButton.filled(
+                        key: const Key('send-chat-message'),
+                        tooltip: _ar ? 'إرسال' : 'Send',
+                        style: IconButton.styleFrom(
+                          backgroundColor: FixoColors.primaryForest,
+                          foregroundColor: palette.limeAccent,
+                          disabledBackgroundColor: palette.surfaceContainer,
+                        ),
+                        onPressed:
+                            !_writable || _sending || _text.text.trim().isEmpty
+                            ? null
+                            : _send,
+                        icon: _sending
+                            ? const SizedBox(
+                                width: 20,
+                                height: 20,
+                                child: CircularProgressIndicator(strokeWidth: 2),
+                              )
+                            : const Icon(Icons.arrow_upward),
                       ),
-                      onPressed:
-                          !_writable || _sending || _text.text.trim().isEmpty
-                          ? null
-                          : _send,
-                      icon: _sending
-                          ? const SizedBox(
-                              width: 20,
-                              height: 20,
-                              child: CircularProgressIndicator(strokeWidth: 2),
-                            )
-                          : const Icon(Icons.arrow_upward),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
               ),
             ),

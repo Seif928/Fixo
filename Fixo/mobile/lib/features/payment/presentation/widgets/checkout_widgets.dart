@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
+import '../../../../app/router/app_routes.dart';
 import '../../../../core/theme/fixo_colors.dart';
 import '../../../../core/theme/fixo_spacing.dart';
 import '../../../../core/theme/fixo_typography.dart';
@@ -1077,23 +1079,58 @@ class CheckoutConfirmationView extends StatelessWidget {
             ),
             const SizedBox(height: 12),
           ],
+          // Track Order 3D CTA
           SizedBox(
             width: double.infinity,
             height: 48,
-            child: ElevatedButton(
-              key: const Key('checkout-return-home-btn'),
-              onPressed: onReturnHome,
-              style: ElevatedButton.styleFrom(
+            child: FilledButton.icon(
+              key: const Key('checkout-track-order-3d-btn'),
+              onPressed: () => context.push(
+                AppRoutes.orderTracking.replaceFirst(
+                  ':orderId',
+                  Uri.encodeComponent(booking.id),
+                ),
+              ),
+              style: FilledButton.styleFrom(
                 backgroundColor: FixoColors.primaryForest,
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(12),
                 ),
                 elevation: 0,
               ),
+              icon: const Icon(
+                Icons.view_in_ar_rounded,
+                size: 20,
+                color: FixoColors.limeAccent,
+              ),
+              label: Text(
+                isArabic ? 'تتبع الفني والطلب 3D' : 'Live 3D Order Tracking',
+                style: FixoTypography.labelLg(
+                  color: Colors.white,
+                ).copyWith(fontWeight: FontWeight.bold),
+              ),
+            ),
+          ),
+          const SizedBox(height: 10),
+
+          // Return to Home CTA
+          SizedBox(
+            width: double.infinity,
+            height: 48,
+            child: OutlinedButton(
+              key: const Key('checkout-return-home-btn'),
+              onPressed: onReturnHome,
+              style: OutlinedButton.styleFrom(
+                foregroundColor: palette.deepForest,
+                side: BorderSide(color: palette.subtleBorder),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
               child: Text(
                 isArabic ? 'العودة للرئيسية' : 'Return to Home',
                 style: FixoTypography.labelLg(
-                  color: Colors.white,
+                  color: palette.deepForest,
                 ).copyWith(fontWeight: FontWeight.bold),
               ),
             ),

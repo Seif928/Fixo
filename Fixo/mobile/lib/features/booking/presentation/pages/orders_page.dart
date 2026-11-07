@@ -10,6 +10,7 @@ import '../../../../core/theme/fixo_spacing.dart';
 import '../../../../core/theme/fixo_typography.dart';
 import '../../../../core/widgets/fixo_brand_mark.dart';
 import '../../../../core/widgets/fixo_cards.dart';
+import '../../../../core/widgets/fixo_liquid_glass_layer.dart';
 import '../../../customer_home/presentation/widgets/customer_home_widgets.dart';
 import '../../data/booking_repository.dart';
 import '../../domain/booking_models.dart';
@@ -412,9 +413,11 @@ class _OrdersPageState extends ConsumerState<OrdersPage> {
     return Padding(
       key: ValueKey('booking-${booking.id}'),
       padding: const EdgeInsets.only(bottom: 14),
-      child: FixoSurfaceCard(
+      child: LiquidGlassCard(
         padding: const EdgeInsets.all(FixoSpacing.md),
         borderRadius: FixoRadius.borderRadiusLg,
+        blurSigma: 20.0,
+        specularIntensity: 0.35,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
@@ -602,9 +605,9 @@ class _OrdersPageState extends ConsumerState<OrdersPage> {
                               Uri.encodeComponent(booking.id),
                             ),
                           ),
-                          icon: const Icon(Icons.near_me_outlined, size: 16),
+                          icon: const Icon(Icons.view_in_ar_rounded, size: 16),
                           label: Text(
-                            ar ? 'تتبع الطلب' : 'Live tracking',
+                            ar ? 'تتبع الفني 3D' : 'Live 3D Tracking',
                           ),
                         ),
                         if (isCompleted) ...[

@@ -257,6 +257,7 @@ class LiquidGlassCard extends StatelessWidget {
     this.borderRadius = FixoRadius.borderRadiusLg,
     this.blurSigma = 26.0,
     this.tintOpacity,
+    this.specularIntensity = 0.42,
     this.onTap,
   });
 
@@ -266,6 +267,7 @@ class LiquidGlassCard extends StatelessWidget {
   final BorderRadius borderRadius;
   final double blurSigma;
   final double? tintOpacity;
+  final double specularIntensity;
   final VoidCallback? onTap;
 
   @override
@@ -287,6 +289,7 @@ class LiquidGlassCard extends StatelessWidget {
       borderRadius: borderRadius,
       blurSigma: blurSigma,
       tintOpacity: tintOpacity,
+      specularIntensity: specularIntensity,
       padding: padding,
       margin: margin,
       child: content,

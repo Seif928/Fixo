@@ -155,7 +155,7 @@ class _Interactive3DHomeSceneState extends State<Interactive3DHomeScene>
                   Expanded(
                     child: Text(
                       widget.isArabic
-                          ? 'اضغط على أي غرفة لفحص وتحديد العطل'
+                          ? 'اضغط لفحص الغرفة والعطل 3D'
                           : 'Tap a zone to inspect & book',
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
@@ -352,40 +352,64 @@ class _HotspotArea extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Material(
       color: Colors.transparent,
       child: InkWell(
         onTap: onTap,
         borderRadius: BorderRadius.circular(12),
         child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(12),
             border: Border.all(
               color: isSelected
-                  ? activeColor.withValues(alpha: 0.8)
-                  : Colors.transparent,
-              width: 1.5,
+                  ? activeColor.withValues(alpha: 0.85)
+                  : (isDark
+                      ? Colors.white.withValues(alpha: 0.16)
+                      : Colors.black.withValues(alpha: 0.10)),
+              width: isSelected ? 1.5 : 1.0,
             ),
             color: isSelected
-                ? activeColor.withValues(alpha: 0.12)
-                : Colors.transparent,
+                ? activeColor.withValues(alpha: 0.20)
+                : (isDark
+                    ? const Color(0xFF14241F).withValues(alpha: 0.65)
+                    : Colors.white.withValues(alpha: 0.82)),
+            boxShadow: [
+              BoxShadow(
+                color: isSelected
+                    ? activeColor.withValues(alpha: 0.25)
+                    : Colors.black.withValues(alpha: 0.05),
+                blurRadius: 6,
+                offset: const Offset(0, 2),
+              ),
+            ],
           ),
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
               Icon(
                 icon,
-                size: 14,
-                color: isSelected ? activeColor : Colors.grey,
+                size: 13,
+                color: isSelected
+                    ? activeColor
+                    : (isDark ? Colors.white70 : const Color(0xFF173F35)),
               ),
               const SizedBox(width: 4),
-              Text(
-                label,
-                style: TextStyle(
-                  fontSize: 11,
-                  fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
-                  color: isSelected ? activeColor : Colors.grey,
+              Flexible(
+                child: Text(
+                  label,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    fontSize: 10.5,
+                    fontWeight: isSelected ? FontWeight.bold : FontWeight.w600,
+                    color: isSelected
+                        ? activeColor
+                        : (isDark
+                            ? Colors.white.withValues(alpha: 0.9)
+                            : const Color(0xFF173F35)),
+                  ),
                 ),
               ),
             ],
@@ -413,6 +437,7 @@ class _RoomPill extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(FixoRadius.pill),
@@ -422,12 +447,16 @@ class _RoomPill extends StatelessWidget {
         decoration: BoxDecoration(
           color: isSelected
               ? FixoColors.primaryForest
-              : Colors.transparent,
+              : (isDark
+                  ? const Color(0xFF14241F).withValues(alpha: 0.45)
+                  : Colors.white.withValues(alpha: 0.65)),
           borderRadius: BorderRadius.circular(FixoRadius.pill),
           border: Border.all(
             color: isSelected
                 ? FixoColors.limeAccent
-                : Colors.grey.withValues(alpha: 0.3),
+                : (isDark
+                    ? Colors.white.withValues(alpha: 0.12)
+                    : Colors.black.withValues(alpha: 0.08)),
             width: 1,
           ),
         ),
@@ -445,7 +474,9 @@ class _RoomPill extends StatelessWidget {
               style: TextStyle(
                 fontSize: 11,
                 fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
-                color: isSelected ? Colors.white : Colors.grey[700],
+                color: isSelected
+                    ? Colors.white
+                    : (isDark ? Colors.white70 : Colors.grey[800]),
               ),
             ),
           ],
