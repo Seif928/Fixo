@@ -378,11 +378,14 @@ class _EmailAuthPageState extends ConsumerState<EmailAuthPage> {
                               onPressed: _busy
                                   ? null
                                   : () => _run(() async {
-                                        await _accept(
-                                          await ref
-                                              .read(emailAccessProvider)
-                                              .signInWithApple(),
-                                        );
+                                        final session = await ref
+                                            .read(emailAccessProvider)
+                                            .promptAndSignInWithApple(
+                                              context,
+                                              isArabic: ar,
+                                            );
+                                        if (session == null) return;
+                                        await _accept(session);
                                       }),
                               icon: const Icon(Icons.apple_rounded, size: 22),
                               label: Text(

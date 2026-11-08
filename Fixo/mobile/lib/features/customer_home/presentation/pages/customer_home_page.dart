@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
@@ -12,6 +13,7 @@ import '../../../../core/theme/fixo_typography.dart';
 import '../../../../core/widgets/fixo_brand_mark.dart';
 import '../../../../core/widgets/fixo_buttons.dart';
 import '../../../../core/widgets/fixo_cards.dart';
+import '../../../../core/widgets/fixo_liquid_glass_layer.dart';
 import '../../../../core/widgets/fixo_skeleton.dart';
 import '../../../auth/presentation/controllers/auth_controller.dart';
 import '../../../profile/presentation/profile_avatar.dart';
@@ -397,6 +399,53 @@ class _CustomerHomePageState extends ConsumerState<CustomerHomePage> {
               ],
             ),
           ),
+          if (MediaQuery.sizeOf(context).width >= 1000)
+            Row(
+              key: const Key('desktop-web-navbar-links'),
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                _buildDesktopNavButton(
+                  label: isArabic ? 'الرئيسية' : 'Home',
+                  icon: Icons.home_rounded,
+                  isActive: true,
+                  palette: palette,
+                  onTap: () {
+                    HapticFeedback.selectionClick();
+                    homeNotifier.clearFilters();
+                  },
+                ),
+                const SizedBox(width: 6),
+                _buildDesktopNavButton(
+                  label: isArabic ? 'الـ 146 خدمة' : '146 Services',
+                  icon: Icons.grid_view_rounded,
+                  isActive: _showAllServices,
+                  palette: palette,
+                  onTap: () {
+                    HapticFeedback.selectionClick();
+                    setState(() {
+                      _showAllCategories = true;
+                      _showAllServices = true;
+                    });
+                  },
+                ),
+                const SizedBox(width: 6),
+                _buildDesktopNavButton(
+                  label: isArabic ? 'طلباتي' : 'Orders',
+                  icon: Icons.receipt_long_rounded,
+                  isActive: false,
+                  palette: palette,
+                  onTap: () => navigateCustomerTab(context, 1),
+                ),
+                const SizedBox(width: 6),
+                _buildDesktopNavButton(
+                  label: isArabic ? 'المحادثات' : 'Chat',
+                  icon: Icons.chat_bubble_outline_rounded,
+                  isActive: false,
+                  palette: palette,
+                  onTap: () => navigateCustomerTab(context, 2),
+                ),
+              ],
+            ),
           Row(
             mainAxisSize: MainAxisSize.min,
             children: [
@@ -771,33 +820,142 @@ class _CustomerHomePageState extends ConsumerState<CustomerHomePage> {
       for (final c in feed.categories) c.slug: c.iconName,
     };
 
+    final isDesktopWeb = MediaQuery.sizeOf(context).width >= 1000;
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        // 0. Interactive 3D Residence Cutaway
-        Interactive3DHomeScene(
-          key: const Key('interactive-3d-home-scene'),
-          isArabic: isArabic,
-          selectedCategorySlug: selectedCategory,
-          onSelectCategory: homeNotifier.selectCategory,
-        ),
-
-        // 1. Featured Seasonal Promo Card (Flat 350 EGP)
-        if (seasonalPromo != null)
+        if (isDesktopWeb)
           Padding(
+            key: const Key('desktop-split-hero-section'),
             padding: const EdgeInsets.fromLTRB(
               FixoSpacing.md,
               8,
               FixoSpacing.md,
-              12,
+              14,
             ),
-            child: SeasonalPromoHeroCard(
-              offer: seasonalPromo,
-              isArabic: isArabic,
-              onBookNow: () =>
-                  _navigateToCreateBooking(offering: seasonalPromo),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(
+                  flex: 11,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(20),
+                        decoration: BoxDecoration(
+                          color: palette.cardSurface,
+                          borderRadius: FixoRadius.borderRadiusLg,
+                          border: Border.all(
+                            color: isDark
+                                ? FixoColors.goldAccent.withValues(alpha: 0.45)
+                                : palette.subtleBorder,
+                          ),
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 10,
+                                vertical: 4,
+                              ),
+                              decoration: BoxDecoration(
+                                color: FixoColors.primaryForest,
+                                borderRadius: FixoRadius.borderRadiusPill,
+                              ),
+                              child: Text(
+                                isArabic
+                                    ? 'بوابة فيكسو للويب • 21 قسماً و146 خدمة معتمدة'
+                                    : 'FIXO ATELIER WEB PORTAL • 21 TRADES & 146 SERVICES',
+                                style: FixoTypography.labelSm(
+                                  color: FixoColors.limeAccent,
+                                ).copyWith(fontWeight: FontWeight.w800),
+                              ),
+                            ),
+                            const SizedBox(height: 10),
+                            Text(
+                              isArabic
+                                  ? 'هندسة الصيانة المنزلية الفاخرة في مصر'
+                                  : 'Luxury Residential Engineering Across Egypt',
+                              style: FixoTypography.headlineMd(
+                                color: palette.inkText,
+                              ).copyWith(fontWeight: FontWeight.w800),
+                            ),
+                            const SizedBox(height: 6),
+                            Text(
+                              isArabic
+                                  ? 'استكشف الفيلا ثلاثية الأبعاد، اختر من بين 146 خدمة بسعر ثابت، وادفع نقداً بعد التنفيذ أو عبر Apple Pay وفيزا 3D.'
+                                  : 'Inspect our interactive 3D Villa, choose from 146 fixed-rate services, and checkout via Cash, Apple Pay, or 3D Visa.',
+                              style: FixoTypography.bodySm(
+                                color: palette.mutedText,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      if (seasonalPromo != null) ...[
+                        const SizedBox(height: 12),
+                        SeasonalPromoHeroCard(
+                          offer: seasonalPromo,
+                          isArabic: isArabic,
+                          onBookNow: () =>
+                              _navigateToCreateBooking(offering: seasonalPromo),
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                  flex: 13,
+                  child: Interactive3DHomeScene(
+                    key: const Key('interactive-3d-home-scene'),
+                    isArabic: isArabic,
+                    selectedCategorySlug: selectedCategory,
+                    onSelectCategory: homeNotifier.selectCategory,
+                  ),
+                ),
+              ],
             ),
+          )
+        else ...[
+          // 0. Interactive 3D Residence Cutaway (Mobile Layout)
+          Interactive3DHomeScene(
+            key: const Key('interactive-3d-home-scene'),
+            isArabic: isArabic,
+            selectedCategorySlug: selectedCategory,
+            onSelectCategory: homeNotifier.selectCategory,
           ),
+
+          // 1. Featured Seasonal Promo Card (Flat 350 EGP)
+          if (seasonalPromo != null)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(
+                FixoSpacing.md,
+                8,
+                FixoSpacing.md,
+                12,
+              ),
+              child: SeasonalPromoHeroCard(
+                offer: seasonalPromo,
+                isArabic: isArabic,
+                onBookNow: () =>
+                    _navigateToCreateBooking(offering: seasonalPromo),
+              ),
+            ),
+        ],
+
+        // 1B. Pinned Liquid Glass Category & Sort Bar
+        _buildLiquidGlassFilterAndSortBar(
+          context,
+          homeState: homeState,
+          homeNotifier: homeNotifier,
+          categories: categories,
+          isArabic: isArabic,
+          palette: palette,
+        ),
 
         // 2. Select Service Category (6 Ready + 2-column grid)
         if (categories.isNotEmpty) ...[
@@ -1036,7 +1194,11 @@ class _CustomerHomePageState extends ConsumerState<CustomerHomePage> {
             padding: const EdgeInsets.symmetric(horizontal: FixoSpacing.md),
             child: LayoutBuilder(
               builder: (context, constraints) {
-                final columns = constraints.maxWidth >= 850 ? 2 : 1;
+                final columns = constraints.maxWidth >= 1000
+                    ? 3
+                    : constraints.maxWidth >= 700
+                    ? 2
+                    : 1;
                 final width =
                     (constraints.maxWidth - 12 * (columns - 1)) / columns;
                 return Wrap(
@@ -1242,6 +1404,198 @@ class _CustomerHomePageState extends ConsumerState<CustomerHomePage> {
           ),
         ),
       ],
+    );
+  }
+
+  Widget _buildDesktopNavButton({
+    required String label,
+    required IconData icon,
+    required bool isActive,
+    required FixoPaletteExtension palette,
+    required VoidCallback onTap,
+  }) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    return Material(
+      color: isActive
+          ? (isDark ? FixoColors.primaryForest : palette.surfaceHigh)
+          : Colors.transparent,
+      borderRadius: FixoRadius.borderRadiusPill,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: FixoRadius.borderRadiusPill,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                icon,
+                size: 16,
+                color: isActive
+                    ? (isDark ? FixoColors.limeAccent : palette.deepForest)
+                    : palette.mutedText,
+              ),
+              const SizedBox(width: 6),
+              Text(
+                label,
+                style: FixoTypography.labelMd(
+                  color: isActive
+                      ? (isDark ? Colors.white : palette.deepForest)
+                      : palette.mutedText,
+                ).copyWith(
+                  fontWeight: isActive ? FontWeight.w800 : FontWeight.w600,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildLiquidGlassFilterAndSortBar(
+    BuildContext context, {
+    required CustomerHomeState homeState,
+    required CustomerHomeController homeNotifier,
+    required List<ServiceCategoryModel> categories,
+    required bool isArabic,
+    required FixoPaletteExtension palette,
+  }) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final sortOptions = <({String id, String labelAr, String labelEn, IconData icon})>[
+      (
+        id: 'default',
+        labelAr: 'الكل',
+        labelEn: 'All',
+        icon: Icons.auto_awesome_rounded,
+      ),
+      (
+        id: 'top_rated',
+        labelAr: 'الأعلى تقييماً ⭐',
+        labelEn: 'Top Rated ⭐',
+        icon: Icons.star_rounded,
+      ),
+      (
+        id: 'lowest_price',
+        labelAr: 'الأقل سعراً 💰',
+        labelEn: 'Lowest Price 💰',
+        icon: Icons.sell_outlined,
+      ),
+      (
+        id: 'fastest',
+        labelAr: 'الأسرع استجابة ⚡',
+        labelEn: 'Fastest ⚡',
+        icon: Icons.bolt_rounded,
+      ),
+    ];
+
+    return Padding(
+      key: const Key('pinned-liquid-glass-filter-bar'),
+      padding: const EdgeInsets.fromLTRB(
+        FixoSpacing.md,
+        4,
+        FixoSpacing.md,
+        8,
+      ),
+      child: LiquidGlassLayer(
+        borderRadius: FixoRadius.borderRadiusMd,
+        blurSigma: 20.0,
+        tintOpacity: isDark ? 0.45 : 0.68,
+        specularIntensity: 0.55,
+        borderWidth: 1.0,
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+        child: SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          child: Row(
+            children: [
+              for (final opt in sortOptions) ...[
+                Padding(
+                  padding: const EdgeInsetsDirectional.only(end: 6),
+                  child: InkWell(
+                    key: Key('sort-pill-${opt.id}'),
+                    borderRadius: FixoRadius.borderRadiusPill,
+                    onTap: () {
+                      HapticFeedback.selectionClick();
+                      homeNotifier.selectSortMode(opt.id);
+                    },
+                    child: AnimatedContainer(
+                      duration: const Duration(milliseconds: 180),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 10,
+                        vertical: 5,
+                      ),
+                      decoration: BoxDecoration(
+                        color: homeState.sortMode == opt.id
+                            ? FixoColors.primaryForest
+                            : palette.surfaceContainer,
+                        borderRadius: FixoRadius.borderRadiusPill,
+                        border: Border.all(
+                          color: homeState.sortMode == opt.id
+                              ? FixoColors.limeAccent.withValues(alpha: 0.7)
+                              : palette.subtleBorder,
+                        ),
+                      ),
+                      child: Text(
+                        isArabic ? opt.labelAr : opt.labelEn,
+                        style: FixoTypography.labelSm(
+                          color: homeState.sortMode == opt.id
+                              ? FixoColors.limeAccent
+                              : palette.inkText,
+                        ).copyWith(fontWeight: FontWeight.w700),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+              Container(
+                width: 1,
+                height: 18,
+                margin: const EdgeInsets.symmetric(horizontal: 6),
+                color: palette.subtleBorder,
+              ),
+              for (final cat in categories.take(10))
+                Padding(
+                  padding: const EdgeInsetsDirectional.only(end: 6),
+                  child: InkWell(
+                    key: Key('quick-cat-pill-${cat.slug}'),
+                    borderRadius: FixoRadius.borderRadiusPill,
+                    onTap: () {
+                      HapticFeedback.selectionClick();
+                      homeNotifier.selectCategory(cat.slug);
+                    },
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 10,
+                        vertical: 5,
+                      ),
+                      decoration: BoxDecoration(
+                        color: homeState.selectedCategorySlug == cat.slug
+                            ? FixoColors.secondaryForest
+                            : Colors.transparent,
+                        borderRadius: FixoRadius.borderRadiusPill,
+                        border: Border.all(
+                          color: homeState.selectedCategorySlug == cat.slug
+                              ? FixoColors.goldBright
+                              : palette.subtleBorder,
+                        ),
+                      ),
+                      child: Text(
+                        isArabic
+                            ? 'قسم: ${cat.localizedName(true)}'
+                            : 'Trade: ${cat.localizedName(false)}',
+                        style: FixoTypography.labelSm(
+                          color: homeState.selectedCategorySlug == cat.slug
+                              ? Colors.white
+                              : palette.mutedText,
+                        ).copyWith(fontWeight: FontWeight.w600),
+                      ),
+                    ),
+                  ),
+                ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }

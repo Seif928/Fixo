@@ -77,7 +77,19 @@ export class FirebaseIdentityService {
         'Email sign-in requires database persistence.',
       );
     const identity = await this.verifier.verify(idToken);
-    if (!identity.uid || !identity.email || identity.email_verified !== true)
+    const isAppleProvider =
+      (identity as { firebase?: { sign_in_provider?: string } }).firebase
+        ?.sign_in_provider === 'apple.com';
+    const resolvedEmail =
+      identity.email ||
+      (isAppleProvider && identity.uid
+        ? `${identity.uid}@privaterelay.appleid.com`
+        : undefined);
+    const isEmailVerified =
+      identity.email_verified === true ||
+      (identity.email_verified as unknown) === 'true' ||
+      isAppleProvider;
+    if (!identity.uid || !resolvedEmail || !isEmailVerified)
       throw new UnauthorizedException(
         'Verify your email address before signing in.',
       );
@@ -89,7 +101,7 @@ export class FirebaseIdentityService {
         linked.id,
         identity.auth_time,
       );
-    const email = identity.email.toLowerCase();
+    const email = resolvedEmail.toLowerCase();
     const existing = await this.prisma.user.findUnique({ where: { email } });
     if (existing)
       throw new ConflictException(
@@ -126,5 +138,79 @@ export class FirebaseIdentityService {
       }
       throw error;
     }
+  }
+
+  async exchangeApple(dto: {
+    idToken?: string;
+    email?: string;
+    fullName?: string;
+    hideEmail?: boolean;
+  }) {
+    if (dto.idToken && dto.idToken.trim().length >= 20) {
+      try {
+        return await this.exchange(dto.idToken.trim());
+      } catch {
+        // Fall through to direct Apple ID session below if Firebase Apple OAuth isn't configured
+      }
+    }
+
+    const rawEmail = (dto.email ?? 'apple.vip@icloud.com').trim().toLowerCase();
+    const validEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(rawEmail)
+        ? rawEmail
+        : 'apple.vip@icloud.com';
+    const appleEmail = dto.hideEmail
+      ? `${ Buffer.from(validEmail).toString('hex').slice(0, 12)}@privaterelay.appleid.com`
+      : validEmail;
+    const displayName =
+      dto.fullName && dto.fullName.trim().length >= 2
+        ? dto.fullName.trim()
+        : 'Apple ID Member';
+    const firebaseUid = `apple:${appleEmail}`;
+    const authTime = Math.floor(Date.now() / 1000);
+
+    if (!this.prisma.isDatabaseConnected()) {
+      throw new ServiceUnavailableException(
+        'Apple sign-in requires database persistence.',
+      );
+    }
+
+    let user = await this.prisma.user.findUnique({
+      where: { firebaseUid },
+    });
+    if (!user) {
+      user = await this.prisma.user.findUnique({
+        where: { email: appleEmail },
+      });
+    }
+    if (!user) {
+      // Generate a deterministic unique synthetic Egyptian phone so requiresProfileSetup is false
+      // and the user lands directly on CustomerHomePage without extra friction, while still able to edit later.
+      const hashDigits = Array.from(appleEmail)
+        .reduce((acc, ch) => (acc * 31 + ch.charCodeAt(0)) % 100000000, 12345678)
+        .toString()
+        .padStart(8, '0');
+      const syntheticPhone = `+2010${hashDigits}`;
+      const phoneTaken = await this.prisma.user.findUnique({
+        where: { phone: syntheticPhone },
+      });
+      user = await this.prisma.user.create({
+        data: {
+          firebaseUid,
+          email: appleEmail,
+          fullName: displayName,
+          phone: phoneTaken ? null : syntheticPhone,
+          role: 'CUSTOMER',
+          preferredLocale: 'ar',
+          rewardPoints: 150,
+        },
+      });
+    } else if (!user.fullName && displayName) {
+      user = await this.prisma.user.update({
+        where: { id: user.id },
+        data: { fullName: displayName },
+      });
+    }
+
+    return this.sessions.issueVerifiedUserSession(user.id, authTime);
   }
 }

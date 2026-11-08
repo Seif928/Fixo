@@ -33,6 +33,15 @@ class CoverageZoneModel {
       isActive: json['isActive'] as bool? ?? true,
     );
   }
+
+  Map<String, dynamic> toJson() => {
+    'id': id,
+    'slug': slug,
+    'nameEn': nameEn,
+    'nameAr': nameAr,
+    'governorate': governorate,
+    'isActive': isActive,
+  };
 }
 
 class ServiceCategoryModel {
@@ -74,6 +83,18 @@ class ServiceCategoryModel {
       sortOrder: (json['sortOrder'] as num?)?.toInt() ?? 0,
     );
   }
+
+  Map<String, dynamic> toJson() => {
+    'id': id,
+    'slug': slug,
+    'nameEn': nameEn,
+    'nameAr': nameAr,
+    'subtitleEn': subtitleEn,
+    'subtitleAr': subtitleAr,
+    'iconName': iconName,
+    'startingPriceEgp': startingPriceEgp,
+    'sortOrder': sortOrder,
+  };
 }
 
 class ServiceOfferModel {
@@ -150,6 +171,27 @@ class ServiceOfferModel {
       isBundle: json['isBundle'] as bool? ?? false,
     );
   }
+
+  Map<String, dynamic> toJson() => {
+    'id': id,
+    'categoryId': categoryId,
+    'categorySlug': categorySlug,
+    'slug': slug,
+    'titleEn': titleEn,
+    'titleAr': titleAr,
+    'descriptionEn': descriptionEn,
+    'descriptionAr': descriptionAr,
+    'badgeEn': badgeEn,
+    'badgeAr': badgeAr,
+    'providerTagEn': providerTagEn,
+    'providerTagAr': providerTagAr,
+    'baseInspectionEgp': baseInspectionEgp,
+    'serviceFeeEgp': serviceFeeEgp,
+    'flatPriceEgp': flatPriceEgp,
+    'estimatedDurationMins': estimatedDurationMins,
+    'isSeasonalPromo': isSeasonalPromo,
+    'isBundle': isBundle,
+  };
 }
 
 class ProfessionalCardModel {
@@ -228,6 +270,26 @@ class ProfessionalCardModel {
       isOnline: json['isOnline'] as bool? ?? false,
     );
   }
+
+  Map<String, dynamic> toJson() => {
+    'id': id,
+    'fullNameEn': fullNameEn,
+    'fullNameAr': fullNameAr,
+    'primaryCategoryId': primaryCategoryId,
+    'primaryCategorySlug': primaryCategorySlug,
+    'primaryZoneSlug': primaryZoneSlug,
+    'specialtyEn': specialtyEn,
+    'specialtyAr': specialtyAr,
+    'zonesLabelEn': zonesLabelEn,
+    'zonesLabelAr': zonesLabelAr,
+    'ratingAvg': ratingAvg,
+    'reviewsCount': reviewsCount,
+    'estimatedPriceEgp': estimatedPriceEgp,
+    'badgeEn': badgeEn,
+    'badgeAr': badgeAr,
+    'badgeVariant': badgeVariant,
+    'isOnline': isOnline,
+  };
 }
 
 class CustomerHomeFeed {
@@ -246,6 +308,34 @@ class CustomerHomeFeed {
   final List<ProfessionalCardModel> professionals;
   final String storageMode;
   final bool databaseConnected;
+
+  factory CustomerHomeFeed.fromJson(Map<String, dynamic> json) {
+    return CustomerHomeFeed(
+      zones: (json['zones'] as List<dynamic>? ?? const [])
+          .map((e) => CoverageZoneModel.fromJson(Map<String, dynamic>.from(e as Map)))
+          .toList(),
+      categories: (json['categories'] as List<dynamic>? ?? const [])
+          .map((e) => ServiceCategoryModel.fromJson(Map<String, dynamic>.from(e as Map)))
+          .toList(),
+      services: (json['services'] as List<dynamic>? ?? const [])
+          .map((e) => ServiceOfferModel.fromJson(Map<String, dynamic>.from(e as Map)))
+          .toList(),
+      professionals: (json['professionals'] as List<dynamic>? ?? const [])
+          .map((e) => ProfessionalCardModel.fromJson(Map<String, dynamic>.from(e as Map)))
+          .toList(),
+      storageMode: json['storageMode'] as String? ?? 'CACHED',
+      databaseConnected: json['databaseConnected'] as bool? ?? true,
+    );
+  }
+
+  Map<String, dynamic> toJson() => {
+    'zones': zones.map((z) => z.toJson()).toList(),
+    'categories': categories.map((c) => c.toJson()).toList(),
+    'services': services.map((s) => s.toJson()).toList(),
+    'professionals': professionals.map((p) => p.toJson()).toList(),
+    'storageMode': storageMode,
+    'databaseConnected': databaseConnected,
+  };
 
   ServiceOfferModel? get seasonalPromo {
     for (final offer in services) {

@@ -28,6 +28,7 @@ class CustomerHomeState {
     this.selectedArea,
     this.selectedCategorySlug,
     this.searchQuery = '',
+    this.sortMode = 'default',
     this.activeBottomTab = 0,
   });
 
@@ -39,6 +40,7 @@ class CustomerHomeState {
   String? get selectedZoneSlug => selectedArea?.zoneSlug;
   final String? selectedCategorySlug;
   final String searchQuery;
+  final String sortMode;
   final int activeBottomTab;
 
   CoverageZoneModel? get activeZone {
@@ -66,7 +68,7 @@ class CustomerHomeState {
   }
 
   List<ProfessionalCardModel> get filteredProfessionals {
-    var pros = feed?.professionals ?? const <ProfessionalCardModel>[];
+    var pros = (feed?.professionals ?? const <ProfessionalCardModel>[]).toList();
     if (selectedCategorySlug != null && selectedCategorySlug!.isNotEmpty) {
       pros = pros
           .where((p) => p.primaryCategorySlug == selectedCategorySlug)
@@ -81,11 +83,22 @@ class CustomerHomeState {
         return text.contains(q);
       }).toList();
     }
+    if (sortMode == 'top_rated') {
+      pros.sort((a, b) => b.ratingAvg.compareTo(a.ratingAvg));
+    } else if (sortMode == 'lowest_price') {
+      pros.sort((a, b) => a.estimatedPriceEgp.compareTo(b.estimatedPriceEgp));
+    } else if (sortMode == 'fastest') {
+      pros.sort((a, b) {
+        final aScore = (a.isOnline ? 2 : 0) + (a.isFastResponder ? 1 : 0);
+        final bScore = (b.isOnline ? 2 : 0) + (b.isFastResponder ? 1 : 0);
+        return bScore.compareTo(aScore);
+      });
+    }
     return pros;
   }
 
   List<ServiceOfferModel> get filteredServices {
-    var services = feed?.services ?? const <ServiceOfferModel>[];
+    var services = (feed?.services ?? const <ServiceOfferModel>[]).toList();
     if (selectedCategorySlug != null && selectedCategorySlug!.isNotEmpty) {
       services = services
           .where((s) => s.categorySlug == selectedCategorySlug)
@@ -99,6 +112,13 @@ class CustomerHomeState {
         );
         return text.contains(q);
       }).toList();
+    }
+    if (sortMode == 'lowest_price') {
+      services.sort((a, b) => a.flatPriceEgp.compareTo(b.flatPriceEgp));
+    } else if (sortMode == 'fastest') {
+      services.sort(
+        (a, b) => a.estimatedDurationMins.compareTo(b.estimatedDurationMins),
+      );
     }
     return services;
   }
@@ -130,6 +150,7 @@ class CustomerHomeState {
     String? selectedCategorySlug,
     bool clearCategory = false,
     String? searchQuery,
+    String? sortMode,
     int? activeBottomTab,
   }) {
     return CustomerHomeState(
@@ -142,12 +163,14 @@ class CustomerHomeState {
           ? null
           : (selectedCategorySlug ?? this.selectedCategorySlug),
       searchQuery: searchQuery ?? this.searchQuery,
+      sortMode: sortMode ?? this.sortMode,
       activeBottomTab: activeBottomTab ?? this.activeBottomTab,
     );
   }
 }
 
 class CustomerHomeController extends Notifier<CustomerHomeState> {
+  static const String _feedCacheKey = 'fixo.home_feed_cache.v1';
   int _request = 0;
   int _searchEpoch = 0;
   Timer? _searchDebounce;
@@ -169,23 +192,46 @@ class CustomerHomeController extends Notifier<CustomerHomeState> {
       _searchCancelToken?.cancel('Disposed');
     });
     _request++;
+    final prefs = ref.read(appPreferencesProvider);
     SelectedServiceArea? saved;
     final raw = _userId == null
         ? null
-        : ref.read(appPreferencesProvider)?.getString('fixo.area.$_userId');
+        : prefs?.getString('fixo.area.$_userId');
     try {
       if (raw != null) saved = SelectedServiceArea.fromJson(jsonDecode(raw));
     } catch (_) {
       /* Ignore invalid/old preferences. */
     }
+    CustomerHomeFeed? cachedFeed;
+    final rawCache = prefs?.getString(_feedCacheKey);
+    if (rawCache != null && rawCache.isNotEmpty) {
+      try {
+        cachedFeed = CustomerHomeFeed.fromJson(
+          Map<String, dynamic>.from(jsonDecode(rawCache) as Map),
+        );
+      } catch (_) {
+        cachedFeed = null;
+      }
+    }
     Future<void>.microtask(loadFeed);
-    return CustomerHomeState(isLoading: true, selectedArea: saved);
+    return CustomerHomeState(
+      isLoading: cachedFeed == null,
+      feed: cachedFeed,
+      selectedArea: saved,
+    );
+  }
+
+  void selectSortMode(String mode) {
+    state = state.copyWith(sortMode: mode);
   }
 
   Future<void> loadFeed() async {
     if (_disposed) return;
     final request = ++_request;
-    state = state.copyWith(isLoading: true, clearError: true);
+    state = state.copyWith(
+      isLoading: state.feed == null,
+      clearError: true,
+    );
     try {
       final repository = ref.read(marketplaceRepositoryProvider);
       final feed = await repository.fetchCustomerHomeFeed(
@@ -193,6 +239,14 @@ class CustomerHomeController extends Notifier<CustomerHomeState> {
       );
       if (_disposed || request != _request) return;
       state = state.copyWith(isLoading: false, feed: feed, clearError: true);
+      try {
+        final prefs = ref.read(appPreferencesProvider);
+        if (prefs != null) {
+          unawaited(prefs.setString(_feedCacheKey, jsonEncode(feed.toJson())));
+        }
+      } catch (_) {
+        /* Ignore cache persistence failures */
+      }
     } on MarketplaceApiException catch (error) {
       if (_disposed || request != _request) return;
       state = state.copyWith(isLoading: false, errorMessage: error.message);

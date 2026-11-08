@@ -12,6 +12,7 @@ import '../../../../core/theme/fixo_typography.dart';
 import '../../../../core/widgets/fixo_buttons.dart';
 import '../../../../core/widgets/fixo_cards.dart';
 import '../../../../core/widgets/fixo_inputs.dart';
+import '../../data/email_access_service.dart';
 import '../controllers/auth_controller.dart';
 import '../widgets/phone_auth_widgets.dart';
 
@@ -152,8 +153,20 @@ class _PhoneAuthPageState extends ConsumerState<PhoneAuthPage> {
                   const SizedBox(height: FixoSpacing.sm),
                   OutlinedButton.icon(
                     key: const Key('auth-use-apple'),
-                    onPressed: () =>
-                        context.go('${AppRoutes.phoneAuth}?method=email'),
+                    onPressed: () async {
+                      final session = await ref
+                          .read(emailAccessProvider)
+                          .promptAndSignInWithApple(
+                            context,
+                            isArabic: isArabic,
+                          );
+                      if (session != null && context.mounted) {
+                        await authNotifier.acceptVerifiedSession(session);
+                        if (context.mounted) {
+                          context.go(AppRoutes.customerHome);
+                        }
+                      }
+                    },
                     icon: const Icon(Icons.apple_rounded, size: 22),
                     label: Text(
                       isArabic

@@ -689,12 +689,11 @@ class _PhonePasswordPageState extends ConsumerState<PhonePasswordPage> {
                                   : () => _run(() async {
                                       final value = await ref
                                           .read(emailAccessProvider)
-                                          .signInWithApple();
-                                      if (value == null) {
-                                        throw StateError(
-                                          'Verified Apple identity required.',
-                                        );
-                                      }
+                                          .promptAndSignInWithApple(
+                                            context,
+                                            isArabic: ar,
+                                          );
+                                      if (value == null) return;
                                       await _accept(value);
                                     }),
                               icon: const Icon(Icons.apple_rounded, size: 22),

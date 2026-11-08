@@ -1,5 +1,6 @@
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import '../../../../core/motion/fixo_visibility_throttler.dart';
 import '../../../../core/theme/fixo_colors.dart';
 import '../../../../core/theme/fixo_spacing.dart';
@@ -97,6 +98,7 @@ class _Interactive3DHomeSceneState extends State<Interactive3DHomeScene>
   }
 
   void _selectRoom(HomeRoom room) {
+    HapticFeedback.selectionClick();
     setState(() => _selectedRoom = room);
     final slug = switch (room) {
       HomeRoom.acLiving => 'ac-repair',
@@ -715,7 +717,7 @@ class _IsometricVillaPainter extends CustomPainter {
     const wallH = 44.0;
     const slabH = 12.0;
 
-    // 0. Ambient Ground Glow under the Villa
+    // 0. Ambient Ground Glow under the Villa (+ Warm Golden Interior Night Glow in Dark Mode)
     canvas.drawOval(
       Rect.fromCenter(
         center: Offset(cx, cy + 16),
@@ -725,9 +727,13 @@ class _IsometricVillaPainter extends CustomPainter {
       Paint()
         ..shader = RadialGradient(
           colors: [
-            FixoColors.primaryForest.withValues(alpha: isDark ? 0.36 : 0.16),
+            isDark
+                ? const Color(0xFFD9A85B).withValues(alpha: 0.24)
+                : FixoColors.primaryForest.withValues(alpha: 0.16),
+            FixoColors.primaryForest.withValues(alpha: isDark ? 0.34 : 0.08),
             Colors.transparent,
           ],
+          stops: const [0.0, 0.48, 1.0],
         ).createShader(
           Rect.fromCenter(
             center: Offset(cx, cy + 16),
@@ -772,6 +778,30 @@ class _IsometricVillaPainter extends CustomPainter {
       final step = i * (r / 3);
       canvas.drawLine(project(step, -r, 0.2), project(step, r, 0.2), gridPaint);
       canvas.drawLine(project(-r, step, 0.2), project(r, step, 0.2), gridPaint);
+    }
+
+    // Nighttime Warm Chandelier Interior Glow Pools in Dark Mode
+    if (isDark) {
+      for (final roomCenter in const [
+        (-r * 0.48, -r * 0.48),
+        (r * 0.48, -r * 0.48),
+        (-r * 0.48, r * 0.48),
+        (r * 0.48, r * 0.48),
+      ]) {
+        final pt = project(roomCenter.$1, roomCenter.$2, 1.0);
+        final glowRect = Rect.fromCenter(center: pt, width: 62, height: 34);
+        canvas.drawOval(
+          glowRect,
+          Paint()
+            ..shader = RadialGradient(
+              colors: [
+                const Color(0xFFFFD68A).withValues(alpha: 0.22),
+                const Color(0xFFC9A96E).withValues(alpha: 0.08),
+                Colors.transparent,
+              ],
+            ).createShader(glowRect),
+        );
+      }
     }
 
     // Active Quadrant Floor Highlight

@@ -1,4 +1,6 @@
+import 'dart:math' as math;
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 import '../../../../app/router/app_routes.dart';
 import '../../../../core/theme/fixo_colors.dart';
@@ -305,15 +307,76 @@ class CheckoutOrderSummaryCard extends StatelessWidget {
   }
 }
 
-/// Payment options section with active Cash on Service and disabled alternative options.
-class CheckoutPaymentMethodsSection extends StatelessWidget {
-  const CheckoutPaymentMethodsSection({super.key});
+/// Payment options section with active Cash on Service, Apple Pay, and Visa / Mastercard 3D Flip Card.
+class CheckoutPaymentMethodsSection extends StatefulWidget {
+  const CheckoutPaymentMethodsSection({
+    super.key,
+    this.selectedMethod = 'CASH_ON_SERVICE',
+    this.onSelectMethod,
+    this.onQuickPay,
+    this.totalEgp = 400,
+  });
+
+  final String selectedMethod;
+  final ValueChanged<String>? onSelectMethod;
+  final ValueChanged<String>? onQuickPay;
+  final int totalEgp;
+
+  @override
+  State<CheckoutPaymentMethodsSection> createState() =>
+      _CheckoutPaymentMethodsSectionState();
+}
+
+class _CheckoutPaymentMethodsSectionState
+    extends State<CheckoutPaymentMethodsSection> {
+  final TextEditingController _cardNumberCtrl = TextEditingController(
+    text: '4532 8891 0421 9048',
+  );
+  final TextEditingController _cardHolderCtrl = TextEditingController(
+    text: 'AHMED AL-MANSOUR',
+  );
+  final TextEditingController _expiryCtrl = TextEditingController(
+    text: '09/29',
+  );
+  final TextEditingController _cvvCtrl = TextEditingController(text: '792');
+  final FocusNode _cvvFocusNode = FocusNode();
+  bool _isCardFlipped = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _cvvFocusNode.addListener(() {
+      if (mounted) {
+        setState(() {
+          _isCardFlipped = _cvvFocusNode.hasFocus;
+        });
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _cardNumberCtrl.dispose();
+    _cardHolderCtrl.dispose();
+    _expiryCtrl.dispose();
+    _cvvCtrl.dispose();
+    _cvvFocusNode.dispose();
+    super.dispose();
+  }
+
+  void _select(String method) {
+    HapticFeedback.selectionClick();
+    widget.onSelectMethod?.call(method);
+  }
 
   @override
   Widget build(BuildContext context) {
     final isArabic = Directionality.of(context) == TextDirection.rtl;
     final palette = context.fixoPalette;
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final isCashSelected = widget.selectedMethod == 'CASH_ON_SERVICE';
+    final isApplePaySelected = widget.selectedMethod == 'SMART_WALLET_SANDBOX';
+    final isCardSelected = widget.selectedMethod == 'CARD_MEEZA_SANDBOX';
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: FixoSpacing.md),
@@ -345,145 +408,458 @@ class CheckoutPaymentMethodsSection extends StatelessWidget {
           ),
           const SizedBox(height: FixoSpacing.sm),
 
-          // Option 1: Cash on Service (Active & Selected)
-          Container(
-            key: const Key('payment-method-cash-on-service'),
-            padding: const EdgeInsets.all(FixoSpacing.md),
-            decoration: BoxDecoration(
-              color: palette.cardSurface,
-              borderRadius: BorderRadius.circular(FixoRadius.lg),
-              border: Border.all(
-                color: isDark ? palette.limeAccent : FixoColors.primaryForest,
-                width: 1.5,
-              ),
-              boxShadow: [
-                BoxShadow(
-                  color: FixoColors.primaryForest.withValues(alpha: 0.05),
-                  blurRadius: 6,
-                  offset: const Offset(0, 2),
+          // Option 1: Cash on Service (Active & Default Selected)
+          GestureDetector(
+            onTap: () => _select('CASH_ON_SERVICE'),
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 220),
+              key: const Key('payment-method-cash-on-service'),
+              padding: const EdgeInsets.all(FixoSpacing.md),
+              decoration: BoxDecoration(
+                color: palette.cardSurface,
+                borderRadius: BorderRadius.circular(FixoRadius.lg),
+                border: Border.all(
+                  color: isCashSelected
+                      ? (isDark ? palette.limeAccent : FixoColors.primaryForest)
+                      : palette.subtleBorder,
+                  width: isCashSelected ? 1.6 : 1.0,
                 ),
-              ],
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Container(
-                      width: 40,
-                      height: 40,
-                      decoration: BoxDecoration(
-                        color: palette.surfaceHigh,
-                        borderRadius: BorderRadius.circular(FixoRadius.md),
-                      ),
-                      child: Icon(
-                        Icons.payments_outlined,
-                        color: palette.deepForest,
-                        size: 22,
-                      ),
+                boxShadow: [
+                  BoxShadow(
+                    color: FixoColors.primaryForest.withValues(
+                      alpha: isCashSelected ? 0.06 : 0.02,
                     ),
-                    const SizedBox(width: FixoSpacing.sm),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Wrap(
-                            spacing: 8,
-                            runSpacing: 4,
-                            crossAxisAlignment: WrapCrossAlignment.center,
-                            children: [
-                              Text(
-                                isArabic
-                                    ? 'الدفع نقداً للفني'
-                                    : 'Cash to Artisan',
-                                style: FixoTypography.labelLg(
-                                  color: palette.inkText,
-                                ).copyWith(fontWeight: FontWeight.bold),
-                              ),
-                              Container(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 6,
-                                  vertical: 2,
-                                ),
-                                decoration: BoxDecoration(
-                                  color: FixoColors.secondaryContainer,
-                                  borderRadius: BorderRadius.circular(
-                                    FixoRadius.pill,
-                                  ),
-                                ),
-                                child: Text(
-                                  isArabic ? 'مفعل حالياً' : 'Active in MVP',
-                                  style: FixoTypography.labelMd(
-                                    color: FixoColors.onSecondaryContainer,
+                    blurRadius: 6,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Container(
+                        width: 40,
+                        height: 40,
+                        decoration: BoxDecoration(
+                          color: palette.surfaceHigh,
+                          borderRadius: BorderRadius.circular(FixoRadius.md),
+                        ),
+                        child: Icon(
+                          Icons.payments_outlined,
+                          color: palette.deepForest,
+                          size: 22,
+                        ),
+                      ),
+                      const SizedBox(width: FixoSpacing.sm),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Wrap(
+                              spacing: 8,
+                              runSpacing: 4,
+                              crossAxisAlignment: WrapCrossAlignment.center,
+                              children: [
+                                Text(
+                                  isArabic
+                                      ? 'الدفع نقداً للفني'
+                                      : 'Cash to Artisan',
+                                  style: FixoTypography.labelLg(
+                                    color: palette.inkText,
                                   ).copyWith(fontWeight: FontWeight.bold),
                                 ),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 6,
+                                    vertical: 2,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: FixoColors.secondaryContainer,
+                                    borderRadius: BorderRadius.circular(
+                                      FixoRadius.pill,
+                                    ),
+                                  ),
+                                  child: Text(
+                                    isArabic ? 'مفعل حالياً' : 'Active in MVP',
+                                    style: FixoTypography.labelMd(
+                                      color: FixoColors.onSecondaryContainer,
+                                    ).copyWith(fontWeight: FontWeight.bold),
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              isArabic
+                                  ? 'ادفع نقداً بالجنيه المصري فقط بعد إتمام الخدمة ومعاينتها'
+                                  : 'Hand cash in EGP only after job completed & inspected',
+                              style: FixoTypography.bodySm(
+                                color: palette.mutedText,
                               ),
-                            ],
-                          ),
-                          const SizedBox(height: 2),
-                          Text(
+                            ),
+                          ],
+                        ),
+                      ),
+                      _buildSelectionRadio(isSelected: isCashSelected, palette: palette),
+                    ],
+                  ),
+                  const SizedBox(height: FixoSpacing.sm),
+                  // Reassurance notice inside Cash option
+                  Container(
+                    padding: const EdgeInsets.all(FixoSpacing.sm),
+                    decoration: BoxDecoration(
+                      color: palette.surfaceLow,
+                      borderRadius: BorderRadius.circular(FixoRadius.md),
+                    ),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Icon(
+                          Icons.info_outline_rounded,
+                          size: 16,
+                          color: FixoColors.secondary,
+                        ),
+                        const SizedBox(width: 6),
+                        Expanded(
+                          child: Text(
                             isArabic
-                                ? 'ادفع نقداً بالجنيه المصري فقط بعد إتمام الخدمة ومعاينتها'
-                                : 'Hand cash in EGP only after job completed & inspected',
+                                ? 'يتم تحصيل المبلغ نقداً بواسطة الفني فقط بعد تقديم الخدمة ومعاينتها. لا يوجد أي خصم مسبق.'
+                                : 'Cash is collected in person by the technician only after service is performed and inspected. No upfront charge.',
                             style: FixoTypography.bodySm(
-                              color: palette.mutedText,
+                              color: palette.inkText,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(height: FixoSpacing.sm),
+
+          // Option 2: Apple Pay (Active & Interactive)
+          GestureDetector(
+            key: const Key('payment-method-apple-pay'),
+            onTap: () => _select('SMART_WALLET_SANDBOX'),
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 220),
+              padding: const EdgeInsets.all(FixoSpacing.md),
+              decoration: BoxDecoration(
+                color: palette.cardSurface,
+                borderRadius: BorderRadius.circular(FixoRadius.lg),
+                border: Border.all(
+                  color: isApplePaySelected
+                      ? (isDark ? palette.limeAccent : FixoColors.primaryForest)
+                      : palette.subtleBorder,
+                  width: isApplePaySelected ? 1.6 : 1.0,
+                ),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Container(
+                        width: 40,
+                        height: 40,
+                        decoration: BoxDecoration(
+                          color: isDark ? Colors.white : Colors.black,
+                          borderRadius: BorderRadius.circular(FixoRadius.md),
+                        ),
+                        child: Icon(
+                          Icons.apple_rounded,
+                          color: isDark ? Colors.black : Colors.white,
+                          size: 24,
+                        ),
+                      ),
+                      const SizedBox(width: FixoSpacing.sm),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Wrap(
+                              spacing: 8,
+                              runSpacing: 4,
+                              crossAxisAlignment: WrapCrossAlignment.center,
+                              children: [
+                                Text(
+                                  isArabic ? 'الدفع عبر Apple Pay' : 'Apple Pay',
+                                  style: FixoTypography.labelLg(
+                                    color: palette.inkText,
+                                  ).copyWith(fontWeight: FontWeight.bold),
+                                ),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 7,
+                                    vertical: 2,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: isDark
+                                        ? Colors.white.withValues(alpha: 0.14)
+                                        : Colors.black.withValues(alpha: 0.08),
+                                    borderRadius: BorderRadius.circular(
+                                      FixoRadius.pill,
+                                    ),
+                                  ),
+                                  child: Text(
+                                    isArabic ? 'فوري • Face ID' : 'Instant • Face ID',
+                                    style: FixoTypography.labelMd(
+                                      color: palette.inkText,
+                                    ).copyWith(
+                                      fontSize: 11,
+                                      fontWeight: FontWeight.w700,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              isArabic
+                                  ? 'دفع فوري مشفّر بلمسة واحدة عبر محفظة Apple'
+                                  : 'One-touch encrypted biometric checkout via Apple Wallet',
+                              style: FixoTypography.bodySm(
+                                color: palette.mutedText,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      _buildSelectionRadio(
+                        isSelected: isApplePaySelected,
+                        palette: palette,
+                      ),
+                    ],
+                  ),
+                  if (isApplePaySelected) ...[
+                    const SizedBox(height: 12),
+                    Container(
+                      key: const Key('apple-pay-vault-panel'),
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: isDark
+                            ? const Color(0xFF101513)
+                            : palette.surfaceLow,
+                        borderRadius: BorderRadius.circular(14),
+                        border: Border.all(
+                          color: palette.limeAccent.withValues(alpha: 0.45),
+                        ),
+                      ),
+                      child: Row(
+                        children: [
+                          Icon(
+                            Icons.fingerprint_rounded,
+                            size: 28,
+                            color: palette.deepForest,
+                          ),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: Text(
+                              isArabic
+                                  ? 'جاهز للمصادقة عبر Face ID / Touch ID بمبلغ ${widget.totalEgp} ج.م بدون أي رسوم إضافية.'
+                                  : 'Ready for Face ID / Touch ID authorization of ${widget.totalEgp} EGP with 0% extra fee.',
+                              style: FixoTypography.bodySm(
+                                color: palette.inkText,
+                              ).copyWith(fontWeight: FontWeight.w600),
                             ),
                           ),
                         ],
                       ),
                     ),
-                    Container(
-                      width: 22,
-                      height: 22,
-                      decoration: const BoxDecoration(
-                        color: FixoColors.primaryForest,
-                        shape: BoxShape.circle,
-                      ),
-                      child: const Icon(
-                        Icons.check_rounded,
-                        color: FixoColors.limeAccent,
-                        size: 15,
-                      ),
-                    ),
                   ],
-                ),
-                const SizedBox(height: FixoSpacing.sm),
-                // Reassurance notice inside Cash option
-                Container(
-                  padding: const EdgeInsets.all(FixoSpacing.sm),
-                  decoration: BoxDecoration(
-                    color: palette.surfaceLow,
-                    borderRadius: BorderRadius.circular(FixoRadius.md),
-                  ),
-                  child: Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Icon(
-                        Icons.info_outline_rounded,
-                        size: 16,
-                        color: FixoColors.secondary,
-                      ),
-                      const SizedBox(width: 6),
-                      Expanded(
-                        child: Text(
-                          isArabic
-                              ? 'يتم تحصيل المبلغ نقداً بواسطة الفني فقط بعد تقديم الخدمة ومعاينتها. لا يوجد أي خصم مسبق.'
-                              : 'Cash is collected in person by the technician only after service is performed and inspected. No upfront charge.',
-                          style: FixoTypography.bodySm(
-                            color: palette.inkText,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
+                ],
+              ),
             ),
           ),
           const SizedBox(height: FixoSpacing.sm),
 
-          // Option 2: InstaPay (Disabled)
+          // Option 3: Visa / Mastercard Credit Card with Interactive 3D Flip Card
+          GestureDetector(
+            key: const Key('payment-method-credit-card'),
+            onTap: () => _select('CARD_MEEZA_SANDBOX'),
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 220),
+              padding: const EdgeInsets.all(FixoSpacing.md),
+              decoration: BoxDecoration(
+                color: palette.cardSurface,
+                borderRadius: BorderRadius.circular(FixoRadius.lg),
+                border: Border.all(
+                  color: isCardSelected
+                      ? (isDark ? palette.limeAccent : FixoColors.primaryForest)
+                      : palette.subtleBorder,
+                  width: isCardSelected ? 1.6 : 1.0,
+                ),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Container(
+                        width: 40,
+                        height: 40,
+                        decoration: BoxDecoration(
+                          gradient: const LinearGradient(
+                            colors: [Color(0xFF173F35), Color(0xFF0A1D18)],
+                          ),
+                          borderRadius: BorderRadius.circular(FixoRadius.md),
+                        ),
+                        child: const Icon(
+                          Icons.credit_card_rounded,
+                          color: Color(0xFFD7F078),
+                          size: 22,
+                        ),
+                      ),
+                      const SizedBox(width: FixoSpacing.sm),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Wrap(
+                              spacing: 8,
+                              runSpacing: 4,
+                              crossAxisAlignment: WrapCrossAlignment.center,
+                              children: [
+                                Text(
+                                  isArabic
+                                      ? 'بطاقة فيزا / ماستركارد الائتمانية'
+                                      : 'Visa & Mastercard Credit Card',
+                                  style: FixoTypography.labelLg(
+                                    color: palette.inkText,
+                                  ).copyWith(fontWeight: FontWeight.bold),
+                                ),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 7,
+                                    vertical: 2,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: FixoColors.secondaryContainer,
+                                    borderRadius: BorderRadius.circular(
+                                      FixoRadius.pill,
+                                    ),
+                                  ),
+                                  child: Text(
+                                    isArabic ? '3D Secure • متاح' : '3D Secure • Active',
+                                    style: FixoTypography.labelMd(
+                                      color: FixoColors.onSecondaryContainer,
+                                    ).copyWith(
+                                      fontSize: 11,
+                                      fontWeight: FontWeight.w700,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              isArabic
+                                  ? 'بطاقات الائتمان والخصم المباشر (Visa • Mastercard • Meeza)'
+                                  : 'Credit & Debit Cards with 3D Interactive Vault',
+                              style: FixoTypography.bodySm(
+                                color: palette.mutedText,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      _buildSelectionRadio(
+                        isSelected: isCardSelected,
+                        palette: palette,
+                      ),
+                    ],
+                  ),
+                  if (isCardSelected) ...[
+                    const SizedBox(height: 14),
+                    Interactive3DCreditCard(
+                      cardNumber: _cardNumberCtrl.text,
+                      cardHolder: _cardHolderCtrl.text,
+                      expiryDate: _expiryCtrl.text,
+                      cvvCode: _cvvCtrl.text,
+                      isFlipped: _isCardFlipped,
+                      isArabic: isArabic,
+                      onFlipToggle: () {
+                        HapticFeedback.selectionClick();
+                        setState(() => _isCardFlipped = !_isCardFlipped);
+                      },
+                    ),
+                    const SizedBox(height: 12),
+                    TextField(
+                      key: const Key('credit-card-number-input'),
+                      controller: _cardNumberCtrl,
+                      keyboardType: TextInputType.number,
+                      textDirection: TextDirection.ltr,
+                      onChanged: (_) => setState(() {}),
+                      decoration: InputDecoration(
+                        labelText: isArabic ? 'رقم البطاقة (16 رقم)' : 'Card Number',
+                        prefixIcon: Icon(
+                          Icons.credit_card_rounded,
+                          color: palette.mutedText,
+                        ),
+                        isDense: true,
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+                    TextField(
+                      key: const Key('credit-card-holder-input'),
+                      controller: _cardHolderCtrl,
+                      onChanged: (_) => setState(() {}),
+                      decoration: InputDecoration(
+                        labelText: isArabic ? 'اسم حامل البطاقة' : 'Cardholder Name',
+                        prefixIcon: Icon(
+                          Icons.person_outline_rounded,
+                          color: palette.mutedText,
+                        ),
+                        isDense: true,
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: TextField(
+                            key: const Key('credit-card-expiry-input'),
+                            controller: _expiryCtrl,
+                            textDirection: TextDirection.ltr,
+                            onChanged: (_) => setState(() {}),
+                            decoration: InputDecoration(
+                              labelText: isArabic ? 'تاريخ الانتهاء' : 'Expiry (MM/YY)',
+                              isDense: true,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: TextField(
+                            key: const Key('credit-card-cvv-input'),
+                            controller: _cvvCtrl,
+                            focusNode: _cvvFocusNode,
+                            keyboardType: TextInputType.number,
+                            textDirection: TextDirection.ltr,
+                            maxLength: 4,
+                            onChanged: (_) => setState(() {}),
+                            decoration: InputDecoration(
+                              counterText: '',
+                              labelText: isArabic ? 'رمز الأمان CVV' : 'CVV Security',
+                              isDense: true,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(height: FixoSpacing.sm),
+
+          // Option 4: InstaPay (Local Rail Preview)
           _buildDisabledPaymentOption(
             palette: palette,
             key: const Key('payment-method-instapay'),
@@ -496,33 +872,39 @@ class CheckoutPaymentMethodsSection extends StatelessWidget {
           ),
           const SizedBox(height: FixoSpacing.sm),
 
-          // Option 3: Smart Wallets (Disabled)
-          _buildDisabledPaymentOption(
-            palette: palette,
-            key: const Key('payment-method-wallets'),
-            icon: Icons.account_balance_wallet_outlined,
-            title: isArabic ? 'المحافظ الإلكترونية' : 'Smart Wallets',
-            subtitle: isArabic
-                ? 'فودافون كاش، أورنج، اتصالات، وي'
-                : 'Vodafone Cash, Orange, Etisalat & WE',
-            badge: isArabic ? 'قريباً' : 'Coming Soon',
+          // Option 5: Smart Wallets (Tapping activates Apple Pay / Smart Wallet)
+          GestureDetector(
+            onTap: () => _select('SMART_WALLET_SANDBOX'),
+            child: _buildDisabledPaymentOption(
+              palette: palette,
+              key: const Key('payment-method-wallets'),
+              icon: Icons.account_balance_wallet_outlined,
+              title: isArabic ? 'المحافظ الإلكترونية' : 'Smart Wallets',
+              subtitle: isArabic
+                  ? 'فودافون كاش، أورنج، اتصالات، وي'
+                  : 'Vodafone Cash, Orange, Etisalat & WE',
+              badge: isArabic ? 'قريباً' : 'Coming Soon',
+            ),
           ),
           const SizedBox(height: FixoSpacing.sm),
 
-          // Option 4: Cards & Meeza (Disabled)
-          _buildDisabledPaymentOption(
-            palette: palette,
-            key: const Key('payment-method-cards'),
-            icon: Icons.credit_card_outlined,
-            title: isArabic ? 'البطاقات وكارت ميزة' : 'Cards & Meeza',
-            subtitle: isArabic
-                ? 'فيزا، ماستركارد، وميزة الوطنية'
-                : 'Visa, Mastercard, & National Meeza Card',
-            badge: isArabic ? 'قريباً' : 'Coming Soon',
+          // Option 6: Cards & Meeza (Tapping activates 3D Credit Card)
+          GestureDetector(
+            onTap: () => _select('CARD_MEEZA_SANDBOX'),
+            child: _buildDisabledPaymentOption(
+              palette: palette,
+              key: const Key('payment-method-cards'),
+              icon: Icons.credit_card_outlined,
+              title: isArabic ? 'البطاقات وكارت ميزة' : 'Cards & Meeza',
+              subtitle: isArabic
+                  ? 'فيزا، ماستركارد، وميزة الوطنية'
+                  : 'Visa, Mastercard, & National Meeza Card',
+              badge: isArabic ? 'قريباً' : 'Coming Soon',
+            ),
           ),
           const SizedBox(height: FixoSpacing.sm),
 
-          // Option 5: Fawry Pay (Disabled)
+          // Option 7: Fawry Pay
           _buildDisabledPaymentOption(
             palette: palette,
             key: const Key('payment-method-fawry'),
@@ -534,6 +916,35 @@ class CheckoutPaymentMethodsSection extends StatelessWidget {
             badge: isArabic ? 'قريباً' : 'Coming Soon',
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildSelectionRadio({
+    required bool isSelected,
+    required FixoPaletteExtension palette,
+  }) {
+    if (isSelected) {
+      return Container(
+        width: 22,
+        height: 22,
+        decoration: const BoxDecoration(
+          color: FixoColors.primaryForest,
+          shape: BoxShape.circle,
+        ),
+        child: const Icon(
+          Icons.check_rounded,
+          color: FixoColors.limeAccent,
+          size: 15,
+        ),
+      );
+    }
+    return Container(
+      width: 20,
+      height: 20,
+      decoration: BoxDecoration(
+        border: Border.all(color: palette.subtleBorder, width: 1.5),
+        shape: BoxShape.circle,
       ),
     );
   }
@@ -619,6 +1030,268 @@ class CheckoutPaymentMethodsSection extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+}
+
+/// Interactive 3D Flip Credit Card widget that rotates 180 degrees in 3D space
+/// when tapped or when the CVV input is focused.
+class Interactive3DCreditCard extends StatelessWidget {
+  const Interactive3DCreditCard({
+    super.key,
+    required this.cardNumber,
+    required this.cardHolder,
+    required this.expiryDate,
+    required this.cvvCode,
+    required this.isFlipped,
+    required this.isArabic,
+    required this.onFlipToggle,
+  });
+
+  final String cardNumber;
+  final String cardHolder;
+  final String expiryDate;
+  final String cvvCode;
+  final bool isFlipped;
+  final bool isArabic;
+  final VoidCallback onFlipToggle;
+
+  String get _brandLabel {
+    final clean = cardNumber.replaceAll(' ', '');
+    if (clean.startsWith('5')) return 'MASTERCARD';
+    if (clean.startsWith('5078')) return 'MEEZA';
+    return 'VISA PLATINUM';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      key: const Key('interactive-3d-credit-card'),
+      onTap: onFlipToggle,
+      child: TweenAnimationBuilder<double>(
+        tween: Tween<double>(begin: 0, end: isFlipped ? math.pi : 0),
+        duration: const Duration(milliseconds: 520),
+        curve: Curves.easeOutBack,
+        builder: (context, angle, _) {
+          final showingBack = angle > (math.pi / 2);
+          return Transform(
+            alignment: Alignment.center,
+            transform: Matrix4.identity()
+              ..setEntry(3, 2, 0.0012)
+              ..rotateY(angle),
+            child: Container(
+              height: 184,
+              width: double.infinity,
+              padding: const EdgeInsets.all(18),
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(20),
+                gradient: const LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [
+                    Color(0xFF0A211B),
+                    Color(0xFF173F35),
+                    Color(0xFF050807),
+                  ],
+                ),
+                border: Border.all(
+                  color: const Color(0xFFC9A96E).withValues(alpha: 0.55),
+                  width: 1.2,
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.35),
+                    blurRadius: 18,
+                    offset: const Offset(0, 8),
+                  ),
+                ],
+              ),
+              child: showingBack
+                  ? Transform(
+                      alignment: Alignment.center,
+                      transform: Matrix4.identity()..rotateY(math.pi),
+                      child: _buildBackSide(),
+                    )
+                  : _buildFrontSide(),
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _buildFrontSide() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Row(
+              children: [
+                // Metallic Gold EMV Chip
+                Container(
+                  width: 38,
+                  height: 28,
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(6),
+                    gradient: const LinearGradient(
+                      colors: [Color(0xFFE5C88F), Color(0xFFB38E4C)],
+                    ),
+                  ),
+                  child: const Icon(
+                    Icons.memory_rounded,
+                    size: 18,
+                    color: Color(0xFF2B200B),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                const Icon(
+                  Icons.wifi_rounded,
+                  size: 18,
+                  color: Colors.white70,
+                ),
+              ],
+            ),
+            Text(
+              _brandLabel,
+              style: const TextStyle(
+                color: Color(0xFFD7F078),
+                fontWeight: FontWeight.w900,
+                letterSpacing: 1.4,
+                fontSize: 13,
+              ),
+            ),
+          ],
+        ),
+        Text(
+          cardNumber.trim().isEmpty ? '4532 •••• •••• 9048' : cardNumber,
+          textDirection: TextDirection.ltr,
+          style: const TextStyle(
+            color: Colors.white,
+            fontSize: 19,
+            fontWeight: FontWeight.w800,
+            letterSpacing: 2.0,
+          ),
+        ),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    isArabic ? 'حامل البطاقة' : 'CARDHOLDER',
+                    style: const TextStyle(
+                      color: Colors.white54,
+                      fontSize: 9.5,
+                      letterSpacing: 1.1,
+                    ),
+                  ),
+                  Text(
+                    cardHolder.trim().isEmpty ? 'FIXO VIP MEMBER' : cardHolder,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.w700,
+                      fontSize: 12.5,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                Text(
+                  isArabic ? 'الانتهاء' : 'EXPIRES',
+                  style: const TextStyle(
+                    color: Colors.white54,
+                    fontSize: 9.5,
+                    letterSpacing: 1.1,
+                  ),
+                ),
+                Text(
+                  expiryDate.trim().isEmpty ? '09/29' : expiryDate,
+                  style: const TextStyle(
+                    color: Color(0xFFD7F078),
+                    fontWeight: FontWeight.w800,
+                    fontSize: 12.5,
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+
+  Widget _buildBackSide() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Container(
+          height: 34,
+          decoration: BoxDecoration(
+            color: Colors.black.withValues(alpha: 0.85),
+            borderRadius: BorderRadius.circular(4),
+          ),
+        ),
+        Row(
+          children: [
+            Expanded(
+              child: Container(
+                height: 32,
+                padding: const EdgeInsets.symmetric(horizontal: 10),
+                alignment: Alignment.centerLeft,
+                decoration: BoxDecoration(
+                  color: Colors.white.withValues(alpha: 0.14),
+                  borderRadius: BorderRadius.circular(6),
+                ),
+                child: const Text(
+                  'FIXO 3D SECURE VAULT',
+                  style: TextStyle(
+                    color: Colors.white70,
+                    fontSize: 10,
+                    letterSpacing: 1.2,
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(width: 10),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+              decoration: BoxDecoration(
+                color: const Color(0xFFD7F078),
+                borderRadius: BorderRadius.circular(6),
+              ),
+              child: Text(
+                'CVV ${cvvCode.trim().isEmpty ? "792" : cvvCode}',
+                style: const TextStyle(
+                  color: Color(0xFF0A211B),
+                  fontWeight: FontWeight.w900,
+                  fontSize: 12,
+                ),
+              ),
+            ),
+          ],
+        ),
+        Text(
+          isArabic
+              ? 'اضغط على البطاقة لقلبها للوجه الأمامي • تشفير بنكي 256-bit'
+              : 'Tap card to flip back • 256-bit CBE Tokenized Security',
+          textAlign: TextAlign.center,
+          style: const TextStyle(
+            color: Colors.white60,
+            fontSize: 10.5,
+          ),
+        ),
+      ],
     );
   }
 }

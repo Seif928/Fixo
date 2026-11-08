@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import '../../../../core/theme/fixo_colors.dart';
 import '../../../../core/theme/fixo_spacing.dart';
 import '../../../../core/theme/fixo_typography.dart';
@@ -1037,6 +1038,7 @@ class _FixoCustomerBottomNavState extends State<FixoCustomerBottomNav> {
   double? _dragTabPosition;
   double _barTranslateX = 0.0;
   bool _isDragging = false;
+  int? _lastHapticIndex;
 
   void _updateDragFromLocalDx(
     double localDx,
@@ -1047,6 +1049,11 @@ class _FixoCustomerBottomNavState extends State<FixoCustomerBottomNav> {
     final normalized = (localDx / trackWidth).clamp(0.0, 1.0);
     final effectiveFraction = isRtl ? (1.0 - normalized) : normalized;
     final tabPos = (effectiveFraction * 3.0).clamp(0.0, 3.0);
+    final hoveredIndex = tabPos.round().clamp(0, 3);
+    if (_lastHapticIndex != hoveredIndex) {
+      _lastHapticIndex = hoveredIndex;
+      HapticFeedback.selectionClick();
+    }
     final centerDelta = ((localDx / trackWidth) - 0.5) * 14.0;
     setState(() {
       _isDragging = true;
@@ -1057,6 +1064,7 @@ class _FixoCustomerBottomNavState extends State<FixoCustomerBottomNav> {
 
   void _finishDrag() {
     final targetPos = _dragTabPosition;
+    _lastHapticIndex = null;
     setState(() {
       _isDragging = false;
       _dragTabPosition = null;
@@ -1065,6 +1073,7 @@ class _FixoCustomerBottomNavState extends State<FixoCustomerBottomNav> {
     if (targetPos != null) {
       final targetIndex = targetPos.round().clamp(0, 3);
       if (targetIndex != widget.currentIndex) {
+        HapticFeedback.lightImpact();
         widget.onTabSelected(targetIndex);
       }
     }

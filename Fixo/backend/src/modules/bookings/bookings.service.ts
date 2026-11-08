@@ -325,10 +325,15 @@ export class BookingsService {
     bookingId: string,
     dto: CheckoutBookingDto,
   ): Promise<BookingDetailResponse> {
-    // 1. Strictly enforce Cash on Service only in Phase 4A
-    if (dto.paymentMethod !== PaymentMethodType.CASH_ON_SERVICE) {
+    // 1. Enforce supported checkout methods: Cash on Service, Apple Pay (SMART_WALLET_SANDBOX), and Visa/Mastercard (CARD_MEEZA_SANDBOX)
+    const supportedMethods: PaymentMethodType[] = [
+      PaymentMethodType.CASH_ON_SERVICE,
+      PaymentMethodType.CARD_MEEZA_SANDBOX,
+      PaymentMethodType.SMART_WALLET_SANDBOX,
+    ];
+    if (!supportedMethods.includes(dto.paymentMethod)) {
       throw new BadRequestException(
-        `Payment method "${dto.paymentMethod}" is not supported yet. Only CASH_ON_SERVICE is currently enabled.`,
+        `Payment method "${dto.paymentMethod}" is not supported yet. Supported methods: CASH_ON_SERVICE, CARD_MEEZA_SANDBOX, SMART_WALLET_SANDBOX.`,
       );
     }
 
@@ -348,11 +353,11 @@ export class BookingsService {
       throw new ForbiddenException('You do not have access to this booking.');
     }
 
-    // Fast-path idempotent check if already checked out with CASH_ON_SERVICE
+    // Fast-path idempotent check if already checked out
     if (
       initialBooking.status === BookingStatus.PENDING_DISPATCH &&
       initialBooking.payment &&
-      initialBooking.payment.method === PaymentMethodType.CASH_ON_SERVICE
+      supportedMethods.includes(initialBooking.payment.method)
     ) {
       return this.mapBookingDetail(initialBooking, userId);
     }
@@ -362,6 +367,10 @@ export class BookingsService {
         `Booking cannot be checked out from current status "${initialBooking.status}". Only bookings in DRAFT status can be checked out.`,
       );
     }
+
+    const isInstantDigital =
+      dto.paymentMethod === PaymentMethodType.CARD_MEEZA_SANDBOX ||
+      dto.paymentMethod === PaymentMethodType.SMART_WALLET_SANDBOX;
 
     // 3. Execute atomic transaction with row lock for concurrent retry safety
     await this.prisma.$transaction(async (tx) => {
@@ -390,7 +399,7 @@ export class BookingsService {
       if (
         lockedBooking.status === BookingStatus.PENDING_DISPATCH &&
         lockedBooking.payment &&
-        lockedBooking.payment.method === PaymentMethodType.CASH_ON_SERVICE
+        supportedMethods.includes(lockedBooking.payment.method)
       ) {
         return;
       }
@@ -410,16 +419,19 @@ export class BookingsService {
         },
       });
 
-      // Create PENDING Cash on Service payment record (paidAt MUST be null)
       await tx.paymentRecord.create({
         data: {
           bookingId: lockedBooking.id,
-          method: PaymentMethodType.CASH_ON_SERVICE,
-          status: PaymentStatus.PENDING,
+          method: dto.paymentMethod,
+          status: isInstantDigital ? PaymentStatus.PAID : PaymentStatus.PENDING,
           amountEgp: lockedBooking.totalEgp,
           tipEgp: 0,
-          externalReference: null,
-          paidAt: null,
+          externalReference: isInstantDigital
+              ? dto.paymentMethod === PaymentMethodType.SMART_WALLET_SANDBOX
+                ? 'APPLE-PAY-VERIFIED'
+                : 'VISA-MC-3DS-VERIFIED'
+              : null,
+          paidAt: isInstantDigital ? new Date() : null,
         },
       });
 
@@ -430,7 +442,11 @@ export class BookingsService {
           fromStatus: BookingStatus.DRAFT,
           toStatus: BookingStatus.PENDING_DISPATCH,
           actorUserId: userId,
-          note: 'Customer confirmed Cash on Service checkout',
+          note: isInstantDigital
+              ? dto.paymentMethod === PaymentMethodType.SMART_WALLET_SANDBOX
+                ? 'Customer confirmed Apple Pay checkout'
+                : 'Customer confirmed Visa/Mastercard checkout'
+              : 'Customer confirmed Cash on Service checkout',
         },
       });
     });

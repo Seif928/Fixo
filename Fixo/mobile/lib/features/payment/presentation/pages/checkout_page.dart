@@ -205,7 +205,11 @@ class CheckoutPage extends ConsumerWidget {
               const CheckoutReassuranceBanner(),
               CheckoutOrderSummaryCard(booking: booking),
               const SizedBox(height: FixoSpacing.sm),
-              const CheckoutPaymentMethodsSection(),
+              CheckoutPaymentMethodsSection(
+                selectedMethod: state.selectedPaymentMethod,
+                onSelectMethod: controller.selectPaymentMethod,
+                totalEgp: booking.pricing.totalEgp,
+              ),
               CheckoutReceiptCard(pricing: booking.pricing),
               const CheckoutTrustFootnote(),
               const SizedBox(height: 120), // Spacing for sticky bottom CTA
@@ -313,17 +317,33 @@ class CheckoutPage extends ConsumerWidget {
                       : Row(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
-                            const Icon(
-                              Icons.check_circle_outline_rounded,
+                            Icon(
+                              state.selectedPaymentMethod ==
+                                      'SMART_WALLET_SANDBOX'
+                                  ? Icons.apple_rounded
+                                  : state.selectedPaymentMethod ==
+                                          'CARD_MEEZA_SANDBOX'
+                                      ? Icons.credit_card_rounded
+                                      : Icons.check_circle_outline_rounded,
                               size: 18,
                               color: Colors.white,
                             ),
                             const SizedBox(width: 8),
                             Flexible(
                               child: Text(
-                                isArabic
-                                    ? 'تأكيد الحجز (دفع نقدي لاحقاً)'
-                                    : 'Confirm Booking (Pay Cash Later)',
+                                state.selectedPaymentMethod ==
+                                        'SMART_WALLET_SANDBOX'
+                                    ? (isArabic
+                                        ? 'الدفع عبر Apple Pay (${booking.pricing.totalEgp} ج.م)'
+                                        : 'Pay with Apple Pay (${booking.pricing.totalEgp} EGP)')
+                                    : state.selectedPaymentMethod ==
+                                            'CARD_MEEZA_SANDBOX'
+                                        ? (isArabic
+                                            ? 'ادفع ببطاقة فيزا / ماستركارد (${booking.pricing.totalEgp} ج.م)'
+                                            : 'Pay with Visa / Mastercard (${booking.pricing.totalEgp} EGP)')
+                                        : (isArabic
+                                            ? 'تأكيد الحجز (دفع نقدي لاحقاً)'
+                                            : 'Confirm Booking (Pay Cash Later)'),
                                 textAlign: TextAlign.center,
                                 style: FixoTypography.labelLg(
                                   color: Colors.white,

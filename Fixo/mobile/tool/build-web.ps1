@@ -3,7 +3,7 @@ $ErrorActionPreference = 'Stop'
 $mobileRoot = Split-Path -Parent $PSScriptRoot
 Push-Location $mobileRoot
 try {
-    flutter build web --release --pwa-strategy=none "--dart-define=FIXO_API_BASE_URL=$ApiBaseUrl"
+    flutter build web --wasm --release --pwa-strategy=none "--dart-define=FIXO_API_BASE_URL=$ApiBaseUrl"
     if ($LASTEXITCODE -ne 0) { throw 'FIXO web build failed.' }
     Copy-Item -LiteralPath web/retire_flutter_service_worker.js -Destination build/web/flutter_service_worker.js
     Copy-Item -LiteralPath vercel.static.json -Destination build/web/vercel.json

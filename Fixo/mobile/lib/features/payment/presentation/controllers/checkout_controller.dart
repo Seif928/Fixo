@@ -64,12 +64,15 @@ class CheckoutController extends StateNotifier<CheckoutState> {
 
       // Check if this booking is already checked out (idempotent reopening)
       final isAlreadyCheckedOut = booking.status == 'PENDING_DISPATCH' &&
-          booking.payment?.method == 'CASH_ON_SERVICE' &&
-          booking.payment?.status == 'PENDING';
+          booking.payment != null &&
+          (booking.payment?.status == 'PENDING' ||
+              booking.payment?.status == 'PAID');
 
       state = state.copyWith(
         isLoading: false,
         booking: booking,
+        selectedPaymentMethod:
+            booking.payment?.method ?? state.selectedPaymentMethod,
         checkoutSuccess: isAlreadyCheckedOut,
         errorMessage: null,
       );
@@ -94,28 +97,43 @@ class CheckoutController extends StateNotifier<CheckoutState> {
     }
   }
 
+  /// Selects an active payment method (`CASH_ON_SERVICE`, `SMART_WALLET_SANDBOX` for Apple Pay,
+  /// or `CARD_MEEZA_SANDBOX` for Visa / Mastercard Credit Card).
+  void selectPaymentMethod(String method) {
+    if (state.isSubmitting || state.checkoutSuccess) return;
+    state = state.copyWith(
+      selectedPaymentMethod: method,
+      errorMessage: null,
+    );
+  }
+
   /// Submits checkout via `POST /api/v1/bookings/:bookingId/checkout`.
-  /// Strictly passes `paymentMethod: CASH_ON_SERVICE`.
   /// Enforces duplicate submission protection and validates response.
-  Future<bool> submitCheckout() async {
+  Future<bool> submitCheckout({String? overrideMethod}) async {
     // Duplicate tap & lifecycle protection
     if (state.isSubmitting || state.checkoutSuccess || state.booking == null) {
       return false;
     }
 
-    state = state.copyWith(isSubmitting: true, errorMessage: null);
+    final methodToSubmit = overrideMethod ?? state.selectedPaymentMethod;
+    state = state.copyWith(
+      isSubmitting: true,
+      selectedPaymentMethod: methodToSubmit,
+      errorMessage: null,
+    );
 
     try {
       final updatedBooking = await repository.checkoutBooking(
         bookingId,
-        paymentMethod: 'CASH_ON_SERVICE',
+        paymentMethod: methodToSubmit,
       );
 
       // Validate confirmation invariants:
-      // Status must be PENDING_DISPATCH and payment method must be CASH_ON_SERVICE with PENDING status.
+      // Status must be PENDING_DISPATCH and payment record must exist.
       final isConfirmed = updatedBooking.status == 'PENDING_DISPATCH' &&
-          updatedBooking.payment?.method == 'CASH_ON_SERVICE' &&
-          updatedBooking.payment?.status == 'PENDING';
+          updatedBooking.payment != null &&
+          (updatedBooking.payment?.status == 'PENDING' ||
+              updatedBooking.payment?.status == 'PAID');
 
       if (isConfirmed) {
         state = state.copyWith(
