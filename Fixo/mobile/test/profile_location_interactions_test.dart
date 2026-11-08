@@ -11,6 +11,7 @@ import 'package:fixo_mobile/core/l10n/app_locale_controller.dart';
 import 'package:fixo_mobile/core/location/egypt_places.dart';
 import 'package:fixo_mobile/core/location/service_area_picker.dart';
 import 'package:fixo_mobile/core/network/dio_client.dart';
+import 'package:fixo_mobile/core/session/session_providers.dart';
 import 'package:fixo_mobile/core/theme/fixo_theme.dart';
 import 'package:fixo_mobile/core/uploads/private_media_picker_sheet.dart';
 import 'package:fixo_mobile/features/auth/domain/auth_models.dart';
@@ -103,6 +104,19 @@ class _Market implements MarketplaceRepository {
   @override
   Future<ServiceOfferModel> fetchServiceById(String id) =>
       throw UnimplementedError();
+
+  @override
+  Future<PaginatedServices> getPaginatedServices({
+    int page = 1,
+    int limit = 20,
+    String? search,
+    String? categoryId,
+  }) async => PaginatedServices(
+    items: [ServiceOfferModel.fromJson(_serviceJson)],
+    page: page,
+    totalPages: 1,
+    total: 1,
+  );
 }
 
 class _Avatars extends AvatarRepository {
@@ -196,6 +210,13 @@ void main() {
     final container = ProviderContainer(
       overrides: [
         appPreferencesProvider.overrideWithValue(prefs),
+        sessionProvider.overrideWith(
+          (ref) => const AuthSession(
+            accessToken: 'fixture',
+            refreshToken: 'fixture',
+            user: _user,
+          ),
+        ),
         authControllerProvider.overrideWith(_Auth.new),
         egyptPlacesProvider.overrideWith((ref) async => catalog),
         marketplaceRepositoryProvider.overrideWithValue(market),

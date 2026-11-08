@@ -183,6 +183,19 @@ class _DelayedMarketplace implements MarketplaceRepository {
   @override
   Future<ServiceOfferModel> fetchServiceById(String id) =>
       throw UnimplementedError();
+
+  @override
+  Future<PaginatedServices> getPaginatedServices({
+    int page = 1,
+    int limit = 20,
+    String? search,
+    String? categoryId,
+  }) async => PaginatedServices(
+    items: const [],
+    page: page,
+    totalPages: 1,
+    total: 0,
+  );
 }
 
 class _TestAuth extends AuthController {

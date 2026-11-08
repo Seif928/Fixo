@@ -1,14 +1,15 @@
+import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import '../../../../core/theme/fixo_colors.dart';
 import '../../../../core/theme/fixo_spacing.dart';
 import '../../../../core/theme/fixo_typography.dart';
 import '../../../../core/widgets/fixo_tilt_3d.dart';
-/// Native Flutter hero showcase card for Screen 01 (`01_onboarding`).
+
+/// Native Flutter Ultra-Luxury Architectural Penthouse Hero Card for Screen 01 (`01_onboarding`).
 ///
-/// Replaces the external hotlinked Google image from `01_onboarding/code.html`
-/// with a deterministic, local architectural Cairo interior illustration
-/// layered with the Stitch scrim, top craftsman pill, and bottom live
-/// neighborhood availability card.
+/// Renders a bespoke contemporary Cairo luxury villa interior with double-height
+/// arched panoramic glass, warm gold chandelier lighting, herringbone parquet &
+/// marble flooring, designer lounge seating, and reflective glassmorphic HUD badges.
 class CairoInteriorHeroCard extends StatelessWidget {
   const CairoInteriorHeroCard({super.key, this.isArabic = false});
 
@@ -17,43 +18,51 @@ class CairoInteriorHeroCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) => FixoTilt3D(
     maxTilt: 0.06,
-    glareOpacity: 0.15,
+    glareOpacity: 0.16,
     borderRadius: FixoRadius.borderRadiusLg,
     child: _card(context),
   );
 
-
   Widget _card(BuildContext context) {
     final palette = context.fixoPalette;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     final locale = isArabic ? const Locale('ar') : const Locale('en');
 
     return Container(
       width: double.infinity,
-      constraints: const BoxConstraints(minHeight: 276),
+      constraints: const BoxConstraints(minHeight: 280),
       decoration: BoxDecoration(
         color: palette.surfaceLow,
         borderRadius: FixoRadius.borderRadiusLg,
+        border: Border.all(
+          color: isDark
+              ? FixoColors.goldAccent.withValues(alpha: 0.28)
+              : Colors.white.withValues(alpha: 0.65),
+          width: 1.2,
+        ),
         boxShadow: FixoShadows.level2Interactive,
       ),
       clipBehavior: Clip.antiAlias,
       child: Stack(
         children: [
-          // Base sunlit Cairo apartment architectural illustration (288dp min)
+          // 1. Bespoke Ultra-Luxury Cairo Penthouse Interior Illustration
           Positioned.fill(
-            child: CustomPaint(painter: _CairoApartmentPainter()),
+            child: CustomPaint(
+              painter: _LuxuryCairoPenthousePainter(isDark: isDark),
+            ),
           ),
 
-          // Ambient Gradient Scrim: from-primary/80 via-primary/20 to-transparent
+          // 2. Ambient Architectural Scrim
           Positioned.fill(
             child: DecoratedBox(
               decoration: BoxDecoration(
                 gradient: LinearGradient(
                   begin: Alignment.bottomCenter,
                   end: Alignment.topCenter,
-                  stops: const [0.0, 0.52, 1.0],
+                  stops: const [0.0, 0.50, 1.0],
                   colors: [
-                    FixoColors.deepestForest.withValues(alpha: 0.82),
-                    FixoColors.deepestForest.withValues(alpha: 0.22),
+                    const Color(0xFF04120E).withValues(alpha: 0.88),
+                    const Color(0xFF0A241D).withValues(alpha: 0.26),
                     Colors.transparent,
                   ],
                 ),
@@ -61,59 +70,116 @@ class CairoInteriorHeroCard extends StatelessWidget {
             ),
           ),
 
-          // Content overlay using intrinsic height so large text scales never clip
+          // 3. Content overlay using intrinsic height so large text scales never clip
           ConstrainedBox(
-            constraints: const BoxConstraints(minHeight: 276),
+            constraints: const BoxConstraints(minHeight: 280),
             child: Padding(
-              padding: const EdgeInsets.all(12),
+              padding: const EdgeInsets.all(FixoSpacing.gutterMobile),
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Top-left floating craftsman tag
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 12,
-                      vertical: 6,
-                    ),
-                    decoration: BoxDecoration(
-                      color: Colors.white.withValues(alpha: 0.92),
-                      borderRadius: FixoRadius.borderRadiusPill,
-                      boxShadow: FixoShadows.level1CardResting,
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        const Icon(
-                          Icons.home_repair_service_rounded,
-                          size: 16,
-                          color: FixoColors.secondary,
-                        ),
-                        const SizedBox(width: 6),
-                        Flexible(
-                          child: Text(
-                            isArabic
-                                ? 'خدمات للمنزل'
-                                : 'Services for Your Home',
-                            style: FixoTypography.labelMd(
-                              color: FixoColors.deepestForest,
-                              locale: locale,
-                            ).copyWith(fontWeight: FontWeight.w700),
+                  // Top row: Luxury Craftsman Pill + 3D Verified Crest Badge
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Flexible(
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: FixoSpacing.gutterMobile,
+                            vertical: 6,
+                          ),
+                          decoration: BoxDecoration(
+                            color: isDark
+                                ? const Color(0xFF0C1411).withValues(alpha: 0.88)
+                                : Colors.white.withValues(alpha: 0.94),
+                            borderRadius: FixoRadius.borderRadiusPill,
+                            border: Border.all(
+                              color: isDark
+                                  ? FixoColors.goldAccent.withValues(alpha: 0.40)
+                                  : Colors.white,
+                            ),
+                            boxShadow: FixoShadows.level1CardResting,
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(
+                                Icons.home_repair_service_rounded,
+                                size: 16,
+                                color: isDark
+                                    ? FixoColors.goldAccent
+                                    : FixoColors.secondary,
+                              ),
+                              const SizedBox(width: 6),
+                              Flexible(
+                                child: Text(
+                                  isArabic
+                                      ? 'خدمات للمنزل'
+                                      : 'Services for Your Home',
+                                  style: FixoTypography.labelMd(
+                                    color: isDark
+                                        ? FixoColors.darkOnSurface
+                                        : FixoColors.deepestForest,
+                                    locale: locale,
+                                  ).copyWith(fontWeight: FontWeight.w700),
+                                ),
+                              ),
+                            ],
                           ),
                         ),
-                      ],
-                    ),
+                      ),
+                      const SizedBox(width: FixoSpacing.sm),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 10,
+                          vertical: 5,
+                        ),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF0A1B16).withValues(alpha: 0.82),
+                          borderRadius: FixoRadius.borderRadiusPill,
+                          border: Border.all(
+                            color: FixoColors.goldAccent.withValues(alpha: 0.55),
+                          ),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Icon(
+                              Icons.workspace_premium_rounded,
+                              size: 14,
+                              color: FixoColors.goldBright,
+                            ),
+                            const SizedBox(width: FixoSpacing.xs),
+                            Text(
+                              isArabic ? 'نخبة معتمدة' : 'VIP Curated',
+                              style: FixoTypography.labelSm(
+                                color: FixoColors.goldBright,
+                                locale: locale,
+                              ).copyWith(fontWeight: FontWeight.w700),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
                   ),
 
-                  const SizedBox(height: 140),
+                  const SizedBox(height: 136),
 
-                  // Bottom active district live indicator card
+                  // Bottom active district live indicator card (Reflective Glass style)
                   Container(
                     width: double.infinity,
-                    padding: const EdgeInsets.all(12),
+                    padding: const EdgeInsets.all(FixoSpacing.gutterMobile),
                     decoration: BoxDecoration(
-                      color: Colors.white.withValues(alpha: 0.96),
+                      color: isDark
+                          ? const Color(0xFF0D1512).withValues(alpha: 0.94)
+                          : Colors.white.withValues(alpha: 0.96),
                       borderRadius: FixoRadius.borderRadiusMd,
+                      border: Border.all(
+                        color: isDark
+                            ? FixoColors.darkBorder
+                            : Colors.white.withValues(alpha: 0.85),
+                      ),
                       boxShadow: FixoShadows.level1CardResting,
                     ),
                     child: Row(
@@ -158,24 +224,28 @@ class CairoInteriorHeroCard extends StatelessWidget {
                                     ? 'القاهرة والجيزة'
                                     : 'Cairo & Giza',
                                 style: FixoTypography.labelMd(
-                                  color: FixoColors.onSurface,
+                                  color: isDark
+                                      ? FixoColors.darkOnSurface
+                                      : FixoColors.onSurface,
                                   locale: locale,
                                 ).copyWith(fontWeight: FontWeight.w700),
                               ),
-                              const SizedBox(height: 2),
+                              const SizedBox(height: FixoSpacing.xxs),
                               Text(
                                 isArabic
                                     ? 'المعادي • القاهرة الجديدة • الزمالك • زايد'
                                     : 'Maadi • New Cairo • Zamalek • Zayed',
                                 style: FixoTypography.bodySm(
-                                  color: FixoColors.onSurfaceVariant,
+                                  color: isDark
+                                      ? FixoColors.darkOnSurfaceVariant
+                                      : FixoColors.onSurfaceVariant,
                                   locale: locale,
                                 ).copyWith(fontSize: 11, height: 1.25),
                               ),
                             ],
                           ),
                         ),
-                        const SizedBox(width: 8),
+                        const SizedBox(width: FixoSpacing.sm),
                         // Estimated response time pill
                         Container(
                           padding: const EdgeInsets.symmetric(
@@ -183,22 +253,35 @@ class CairoInteriorHeroCard extends StatelessWidget {
                             vertical: 5,
                           ),
                           decoration: BoxDecoration(
-                            color: FixoColors.surfaceContainerHigh,
-                            borderRadius: BorderRadius.circular(6),
+                            color: isDark
+                                ? FixoColors.primaryForest
+                                : FixoColors.surfaceContainerHigh,
+                            borderRadius: BorderRadius.circular(FixoRadius.sm),
+                            border: isDark
+                                ? Border.all(
+                                    color: FixoColors.limeAccent.withValues(
+                                      alpha: 0.35,
+                                    ),
+                                  )
+                                : null,
                           ),
                           child: Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              const Icon(
+                              Icon(
                                 Icons.bolt_rounded,
                                 size: 14,
-                                color: FixoColors.deepestForest,
+                                color: isDark
+                                    ? FixoColors.limeAccent
+                                    : FixoColors.deepestForest,
                               ),
-                              const SizedBox(width: 2),
+                              const SizedBox(width: FixoSpacing.xxs),
                               Text(
                                 isArabic ? 'نقداً' : 'Cash',
                                 style: FixoTypography.labelMd(
-                                  color: FixoColors.deepestForest,
+                                  color: isDark
+                                      ? FixoColors.limeAccent
+                                      : FixoColors.deepestForest,
                                   locale: locale,
                                 ).copyWith(fontWeight: FontWeight.w700),
                               ),
@@ -218,129 +301,233 @@ class CairoInteriorHeroCard extends StatelessWidget {
   }
 }
 
-/// Custom painter rendering a warm sunlit Cairo contemporary apartment scene
-/// inspired by `01_onboarding/screen.png` (travertine walls, wood beam ceiling,
-/// balcony greenery, mid-century armchair, and indoor ficus tree).
-class _CairoApartmentPainter extends CustomPainter {
+/// Custom painter rendering an ultra-luxury Cairo architectural villa interior
+/// with arched panoramic windows, warm brass chandelier lighting, marble wall
+/// paneling, designer emerald-and-gold lounge seating, and botanical accents.
+class _LuxuryCairoPenthousePainter extends CustomPainter {
+  const _LuxuryCairoPenthousePainter({required this.isDark});
+
+  final bool isDark;
+
   @override
   void paint(Canvas canvas, Size size) {
-    // 1. Warm travertine limestone background gradient
+    final w = size.width;
+    final h = size.height;
+
+    // 1. Architectural fluted limestone & emerald-slate wall backdrop
     final wallPaint = Paint()
-      ..shader = const LinearGradient(
+      ..shader = LinearGradient(
         begin: Alignment.topLeft,
         end: Alignment.bottomRight,
-        colors: [Color(0xFFE9DEC9), Color(0xFFD8C6A8), Color(0xFFB59E7D)],
+        colors: isDark
+            ? const [Color(0xFF172822), Color(0xFF0E1B16), Color(0xFF08110E)]
+            : const [Color(0xFF234238), Color(0xFF163028), Color(0xFF0E221C)],
       ).createShader(Offset.zero & size);
     canvas.drawRect(Offset.zero & size, wallPaint);
 
-    // 2. Sunlit Zamalek balcony window opening (left-center)
-    final windowRect = Rect.fromLTWH(
-      size.width * 0.06,
-      size.height * 0.12,
-      size.width * 0.52,
-      size.height * 0.68,
-    );
+    // Subtle vertical fluted wall panelling lines on the right wall
+    final flutePaint = Paint()
+      ..color = FixoColors.goldAccent.withValues(alpha: 0.10)
+      ..strokeWidth = 1.2;
+    for (double x = w * 0.58; x < w * 0.96; x += w * 0.035) {
+      canvas.drawLine(Offset(x, h * 0.06), Offset(x, h * 0.72), flutePaint);
+    }
+
+    // 2. Grand Arched Cairo Terrace Window (left-center)
+    final archRect = Rect.fromLTWH(w * 0.07, h * 0.10, w * 0.46, h * 0.64);
+    final archPath = Path()
+      ..moveTo(archRect.left, archRect.bottom)
+      ..lineTo(archRect.left, archRect.top + archRect.width * 0.42)
+      ..arcToPoint(
+        Offset(archRect.right, archRect.top + archRect.width * 0.42),
+        radius: Radius.circular(archRect.width * 0.5),
+      )
+      ..lineTo(archRect.right, archRect.bottom)
+      ..close();
+
     final skyPaint = Paint()
       ..shader = const LinearGradient(
         begin: Alignment.topCenter,
         end: Alignment.bottomCenter,
-        colors: [Color(0xFFDFF0E6), Color(0xFFBBD8C5), Color(0xFF7FA98F)],
-      ).createShader(windowRect);
-    canvas.drawRRect(
-      RRect.fromRectAndRadius(windowRect, const Radius.circular(6)),
-      skyPaint,
-    );
+        colors: [
+          Color(0xFFF6E6C2),
+          Color(0xFFD5E6DA),
+          Color(0xFF83B19B),
+        ],
+      ).createShader(archRect);
+    canvas.drawPath(archPath, skyPaint);
 
-    // Distant garden foliage silhouette inside balcony view
-    final foliagePaint = Paint()..color = const Color(0xFF476F5B);
+    // Distant Nile / Zamalek skyline & lush botanical silhouettes inside arch
+    canvas.save();
+    canvas.clipPath(archPath);
     canvas.drawCircle(
-      Offset(size.width * 0.22, size.height * 0.52),
-      size.width * 0.14,
-      foliagePaint,
+      Offset(w * 0.38, h * 0.26),
+      w * 0.065,
+      Paint()..color = const Color(0xFFFFF4D2).withValues(alpha: 0.85),
     );
     canvas.drawCircle(
-      Offset(size.width * 0.42, size.height * 0.48),
-      size.width * 0.16,
-      Paint()..color = const Color(0xFF355947),
+      Offset(w * 0.19, h * 0.55),
+      w * 0.15,
+      Paint()..color = const Color(0xFF2E5A49),
     );
+    canvas.drawCircle(
+      Offset(w * 0.39, h * 0.52),
+      w * 0.17,
+      Paint()..color = const Color(0xFF1E4436),
+    );
+    canvas.restore();
 
-    // Architectural wooden ceiling beams (top right)
-    final woodPaint = Paint()..color = const Color(0xFF8C5832);
-    final beamPath = Path()
-      ..moveTo(size.width * 0.65, 0)
-      ..lineTo(size.width, 0)
-      ..lineTo(size.width, size.height * 0.28)
-      ..lineTo(size.width * 0.65, size.height * 0.18)
-      ..close();
-    canvas.drawPath(beamPath, woodPaint);
-
-    // Window frame mullions
-    final framePaint = Paint()
-      ..color = const Color(0xFF5C4938)
+    // Brushed brass window mullions
+    final brassStroke = Paint()
+      ..color = FixoColors.goldAccent.withValues(alpha: 0.65)
       ..style = PaintingStyle.stroke
-      ..strokeWidth = 3;
-    canvas.drawRect(windowRect, framePaint);
+      ..strokeWidth = 2.2;
+    canvas.drawPath(archPath, brassStroke);
     canvas.drawLine(
-      Offset(windowRect.center.dx, windowRect.top),
-      Offset(windowRect.center.dx, windowRect.bottom),
-      framePaint,
+      Offset(archRect.center.dx, archRect.top + 4),
+      Offset(archRect.center.dx, archRect.bottom),
+      brassStroke,
+    );
+    canvas.drawLine(
+      Offset(archRect.left, archRect.top + archRect.height * 0.48),
+      Offset(archRect.right, archRect.top + archRect.height * 0.48),
+      brassStroke,
     );
 
-    // Polished marble floor reflection at bottom
-    final floorRect = Rect.fromLTWH(
-      0,
-      size.height * 0.75,
-      size.width,
-      size.height * 0.25,
-    );
-    canvas.drawRect(floorRect, Paint()..color = const Color(0xFF6B6556));
+    // 3. Polished Calacatta Marble & Dark Walnut Floor
+    final floorRect = Rect.fromLTWH(0, h * 0.72, w, h * 0.28);
+    final floorPaint = Paint()
+      ..shader = const LinearGradient(
+        begin: Alignment.topCenter,
+        end: Alignment.bottomCenter,
+        colors: [
+          Color(0xFF1B312A),
+          Color(0xFF0A1612),
+        ],
+      ).createShader(floorRect);
+    canvas.drawRect(floorRect, floorPaint);
 
-    // Mid-century warm ochre armchair silhouette (right side)
-    final chairRect = RRect.fromRectAndRadius(
-      Rect.fromLTWH(
-        size.width * 0.66,
-        size.height * 0.54,
-        size.width * 0.20,
-        size.height * 0.18,
+    // Subtle perspective floor grid lines
+    final floorGridPaint = Paint()
+      ..color = FixoColors.goldAccent.withValues(alpha: 0.12)
+      ..strokeWidth = 1.0;
+    for (var i = 1; i <= 5; i++) {
+      final xTop = w * (0.15 * i);
+      final xBot = w * (-0.1 + 0.24 * i);
+      canvas.drawLine(
+        Offset(xTop, h * 0.72),
+        Offset(xBot, h),
+        floorGridPaint,
+      );
+    }
+
+    // 4. Designer Ring Chandelier & Warm Halo Glow (Top-Right)
+    final chandelierCenter = Offset(w * 0.74, h * 0.26);
+    canvas.drawCircle(
+      chandelierCenter,
+      w * 0.18,
+      Paint()
+        ..shader = RadialGradient(
+          colors: [
+            FixoColors.goldBright.withValues(alpha: 0.34),
+            FixoColors.limeHighlight.withValues(alpha: 0.08),
+            Colors.transparent,
+          ],
+        ).createShader(
+          Rect.fromCircle(center: chandelierCenter, radius: w * 0.18),
+        ),
+    );
+    canvas.drawLine(
+      Offset(chandelierCenter.dx, 0),
+      Offset(chandelierCenter.dx, chandelierCenter.dy - h * 0.04),
+      Paint()
+        ..color = FixoColors.goldAccent
+        ..strokeWidth = 1.8,
+    );
+    canvas.drawOval(
+      Rect.fromCenter(
+        center: chandelierCenter,
+        width: w * 0.18,
+        height: h * 0.065,
       ),
+      Paint()
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 3.0
+        ..color = FixoColors.goldBright,
+    );
+
+    // 5. Bespoke Curved Velvet Lounge Sofa & Brass Coffee Table (Right-Center)
+    final sofaBase = RRect.fromRectAndRadius(
+      Rect.fromLTWH(w * 0.56, h * 0.54, w * 0.34, h * 0.16),
+      const Radius.circular(14),
+    );
+    final sofaBack = RRect.fromRectAndRadius(
+      Rect.fromLTWH(w * 0.59, h * 0.44, w * 0.28, h * 0.13),
+      const Radius.circular(14),
+    );
+    canvas.drawRRect(
+      sofaBack,
+      Paint()..color = const Color(0xFFD9C7A7),
+    );
+    canvas.drawRRect(
+      sofaBase,
+      Paint()
+        ..shader = const LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: [Color(0xFFEDE2CE), Color(0xFFC8B28E)],
+        ).createShader(sofaBase.outerRect),
+    );
+    // Gold accent pillow
+    canvas.drawRRect(
+      RRect.fromRectAndRadius(
+        Rect.fromLTWH(w * 0.63, h * 0.48, w * 0.08, h * 0.07),
+        const Radius.circular(6),
+      ),
+      Paint()..color = FixoColors.goldAccent,
+    );
+
+    // 6. Sculptural Brass Planter with Architectural Botanical Canopy
+    final potRect = RRect.fromRectAndRadius(
+      Rect.fromLTWH(w * 0.44, h * 0.55, w * 0.09, h * 0.17),
       const Radius.circular(8),
     );
-    canvas.drawRRect(chairRect, Paint()..color = const Color(0xFFC48F4B));
-
-    // Indoor ficus plant in ceramic planter (center-left)
-    final potRect = RRect.fromRectAndRadius(
-      Rect.fromLTWH(
-        size.width * 0.22,
-        size.height * 0.58,
-        size.width * 0.12,
-        size.height * 0.16,
-      ),
-      const Radius.circular(6),
+    canvas.drawRRect(
+      potRect,
+      Paint()
+        ..shader = const LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [FixoColors.goldBright, Color(0xFF9E7B32)],
+        ).createShader(potRect.outerRect),
     );
-    canvas.drawRRect(potRect, Paint()..color = const Color(0xFFD9D2C5));
 
-    // Ficus canopy leaves in FIXO forest tones
-    final leafPaintDark = Paint()..color = FixoColors.primaryForest;
-    final leafPaintMid = Paint()..color = FixoColors.secondaryForest;
     final leafCenters = <Offset>[
-      Offset(size.width * 0.28, size.height * 0.44),
-      Offset(size.width * 0.23, size.height * 0.36),
-      Offset(size.width * 0.33, size.height * 0.34),
-      Offset(size.width * 0.28, size.height * 0.25),
-      Offset(size.width * 0.25, size.height * 0.18),
+      Offset(w * 0.485, h * 0.45),
+      Offset(w * 0.44, h * 0.39),
+      Offset(w * 0.53, h * 0.38),
+      Offset(w * 0.485, h * 0.31),
     ];
     for (var i = 0; i < leafCenters.length; i++) {
+      canvas.save();
+      canvas.translate(leafCenters[i].dx, leafCenters[i].dy);
+      canvas.rotate((i.isEven ? -1 : 1) * math.pi / 10);
       canvas.drawOval(
         Rect.fromCenter(
-          center: leafCenters[i],
-          width: size.width * 0.14,
-          height: size.height * 0.09,
+          center: Offset.zero,
+          width: w * 0.11,
+          height: h * 0.07,
         ),
-        i.isEven ? leafPaintDark : leafPaintMid,
+        Paint()
+          ..color = i.isEven
+              ? FixoColors.secondaryForest
+              : FixoColors.limeHighlight.withValues(alpha: 0.85),
       );
+      canvas.restore();
     }
   }
 
   @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
+  bool shouldRepaint(covariant _LuxuryCairoPenthousePainter oldDelegate) =>
+      oldDelegate.isDark != isDark;
 }

@@ -6,6 +6,8 @@ import '../../../../core/theme/fixo_colors.dart';
 import '../../../../core/theme/fixo_spacing.dart';
 import '../../../../core/theme/fixo_typography.dart';
 import '../../../../core/widgets/fixo_brand_mark.dart';
+import '../../../../core/widgets/fixo_liquid_glass_layer.dart';
+import '../../../../core/widgets/fixo_skeleton.dart';
 import '../controllers/checkout_controller.dart';
 import '../widgets/checkout_widgets.dart';
 
@@ -109,10 +111,9 @@ class CheckoutPage extends ConsumerWidget {
     bool isArabic,
   ) {
     if (state.isLoading) {
-      return Center(
-        child: CircularProgressIndicator(
-          valueColor: AlwaysStoppedAnimation<Color>(palette.deepForest),
-        ),
+      return const FixoListSkeleton(
+        itemCount: 3,
+        showHeaderBanner: true,
       );
     }
 
@@ -224,25 +225,16 @@ class CheckoutPage extends ConsumerWidget {
   ) {
     final booking = state.booking!;
 
-    return Container(
+    return LiquidGlassLayer(
+      borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+      blurSigma: 28.0,
+      specularIntensity: 0.65,
+      borderWidth: 1.4,
       padding: EdgeInsets.only(
         left: FixoSpacing.md,
         right: FixoSpacing.md,
         top: FixoSpacing.sm,
         bottom: MediaQuery.of(context).padding.bottom + FixoSpacing.sm,
-      ),
-      decoration: BoxDecoration(
-        color: palette.cardSurface,
-        border: Border(
-          top: BorderSide(color: palette.subtleBorder, width: 1.0),
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.05),
-            blurRadius: 10,
-            offset: const Offset(0, -3),
-          ),
-        ],
       ),
       child: Center(
         heightFactor: 1.0,

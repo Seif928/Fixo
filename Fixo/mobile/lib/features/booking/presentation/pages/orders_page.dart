@@ -11,6 +11,7 @@ import '../../../../core/theme/fixo_typography.dart';
 import '../../../../core/widgets/fixo_brand_mark.dart';
 import '../../../../core/widgets/fixo_cards.dart';
 import '../../../../core/widgets/fixo_liquid_glass_layer.dart';
+import '../../../../core/widgets/fixo_skeleton.dart';
 import '../../../customer_home/presentation/widgets/customer_home_widgets.dart';
 import '../../data/booking_repository.dart';
 import '../../domain/booking_models.dart';
@@ -35,12 +36,22 @@ class _OrdersPageState extends ConsumerState<OrdersPage> {
   @override
   void initState() {
     super.initState();
+    _scroll.addListener(_onScroll);
     _load();
+  }
+
+  void _onScroll() {
+    if (!_scroll.hasClients || _loading || _loadingMore || !_hasMore) return;
+    final pos = _scroll.position;
+    if (pos.pixels >= pos.maxScrollExtent - 240) {
+      _load(more: true);
+    }
   }
 
   @override
   void dispose() {
     _generation++;
+    _scroll.removeListener(_onScroll);
     _scroll.dispose();
     super.dispose();
   }
@@ -160,7 +171,12 @@ class _OrdersPageState extends ConsumerState<OrdersPage> {
           children: [
             if (!widget.showChats)
               Padding(
-                padding: EdgeInsets.fromLTRB(inset, 14, inset, 10),
+                padding: EdgeInsets.fromLTRB(
+                  inset,
+                  FixoSpacing.gutterMobile,
+                  inset,
+                  FixoSpacing.sm,
+                ),
                 child: SizedBox(
                   width: double.infinity,
                   child: SegmentedButton<String>(
@@ -217,126 +233,172 @@ class _OrdersPageState extends ConsumerState<OrdersPage> {
               ),
             Expanded(
               child: _loading
-                  ? const Center(child: CircularProgressIndicator())
+                  ? FixoListSkeleton(
+                      itemCount: 4,
+                      padding: EdgeInsets.fromLTRB(
+                        inset,
+                        FixoSpacing.sm,
+                        inset,
+                        FixoSpacing.lg,
+                      ),
+                    )
                   : RefreshIndicator(
                       onRefresh: _load,
-                      child: ListView(
-                        controller: _scroll,
-                        physics: const AlwaysScrollableScrollPhysics(),
-                        padding: EdgeInsets.fromLTRB(inset, 6, inset, 24),
-                        children: [
-                          if (_failed)
-                            FixoSurfaceCard(
-                              padding: const EdgeInsets.all(FixoSpacing.md),
-                              borderRadius: FixoRadius.borderRadiusLg,
-                              child: Column(
-                                children: [
-                                  const Icon(
-                                    Icons.error_outline_rounded,
-                                    color: FixoColors.error,
-                                    size: 28,
-                                  ),
-                                  const SizedBox(height: 8),
-                                  Text(
-                                    ar
-                                        ? 'تعذّر تحميل القائمة.'
-                                        : 'Could not load the list.',
-                                    style: FixoTypography.bodyMd(
-                                      color: palette.inkText,
-                                    ).copyWith(fontWeight: FontWeight.w600),
-                                    textAlign: TextAlign.center,
-                                  ),
-                                  const SizedBox(height: 6),
-                                  TextButton.icon(
-                                    onPressed: () => _load(),
-                                    icon: const Icon(
-                                      Icons.refresh_rounded,
-                                      size: 18,
-                                    ),
-                                    label: Text(
-                                      ar ? 'إعادة المحاولة' : 'Retry',
-                                    ),
-                                  ),
-                                ],
+                      child: visible.isEmpty
+                          ? ListView(
+                              controller: _scroll,
+                              physics: const AlwaysScrollableScrollPhysics(),
+                              padding: EdgeInsets.fromLTRB(
+                                inset,
+                                FixoSpacing.sm,
+                                inset,
+                                FixoSpacing.lg,
                               ),
-                            ),
-                          if (!_failed && visible.isEmpty)
-                            Padding(
-                              padding: const EdgeInsets.symmetric(vertical: 48),
-                              child: FixoSurfaceCard(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: FixoSpacing.lg,
-                                  vertical: FixoSpacing.xl,
-                                ),
-                                borderRadius: FixoRadius.borderRadiusLg,
-                                child: Column(
-                                  children: [
-                                    Container(
-                                      width: 56,
-                                      height: 56,
-                                      decoration: BoxDecoration(
-                                        color: palette.surfaceLow,
-                                        shape: BoxShape.circle,
-                                        border: Border.all(
-                                          color: palette.subtleBorder,
+                              children: [
+                                if (_failed)
+                                  FixoSurfaceCard(
+                                    padding: const EdgeInsets.all(
+                                      FixoSpacing.md,
+                                    ),
+                                    borderRadius: FixoRadius.borderRadiusLg,
+                                    child: Column(
+                                      children: [
+                                        const Icon(
+                                          Icons.error_outline_rounded,
+                                          color: FixoColors.error,
+                                          size: 28,
                                         ),
-                                      ),
-                                      alignment: Alignment.center,
-                                      child: Icon(
-                                        widget.showChats
-                                            ? Icons.chat_bubble_outline_rounded
-                                            : Icons.receipt_long_outlined,
-                                        size: 28,
-                                        color: isDark
-                                            ? palette.limeAccent
-                                            : palette.deepForest,
-                                      ),
-                                    ),
-                                    const SizedBox(height: 14),
-                                    Text(
-                                      widget.showChats
-                                          ? (ar
-                                                ? 'لا توجد محادثات متاحة بعد.'
-                                                : 'No conversations available yet.')
-                                          : (ar
-                                                ? 'لا توجد طلبات في هذه القائمة.'
-                                                : 'No bookings in this list.'),
-                                      textAlign: TextAlign.center,
-                                      style: FixoTypography.labelLg(
-                                        color: palette.inkText,
-                                      ).copyWith(fontWeight: FontWeight.w700),
-                                    ),
-                                    if (widget.showChats) ...[
-                                      const SizedBox(height: 6),
-                                      Text(
-                                        ar
-                                            ? 'تظهر المحادثة بعد إسناد الطلب لفني.'
-                                            : 'Conversations appear after a professional is assigned.',
-                                        textAlign: TextAlign.center,
-                                        style: FixoTypography.bodySm(
-                                          color: palette.mutedText,
+                                        const SizedBox(height: FixoSpacing.sm),
+                                        Text(
+                                          ar
+                                              ? 'تعذّر تحميل القائمة.'
+                                              : 'Could not load the list.',
+                                          style: FixoTypography.bodyMd(
+                                            color: palette.inkText,
+                                          ).copyWith(
+                                            fontWeight: FontWeight.w600,
+                                          ),
+                                          textAlign: TextAlign.center,
                                         ),
+                                        const SizedBox(height: FixoSpacing.xs),
+                                        TextButton.icon(
+                                          onPressed: () => _load(),
+                                          icon: const Icon(
+                                            Icons.refresh_rounded,
+                                            size: 18,
+                                          ),
+                                          label: Text(
+                                            ar ? 'إعادة المحاولة' : 'Retry',
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                if (!_failed)
+                                  Padding(
+                                    padding: const EdgeInsets.symmetric(
+                                      vertical: FixoSpacing.xxl,
+                                    ),
+                                    child: FixoSurfaceCard(
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: FixoSpacing.lg,
+                                        vertical: FixoSpacing.xl,
                                       ),
-                                    ],
-                                  ],
-                                ),
+                                      borderRadius: FixoRadius.borderRadiusLg,
+                                      child: Column(
+                                        children: [
+                                          Container(
+                                            width: 56,
+                                            height: 56,
+                                            decoration: BoxDecoration(
+                                              color: palette.surfaceLow,
+                                              shape: BoxShape.circle,
+                                              border: Border.all(
+                                                color: palette.subtleBorder,
+                                              ),
+                                            ),
+                                            alignment: Alignment.center,
+                                            child: Icon(
+                                              widget.showChats
+                                                  ? Icons
+                                                        .chat_bubble_outline_rounded
+                                                  : Icons.receipt_long_outlined,
+                                              size: 28,
+                                              color: isDark
+                                                  ? palette.limeAccent
+                                                  : palette.deepForest,
+                                            ),
+                                          ),
+                                          const SizedBox(
+                                            height: FixoSpacing.gutterMobile,
+                                          ),
+                                          Text(
+                                            widget.showChats
+                                                ? (ar
+                                                      ? 'لا توجد محادثات متاحة بعد.'
+                                                      : 'No conversations available yet.')
+                                                : (ar
+                                                      ? 'لا توجد طلبات في هذه القائمة.'
+                                                      : 'No bookings in this list.'),
+                                            textAlign: TextAlign.center,
+                                            style: FixoTypography.labelLg(
+                                              color: palette.inkText,
+                                            ).copyWith(
+                                              fontWeight: FontWeight.w700,
+                                            ),
+                                          ),
+                                          if (widget.showChats) ...[
+                                            const SizedBox(
+                                              height: FixoSpacing.xs,
+                                            ),
+                                            Text(
+                                              ar
+                                                  ? 'تظهر المحادثة بعد إسناد الطلب لفني.'
+                                                  : 'Conversations appear after a professional is assigned.',
+                                              textAlign: TextAlign.center,
+                                              style: FixoTypography.bodySm(
+                                                color: palette.mutedText,
+                                              ),
+                                            ),
+                                          ],
+                                        ],
+                                      ),
+                                    ),
+                                  ),
+                              ],
+                            )
+                          : ListView.builder(
+                              controller: _scroll,
+                              physics: const AlwaysScrollableScrollPhysics(),
+                              padding: EdgeInsets.fromLTRB(
+                                inset,
+                                FixoSpacing.sm,
+                                inset,
+                                FixoSpacing.lg,
                               ),
+                              itemCount: visible.length + (_hasMore ? 1 : 0),
+                              itemBuilder: (context, index) {
+                                if (index >= visible.length) {
+                                  return Center(
+                                    child: TextButton(
+                                      onPressed: _loadingMore
+                                          ? null
+                                          : () => _load(more: true),
+                                      child: Text(
+                                        _loadingMore
+                                            ? (ar
+                                                  ? 'جارٍ التحميل...'
+                                                  : 'Loading...')
+                                            : (ar
+                                                  ? 'تحميل المزيد'
+                                                  : 'Load more'),
+                                      ),
+                                    ),
+                                  );
+                                }
+                                return _card(context, visible[index], ar);
+                              },
                             ),
-                          for (final booking in visible)
-                            _card(context, booking, ar),
-                          if (_hasMore)
-                            TextButton(
-                              onPressed: _loadingMore
-                                  ? null
-                                  : () => _load(more: true),
-                              child: Text(
-                                _loadingMore
-                                    ? (ar ? 'جارٍ التحميل...' : 'Loading...')
-                                    : (ar ? 'تحميل المزيد' : 'Load more'),
-                              ),
-                            ),
-                        ],
-                      ),
                     ),
             ),
           ],
@@ -412,12 +474,13 @@ class _OrdersPageState extends ConsumerState<OrdersPage> {
 
     return Padding(
       key: ValueKey('booking-${booking.id}'),
-      padding: const EdgeInsets.only(bottom: 14),
+      padding: const EdgeInsets.only(bottom: FixoSpacing.gutterMobile),
       child: LiquidGlassCard(
         padding: const EdgeInsets.all(FixoSpacing.md),
         borderRadius: FixoRadius.borderRadiusLg,
         blurSigma: 20.0,
         specularIntensity: 0.35,
+        enableBlur: false,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [

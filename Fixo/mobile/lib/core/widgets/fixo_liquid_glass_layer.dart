@@ -18,9 +18,10 @@ class LiquidGlassLayer extends StatefulWidget {
     this.borderRadius = FixoRadius.borderRadiusLg,
     this.blurSigma = 26.0,
     this.tintOpacity,
-    this.specularIntensity = 0.42,
-    this.borderWidth = 1.2,
+    this.specularIntensity = 0.48,
+    this.borderWidth = 1.25,
     this.enableInteractiveCaustics = true,
+    this.enableBlur = true,
     this.padding,
     this.margin,
   });
@@ -32,6 +33,7 @@ class LiquidGlassLayer extends StatefulWidget {
   final double specularIntensity;
   final double borderWidth;
   final bool enableInteractiveCaustics;
+  final bool enableBlur;
   final EdgeInsetsGeometry? padding;
   final EdgeInsetsGeometry? margin;
 
@@ -70,22 +72,85 @@ class _LiquidGlassLayerState extends State<LiquidGlassLayer> {
     final isTest =
         WidgetsBinding.instance.runtimeType.toString().contains('Test');
 
-    // Apple Glass substrate tint:
-    // Light: crystalline milky frosted white with 72% opacity.
-    // Dark: obsidian graphite green with 58% opacity.
-    final defaultOpacity = isDark ? 0.58 : 0.72;
+    // Apple VisionOS Reflective Glass substrate tint:
+    // Light: crystalline milky frosted white with 74% opacity.
+    // Dark: True Black obsidian smoked glass with 68% opacity.
+    final defaultOpacity = isDark ? 0.68 : 0.74;
     final opacity = widget.tintOpacity ?? defaultOpacity;
 
     final substrateColor = isDark
-        ? const Color(0xFF14241F).withValues(alpha: opacity)
-        : const Color(0xFFFBFBFA).withValues(alpha: opacity);
+        ? const Color(0xFF0C1210).withValues(alpha: opacity)
+        : const Color(0xFFFCFBFA).withValues(alpha: opacity);
 
     final rimTopColor = isDark
-        ? Colors.white.withValues(alpha: (0.32 * widget.specularIntensity + 0.12).clamp(0.0, 1.0))
-        : Colors.white.withValues(alpha: (0.78 * widget.specularIntensity + 0.20).clamp(0.0, 1.0));
+        ? Colors.white.withValues(alpha: (0.42 * widget.specularIntensity + 0.16).clamp(0.0, 1.0))
+        : Colors.white.withValues(alpha: (0.82 * widget.specularIntensity + 0.22).clamp(0.0, 1.0));
     final rimBottomColor = isDark
-        ? Colors.white.withValues(alpha: 0.06)
+        ? const Color(0xFFD7F078).withValues(alpha: 0.10)
         : Colors.black.withValues(alpha: 0.07);
+
+    final Widget paintedBody = CustomPaint(
+      foregroundPainter: _AppleGlassBevelPainter(
+        borderRadius: widget.borderRadius,
+        borderWidth: widget.borderWidth,
+        topColor: rimTopColor,
+        bottomColor: rimBottomColor,
+        lightDirection: _pointerNorm,
+      ),
+      child: Container(
+        padding: widget.padding,
+        decoration: BoxDecoration(
+          color: substrateColor,
+          borderRadius: widget.borderRadius,
+          // Convex Liquid Dome Gradient (Upper lens meniscus catches light)
+          gradient: LinearGradient(
+            begin: Alignment(-_pointerNorm.dx, -_pointerNorm.dy),
+            end: Alignment(_pointerNorm.dx, _pointerNorm.dy),
+            colors: isDark
+                ? [
+                    Colors.white.withValues(alpha: (0.14 * widget.specularIntensity).clamp(0.0, 1.0)),
+                    Colors.white.withValues(alpha: 0.03),
+                    const Color(0xFF080D0B).withValues(alpha: 0.55),
+                  ]
+                : [
+                    Colors.white.withValues(alpha: (0.78 * widget.specularIntensity + 0.15).clamp(0.0, 1.0)),
+                    Colors.white.withValues(alpha: 0.38),
+                    const Color(0xFFEBE8DF).withValues(alpha: 0.22),
+                  ],
+            stops: const [0.0, 0.42, 1.0],
+          ),
+        ),
+        child: Stack(
+          children: [
+            widget.child,
+            // Liquid Caustic Specular Glare Overlay
+            if (widget.enableInteractiveCaustics && !isTest)
+              Positioned.fill(
+                child: IgnorePointer(
+                  child: ClipRRect(
+                    borderRadius: widget.borderRadius,
+                    child: DecoratedBox(
+                      decoration: BoxDecoration(
+                        gradient: RadialGradient(
+                          center: Alignment(_pointerNorm.dx, _pointerNorm.dy),
+                          radius: 1.3,
+                          colors: [
+                            Colors.white.withValues(
+                              alpha: ((isDark ? 0.18 : 0.28) * widget.specularIntensity).clamp(0.0, 1.0),
+                            ),
+                            Colors.white.withValues(alpha: 0.0),
+                          ],
+                          stops: const [0.0, 0.75],
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+          ],
+        ),
+      ),
+    );
 
     Widget glassContainer = Container(
       margin: widget.margin,
@@ -95,7 +160,7 @@ class _LiquidGlassLayerState extends State<LiquidGlassLayer> {
           // Apple Ambient Volumetric Depth Shadow
           BoxShadow(
             color: isDark
-                ? Colors.black.withValues(alpha: 0.40)
+                ? Colors.black.withValues(alpha: 0.65)
                 : const Color(0xFF173F35).withValues(alpha: 0.08),
             blurRadius: 30,
             offset: const Offset(0, 12),
@@ -104,7 +169,7 @@ class _LiquidGlassLayerState extends State<LiquidGlassLayer> {
           // Sharp Contact Shadow
           BoxShadow(
             color: isDark
-                ? Colors.black.withValues(alpha: 0.25)
+                ? Colors.black.withValues(alpha: 0.45)
                 : const Color(0xFF173F35).withValues(alpha: 0.04),
             blurRadius: 10,
             offset: const Offset(0, 3),
@@ -113,74 +178,15 @@ class _LiquidGlassLayerState extends State<LiquidGlassLayer> {
       ),
       child: ClipRRect(
         borderRadius: widget.borderRadius,
-        child: BackdropFilter(
-          filter: ImageFilter.blur(
-            sigmaX: isTest ? 0.1 : widget.blurSigma,
-            sigmaY: isTest ? 0.1 : widget.blurSigma,
-          ),
-          child: CustomPaint(
-            foregroundPainter: _AppleGlassBevelPainter(
-              borderRadius: widget.borderRadius,
-              borderWidth: widget.borderWidth,
-              topColor: rimTopColor,
-              bottomColor: rimBottomColor,
-              lightDirection: _pointerNorm,
-            ),
-            child: Container(
-              padding: widget.padding,
-              decoration: BoxDecoration(
-                color: substrateColor,
-                borderRadius: widget.borderRadius,
-                // Convex Liquid Dome Gradient (Upper lens meniscus catches light)
-                gradient: LinearGradient(
-                  begin: Alignment(-_pointerNorm.dx, -_pointerNorm.dy),
-                  end: Alignment(_pointerNorm.dx, _pointerNorm.dy),
-                  colors: isDark
-                      ? [
-                          Colors.white.withValues(alpha: (0.10 * widget.specularIntensity).clamp(0.0, 1.0)),
-                          Colors.white.withValues(alpha: 0.02),
-                          const Color(0xFF14241F).withValues(alpha: 0.35),
-                        ]
-                      : [
-                          Colors.white.withValues(alpha: (0.75 * widget.specularIntensity + 0.15).clamp(0.0, 1.0)),
-                          Colors.white.withValues(alpha: 0.35),
-                          const Color(0xFFEBE8DF).withValues(alpha: 0.20),
-                        ],
-                  stops: const [0.0, 0.45, 1.0],
+        child: widget.enableBlur
+            ? BackdropFilter(
+                filter: ImageFilter.blur(
+                  sigmaX: isTest ? 0.1 : widget.blurSigma,
+                  sigmaY: isTest ? 0.1 : widget.blurSigma,
                 ),
-              ),
-              child: Stack(
-                children: [
-                  widget.child,
-                  // Liquid Caustic Specular Glare Overlay
-                  if (widget.enableInteractiveCaustics && !isTest)
-                    Positioned.fill(
-                      child: IgnorePointer(
-                        child: ClipRRect(
-                          borderRadius: widget.borderRadius,
-                          child: DecoratedBox(
-                            decoration: BoxDecoration(
-                              gradient: RadialGradient(
-                                center: Alignment(_pointerNorm.dx, _pointerNorm.dy),
-                                radius: 1.3,
-                                colors: [
-                                  Colors.white.withValues(
-                                    alpha: ((isDark ? 0.15 : 0.28) * widget.specularIntensity).clamp(0.0, 1.0),
-                                  ),
-                                  Colors.white.withValues(alpha: 0.0),
-                                ],
-                                stops: const [0.0, 0.75],
-                              ),
-                            ),
-                          ),
-                        ),
-                      ),
-                    ),
-                ],
-              ),
-            ),
-          ),
-        ),
+                child: paintedBody,
+              )
+            : paintedBody,
       ),
     );
 
@@ -257,7 +263,8 @@ class LiquidGlassCard extends StatelessWidget {
     this.borderRadius = FixoRadius.borderRadiusLg,
     this.blurSigma = 26.0,
     this.tintOpacity,
-    this.specularIntensity = 0.42,
+    this.specularIntensity = 0.48,
+    this.enableBlur = true,
     this.onTap,
   });
 
@@ -268,6 +275,7 @@ class LiquidGlassCard extends StatelessWidget {
   final double blurSigma;
   final double? tintOpacity;
   final double specularIntensity;
+  final bool enableBlur;
   final VoidCallback? onTap;
 
   @override
@@ -290,6 +298,8 @@ class LiquidGlassCard extends StatelessWidget {
       blurSigma: blurSigma,
       tintOpacity: tintOpacity,
       specularIntensity: specularIntensity,
+      enableBlur: enableBlur,
+      enableInteractiveCaustics: enableBlur,
       padding: padding,
       margin: margin,
       child: content,

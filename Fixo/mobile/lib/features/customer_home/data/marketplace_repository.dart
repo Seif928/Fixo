@@ -21,6 +21,13 @@ abstract class MarketplaceRepository {
   });
 
   Future<ServiceOfferModel> fetchServiceById(String id);
+
+  Future<PaginatedServices> getPaginatedServices({
+    int page = 1,
+    int limit = 20,
+    String? search,
+    String? categoryId,
+  });
 }
 
 /// Real Dio-backed implementation of `MarketplaceRepository` consuming:
@@ -38,24 +45,28 @@ class DioMarketplaceRepository implements MarketplaceRepository {
     String? search,
     String? categoryId,
     String? zone,
+    CancelToken? cancelToken,
   }) async {
     try {
       final categoriesFuture = _dio.get<Map<String, dynamic>>(
         '/services/categories',
+        cancelToken: cancelToken,
       );
       final servicesFuture = _dio.get<Map<String, dynamic>>(
         '/services',
+        cancelToken: cancelToken,
         queryParameters: <String, dynamic>{
           if (search != null && search.trim().isNotEmpty)
             'search': search.trim(),
           if (categoryId != null && categoryId.trim().isNotEmpty)
             'categoryId': categoryId.trim(),
           'page': 1,
-          'limit': 20,
+          'limit': 200,
         },
       );
       final prosFuture = _dio.get<Map<String, dynamic>>(
         '/professionals',
+        cancelToken: cancelToken,
         queryParameters: <String, dynamic>{
           if (search != null && search.trim().isNotEmpty)
             'search': search.trim(),
@@ -63,7 +74,7 @@ class DioMarketplaceRepository implements MarketplaceRepository {
             'categoryId': categoryId.trim(),
           if (zone != null && zone.trim().isNotEmpty) 'zone': zone.trim(),
           'page': 1,
-          'limit': 20,
+          'limit': 50,
         },
       );
 
@@ -131,6 +142,40 @@ class DioMarketplaceRepository implements MarketplaceRepository {
       throw _mapError(
         error,
         fallback: 'Requested service details could not be loaded.',
+      );
+    }
+  }
+
+  @override
+  Future<PaginatedServices> getPaginatedServices({
+    int page = 1,
+    int limit = 20,
+    String? search,
+    String? categoryId,
+    CancelToken? cancelToken,
+  }) async {
+    try {
+      final response = await _dio.get<Map<String, dynamic>>(
+        '/services',
+        cancelToken: cancelToken,
+        queryParameters: <String, dynamic>{
+          'page': page,
+          'limit': limit,
+          if (search != null && search.trim().isNotEmpty)
+            'search': search.trim(),
+          if (categoryId != null && categoryId.trim().isNotEmpty)
+            'categoryId': categoryId.trim(),
+        },
+      );
+      final data = response.data;
+      if (data == null) {
+        throw const FormatException('Service catalog is unavailable.');
+      }
+      return PaginatedServices.fromJson(data, expectedPage: page);
+    } on DioException catch (error) {
+      throw _mapError(
+        error,
+        fallback: 'Could not load service catalog.',
       );
     }
   }

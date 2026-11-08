@@ -4,7 +4,7 @@ import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/network/dio_client.dart';
 import '../../../core/uploads/device_media_picker.dart';
-import '../../auth/presentation/controllers/auth_controller.dart';
+import '../../../core/session/session_providers.dart';
 
 class AvatarRepository {
   const AvatarRepository(this._dio);
@@ -49,12 +49,12 @@ final privateAvatarProvider = FutureProvider.autoDispose
       bool active = true;
       ref.onDispose(() => active = false);
       final userId = key.split(':').first;
-      if (ref.watch(authControllerProvider).session?.user.id != userId) {
+      if (ref.watch(currentUserIdProvider) != userId) {
         return null;
       }
       final bytes = await ref.read(avatarRepositoryProvider).read();
       if (!active ||
-          ref.read(authControllerProvider).session?.user.id != userId) {
+          ref.read(currentUserIdProvider) != userId) {
         return null;
       }
       return bytes;

@@ -15,6 +15,10 @@ import { CreateAddressDto } from './dto/create-address.dto';
 export class UsersService {
   constructor(private readonly prisma: PrismaService) {}
 
+  getStorageMode(): string {
+    return this.prisma.getStorageMode();
+  }
+
   async updateDisplayName(userId: string, fullName: string) {
     if (!this.prisma.isDatabaseConnected())
       throw new ServiceUnavailableException(

@@ -94,6 +94,19 @@ class _CatalogOnlyMarketplaceRepository implements MarketplaceRepository {
   @override
   Future<ServiceOfferModel> fetchServiceById(String id) async =>
       feed.services.first;
+
+  @override
+  Future<PaginatedServices> getPaginatedServices({
+    int page = 1,
+    int limit = 20,
+    String? search,
+    String? categoryId,
+  }) async => PaginatedServices(
+    items: feed.services,
+    page: page,
+    totalPages: 1,
+    total: feed.services.length,
+  );
 }
 
 Widget _app(ProviderContainer container, Locale locale) {

@@ -71,6 +71,21 @@ class EmailAccessService {
     return user.emailVerified ? _exchange(user) : null;
   }
 
+  Future<AuthSession?> signInWithApple() async {
+    final auth = await _auth();
+    final appleProvider = AppleAuthProvider()
+      ..addScope('email')
+      ..addScope('name');
+    final UserCredential credential = kIsWeb
+        ? await auth.signInWithPopup(appleProvider)
+        : await auth.signInWithProvider(appleProvider);
+    final user = credential.user;
+    if (user == null) {
+      throw StateError('Apple identity token unavailable.');
+    }
+    return _exchange(user);
+  }
+
   Future<void> resendVerification() async {
     final auth = await _auth();
     final user = auth.currentUser;

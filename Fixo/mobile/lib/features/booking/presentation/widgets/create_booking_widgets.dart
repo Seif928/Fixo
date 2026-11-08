@@ -8,6 +8,7 @@ import '../../../../core/theme/fixo_spacing.dart';
 import '../../../../core/theme/fixo_typography.dart';
 import '../../../customer_home/domain/marketplace_models.dart';
 import '../../domain/booking_models.dart';
+import '../extensions/time_window_ui_extension.dart';
 
 /// Progress Header Meta: "1 Schedule Service" + "Step 1 of 2" pill
 class BookingProgressHeader extends StatelessWidget {

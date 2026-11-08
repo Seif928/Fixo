@@ -68,19 +68,21 @@ abstract final class FixoColors {
 
   // Urgency & Semantic Alerts
   static const Color coral = Color(0xFFFF795F); // Narrative Coral
+  static const Color goldAccent = Color(0xFFE5C467); // Luxury Architectural Gold
+  static const Color goldBright = Color(0xFFF3D98B); // Specular Gold Highlight
   static const Color error = Color(0xFFBA1A1A);
   static const Color errorContainer = Color(0xFFFFDAD6);
   static const Color onErrorContainer = Color(0xFF93000A);
 
-  // Dark Mode Surface Counterparts (for extensible Dark Mode support)
-  static const Color darkBackground = Color(0xFF0D1714);
-  static const Color darkSurfaceLowest = Color(0xFF13221D);
-  static const Color darkSurfaceLow = Color(0xFF182A24);
-  static const Color darkSurfaceContainer = Color(0xFF1D332C);
-  static const Color darkSurfaceHigh = Color(0xFF243E36);
-  static const Color darkOnSurface = Color(0xFFE8F3ED);
-  static const Color darkOnSurfaceVariant = Color(0xFFA9B8B0);
-  static const Color darkBorder = Color(0xFF2C463E);
+  // True Black / OLED Obsidian Dark Mode Surface Counterparts
+  static const Color darkBackground = Color(0xFF050706); // True Obsidian Black
+  static const Color darkSurfaceLowest = Color(0xFF0C100E); // Obsidian Card Base
+  static const Color darkSurfaceLow = Color(0xFF111714); // Elevated Obsidian
+  static const Color darkSurfaceContainer = Color(0xFF161E1A); // Interactive Surface
+  static const Color darkSurfaceHigh = Color(0xFF1E2924); // High Elevation Surface
+  static const Color darkOnSurface = Color(0xFFF5F9F7); // Crisp Alabaster White
+  static const Color darkOnSurfaceVariant = Color(0xFFB8C7C0); // Silver Botanical Muted
+  static const Color darkBorder = Color(0xFF25352E); // Specular Obsidian Rim
 }
 
 /// Theme extension providing semantic FIXO surface and accent tokens

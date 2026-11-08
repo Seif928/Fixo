@@ -6,6 +6,8 @@ import 'package:flutter/services.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:fixo_mobile/core/l10n/app_locale_controller.dart';
 import 'package:fixo_mobile/core/network/dio_client.dart';
+import 'package:fixo_mobile/core/session/session_providers.dart';
+import 'package:fixo_mobile/core/storage/secure_token_storage.dart';
 import 'package:fixo_mobile/core/theme/fixo_theme.dart';
 import 'package:fixo_mobile/features/admin/data/admin_repository.dart';
 import 'package:fixo_mobile/features/admin/presentation/admin_page.dart';
@@ -17,26 +19,28 @@ import 'package:fixo_mobile/features/auth/presentation/pages/phone_password_page
 import 'dart:ui' as ui;
 
 class _Auth extends AuthController {
+  static const fixtureSession = AuthSession(
+    accessToken: 'fixture',
+    refreshToken: 'fixture',
+    user: AuthUser(
+      id: 'owner-fixture',
+      phone: '+201023456789',
+      fullName: 'Fixture',
+      role: 'CUSTOMER',
+    ),
+  );
+
   @override
   Future<void> acceptVerifiedSession(AuthSession session) async {
     state = AuthState(session: session);
   }
 
   @override
-  AuthState build() => const AuthState(
-    session: AuthSession(
-      accessToken: 'fixture',
-      refreshToken: 'fixture',
-      user: AuthUser(
-        id: 'owner-fixture',
-        phone: '+201023456789',
-        fullName: 'Fixture',
-        role: 'CUSTOMER',
-      ),
-    ),
-  );
+  AuthState build() => const AuthState(session: fixtureSession);
+
   void changeAccount() => state = const AuthState();
-  void restoreFixtureAccount() => state = build();
+  void restoreFixtureAccount() =>
+      state = const AuthState(session: fixtureSession);
 }
 
 void main() {
@@ -383,6 +387,10 @@ void main() {
       );
     final container = ProviderContainer(
       overrides: [
+        sessionProvider.overrideWith((ref) => _Auth.fixtureSession),
+        activeSessionOwnerProvider.overrideWith(
+          (ref) => _Auth.fixtureSession.user.id,
+        ),
         authControllerProvider.overrideWith(_Auth.new),
         dioClientProvider.overrideWithValue(dio),
       ],

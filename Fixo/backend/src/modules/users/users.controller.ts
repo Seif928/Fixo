@@ -16,7 +16,6 @@ import {
   ApiTags,
 } from '@nestjs/swagger';
 import { UserRole } from '@prisma/client';
-import { PrismaService } from '../../prisma/prisma.service';
 import { AuthService, AuthenticatedUserProfile } from '../auth/auth.service';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { Roles } from '../auth/decorators/roles.decorator';
@@ -37,7 +36,6 @@ import { UpdateProfileDto } from './dto/update-profile.dto';
 export class UsersController {
   constructor(
     private readonly authService: AuthService,
-    private readonly prisma: PrismaService,
     private readonly usersService: UsersService,
   ) {}
 
@@ -80,7 +78,7 @@ export class UsersController {
         ...profile,
         addresses,
       },
-      storageMode: this.prisma.getStorageMode(),
+      storageMode: this.usersService.getStorageMode(),
     };
   }
 

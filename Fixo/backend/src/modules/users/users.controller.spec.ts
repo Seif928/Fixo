@@ -68,6 +68,7 @@ describe('UsersController (Unit Tests)', () => {
       createAddress: jest.fn(),
       findUserAddresses: jest.fn(),
       formatAddressResponse: jest.fn(),
+      getStorageMode: jest.fn().mockReturnValue('POSTGRESQL_PRISMA'),
     };
 
     prismaMock = {

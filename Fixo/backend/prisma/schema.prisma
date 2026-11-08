@@ -404,6 +404,12 @@ model Booking {
   messages     ChatMessage[]
   review       Review?
   complaints   Complaint[]
+
+  @@index([customerId, status, createdAt])
+  @@index([proProfileId, status])
+  @@index([offeringId])
+  @@index([addressId])
+  @@index([status, scheduledDate])
 }
 
 model BookingStatusEvent {
@@ -416,6 +422,8 @@ model BookingStatusEvent {
   createdAt   DateTime       @default(now())
 
   booking Booking @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+
+  @@index([bookingId, createdAt])
 }
 
 model JobOffer {
@@ -461,6 +469,9 @@ model ChatMessage {
 
   booking Booking @relation(fields: [bookingId], references: [id], onDelete: Cascade)
   sender  User    @relation(fields: [senderUserId], references: [id])
+
+  @@index([bookingId, createdAt])
+  @@index([senderUserId])
 }
 
 model Review {

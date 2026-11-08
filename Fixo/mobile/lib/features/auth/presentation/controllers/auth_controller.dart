@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/storage/secure_token_storage.dart';
+import '../../../../core/session/session_providers.dart';
 import '../../../../core/notifications/device_push_service.dart';
 import '../../data/auth_repository.dart';
 import '../../data/email_access_service.dart';
@@ -74,6 +75,7 @@ class AuthController extends Notifier<AuthState> {
       _sessionEpoch++;
       _countdownTimer?.cancel();
       ref.read(activeSessionOwnerProvider.notifier).state = null;
+      ref.read(sessionProvider.notifier).state = null;
       state = const AuthState();
       unawaited(ref.read(devicePushProvider).invalidateLocalSession());
     });
@@ -82,6 +84,16 @@ class AuthController extends Notifier<AuthState> {
       _countdownTimer?.cancel();
     });
     return const AuthState();
+  }
+
+  @override
+  set state(AuthState value) {
+    super.state = value;
+    final session = value.session;
+    if (ref.read(sessionProvider) != session) {
+      ref.read(sessionProvider.notifier).state = session;
+      ref.read(activeSessionOwnerProvider.notifier).state = session?.user.id;
+    }
   }
 
   void updatePhoneInput(String value) {
@@ -256,6 +268,7 @@ class AuthController extends Notifier<AuthState> {
       _countdownTimer?.cancel();
       if (!_disposed) {
         ref.read(activeSessionOwnerProvider.notifier).state = null;
+        ref.read(sessionProvider.notifier).state = null;
         state = const AuthState();
       }
       _localLogout = null;
@@ -335,6 +348,7 @@ class AuthController extends Notifier<AuthState> {
   void _publishSession(AuthSession session) {
     _countdownTimer?.cancel();
     ref.read(activeSessionOwnerProvider.notifier).state = session.user.id;
+    ref.read(sessionProvider.notifier).state = session;
     state = state.copyWith(
       isLoading: false,
       session: session,
@@ -368,13 +382,13 @@ class AuthController extends Notifier<AuthState> {
         epoch != _sessionEpoch) {
       throw const FormatException('The account session has changed.');
     }
-    state = state.copyWith(
-      session: AuthSession(
-        accessToken: tokens.accessToken,
-        refreshToken: tokens.refreshToken,
-        user: user,
-      ),
+    final updatedSession = AuthSession(
+      accessToken: tokens.accessToken,
+      refreshToken: tokens.refreshToken,
+      user: user,
     );
+    ref.read(sessionProvider.notifier).state = updatedSession;
+    state = state.copyWith(session: updatedSession);
   }
 
   void _startResendCountdown(int initialSeconds) {

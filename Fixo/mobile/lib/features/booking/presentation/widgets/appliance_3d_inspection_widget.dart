@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../../core/motion/fixo_visibility_throttler.dart';
 import '../../../../core/theme/fixo_colors.dart';
 import '../../../../core/theme/fixo_spacing.dart';
 import '../../../../core/theme/fixo_typography.dart';
@@ -293,19 +294,22 @@ class _Appliance3DInspectionWidgetState extends State<Appliance3DInspectionWidge
               });
             },
             onHorizontalDragEnd: (_) => setState(() => _tiltAngle = 0),
-            child: Container(
-              height: 180,
-              margin: const EdgeInsets.symmetric(horizontal: 10),
-              decoration: BoxDecoration(
-                color: isDark ? const Color(0xFF0F1B17) : const Color(0xFFF9F8F5),
-                borderRadius: BorderRadius.circular(14),
-                border: Border.all(
-                  color: isDark
-                      ? Colors.white.withValues(alpha: 0.05)
-                      : Colors.black.withValues(alpha: 0.04),
+            child: FixoVisibilityThrottler(
+              controller: _pulseController,
+              repeatReverse: true,
+              child: Container(
+                height: 180,
+                margin: const EdgeInsets.symmetric(horizontal: 10),
+                decoration: BoxDecoration(
+                  color: isDark ? const Color(0xFF0F1B17) : const Color(0xFFF9F8F5),
+                  borderRadius: BorderRadius.circular(14),
+                  border: Border.all(
+                    color: isDark
+                        ? Colors.white.withValues(alpha: 0.05)
+                        : Colors.black.withValues(alpha: 0.04),
+                  ),
                 ),
-              ),
-              child: Stack(
+                child: Stack(
                 children: [
                   // 3D Appliance Vector Graphic
                   Positioned.fill(
@@ -406,6 +410,7 @@ class _Appliance3DInspectionWidgetState extends State<Appliance3DInspectionWidge
                   }),
                 ],
               ),
+            ),
             ),
           ),
 

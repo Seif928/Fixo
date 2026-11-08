@@ -35,138 +35,138 @@ export async function seedCatalog(
   return await prisma.$transaction(
     async (tx) => {
       // 1. Seed Coverage Zones (stable unique key: slug)
+      const existingZonesList = await tx.coverageZone.findMany({
+        select: { id: true, slug: true },
+      });
+      const existingZoneSlugs = new Set(existingZonesList.map((z) => z.slug));
       let zonesCreated = 0;
       let zonesPreserved = 0;
 
+      const zonesToCreate = [];
       for (const zone of EGYPT_COVERAGE_ZONES) {
-        const existing = await tx.coverageZone.findUnique({
-          where: { slug: zone.slug },
-          select: { id: true },
-        });
-
-        if (!existing) {
-          await tx.coverageZone.create({
-            data: {
-              id: zone.id,
-              slug: zone.slug,
-              nameEn: zone.nameEn,
-              nameAr: zone.nameAr,
-              governorate: zone.governorate,
-              isActive: zone.isActive,
-            },
+        if (!existingZoneSlugs.has(zone.slug)) {
+          zonesToCreate.push({
+            id: zone.id,
+            slug: zone.slug,
+            nameEn: zone.nameEn,
+            nameAr: zone.nameAr,
+            governorate: zone.governorate,
+            isActive: zone.isActive,
           });
           zonesCreated++;
         } else {
           zonesPreserved++;
         }
       }
+      if (zonesToCreate.length > 0) {
+        await tx.coverageZone.createMany({ data: zonesToCreate });
+      }
 
       // 2. Seed Service Categories (stable unique key: slug)
+      const existingCatsList = await tx.serviceCategory.findMany({
+        select: { id: true, slug: true },
+      });
+      const categoryIdBySlug = new Map<string, string>(
+        existingCatsList.map((c) => [c.slug, c.id]),
+      );
       let categoriesCreated = 0;
       let categoriesPreserved = 0;
 
+      const catsToCreate = [];
       for (const category of EGYPT_SERVICE_CATEGORIES) {
-        const existing = await tx.serviceCategory.findUnique({
-          where: { slug: category.slug },
-          select: { id: true },
-        });
-
-        if (!existing) {
-          await tx.serviceCategory.create({
-            data: {
-              id: category.id,
-              slug: category.slug,
-              nameEn: category.nameEn,
-              nameAr: category.nameAr,
-              subtitleEn: category.subtitleEn,
-              subtitleAr: category.subtitleAr,
-              iconName: category.iconName,
-              startingPriceEgp: category.startingPriceEgp,
-              sortOrder: category.sortOrder,
-              isActive: category.isActive,
-            },
+        if (!categoryIdBySlug.has(category.slug)) {
+          catsToCreate.push({
+            id: category.id,
+            slug: category.slug,
+            nameEn: category.nameEn,
+            nameAr: category.nameAr,
+            subtitleEn: category.subtitleEn,
+            subtitleAr: category.subtitleAr,
+            iconName: category.iconName,
+            startingPriceEgp: category.startingPriceEgp,
+            sortOrder: category.sortOrder,
+            isActive: category.isActive,
           });
+          categoryIdBySlug.set(category.slug, category.id);
           categoriesCreated++;
         } else {
           categoriesPreserved++;
         }
       }
+      if (catsToCreate.length > 0) {
+        await tx.serviceCategory.createMany({ data: catsToCreate });
+      }
 
       // 2b. Seed Service Sub-Skills (if tx.serviceSubSkill is available)
       if ((tx as any).serviceSubSkill) {
+        const existingSubsList = await tx.serviceSubSkill.findMany({
+          select: { slug: true },
+        });
+        const existingSubSlugs = new Set(existingSubsList.map((s) => s.slug));
+        const subsToCreate = [];
         for (const subSkill of EGYPT_SERVICE_SUB_SKILLS) {
-          const cat = await tx.serviceCategory.findUnique({
-            where: { slug: subSkill.categorySlug },
-            select: { id: true },
-          });
-          if (cat) {
-            const existingSub = await tx.serviceSubSkill.findUnique({
-              where: { slug: subSkill.slug },
-              select: { id: true },
+          const catId = categoryIdBySlug.get(subSkill.categorySlug);
+          if (catId && !existingSubSlugs.has(subSkill.slug)) {
+            subsToCreate.push({
+              id: subSkill.id,
+              categoryId: catId,
+              slug: subSkill.slug,
+              nameEn: subSkill.nameEn,
+              nameAr: subSkill.nameAr,
             });
-            if (!existingSub) {
-              await tx.serviceSubSkill.create({
-                data: {
-                  id: subSkill.id,
-                  categoryId: cat.id,
-                  slug: subSkill.slug,
-                  nameEn: subSkill.nameEn,
-                  nameAr: subSkill.nameAr,
-                },
-              });
-            }
           }
+        }
+        if (subsToCreate.length > 0) {
+          await tx.serviceSubSkill.createMany({ data: subsToCreate });
         }
       }
 
       // 3. Seed Service Offerings (stable unique key: slug)
+      const existingOfferingsList = await tx.serviceOffering.findMany({
+        select: { id: true, slug: true },
+      });
+      const existingOfferingSlugs = new Set(
+        existingOfferingsList.map((o) => o.slug),
+      );
       let offeringsCreated = 0;
       let offeringsPreserved = 0;
 
+      const offeringsToCreate = [];
       for (const offering of EGYPT_SERVICE_OFFERINGS) {
-        // Find category dynamically by categorySlug to ensure valid FK relation
-        const category = await tx.serviceCategory.findUnique({
-          where: { slug: offering.categorySlug },
-          select: { id: true },
-        });
-
-        if (!category) {
+        const catId = categoryIdBySlug.get(offering.categorySlug);
+        if (!catId) {
           throw new Error(
             `Cannot seed offering "${offering.slug}": referenced category slug "${offering.categorySlug}" does not exist in the database.`,
           );
         }
 
-        const existing = await tx.serviceOffering.findUnique({
-          where: { slug: offering.slug },
-          select: { id: true },
-        });
-
-        if (!existing) {
-          await tx.serviceOffering.create({
-            data: {
-              id: offering.id,
-              categoryId: category.id,
-              slug: offering.slug,
-              titleEn: offering.titleEn,
-              titleAr: offering.titleAr,
-              descriptionEn: offering.descriptionEn,
-              descriptionAr: offering.descriptionAr,
-              badgeEn: offering.badgeEn,
-              badgeAr: offering.badgeAr,
-              providerTagEn: offering.providerTagEn,
-              providerTagAr: offering.providerTagAr,
-              baseInspectionEgp: offering.baseInspectionEgp,
-              serviceFeeEgp: offering.serviceFeeEgp,
-              flatPriceEgp: offering.flatPriceEgp,
-              estimatedDurationMins: offering.estimatedDurationMins,
-              isSeasonalPromo: offering.isSeasonalPromo,
-              isBundle: offering.isBundle,
-            },
+        if (!existingOfferingSlugs.has(offering.slug)) {
+          offeringsToCreate.push({
+            id: offering.id,
+            categoryId: catId,
+            slug: offering.slug,
+            titleEn: offering.titleEn,
+            titleAr: offering.titleAr,
+            descriptionEn: offering.descriptionEn,
+            descriptionAr: offering.descriptionAr,
+            badgeEn: offering.badgeEn,
+            badgeAr: offering.badgeAr,
+            providerTagEn: offering.providerTagEn,
+            providerTagAr: offering.providerTagAr,
+            baseInspectionEgp: offering.baseInspectionEgp,
+            serviceFeeEgp: offering.serviceFeeEgp,
+            flatPriceEgp: offering.flatPriceEgp,
+            estimatedDurationMins: offering.estimatedDurationMins,
+            isSeasonalPromo: offering.isSeasonalPromo,
+            isBundle: offering.isBundle,
           });
           offeringsCreated++;
         } else {
           offeringsPreserved++;
         }
+      }
+      if (offeringsToCreate.length > 0) {
+        await tx.serviceOffering.createMany({ data: offeringsToCreate });
       }
 
       return {
@@ -187,7 +187,7 @@ export async function seedCatalog(
         },
       };
     },
-    { timeout: 30000, maxWait: 10000 },
+    { timeout: 120000, maxWait: 20000 },
   );
 }
 

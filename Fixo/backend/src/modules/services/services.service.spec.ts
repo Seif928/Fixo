@@ -26,13 +26,13 @@ describe('ServicesController & ProfessionalsController (Phase 2 Marketplace API)
     memoryStore.resetToSeedState();
   });
 
-  it('GET /api/v1/services/categories returns all 6 Fixo categories in EGP', async () => {
+  it('GET /api/v1/services/categories returns all 21 Fixo categories in EGP', async () => {
     const result = await servicesController.listCategories();
     expect(result.meta.currency).toBe('EGP');
     expect(result.meta.market).toBe('EG');
-    expect(result.categories).toHaveLength(6);
+    expect(result.categories).toHaveLength(21);
 
-    const names = result.categories.map((c) => c.nameEn);
+    const names = result.categories.slice(0, 6).map((c) => c.nameEn);
     expect(names).toEqual([
       'AC Maintenance',
       'Plumbing & Leaks',

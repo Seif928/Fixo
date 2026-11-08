@@ -1,14 +1,28 @@
-import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'dart:async';
 import 'dart:convert';
+import 'package:dio/dio.dart';
+import 'package:flutter/scheduler.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/location/egypt_places.dart';
 import '../../../../core/l10n/app_locale_controller.dart';
 import '../../../auth/presentation/controllers/auth_controller.dart';
 import '../../data/marketplace_repository.dart';
 import '../../domain/marketplace_models.dart';
 
+String _normalizeSearchText(String input) {
+  return input
+      .trim()
+      .toLowerCase()
+      .replaceAll(RegExp(r'[\u064B-\u065F\u0670]'), '')
+      .replaceAll(RegExp(r'[أإآ]'), 'ا')
+      .replaceAll('ة', 'ه')
+      .replaceAll('ى', 'ي');
+}
+
 class CustomerHomeState {
   const CustomerHomeState({
     this.isLoading = true,
+    this.isSearching = false,
     this.errorMessage,
     this.feed,
     this.selectedArea,
@@ -18,6 +32,7 @@ class CustomerHomeState {
   });
 
   final bool isLoading;
+  final bool isSearching;
   final String? errorMessage;
   final CustomerHomeFeed? feed;
   final SelectedServiceArea? selectedArea;
@@ -38,14 +53,14 @@ class CustomerHomeState {
 
   List<ServiceCategoryModel> get filteredCategories {
     final all = feed?.categories ?? const <ServiceCategoryModel>[];
-    final q = searchQuery.trim().toLowerCase();
+    final q = _normalizeSearchText(searchQuery);
     if (q.isEmpty) {
       return all;
     }
     return all.where((cat) {
-      final text =
-          '${cat.nameEn} ${cat.nameAr} ${cat.subtitleEn} ${cat.subtitleAr}'
-              .toLowerCase();
+      final text = _normalizeSearchText(
+        '${cat.nameEn} ${cat.nameAr} ${cat.subtitleEn} ${cat.subtitleAr} ${cat.slug}',
+      );
       return text.contains(q);
     }).toList();
   }
@@ -57,12 +72,12 @@ class CustomerHomeState {
           .where((p) => p.primaryCategorySlug == selectedCategorySlug)
           .toList();
     }
-    final q = searchQuery.trim().toLowerCase();
+    final q = _normalizeSearchText(searchQuery);
     if (q.isNotEmpty) {
       pros = pros.where((p) {
-        final text =
-            '${p.fullNameEn} ${p.fullNameAr} ${p.specialtyEn} ${p.specialtyAr} ${p.zonesLabelEn} ${p.zonesLabelAr}'
-                .toLowerCase();
+        final text = _normalizeSearchText(
+          '${p.fullNameEn} ${p.fullNameAr} ${p.specialtyEn} ${p.specialtyAr} ${p.zonesLabelEn} ${p.zonesLabelAr} ${p.primaryCategorySlug}',
+        );
         return text.contains(q);
       }).toList();
     }
@@ -76,12 +91,12 @@ class CustomerHomeState {
           .where((s) => s.categorySlug == selectedCategorySlug)
           .toList();
     }
-    final q = searchQuery.trim().toLowerCase();
+    final q = _normalizeSearchText(searchQuery);
     if (q.isNotEmpty) {
       services = services.where((s) {
-        final text =
-            '${s.titleEn} ${s.titleAr} ${s.descriptionEn} ${s.descriptionAr}'
-                .toLowerCase();
+        final text = _normalizeSearchText(
+          '${s.titleEn} ${s.titleAr} ${s.descriptionEn} ${s.descriptionAr} ${s.categorySlug} ${s.slug}',
+        );
         return text.contains(q);
       }).toList();
     }
@@ -106,6 +121,7 @@ class CustomerHomeState {
 
   CustomerHomeState copyWith({
     bool? isLoading,
+    bool? isSearching,
     String? errorMessage,
     bool clearError = false,
     CustomerHomeFeed? feed,
@@ -118,6 +134,7 @@ class CustomerHomeState {
   }) {
     return CustomerHomeState(
       isLoading: isLoading ?? this.isLoading,
+      isSearching: isSearching ?? this.isSearching,
       errorMessage: clearError ? null : (errorMessage ?? this.errorMessage),
       feed: feed ?? this.feed,
       selectedArea: clearArea ? null : (selectedArea ?? this.selectedArea),
@@ -132,8 +149,12 @@ class CustomerHomeState {
 
 class CustomerHomeController extends Notifier<CustomerHomeState> {
   int _request = 0;
+  int _searchEpoch = 0;
+  Timer? _searchDebounce;
+  CancelToken? _searchCancelToken;
   String? _userId;
   bool _disposed = false;
+
   @override
   CustomerHomeState build() {
     _disposed = false;
@@ -143,6 +164,9 @@ class CustomerHomeController extends Notifier<CustomerHomeState> {
     ref.onDispose(() {
       _disposed = true;
       _request++;
+      _searchEpoch++;
+      _searchDebounce?.cancel();
+      _searchCancelToken?.cancel('Disposed');
     });
     _request++;
     SelectedServiceArea? saved;
@@ -182,8 +206,89 @@ class CustomerHomeController extends Notifier<CustomerHomeState> {
     }
   }
 
+  void _scheduleDebounceFrames() {
+    if (_disposed || !(_searchDebounce?.isActive ?? false)) return;
+    SchedulerBinding.instance.scheduleFrameCallback((_) {
+      if (!_disposed && (_searchDebounce?.isActive ?? false)) {
+        _scheduleDebounceFrames();
+      }
+    });
+  }
+
+  /// Waits 300ms after the user finishes typing, cancels any previous in-flight
+  /// search token (`CancelToken`), and updates/fetches matching services.
   void updateSearchQuery(String value) {
-    state = state.copyWith(searchQuery: value);
+    _searchDebounce?.cancel();
+    _searchCancelToken?.cancel('Superseded by new search input');
+    final epoch = ++_searchEpoch;
+
+    if (value.trim().isEmpty) {
+      state = state.copyWith(searchQuery: '', isSearching: false);
+      return;
+    }
+
+    state = state.copyWith(isSearching: true);
+    _searchDebounce = Timer(const Duration(milliseconds: 300), () {
+      if (_disposed || epoch != _searchEpoch) return;
+      state = state.copyWith(searchQuery: value, isSearching: true);
+      final cancelToken = CancelToken();
+      _searchCancelToken = cancelToken;
+      unawaited(_executeDebouncedSearch(value.trim(), epoch, cancelToken));
+    });
+    _scheduleDebounceFrames();
+  }
+
+  Future<void> _executeDebouncedSearch(
+    String query,
+    int epoch,
+    CancelToken cancelToken,
+  ) async {
+    try {
+      final repository = ref.read(marketplaceRepositoryProvider);
+      final paginated = repository is DioMarketplaceRepository
+          ? await repository.getPaginatedServices(
+              page: 1,
+              limit: 50,
+              search: query,
+              categoryId: state.selectedCategorySlug,
+              cancelToken: cancelToken,
+            )
+          : await repository.getPaginatedServices(
+              page: 1,
+              limit: 50,
+              search: query,
+              categoryId: state.selectedCategorySlug,
+            );
+      if (_disposed || epoch != _searchEpoch || cancelToken.isCancelled) return;
+      final currentFeed = state.feed;
+      if (currentFeed != null && paginated.items.isNotEmpty) {
+        final existingIds = currentFeed.services.map((s) => s.id).toSet();
+        final newServices = paginated.items
+            .where((s) => !existingIds.contains(s.id))
+            .toList();
+        if (newServices.isNotEmpty) {
+          state = state.copyWith(
+            isSearching: false,
+            feed: CustomerHomeFeed(
+              zones: currentFeed.zones,
+              categories: currentFeed.categories,
+              services: [...currentFeed.services, ...newServices],
+              professionals: currentFeed.professionals,
+              storageMode: currentFeed.storageMode,
+              databaseConnected: currentFeed.databaseConnected,
+            ),
+          );
+          return;
+        }
+      }
+      if (!_disposed && epoch == _searchEpoch) {
+        state = state.copyWith(isSearching: false);
+      }
+    } catch (_) {
+      if (!_disposed && epoch == _searchEpoch) {
+        state = state.copyWith(isSearching: false);
+      }
+    }
   }
 
   void selectCategory(String? categorySlug) {
@@ -209,7 +314,14 @@ class CustomerHomeController extends Notifier<CustomerHomeState> {
   }
 
   void clearFilters() {
-    state = state.copyWith(searchQuery: '', clearCategory: true);
+    _searchDebounce?.cancel();
+    _searchCancelToken?.cancel('Filters cleared');
+    _searchEpoch++;
+    state = state.copyWith(
+      searchQuery: '',
+      clearCategory: true,
+      isSearching: false,
+    );
   }
 
   void setActiveBottomTab(int index) {

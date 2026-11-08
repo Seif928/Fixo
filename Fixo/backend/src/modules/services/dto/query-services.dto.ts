@@ -77,7 +77,7 @@ export class QueryServicesDto {
   @Type(() => Number)
   @IsInt()
   @Min(1)
-  @Max(50)
+  @Max(250)
   limit?: number = 20;
 }
 
@@ -119,7 +119,7 @@ export class QueryProfessionalsDto {
   @Type(() => Number)
   @IsInt()
   @Min(1)
-  @Max(50)
+  @Max(250)
   limit?: number = 20;
 }
 

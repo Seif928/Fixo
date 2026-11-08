@@ -4,12 +4,15 @@ import 'fixo_colors.dart';
 /// 8pt baseline spacing, border-radius, and ambient botanical shadow tokens.
 abstract final class FixoSpacing {
   // Spacing Scale
+  static const double xxs = 2.0; // 0.125rem (hairline / badge micro-inset)
   static const double xs = 4.0; // 0.25rem (space-xs)
   static const double sm = 8.0; // 0.5rem (space-sm)
   static const double gutterMobile = 12.0; // 0.75rem (gutter-mobile)
   static const double md = 16.0; // 1.0rem (space-md / gutter / margin)
   static const double lg = 24.0; // 1.5rem (space-lg)
+  static const double lgPlus = 32.0; // 2.0rem (space-lg-plus)
   static const double xl = 40.0; // 2.5rem (space-xl)
+  static const double xxl = 48.0; // 3.0rem (space-xxl)
 
   // Standard Touch Targets
   static const double minTouchTarget = 48.0;

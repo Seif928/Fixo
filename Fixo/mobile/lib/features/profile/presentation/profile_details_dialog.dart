@@ -1,9 +1,9 @@
-import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../../../core/network/dio_client.dart';
 import '../../auth/domain/auth_models.dart';
 import '../../auth/presentation/controllers/auth_controller.dart';
+import '../data/profile_repository.dart';
+import 'controllers/profile_controller.dart';
 
 class ProfileDetailsDialog extends ConsumerStatefulWidget {
   const ProfileDetailsDialog({
@@ -52,55 +52,44 @@ class _ProfileDetailsDialogState extends ConsumerState<ProfileDetailsDialog> {
       _error = null;
     });
     try {
-      final dio = ref.read(dioClientProvider);
-      final response = await dio.patch<Map<String, dynamic>>(
-        widget.isPhone ? '/auth/phone-alias' : '/users/me/profile',
-        data: widget.isPhone
-            ? {
-                'phone': EgyptPhoneValidator.tryNormalize(_value.text)!,
-                'password': _password.text,
-              }
-            : {'fullName': _value.text.trim()},
-      );
+      final controller = ref.read(profileControllerProvider.notifier);
+      if (widget.isPhone) {
+        final phone = EgyptPhoneValidator.tryNormalize(_value.text)!;
+        await controller.updatePhone(
+          phone: phone,
+          password: _password.text,
+        );
+      } else {
+        await controller.updateDisplayName(_value.text.trim());
+      }
       if (!mounted ||
           ref.read(authControllerProvider).session?.user.id != _owner) {
         return;
       }
-      if (widget.isPhone) {
-        final session = AuthSession.fromJson(response.data!);
-        if (session.user.id != _owner) {
-          throw const FormatException('Account changed.');
-        }
-        await ref
-            .read(authControllerProvider.notifier)
-            .acceptVerifiedSession(session);
-      } else {
-        final user = AuthUser.fromJson(response.data!);
-        if (user.id != _owner) throw const FormatException('Account changed.');
-        await ref
-            .read(authControllerProvider.notifier)
-            .acceptUpdatedProfile(user);
-      }
-      if (mounted &&
-          ref.read(authControllerProvider).session?.user.id == _owner) {
-        Navigator.pop(context, true);
-      }
-    } catch (error) {
+      Navigator.pop(context, true);
+    } on ProfileApiException catch (error) {
       if (mounted) {
-        setState(
-          () => _error =
-              error is DioException && error.response?.statusCode == 401
+        setState(() {
+          _error = error.isUnauthorized
               ? (widget.isArabic
-                    ? 'تعذر تأكيد كلمة المرور. راجع كلمة مرورك الحالية.'
-                    : 'Password confirmation failed. Check your current password.')
-              : error is DioException && error.response?.statusCode == 409
+                  ? 'تعذر تأكيد كلمة المرور. راجع كلمة مرورك الحالية.'
+                  : 'Password confirmation failed. Check your current password.')
+              : error.isConflict
               ? (widget.isArabic
-                    ? 'لا يمكن استخدام الرقم ده للحساب. راجع الرقم أو حاول تاني.'
-                    : 'This phone cannot be used for this account. Check it or retry.')
+                  ? 'لا يمكن استخدام الرقم ده للحساب. راجع الرقم أو حاول تاني.'
+                  : 'This phone cannot be used for this account. Check it or retry.')
               : (widget.isArabic
-                    ? 'تعذر تأكيد حفظ التغيير. حاول تاني.'
-                    : 'Could not confirm this change. Please retry.'),
-        );
+                  ? 'تعذر تأكيد حفظ التغيير. حاول تاني.'
+                  : 'Could not confirm this change. Please retry.');
+        });
+      }
+    } catch (_) {
+      if (mounted) {
+        setState(() {
+          _error = widget.isArabic
+              ? 'تعذر تأكيد حفظ التغيير. حاول تاني.'
+              : 'Could not confirm this change. Please retry.';
+        });
       }
     } finally {
       if (mounted) setState(() => _saving = false);

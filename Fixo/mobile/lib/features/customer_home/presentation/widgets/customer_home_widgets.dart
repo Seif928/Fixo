@@ -11,17 +11,50 @@ import '../../domain/marketplace_models.dart';
 IconData mapCategoryIconName(String iconName) {
   switch (iconName) {
     case 'mode_fan':
+    case 'ac_unit':
       return Icons.ac_unit_rounded;
     case 'plumbing':
       return Icons.plumbing_rounded;
     case 'bolt':
+    case 'electrical_services':
       return Icons.bolt_rounded;
     case 'cleaning_services':
       return Icons.cleaning_services_rounded;
     case 'handyman':
+    case 'carpenter':
       return Icons.handyman_rounded;
     case 'format_paint':
       return Icons.format_paint_rounded;
+    case 'local_laundry_service':
+      return Icons.local_laundry_service_rounded;
+    case 'kitchen':
+      return Icons.kitchen_rounded;
+    case 'microwave':
+      return Icons.microwave_rounded;
+    case 'water_drop':
+      return Icons.water_drop_rounded;
+    case 'local_shipping':
+      return Icons.local_shipping_rounded;
+    case 'pest_control':
+      return Icons.pest_control_rounded;
+    case 'yard':
+      return Icons.yard_rounded;
+    case 'window':
+      return Icons.window_rounded;
+    case 'hardware':
+      return Icons.hardware_rounded;
+    case 'grid_view':
+      return Icons.grid_view_rounded;
+    case 'roofing':
+      return Icons.roofing_rounded;
+    case 'lock':
+      return Icons.lock_rounded;
+    case 'router':
+      return Icons.router_rounded;
+    case 'chair':
+      return Icons.chair_rounded;
+    case 'blender':
+      return Icons.blender_rounded;
     default:
       return Icons.home_repair_service_rounded;
   }
@@ -539,6 +572,146 @@ class BundleSaveInspectionCard extends StatelessWidget {
   }
 }
 
+/// Interactive Service Offering Card for CustomerHomePage catalog & search results.
+class ServiceOfferCatalogCard extends StatelessWidget {
+  const ServiceOfferCatalogCard({
+    super.key,
+    required this.offer,
+    required this.isArabic,
+    required this.onTap,
+    this.categoryIconName,
+  });
+
+  final ServiceOfferModel offer;
+  final bool isArabic;
+  final VoidCallback onTap;
+  final String? categoryIconName;
+
+  @override
+  Widget build(BuildContext context) {
+    final palette = context.fixoPalette;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final iconData = mapCategoryIconName(categoryIconName ?? '');
+
+    return Material(
+      color: palette.cardSurface,
+      borderRadius: FixoRadius.borderRadiusMd,
+      child: InkWell(
+        key: Key('home-service-card-${offer.id}'),
+        onTap: onTap,
+        borderRadius: FixoRadius.borderRadiusMd,
+        child: Container(
+          padding: const EdgeInsets.all(FixoSpacing.md),
+          decoration: BoxDecoration(
+            borderRadius: FixoRadius.borderRadiusMd,
+            border: Border.all(
+              color: palette.subtleBorder.withValues(alpha: isDark ? 0.85 : 0.7),
+              width: 1,
+            ),
+            boxShadow: FixoShadows.level1CardResting,
+          ),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              Container(
+                width: 44,
+                height: 44,
+                decoration: BoxDecoration(
+                  color: isDark ? palette.surfaceHigh : palette.surfaceContainer,
+                  borderRadius: FixoRadius.borderRadiusSm,
+                  border: Border.all(
+                    color: palette.subtleBorder.withValues(alpha: 0.5),
+                    width: 1,
+                  ),
+                ),
+                alignment: Alignment.center,
+                child: Icon(
+                  iconData,
+                  size: 22,
+                  color: isDark ? palette.limeAccent : palette.deepForest,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      offer.localizedTitle(isArabic),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: FixoTypography.labelLg(
+                        color: palette.inkText,
+                      ).copyWith(fontWeight: FontWeight.w700),
+                    ),
+                    const SizedBox(height: 3),
+                    Text(
+                      offer.localizedDescription(isArabic),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: FixoTypography.bodySm(color: palette.mutedText),
+                    ),
+                    const SizedBox(height: 6),
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 4,
+                      crossAxisAlignment: WrapCrossAlignment.center,
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 8,
+                            vertical: 2,
+                          ),
+                          decoration: BoxDecoration(
+                            color: palette.surfaceHigh,
+                            borderRadius: FixoRadius.borderRadiusPill,
+                          ),
+                          child: Text(
+                            '${offer.flatPriceEgp} ${isArabic ? 'ج.م' : 'EGP'}',
+                            style: FixoTypography.labelMd(
+                              color: isDark
+                                  ? palette.limeAccent
+                                  : palette.deepForest,
+                              tabularFigures: true,
+                            ).copyWith(fontWeight: FontWeight.w800),
+                          ),
+                        ),
+                        Text(
+                          '• ${offer.estimatedDurationMins} ${isArabic ? 'دقيقة' : 'min'}',
+                          style: FixoTypography.bodySm(
+                            color: palette.mutedText,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 8),
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 7,
+                ),
+                decoration: BoxDecoration(
+                  color: isDark ? palette.limeAccent : palette.primaryBrand,
+                  borderRadius: FixoRadius.borderRadiusSm,
+                ),
+                child: Text(
+                  isArabic ? 'احجز' : 'Book',
+                  style: FixoTypography.labelMd(
+                    color: isDark ? FixoColors.onTertiaryFixed : Colors.white,
+                  ).copyWith(fontWeight: FontWeight.w700),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 /// Recommended Professional card (`Eng. Tarek Mansour — 250 EGP`, `Hassan El-Sayed — 350 EGP`) from Screen 03.
 class RecommendedProCard extends StatelessWidget {
   const RecommendedProCard({
@@ -872,89 +1045,187 @@ class FixoCustomerBottomNav extends StatelessWidget {
       ),
     ];
 
-    return LiquidGlassLayer(
-      key: const Key('customer-bottom-nav'),
-      borderRadius: BorderRadius.zero,
-      blurSigma: 24.0,
-      specularIntensity: 0.25,
-      borderWidth: 1.0,
-      enableInteractiveCaustics: false,
-      child: SafeArea(
-        top: false,
-        child: SizedBox(
-          height: 66,
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceAround,
-            children: List<Widget>.generate(items.length, (index) {
-              final item = items[index];
-              final isSelected = index == currentIndex;
-              final fgColor = isSelected
-                  ? (isDark ? palette.limeAccent : palette.deepForest)
-                  : palette.mutedText;
-
-              return Expanded(
-                child: Semantics(
-                  selected: isSelected,
-                  button: true,
-                  child: InkWell(
-                    key: Key(item.keyName),
-                    onTap: () => onTabSelected(index),
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        AnimatedContainer(
-                          duration: const Duration(milliseconds: 180),
-                          curve: Curves.easeOutCubic,
-                          width: isSelected ? 24 : 0,
-                          height: 3,
-                          margin: const EdgeInsets.only(bottom: 3),
-                          decoration: BoxDecoration(
-                            color: isSelected
-                                ? palette.limeAccent
-                                : Colors.transparent,
-                            borderRadius: FixoRadius.borderRadiusPill,
-                          ),
+    return SafeArea(
+      top: false,
+      minimum: const EdgeInsets.fromLTRB(
+        FixoSpacing.gutterMobile,
+        0,
+        FixoSpacing.gutterMobile,
+        FixoSpacing.sm,
+      ),
+      child: LiquidGlassLayer(
+        key: const Key('customer-bottom-nav'),
+        borderRadius: FixoRadius.borderRadiusPill,
+        blurSigma: 32.0,
+        tintOpacity: isDark ? 0.56 : 0.72,
+        specularIntensity: 0.82,
+        borderWidth: 1.5,
+        enableInteractiveCaustics: true,
+        padding: const EdgeInsets.symmetric(horizontal: FixoSpacing.xs),
+        child: Stack(
+          alignment: Alignment.topCenter,
+          children: [
+            // Apple VisionOS / iOS 27 Top Prismatic Specular Mirror Highlight Strip
+            Positioned(
+              top: 0,
+              left: 28,
+              right: 28,
+              child: IgnorePointer(
+                child: Container(
+                  height: 1.6,
+                  decoration: BoxDecoration(
+                    borderRadius: FixoRadius.borderRadiusPill,
+                    gradient: LinearGradient(
+                      colors: [
+                        Colors.white.withValues(alpha: 0.0),
+                        Colors.white.withValues(alpha: isDark ? 0.65 : 0.95),
+                        FixoColors.goldBright.withValues(
+                          alpha: isDark ? 0.55 : 0.45,
                         ),
-                        AnimatedContainer(
-                          duration: const Duration(milliseconds: 180),
-                          curve: Curves.easeOutCubic,
-                          padding: EdgeInsets.symmetric(
-                            horizontal: isSelected ? 12 : 6,
-                            vertical: 2,
-                          ),
-                          decoration: BoxDecoration(
-                            color: isSelected
-                                ? palette.primaryBrand.withValues(
-                                    alpha: isDark ? 0.55 : 0.10,
-                                  )
-                                : Colors.transparent,
-                            borderRadius: FixoRadius.borderRadiusPill,
-                          ),
-                          child: Icon(
-                            isSelected ? item.activeIcon : item.icon,
-                            size: 22,
-                            color: fgColor,
-                          ),
-                        ),
-                        const SizedBox(height: 2),
-                        Text(
-                          item.label,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: FixoTypography.labelMd(color: fgColor)
-                              .copyWith(
-                                fontWeight: isSelected
-                                    ? FontWeight.w800
-                                    : FontWeight.w600,
-                              ),
-                        ),
+                        Colors.white.withValues(alpha: isDark ? 0.65 : 0.95),
+                        Colors.white.withValues(alpha: 0.0),
                       ],
+                      stops: const [0.0, 0.25, 0.50, 0.75, 1.0],
                     ),
                   ),
                 ),
-              );
-            }),
-          ),
+              ),
+            ),
+            SizedBox(
+              height: 68,
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceAround,
+                children: List<Widget>.generate(items.length, (index) {
+                  final item = items[index];
+                  final isSelected = index == currentIndex;
+                  final fgColor = isSelected
+                      ? (isDark ? palette.limeAccent : palette.deepForest)
+                      : palette.mutedText;
+
+                  return Expanded(
+                    child: Semantics(
+                      selected: isSelected,
+                      button: true,
+                      child: InkWell(
+                        key: Key(item.keyName),
+                        borderRadius: FixoRadius.borderRadiusPill,
+                        onTap: () => onTabSelected(index),
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: FixoSpacing.xxs,
+                            vertical: FixoSpacing.xs,
+                          ),
+                          child: AnimatedContainer(
+                            duration: const Duration(milliseconds: 220),
+                            curve: Curves.easeOutCubic,
+                            decoration: BoxDecoration(
+                              borderRadius: FixoRadius.borderRadiusPill,
+                              gradient: isSelected
+                                  ? LinearGradient(
+                                      begin: Alignment.topCenter,
+                                      end: Alignment.bottomCenter,
+                                      colors: isDark
+                                          ? [
+                                              Colors.white.withValues(
+                                                alpha: 0.22,
+                                              ),
+                                              palette.primaryBrand.withValues(
+                                                alpha: 0.62,
+                                              ),
+                                              const Color(
+                                                0xFF07130F,
+                                              ).withValues(alpha: 0.75),
+                                            ]
+                                          : [
+                                              Colors.white.withValues(
+                                                alpha: 0.94,
+                                              ),
+                                              Colors.white.withValues(
+                                                alpha: 0.58,
+                                              ),
+                                              palette.primaryBrand.withValues(
+                                                alpha: 0.14,
+                                              ),
+                                            ],
+                                      stops: const [0.0, 0.48, 1.0],
+                                    )
+                                  : null,
+                              border: isSelected
+                                  ? Border.all(
+                                      color: isDark
+                                          ? Colors.white.withValues(alpha: 0.34)
+                                          : Colors.white.withValues(alpha: 0.96),
+                                      width: 1.1,
+                                    )
+                                  : null,
+                              boxShadow: isSelected
+                                  ? [
+                                      BoxShadow(
+                                        color: (isDark
+                                                ? palette.limeAccent
+                                                : palette.primaryBrand)
+                                            .withValues(
+                                              alpha: isDark ? 0.22 : 0.12,
+                                            ),
+                                        blurRadius: 14,
+                                        offset: const Offset(0, 4),
+                                      ),
+                                    ]
+                                  : null,
+                            ),
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                AnimatedContainer(
+                                  duration: const Duration(milliseconds: 200),
+                                  curve: Curves.easeOutCubic,
+                                  width: isSelected ? 22 : 0,
+                                  height: 2.5,
+                                  margin: const EdgeInsets.only(bottom: 2),
+                                  decoration: BoxDecoration(
+                                    color: isSelected
+                                        ? palette.limeAccent
+                                        : Colors.transparent,
+                                    borderRadius: FixoRadius.borderRadiusPill,
+                                    boxShadow: isSelected
+                                        ? [
+                                            BoxShadow(
+                                              color: palette.limeAccent
+                                                  .withValues(alpha: 0.65),
+                                              blurRadius: 8,
+                                            ),
+                                          ]
+                                        : null,
+                                  ),
+                                ),
+                                Icon(
+                                  isSelected ? item.activeIcon : item.icon,
+                                  size: 21,
+                                  color: fgColor,
+                                ),
+                                const SizedBox(height: FixoSpacing.xxs),
+                                Text(
+                                  item.label,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: FixoTypography.labelSm(color: fgColor)
+                                      .copyWith(
+                                        fontWeight: isSelected
+                                            ? FontWeight.w800
+                                            : FontWeight.w600,
+                                      ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  );
+                }),
+              ),
+            ),
+          ],
         ),
       ),
     );

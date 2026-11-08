@@ -8,6 +8,7 @@ import '../../../../core/theme/fixo_spacing.dart';
 import '../../../../core/theme/fixo_typography.dart';
 import '../../../../core/widgets/fixo_brand_mark.dart';
 import '../../../../core/widgets/fixo_cards.dart';
+import '../../../../core/widgets/fixo_skeleton.dart';
 import '../../data/pro_repository.dart';
 import '../../domain/pro_models.dart';
 
@@ -261,7 +262,10 @@ class _ProDashboardPageState extends ConsumerState<ProDashboardPage> {
           ],
         ),
         body: _loading
-            ? const Center(child: CircularProgressIndicator())
+            ? const FixoListSkeleton(
+                itemCount: 4,
+                showHeaderBanner: true,
+              )
             : SingleChildScrollView(
                 padding: const EdgeInsets.all(FixoSpacing.md),
                 child: Center(

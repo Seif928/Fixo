@@ -265,3 +265,66 @@ class CustomerHomeFeed {
     return null;
   }
 }
+
+class PaginatedServices {
+  const PaginatedServices({
+    required this.items,
+    required this.page,
+    required this.totalPages,
+    required this.total,
+    this.limit = 20,
+  });
+
+  final List<ServiceOfferModel> items;
+  final int page;
+  final int totalPages;
+  final int total;
+  final int limit;
+
+  factory PaginatedServices.fromJson(
+    Map<String, dynamic> json, {
+    int? expectedPage,
+  }) {
+    if (json['items'] is! List || json['meta'] is! Map) {
+      throw const FormatException('Service catalog is unavailable.');
+    }
+    final meta = json['meta'] as Map<dynamic, dynamic>;
+    final pages = meta['totalPages'];
+    final currentPage = (meta['page'] as num?)?.toInt() ?? 1;
+    if (pages is! int ||
+        pages < 1 ||
+        (expectedPage != null && currentPage != expectedPage)) {
+      throw const FormatException('Service catalog pagination is invalid.');
+    }
+    final totalItems = (meta['total'] as num?)?.toInt() ?? (pages * 20);
+    final pageLimit = (meta['limit'] as num?)?.toInt() ?? 20;
+
+    final rawList = json['items'] as List<dynamic>;
+    final parsedItems = rawList.map((value) {
+      final itemMap = Map<String, dynamic>.from(value as Map);
+      // Enforce price integrity: prices must be finite, non-negative, and integer EGP
+      for (final field in [
+        'baseInspectionEgp',
+        'serviceFeeEgp',
+        'flatPriceEgp',
+      ]) {
+        final val = itemMap[field];
+        if (val is! num || !val.isFinite || val < 0 || val % 1 != 0) {
+          throw const FormatException('Service price is unavailable.');
+        }
+      }
+      if (itemMap['id'] is! String || (itemMap['id'] as String).isEmpty) {
+        throw const FormatException('Service identity is unavailable.');
+      }
+      return ServiceOfferModel.fromJson(itemMap);
+    }).toList();
+
+    return PaginatedServices(
+      items: parsedItems,
+      page: currentPage,
+      totalPages: pages,
+      total: totalItems,
+      limit: pageLimit,
+    );
+  }
+}

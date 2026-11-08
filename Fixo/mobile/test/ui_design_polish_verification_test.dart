@@ -163,6 +163,19 @@ class _FakeMarketplaceRepository implements MarketplaceRepository {
 
   @override
   Future<ServiceOfferModel> fetchServiceById(String id) async => sampleOffering;
+
+  @override
+  Future<PaginatedServices> getPaginatedServices({
+    int page = 1,
+    int limit = 20,
+    String? search,
+    String? categoryId,
+  }) async => PaginatedServices(
+    items: [sampleOffering],
+    page: page,
+    totalPages: 1,
+    total: 1,
+  );
 }
 
 class _FakeBookingRepository implements BookingRepository {

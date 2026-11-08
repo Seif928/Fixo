@@ -1,5 +1,3 @@
-import 'package:flutter/material.dart';
-
 enum ComplaintCategory {
   serviceQuality('SERVICE_QUALITY'),
   behavior('BEHAVIOR'),
@@ -31,17 +29,6 @@ enum ComplaintCategory {
       ComplaintCategory.propertyDamage =>
         isArabic ? 'تلفيات أو أضرار' : 'Property Damage',
       ComplaintCategory.other => isArabic ? 'أخرى' : 'Other',
-    };
-  }
-
-  IconData get icon {
-    return switch (this) {
-      ComplaintCategory.serviceQuality => Icons.handyman_outlined,
-      ComplaintCategory.behavior => Icons.person_off_outlined,
-      ComplaintCategory.delay => Icons.schedule_outlined,
-      ComplaintCategory.overcharging => Icons.price_change_outlined,
-      ComplaintCategory.propertyDamage => Icons.home_repair_service_outlined,
-      ComplaintCategory.other => Icons.help_outline_rounded,
     };
   }
 }

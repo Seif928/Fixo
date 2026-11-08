@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../motion/fixo_visibility_throttler.dart';
 import '../theme/fixo_colors.dart';
 import '../theme/fixo_spacing.dart';
 import '../theme/fixo_typography.dart';
@@ -62,10 +63,12 @@ class _FixoHolographicProBadgeState extends State<FixoHolographicProBadge>
       maxTilt: 0.12,
       glareOpacity: 0.35,
       borderRadius: BorderRadius.circular(FixoRadius.pill),
-      child: AnimatedBuilder(
-        animation: _shimmerController,
-        builder: (context, _) {
-          final shimmer = _shimmerController.value;
+      child: FixoVisibilityThrottler(
+        controller: _shimmerController,
+        child: AnimatedBuilder(
+          animation: _shimmerController,
+          builder: (context, _) {
+            final shimmer = _shimmerController.value;
 
           return Container(
             padding: EdgeInsets.symmetric(
@@ -140,8 +143,9 @@ class _FixoHolographicProBadgeState extends State<FixoHolographicProBadge>
                 ),
               ],
             ),
-          );
-        },
+            );
+          },
+        ),
       ),
     );
   }

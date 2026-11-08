@@ -1,5 +1,6 @@
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
+import '../../../../core/motion/fixo_visibility_throttler.dart';
 import '../../../../core/theme/fixo_colors.dart';
 import '../../../../core/theme/fixo_spacing.dart';
 import '../../../../core/theme/fixo_typography.dart';
@@ -67,9 +68,11 @@ class _Holographic3DReceiptCardState extends State<Holographic3DReceiptCard>
           maxTilt: 0.08,
           glareOpacity: 0.25,
           borderRadius: BorderRadius.circular(20),
-          child: AnimatedBuilder(
-            animation: _foilController,
-            builder: (context, _) {
+          child: FixoVisibilityThrottler(
+            controller: _foilController,
+            child: AnimatedBuilder(
+              animation: _foilController,
+              builder: (context, _) {
               final shimmer = _foilController.value;
 
               return Container(
@@ -274,7 +277,8 @@ class _Holographic3DReceiptCardState extends State<Holographic3DReceiptCard>
                   ],
                 ),
               );
-            },
+              },
+            ),
           ),
         ),
       ),

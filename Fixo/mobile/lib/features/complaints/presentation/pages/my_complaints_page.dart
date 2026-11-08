@@ -7,6 +7,7 @@ import '../../../../core/theme/fixo_spacing.dart';
 import '../../../../core/widgets/fixo_cards.dart';
 import '../../data/complaints_models.dart';
 import '../../data/complaints_repository.dart';
+import '../extensions/complaint_ui_extensions.dart';
 
 class MyComplaintsPage extends ConsumerStatefulWidget {
   const MyComplaintsPage({super.key});

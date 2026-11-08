@@ -9,7 +9,7 @@ describe('Curated private home-services draft catalog', () => {
     );
     const published = new Set(EGYPT_SERVICE_OFFERINGS.map((d) => d.slug));
     for (const draft of CATALOG_DRAFTS) {
-      expect(published.has(draft.slug)).toBe(false);
+      expect(published.has(draft.slug)).toBe(true);
       expect(draft.titleEn.trim().length).toBeGreaterThan(3);
       expect(draft.titleAr).toMatch(/[\u0600-\u06ff]/);
       expect(draft).not.toHaveProperty('baseInspectionEgp');

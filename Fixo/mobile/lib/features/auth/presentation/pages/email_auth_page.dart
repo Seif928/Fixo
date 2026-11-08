@@ -355,6 +355,7 @@ class _EmailAuthPageState extends ConsumerState<EmailAuthPage> {
                             ),
                           ] else ...[
                             OutlinedButton.icon(
+                              key: const Key('email-use-google'),
                               onPressed: _busy
                                   ? null
                                   : () => _run(() async {
@@ -364,14 +365,33 @@ class _EmailAuthPageState extends ConsumerState<EmailAuthPage> {
                                               .signInWithGoogle(),
                                         );
                                       }),
-                              icon: const Icon(Icons.login),
+                              icon: const Icon(Icons.g_mobiledata_rounded, size: 24),
                               label: Text(
                                 ar
                                     ? 'المتابعة بحساب Google'
                                     : 'Continue with Google',
                               ),
                             ),
-                            const SizedBox(height: 16),
+                            const SizedBox(height: FixoSpacing.sm),
+                            OutlinedButton.icon(
+                              key: const Key('email-use-apple'),
+                              onPressed: _busy
+                                  ? null
+                                  : () => _run(() async {
+                                        await _accept(
+                                          await ref
+                                              .read(emailAccessProvider)
+                                              .signInWithApple(),
+                                        );
+                                      }),
+                              icon: const Icon(Icons.apple_rounded, size: 22),
+                              label: Text(
+                                ar
+                                    ? 'المتابعة بحساب Apple'
+                                    : 'Continue with Apple',
+                              ),
+                            ),
+                            const SizedBox(height: FixoSpacing.md),
                             TextFormField(
                               key: const Key('email-sign-in-address'),
                               controller: _email,

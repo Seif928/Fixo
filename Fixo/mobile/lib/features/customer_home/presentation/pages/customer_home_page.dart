@@ -12,6 +12,7 @@ import '../../../../core/theme/fixo_typography.dart';
 import '../../../../core/widgets/fixo_brand_mark.dart';
 import '../../../../core/widgets/fixo_buttons.dart';
 import '../../../../core/widgets/fixo_cards.dart';
+import '../../../../core/widgets/fixo_skeleton.dart';
 import '../../../auth/presentation/controllers/auth_controller.dart';
 import '../../../profile/presentation/profile_avatar.dart';
 import '../../../chat/presentation/notification_sheet.dart';
@@ -33,6 +34,8 @@ class CustomerHomePage extends ConsumerStatefulWidget {
 
 class _CustomerHomePageState extends ConsumerState<CustomerHomePage> {
   late final TextEditingController _searchController;
+  bool _showAllCategories = false;
+  bool _showAllServices = false;
 
   Future<void> _browseServices() async {
     final owner = ref.read(authControllerProvider).session?.user.id;
@@ -214,13 +217,10 @@ class _CustomerHomePageState extends ConsumerState<CustomerHomePage> {
     final isArabic = locale.languageCode == 'ar';
     final palette = context.fixoPalette;
 
-    if (_searchController.text != homeState.searchQuery) {
-      _searchController.value = TextEditingValue(
-        text: homeState.searchQuery,
-        selection: TextSelection.collapsed(
-          offset: homeState.searchQuery.length,
-        ),
-      );
+    if (homeState.searchQuery.isEmpty &&
+        !homeState.isSearching &&
+        _searchController.text.isNotEmpty) {
+      _searchController.clear();
     }
 
     return Scaffold(
@@ -568,12 +568,40 @@ class _CustomerHomePageState extends ConsumerState<CustomerHomePage> {
                         horizontal: 10,
                         vertical: 12,
                       ),
-                      hintText: isArabic
+                       hintText: isArabic
                           ? 'ابحث عن كهرباء، سباكة، صيانة تكييف...'
                           : 'Search electrical, plumbing, AC repair...',
                     ),
                   ),
                 ),
+                if (homeState.isSearching)
+                  Padding(
+                    padding: const EdgeInsetsDirectional.only(end: 6),
+                    child: SizedBox(
+                      width: 16,
+                      height: 16,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: palette.deepForest,
+                      ),
+                    ),
+                  )
+                else if (homeState.searchQuery.isNotEmpty ||
+                    _searchController.text.isNotEmpty)
+                  IconButton(
+                    key: const Key('btn-clear-search-input'),
+                    visualDensity: VisualDensity.compact,
+                    tooltip: isArabic ? 'مسح البحث' : 'Clear search',
+                    onPressed: () {
+                      _searchController.clear();
+                      homeNotifier.clearFilters();
+                    },
+                    icon: Icon(
+                      Icons.close_rounded,
+                      size: 18,
+                      color: palette.mutedText,
+                    ),
+                  ),
                 Padding(
                   padding: const EdgeInsetsDirectional.only(end: 8),
                   child: Material(
@@ -607,23 +635,9 @@ class _CustomerHomePageState extends ConsumerState<CustomerHomePage> {
   }
 
   Widget _buildLoadingState(FixoPaletteExtension palette, bool isArabic) {
-    return Padding(
+    return KeyedSubtree(
       key: const Key('customer-home-loading'),
-      padding: const EdgeInsets.all(FixoSpacing.lg),
-      child: Column(
-        children: [
-          const SizedBox(height: 24),
-          CircularProgressIndicator(color: palette.primaryBrand),
-          const SizedBox(height: 16),
-          Text(
-            isArabic
-                ? 'جارٍ تحميل الخدمات المتاحة...'
-                : 'Loading available services...',
-            textAlign: TextAlign.center,
-            style: FixoTypography.bodyMd(color: palette.mutedText),
-          ),
-        ],
-      ),
+      child: FixoMarketplaceSkeleton(isArabic: isArabic),
     );
   }
 
@@ -738,6 +752,21 @@ class _CustomerHomePageState extends ConsumerState<CustomerHomePage> {
         : null;
     final categories = homeState.filteredCategories;
     final professionals = homeState.filteredProfessionals;
+    final hasSearchOrCategory =
+        homeState.searchQuery.trim().isNotEmpty || selectedCategory != null;
+    final visibleCategories =
+        (_showAllCategories || homeState.searchQuery.trim().isNotEmpty)
+        ? categories
+        : categories.take(8).toList();
+    final catalogServices = homeState.filteredServices
+        .where((s) => s.id != seasonalPromo?.id && s.id != bundleOffer?.id)
+        .toList();
+    final visibleServices = _showAllServices
+        ? catalogServices
+        : catalogServices.take(hasSearchOrCategory ? 12 : 6).toList();
+    final categoryIconBySlug = <String, String>{
+      for (final c in feed.categories) c.slug: c.iconName,
+    };
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -842,7 +871,7 @@ class _CustomerHomePageState extends ConsumerState<CustomerHomePage> {
                 return Wrap(
                   spacing: spacing,
                   runSpacing: spacing,
-                  children: categories.map((category) {
+                  children: visibleCategories.map((category) {
                     return SizedBox(
                       width: itemWidth,
                       child: ServiceCategoryGridTile(
@@ -858,6 +887,160 @@ class _CustomerHomePageState extends ConsumerState<CustomerHomePage> {
               },
             ),
           ),
+          if (categories.length > 8 &&
+              homeState.searchQuery.trim().isEmpty) ...[
+            const SizedBox(height: 10),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: FixoSpacing.md),
+              child: Align(
+                alignment: Alignment.center,
+                child: TextButton.icon(
+                  key: const Key('btn-toggle-all-categories'),
+                  onPressed: () => setState(() {
+                    _showAllCategories = !_showAllCategories;
+                  }),
+                  icon: Icon(
+                    _showAllCategories
+                        ? Icons.expand_less_rounded
+                        : Icons.grid_view_rounded,
+                    size: 18,
+                    color: FixoColors.secondary,
+                  ),
+                  label: Text(
+                    _showAllCategories
+                        ? (isArabic ? 'عرض أقسام أقل' : 'Show Less Categories')
+                        : (isArabic
+                              ? 'عرض كل الأقسام (${categories.length})'
+                              : 'Show All Categories (${categories.length})'),
+                    style: FixoTypography.labelMd(
+                      color: FixoColors.secondary,
+                    ).copyWith(fontWeight: FontWeight.w700),
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ],
+
+        // 2B. Available Marketplace Services (All 146 Services from Admin Catalog)
+        if (catalogServices.isNotEmpty) ...[
+          Padding(
+            padding: const EdgeInsets.fromLTRB(
+              FixoSpacing.md,
+              20,
+              FixoSpacing.md,
+              10,
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Flexible(
+                  child: Wrap(
+                    crossAxisAlignment: WrapCrossAlignment.center,
+                    spacing: 6,
+                    runSpacing: 4,
+                    children: [
+                      Text(
+                        isArabic ? 'الخدمات المتاحة' : 'Available Services',
+                        style: FixoTypography.headlineSm(
+                          color: palette.inkText,
+                        ).copyWith(fontWeight: FontWeight.w700),
+                      ),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 6,
+                          vertical: 2,
+                        ),
+                        decoration: BoxDecoration(
+                          color: palette.surfaceHigh,
+                          borderRadius: BorderRadius.circular(4),
+                        ),
+                        child: Text(
+                          isArabic
+                              ? '${catalogServices.length} خدمة'
+                              : '${catalogServices.length} Services',
+                          style: FixoTypography.labelMd(
+                            color: palette.mutedText,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                TextButton(
+                  key: const Key('btn-home-browse-all-services'),
+                  onPressed: _browseServices,
+                  child: Text(
+                    isArabic ? 'تصفح الكل' : 'Browse All',
+                    style: FixoTypography.labelMd(
+                      color: FixoColors.secondary,
+                    ).copyWith(fontWeight: FontWeight.w700),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: FixoSpacing.md),
+            child: LayoutBuilder(
+              builder: (context, constraints) {
+                final columns = constraints.maxWidth >= 850 ? 2 : 1;
+                final width =
+                    (constraints.maxWidth - 12 * (columns - 1)) / columns;
+                return Wrap(
+                  spacing: 12,
+                  runSpacing: 10,
+                  children: [
+                    for (final service in visibleServices)
+                      SizedBox(
+                        width: width,
+                        child: ServiceOfferCatalogCard(
+                          offer: service,
+                          isArabic: isArabic,
+                          categoryIconName:
+                              categoryIconBySlug[service.categorySlug],
+                          onTap: () =>
+                              _navigateToCreateBooking(offering: service),
+                        ),
+                      ),
+                  ],
+                );
+              },
+            ),
+          ),
+          if (catalogServices.length > visibleServices.length ||
+              _showAllServices) ...[
+            const SizedBox(height: 10),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: FixoSpacing.md),
+              child: Align(
+                alignment: Alignment.center,
+                child: TextButton.icon(
+                  key: const Key('btn-toggle-all-services'),
+                  onPressed: () => setState(() {
+                    _showAllServices = !_showAllServices;
+                  }),
+                  icon: Icon(
+                    _showAllServices
+                        ? Icons.expand_less_rounded
+                        : Icons.expand_more_rounded,
+                    size: 18,
+                    color: FixoColors.secondary,
+                  ),
+                  label: Text(
+                    _showAllServices
+                        ? (isArabic ? 'عرض خدمات أقل' : 'Show Less Services')
+                        : (isArabic
+                              ? 'عرض كل الخدمات (${catalogServices.length})'
+                              : 'Show All Services (${catalogServices.length})'),
+                    style: FixoTypography.labelMd(
+                      color: FixoColors.secondary,
+                    ).copyWith(fontWeight: FontWeight.w700),
+                  ),
+                ),
+              ),
+            ),
+          ],
         ],
 
         // 3. Bundle Save Card (Home Safety Inspection — 450 EGP)

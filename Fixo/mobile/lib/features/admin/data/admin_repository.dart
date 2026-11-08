@@ -1,7 +1,7 @@
 import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/network/dio_client.dart';
-import '../../auth/presentation/controllers/auth_controller.dart';
+import '../../../core/session/session_providers.dart';
 import 'admin_catalog_models.dart';
 import 'admin_professional_models.dart';
 import 'admin_booking_models.dart';
@@ -368,9 +368,7 @@ class AdminRepository {
 final adminRepositoryProvider = Provider<AdminRepository>(
   (ref) => AdminRepository(
     ref.watch(dioClientProvider),
-    account: ref.watch(
-      authControllerProvider.select((s) => s.session?.user.id),
-    ),
+    account: ref.watch(currentUserIdProvider),
   ),
 );
 
@@ -386,9 +384,7 @@ final adminProfessionalsRevisionProvider = StateProvider.autoDispose<int>(
 final adminAccessProvider = FutureProvider.autoDispose<AdminAccess>((
   ref,
 ) async {
-  final token = ref.watch(
-    authControllerProvider.select((s) => s.session?.accessToken),
-  );
+  final token = ref.watch(sessionTokenProvider);
   if (token == null) throw StateError('Sign in first.');
   final cancel = CancelToken();
   ref.onDispose(cancel.cancel);

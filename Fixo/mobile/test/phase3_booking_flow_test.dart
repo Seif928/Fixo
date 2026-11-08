@@ -393,6 +393,22 @@ class FakeMarketplaceRepository implements MarketplaceRepository {
   Future<ServiceOfferModel> fetchServiceById(String id) async {
     return sampleFeed().services.first;
   }
+
+  @override
+  Future<PaginatedServices> getPaginatedServices({
+    int page = 1,
+    int limit = 20,
+    String? search,
+    String? categoryId,
+  }) async {
+    final services = sampleFeed().services;
+    return PaginatedServices(
+      items: services,
+      page: page,
+      totalPages: 1,
+      total: services.length,
+    );
+  }
 }
 
 class FakeLocaleNotifier extends AppLocaleNotifier {

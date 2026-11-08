@@ -1,4 +1,3 @@
-import 'package:flutter/material.dart';
 import '../../customer_home/domain/marketplace_models.dart';
 
 /// Represents a customer's saved service delivery address in Cairo / Giza.
@@ -694,7 +693,6 @@ class TimeWindowSlot {
     required this.titleAr,
     required this.timeRangeEn,
     required this.timeRangeAr,
-    required this.icon,
   });
 
   final String key;
@@ -702,7 +700,6 @@ class TimeWindowSlot {
   final String titleAr;
   final String timeRangeEn;
   final String timeRangeAr;
-  final IconData icon;
 
   String localizedTitle(bool isArabic) => isArabic ? titleAr : titleEn;
   String localizedTimeRange(bool isArabic) =>
@@ -715,7 +712,6 @@ class TimeWindowSlot {
       titleAr: 'الفترة الصباحية',
       timeRangeEn: '09:00 AM – 12:00 PM',
       timeRangeAr: '٠٩:٠٠ ص – ١٢:٠٠ م',
-      icon: Icons.wb_twilight_rounded,
     ),
     TimeWindowSlot(
       key: 'AFTERNOON_13_16',
@@ -723,7 +719,6 @@ class TimeWindowSlot {
       titleAr: 'فترة بعد الظهر',
       timeRangeEn: '01:00 PM – 04:00 PM',
       timeRangeAr: '٠١:٠٠ م – ٠٤:٠٠ م',
-      icon: Icons.wb_sunny_rounded,
     ),
     TimeWindowSlot(
       key: 'EVENING_17_20',
@@ -731,7 +726,6 @@ class TimeWindowSlot {
       titleAr: 'الفترة المسائية',
       timeRangeEn: '05:00 PM – 08:00 PM',
       timeRangeAr: '٠٥:٠٠ م – ٠٨:٠٠ م',
-      icon: Icons.bedtime_rounded,
     ),
   ];
 }

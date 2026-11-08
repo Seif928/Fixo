@@ -11,6 +11,7 @@ import '../../../../core/theme/fixo_spacing.dart';
 import '../../../../core/theme/fixo_typography.dart';
 import '../../../../core/widgets/fixo_brand_mark.dart';
 import '../../../../core/widgets/fixo_cards.dart';
+import '../../../../core/widgets/fixo_skeleton.dart';
 import '../../../customer_home/presentation/widgets/customer_home_widgets.dart';
 import '../../data/booking_repository.dart';
 import '../../domain/booking_models.dart';
@@ -260,7 +261,10 @@ class _OrderTrackingPageState extends ConsumerState<OrderTrackingPage> {
         ),
         body: SafeArea(
           child: _loading
-              ? const Center(child: CircularProgressIndicator())
+              ? const FixoListSkeleton(
+                  itemCount: 3,
+                  showHeaderBanner: true,
+                )
               : _error != null || _tracking == null
                   ? Center(
                       child: Padding(

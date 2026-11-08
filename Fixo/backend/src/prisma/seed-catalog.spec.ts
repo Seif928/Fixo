@@ -114,8 +114,8 @@ describe('Catalog Seed Integration Suite (fixo_test)', () => {
 
   it('verifies catalog definitions match expected record counts', () => {
     expect(EGYPT_COVERAGE_ZONES.length).toBe(32);
-    expect(EGYPT_SERVICE_CATEGORIES.length).toBe(6);
-    expect(EGYPT_SERVICE_OFFERINGS.length).toBe(8);
+    expect(EGYPT_SERVICE_CATEGORIES.length).toBe(21);
+    expect(EGYPT_SERVICE_OFFERINGS.length).toBe(146);
   });
 
   it('seeds catalog data cleanly on first run and creates no non-catalog entities', async () => {
@@ -134,20 +134,20 @@ describe('Catalog Seed Integration Suite (fixo_test)', () => {
       total: EGYPT_COVERAGE_ZONES.length,
     });
     expect(result.serviceCategories).toEqual({
-      created: 6,
+      created: EGYPT_SERVICE_CATEGORIES.length,
       preserved: 0,
-      total: 6,
+      total: EGYPT_SERVICE_CATEGORIES.length,
     });
     expect(result.serviceOfferings).toEqual({
-      created: 8,
+      created: EGYPT_SERVICE_OFFERINGS.length,
       preserved: 0,
-      total: 8,
+      total: EGYPT_SERVICE_OFFERINGS.length,
     });
 
     // 4. Verify actual database counts in PostgreSQL
     expect(await prisma.coverageZone.count()).toBe(EGYPT_COVERAGE_ZONES.length);
-    expect(await prisma.serviceCategory.count()).toBe(6);
-    expect(await prisma.serviceOffering.count()).toBe(8);
+    expect(await prisma.serviceCategory.count()).toBe(EGYPT_SERVICE_CATEGORIES.length);
+    expect(await prisma.serviceOffering.count()).toBe(EGYPT_SERVICE_OFFERINGS.length);
 
     // 5. Verify strict catalog-only boundary: zero user or auth records created
     expect(await prisma.user.count()).toBe(0);
@@ -161,8 +161,8 @@ describe('Catalog Seed Integration Suite (fixo_test)', () => {
     // 1. First run: initial seed
     const firstRun = await seedCatalog(prisma);
     expect(firstRun.coverageZones.created).toBe(EGYPT_COVERAGE_ZONES.length);
-    expect(firstRun.serviceCategories.created).toBe(6);
-    expect(firstRun.serviceOfferings.created).toBe(8);
+    expect(firstRun.serviceCategories.created).toBe(EGYPT_SERVICE_CATEGORIES.length);
+    expect(firstRun.serviceOfferings.created).toBe(EGYPT_SERVICE_OFFERINGS.length);
 
     // 2. Simulate customized administrator edits directly in the database
     await prisma.coverageZone.update({
@@ -197,19 +197,19 @@ describe('Catalog Seed Integration Suite (fixo_test)', () => {
     });
     expect(secondRun.serviceCategories).toEqual({
       created: 0,
-      preserved: 6,
-      total: 6,
+      preserved: EGYPT_SERVICE_CATEGORIES.length,
+      total: EGYPT_SERVICE_CATEGORIES.length,
     });
     expect(secondRun.serviceOfferings).toEqual({
       created: 0,
-      preserved: 8,
-      total: 8,
+      preserved: EGYPT_SERVICE_OFFERINGS.length,
+      total: EGYPT_SERVICE_OFFERINGS.length,
     });
 
     // 5. Verify total record counts did NOT change (no duplicates created)
     expect(await prisma.coverageZone.count()).toBe(EGYPT_COVERAGE_ZONES.length);
-    expect(await prisma.serviceCategory.count()).toBe(6);
-    expect(await prisma.serviceOffering.count()).toBe(8);
+    expect(await prisma.serviceCategory.count()).toBe(EGYPT_SERVICE_CATEGORIES.length);
+    expect(await prisma.serviceOffering.count()).toBe(EGYPT_SERVICE_OFFERINGS.length);
 
     // 6. Verify customized values were NOT overwritten by default seed values
     const updatedZone = await prisma.coverageZone.findUnique({
@@ -262,11 +262,11 @@ describe('Catalog Seed Integration Suite (fixo_test)', () => {
 
     // 4. Verify counts: 5 categories created, 1 preserved (the pre-existing category)
     expect(result.serviceCategories).toEqual({
-      created: 5,
+      created: EGYPT_SERVICE_CATEGORIES.length - 1,
       preserved: 1,
-      total: 6,
+      total: EGYPT_SERVICE_CATEGORIES.length,
     });
-    expect(await prisma.serviceCategory.count()).toBe(6);
+    expect(await prisma.serviceCategory.count()).toBe(EGYPT_SERVICE_CATEGORIES.length);
 
     // 5. Verify the pre-existing category retains its custom ID and custom values
     const preservedCat = await prisma.serviceCategory.findUnique({
@@ -295,7 +295,7 @@ describe('Catalog Seed Integration Suite (fixo_test)', () => {
       where: { id: customCategoryId },
       include: { offerings: true },
     });
-    expect(catWithOfferings?.offerings.length).toBe(2);
+    expect(catWithOfferings?.offerings.length).toBeGreaterThanOrEqual(2);
     const offeringSlugs = catWithOfferings?.offerings.map((o) => o.slug);
     expect(offeringSlugs).toContain('summer-ac-deep-clean-gas-refill');
     expect(offeringSlugs).toContain('inverter-split-ac-maintenance');

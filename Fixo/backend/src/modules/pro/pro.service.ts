@@ -1593,6 +1593,11 @@ export class ProService {
           categoryId: profile.primaryCategoryId,
         },
         address: addressCoverageWhere(areas),
+        jobOffers: {
+          none: {
+            proProfileId: profile.id,
+          },
+        },
       },
       take: 10,
     });

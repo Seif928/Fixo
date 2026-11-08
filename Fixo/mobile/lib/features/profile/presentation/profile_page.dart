@@ -5,7 +5,9 @@ import '../../../app/router/app_routes.dart';
 import '../../../app/router/customer_tab_navigation.dart';
 
 import '../../../core/l10n/app_locale_controller.dart';
-import '../../../core/network/dio_client.dart';
+import '../domain/profile_models.dart';
+import '../data/profile_repository.dart';
+import 'controllers/profile_controller.dart';
 import '../../../core/notifications/device_push_service.dart';
 import '../../../core/theme/fixo_colors.dart';
 import '../../../core/theme/fixo_spacing.dart';
@@ -29,7 +31,7 @@ class ProfilePage extends ConsumerStatefulWidget {
 }
 
 class _ProfilePageState extends ConsumerState<ProfilePage> {
-  late Future<Map<String, dynamic>> _profile;
+  late Future<UserProfile> _profile;
   bool _saving = false;
   bool get _ar => ref.read(appLocaleProvider).languageCode == 'ar';
 
@@ -147,12 +149,8 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
     _profile = _load();
   }
 
-  Future<Map<String, dynamic>> _load() async {
-    final response = await ref
-        .read(dioClientProvider)
-        .get<Map<String, dynamic>>('/users/me');
-    final data = response.data!;
-    return Map<String, dynamic>.from((data['user'] ?? data) as Map);
+  Future<UserProfile> _load() async {
+    return ref.read(profileRepositoryProvider).getProfile();
   }
 
   Future<void> _save(Future<void> Function() action) async {
@@ -291,7 +289,7 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
             FixoSpacing.xl,
           ),
           children: [
-            FutureBuilder<Map<String, dynamic>>(
+            FutureBuilder<UserProfile>(
               future: _profile,
               builder: (context, snapshot) {
                 if (snapshot.hasError) {
@@ -733,12 +731,9 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
                                 ? null
                                 : (enabled) => _save(() async {
                                     await ref
-                                        .read(dioClientProvider)
-                                        .patch(
-                                          '/users/me/notification-preferences',
-                                          data: {
-                                            'arrivalAlertsEnabled': enabled,
-                                          },
+                                        .read(profileControllerProvider.notifier)
+                                        .updateNotificationPreferences(
+                                          arrivalAlertsEnabled: enabled,
                                         );
                                     if (mounted) {
                                       setState(() {

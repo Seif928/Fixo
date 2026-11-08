@@ -1,5 +1,6 @@
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
+import '../../../../core/motion/fixo_visibility_throttler.dart';
 import '../../../../core/theme/fixo_colors.dart';
 import '../../../../core/theme/fixo_spacing.dart';
 import '../../../../core/theme/fixo_typography.dart';
@@ -92,18 +93,21 @@ class _Isometric3DTrackingCanvasState extends State<Isometric3DTrackingCanvas>
               onHorizontalDragEnd: (_) {
                 setState(() => _viewOrbit = _viewOrbit * 0.5);
               },
-              child: AnimatedBuilder(
-                animation: _animController,
-                builder: (context, _) {
-                  return CustomPaint(
-                    size: Size.infinite,
-                    painter: _CairoIsometric3DPainter(
-                      progress: _animController.value,
-                      orbit: _viewOrbit,
-                      isDark: isDark,
-                    ),
-                  );
-                },
+              child: FixoVisibilityThrottler(
+                controller: _animController,
+                child: AnimatedBuilder(
+                  animation: _animController,
+                  builder: (context, _) {
+                    return CustomPaint(
+                      size: Size.infinite,
+                      painter: _CairoIsometric3DPainter(
+                        progress: _animController.value,
+                        orbit: _viewOrbit,
+                        isDark: isDark,
+                      ),
+                    );
+                  },
+                ),
               ),
             ),
 

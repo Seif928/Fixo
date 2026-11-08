@@ -674,11 +674,34 @@ class _PhonePasswordPageState extends ConsumerState<PhonePasswordPage> {
                                       }
                                       await _accept(value);
                                     }),
-                              icon: const Icon(Icons.login),
+                              icon: const Icon(Icons.g_mobiledata_rounded, size: 24),
                               label: Text(
                                 ar
                                     ? 'أول مرة؟ تابع بحساب Google'
                                     : 'First time? Continue with Google',
+                              ),
+                            ),
+                            const SizedBox(height: FixoSpacing.sm),
+                            OutlinedButton.icon(
+                              key: const Key('first-use-apple'),
+                              onPressed: _busy
+                                  ? null
+                                  : () => _run(() async {
+                                      final value = await ref
+                                          .read(emailAccessProvider)
+                                          .signInWithApple();
+                                      if (value == null) {
+                                        throw StateError(
+                                          'Verified Apple identity required.',
+                                        );
+                                      }
+                                      await _accept(value);
+                                    }),
+                              icon: const Icon(Icons.apple_rounded, size: 22),
+                              label: Text(
+                                ar
+                                    ? 'المتابعة بحساب Apple'
+                                    : 'Continue with Apple',
                               ),
                             ),
                           ] else ...[

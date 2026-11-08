@@ -149,6 +149,18 @@ class _PhoneAuthPageState extends ConsumerState<PhoneAuthPage> {
                           : 'Continue with email or Google',
                     ),
                   ),
+                  const SizedBox(height: FixoSpacing.sm),
+                  OutlinedButton.icon(
+                    key: const Key('auth-use-apple'),
+                    onPressed: () =>
+                        context.go('${AppRoutes.phoneAuth}?method=email'),
+                    icon: const Icon(Icons.apple_rounded, size: 22),
+                    label: Text(
+                      isArabic
+                          ? 'المتابعة بحساب Apple أو Google'
+                          : 'Continue with Apple or Google',
+                    ),
+                  ),
                   const SizedBox(height: 18),
 
                   // Editorial Brand Header

@@ -1,7 +1,10 @@
 import 'dart:async';
+import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../../../../core/network/dio_client.dart';
+import '../../../../core/theme/fixo_spacing.dart';
+import '../../../../core/widgets/fixo_skeleton.dart';
+import '../../data/marketplace_repository.dart';
 import '../../domain/marketplace_models.dart';
 
 /// Browses the live catalog independently of the Home search/category filter.
@@ -17,6 +20,7 @@ class _ServiceCatalogSheetState extends ConsumerState<ServiceCatalogSheet> {
   final _search = TextEditingController();
   final _items = <ServiceOfferModel>[];
   Timer? _debounce;
+  CancelToken? _cancelToken;
   int _epoch = 0, _page = 0, _totalPages = 1;
   bool _loading = true;
   String? _error;
@@ -28,6 +32,9 @@ class _ServiceCatalogSheetState extends ConsumerState<ServiceCatalogSheet> {
   }
 
   Future<void> _load({bool reset = false}) async {
+    _cancelToken?.cancel();
+    final cancelToken = CancelToken();
+    _cancelToken = cancelToken;
     final epoch = ++_epoch;
     final page = reset ? 1 : _page + 1;
     setState(() {
@@ -36,51 +43,27 @@ class _ServiceCatalogSheetState extends ConsumerState<ServiceCatalogSheet> {
       if (reset) _items.clear();
     });
     try {
-      final response = await ref
-          .read(dioClientProvider)
-          .get<Map<String, dynamic>>(
-            '/services',
-            queryParameters: {
-              'page': page,
-              'limit': 20,
-              if (_search.text.trim().isNotEmpty) 'search': _search.text.trim(),
-            },
-          );
-      final data = response.data;
-      if (data == null || data['items'] is! List || data['meta'] is! Map) {
-        throw const FormatException('Service catalog is unavailable.');
-      }
-      final meta = data['meta'] as Map;
-      final pages = meta['totalPages'];
-      if (pages is! int || pages < 1 || meta['page'] != page) {
-        throw const FormatException('Service catalog pagination is invalid.');
-      }
-      final items = (data['items'] as List).map((value) {
-        final json = Map<String, dynamic>.from(value as Map);
-        // Never show the older model's example pricing when a response is incomplete.
-        for (final field in [
-          'baseInspectionEgp',
-          'serviceFeeEgp',
-          'flatPriceEgp',
-        ]) {
-          if (json[field] is! num ||
-              !(json[field] as num).isFinite ||
-              (json[field] as num) < 0 ||
-              (json[field] as num) % 1 != 0) {
-            throw const FormatException('Service price is unavailable.');
-          }
-        }
-        if (json['id'] is! String || (json['id'] as String).isEmpty) {
-          throw const FormatException('Service identity is unavailable.');
-        }
-        return ServiceOfferModel.fromJson(json);
-      }).toList();
+      final repository = ref.read(marketplaceRepositoryProvider);
+      final searchVal =
+          _search.text.trim().isNotEmpty ? _search.text.trim() : null;
+      final result = repository is DioMarketplaceRepository
+          ? await repository.getPaginatedServices(
+              page: page,
+              limit: 20,
+              search: searchVal,
+              cancelToken: cancelToken,
+            )
+          : await repository.getPaginatedServices(
+              page: page,
+              limit: 20,
+              search: searchVal,
+            );
       if (!mounted || epoch != _epoch) return;
       setState(() {
         final ids = _items.map((s) => s.id).toSet();
-        _items.addAll(items.where((s) => ids.add(s.id)));
+        _items.addAll(result.items.where((s) => ids.add(s.id)));
         _page = page;
-        _totalPages = items.isEmpty ? page : pages;
+        _totalPages = result.items.isEmpty ? page : result.totalPages;
         _loading = false;
       });
     } catch (_) {
@@ -99,6 +82,7 @@ class _ServiceCatalogSheetState extends ConsumerState<ServiceCatalogSheet> {
   void dispose() {
     _epoch++;
     _debounce?.cancel();
+    _cancelToken?.cancel();
     _search.dispose();
     super.dispose();
   }
@@ -144,6 +128,7 @@ class _ServiceCatalogSheetState extends ConsumerState<ServiceCatalogSheet> {
                   ),
                   onChanged: (_) {
                     _debounce?.cancel();
+                    _cancelToken?.cancel();
                     _epoch++;
                     setState(() {
                       _loading = true;
@@ -174,8 +159,11 @@ class _ServiceCatalogSheetState extends ConsumerState<ServiceCatalogSheet> {
                         ),
                       if (_loading)
                         const Padding(
-                          padding: EdgeInsets.all(20),
-                          child: Center(child: CircularProgressIndicator()),
+                          padding: EdgeInsets.symmetric(vertical: FixoSpacing.sm),
+                          child: FixoListSkeleton(
+                            itemCount: 3,
+                            padding: EdgeInsets.zero,
+                          ),
                         ),
                       if (_error != null)
                         Column(
