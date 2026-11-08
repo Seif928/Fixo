@@ -121,6 +121,7 @@ class _OrdersPageState extends ConsumerState<OrdersPage> {
         ? _items.where((item) => item.proProfile != null).toList()
         : _items;
     return Scaffold(
+      extendBody: true,
       backgroundColor: palette.canvasBackground,
       appBar: AppBar(
         backgroundColor: palette.cardSurface.withValues(alpha: 0.94),

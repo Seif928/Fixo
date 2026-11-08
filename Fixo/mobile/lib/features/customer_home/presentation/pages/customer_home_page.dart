@@ -224,6 +224,7 @@ class _CustomerHomePageState extends ConsumerState<CustomerHomePage> {
     }
 
     return Scaffold(
+      extendBody: true,
       backgroundColor: palette.canvasBackground,
       bottomNavigationBar: FixoCustomerBottomNav(
         currentIndex: 0,
@@ -234,6 +235,7 @@ class _CustomerHomePageState extends ConsumerState<CustomerHomePage> {
         },
       ),
       body: SafeArea(
+        bottom: false,
         child: Column(
           children: [
             // Fixed Top App Bar (Screen 03 h-16 header)
@@ -252,7 +254,7 @@ class _CustomerHomePageState extends ConsumerState<CustomerHomePage> {
                 onRefresh: homeNotifier.loadFeed,
                 child: SingleChildScrollView(
                   physics: const AlwaysScrollableScrollPhysics(),
-                  padding: const EdgeInsets.only(bottom: 32),
+                  padding: const EdgeInsets.only(bottom: 92),
                   child: Center(
                     child: ConstrainedBox(
                       key: const Key('home-marketplace-layout'),
@@ -739,6 +741,7 @@ class _CustomerHomePageState extends ConsumerState<CustomerHomePage> {
     required FixoPaletteExtension palette,
   }) {
     final feed = homeState.feed!;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     final selectedCategory = homeState.selectedCategorySlug;
     final seasonalPromo =
         (selectedCategory == null ||
@@ -844,11 +847,37 @@ class _CustomerHomePageState extends ConsumerState<CustomerHomePage> {
                   ),
                 ),
                 TextButton(
-                  onPressed: homeNotifier.clearFilters,
+                  key: const Key('btn-view-all-categories-and-services'),
+                  onPressed: () {
+                    final hasActiveFilter =
+                        homeState.selectedCategorySlug != null ||
+                        homeState.searchQuery.trim().isNotEmpty;
+                    if (hasActiveFilter) {
+                      homeNotifier.clearFilters();
+                      setState(() {
+                        _showAllCategories = true;
+                        _showAllServices = true;
+                      });
+                    } else {
+                      final expandAll =
+                          !(_showAllCategories && _showAllServices);
+                      setState(() {
+                        _showAllCategories = expandAll;
+                        _showAllServices = expandAll;
+                      });
+                    }
+                  },
                   child: Text(
-                    isArabic ? 'عرض الكل' : 'View All',
+                    (_showAllCategories &&
+                            _showAllServices &&
+                            homeState.selectedCategorySlug == null &&
+                            homeState.searchQuery.trim().isEmpty)
+                        ? (isArabic ? 'عرض أقل' : 'Show Less')
+                        : (isArabic ? 'عرض الكل' : 'View All'),
                     style: FixoTypography.labelMd(
-                      color: FixoColors.secondary,
+                      color: isDark
+                          ? FixoColors.goldBright
+                          : FixoColors.secondary,
                     ).copyWith(fontWeight: FontWeight.w700),
                   ),
                 ),
@@ -967,15 +996,38 @@ class _CustomerHomePageState extends ConsumerState<CustomerHomePage> {
                     ],
                   ),
                 ),
-                TextButton(
-                  key: const Key('btn-home-browse-all-services'),
-                  onPressed: _browseServices,
-                  child: Text(
-                    isArabic ? 'تصفح الكل' : 'Browse All',
-                    style: FixoTypography.labelMd(
-                      color: FixoColors.secondary,
-                    ).copyWith(fontWeight: FontWeight.w700),
-                  ),
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    TextButton(
+                      key: const Key('btn-view-all-services-inline'),
+                      onPressed: () => setState(() {
+                        _showAllServices = !_showAllServices;
+                      }),
+                      child: Text(
+                        _showAllServices
+                            ? (isArabic ? 'عرض أقل' : 'Show Less')
+                            : (isArabic ? 'عرض الكل' : 'View All'),
+                        style: FixoTypography.labelMd(
+                          color: isDark
+                              ? FixoColors.goldBright
+                              : FixoColors.secondary,
+                        ).copyWith(fontWeight: FontWeight.w700),
+                      ),
+                    ),
+                    TextButton(
+                      key: const Key('btn-home-browse-all-services'),
+                      onPressed: _browseServices,
+                      child: Text(
+                        isArabic ? 'تصفح الكل' : 'Browse All',
+                        style: FixoTypography.labelMd(
+                          color: isDark
+                              ? palette.limeAccent
+                              : FixoColors.secondary,
+                        ).copyWith(fontWeight: FontWeight.w700),
+                      ),
+                    ),
+                  ],
                 ),
               ],
             ),

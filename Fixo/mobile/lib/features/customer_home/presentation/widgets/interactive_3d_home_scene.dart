@@ -264,12 +264,11 @@ class _Interactive3DHomeSceneState extends State<Interactive3DHomeScene>
                         children: [
                           // Top-Left: Living & AC
                           Positioned(
-                            left: FixoSpacing.gutterMobile,
-                            top: FixoSpacing.sm,
-                            width: 132,
+                            left: FixoSpacing.sm,
+                            top: 6,
                             child: _HotspotArea(
                               onTap: () => _selectRoom(HomeRoom.acLiving),
-                              label: ar ? 'المعيشة والتكييف' : 'Living & AC',
+                              label: ar ? 'التكييف' : 'AC & Living',
                               icon: Icons.ac_unit_rounded,
                               isSelected: _selectedRoom == HomeRoom.acLiving,
                               activeColor: const Color(0xFF38BDF8),
@@ -277,13 +276,12 @@ class _Interactive3DHomeSceneState extends State<Interactive3DHomeScene>
                           ),
                           // Top-Right: Kitchen & Bath Plumbing
                           Positioned(
-                            right: FixoSpacing.gutterMobile,
-                            top: FixoSpacing.sm,
-                            width: 132,
+                            right: FixoSpacing.sm,
+                            top: 6,
                             child: _HotspotArea(
                               onTap: () =>
                                   _selectRoom(HomeRoom.plumbingKitchen),
-                              label: ar ? 'المطبخ والسباكة' : 'Kitchen & Bath',
+                              label: ar ? 'السباكة' : 'Plumbing',
                               icon: Icons.water_drop_rounded,
                               isSelected:
                                   _selectedRoom == HomeRoom.plumbingKitchen,
@@ -292,12 +290,11 @@ class _Interactive3DHomeSceneState extends State<Interactive3DHomeScene>
                           ),
                           // Mid-Left: Painting & Finishes
                           Positioned(
-                            left: FixoSpacing.gutterMobile,
-                            top: 96,
-                            width: 122,
+                            left: FixoSpacing.sm,
+                            top: 40,
                             child: _HotspotArea(
                               onTap: () => _selectRoom(HomeRoom.paintingDecor),
-                              label: ar ? 'الدهانات والديكور' : 'Walls & Paint',
+                              label: ar ? 'الدهانات' : 'Painting',
                               icon: Icons.format_paint_rounded,
                               isSelected:
                                   _selectedRoom == HomeRoom.paintingDecor,
@@ -306,12 +303,11 @@ class _Interactive3DHomeSceneState extends State<Interactive3DHomeScene>
                           ),
                           // Mid-Right: Roof Satellite & Smart Home
                           Positioned(
-                            right: FixoSpacing.gutterMobile,
-                            top: 96,
-                            width: 122,
+                            right: FixoSpacing.sm,
+                            top: 40,
                             child: _HotspotArea(
                               onTap: () => _selectRoom(HomeRoom.satelliteSmart),
-                              label: ar ? 'الروف والسمارت' : 'Roof & Smart',
+                              label: ar ? 'السمارت والروف' : 'Smart Roof',
                               icon: Icons.settings_input_antenna_rounded,
                               isSelected:
                                   _selectedRoom == HomeRoom.satelliteSmart,
@@ -320,12 +316,11 @@ class _Interactive3DHomeSceneState extends State<Interactive3DHomeScene>
                           ),
                           // Bottom-Left: Electrical Hub
                           Positioned(
-                            left: FixoSpacing.gutterMobile,
-                            bottom: FixoSpacing.sm,
-                            width: 132,
+                            left: FixoSpacing.sm,
+                            bottom: 6,
                             child: _HotspotArea(
                               onTap: () => _selectRoom(HomeRoom.electricalHub),
-                              label: ar ? 'لوحة الكهرباء' : 'Electrical Hub',
+                              label: ar ? 'الكهرباء' : 'Electrical',
                               icon: Icons.bolt_rounded,
                               isSelected:
                                   _selectedRoom == HomeRoom.electricalHub,
@@ -334,12 +329,11 @@ class _Interactive3DHomeSceneState extends State<Interactive3DHomeScene>
                           ),
                           // Bottom-Right: Master Carpentry Suite
                           Positioned(
-                            right: FixoSpacing.gutterMobile,
-                            bottom: FixoSpacing.sm,
-                            width: 132,
+                            right: FixoSpacing.sm,
+                            bottom: 6,
                             child: _HotspotArea(
                               onTap: () => _selectRoom(HomeRoom.carpentrySuite),
-                              label: ar ? 'النجارة والأثاث' : 'Carpentry Suite',
+                              label: ar ? 'النجارة' : 'Carpentry',
                               icon: Icons.chair_rounded,
                               isSelected:
                                   _selectedRoom == HomeRoom.carpentrySuite,
@@ -502,31 +496,33 @@ class _HotspotArea extends StatelessWidget {
       color: Colors.transparent,
       child: InkWell(
         onTap: onTap,
-        borderRadius: FixoRadius.borderRadiusMd,
+        borderRadius: FixoRadius.borderRadiusPill,
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 180),
-          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
           decoration: BoxDecoration(
-            borderRadius: FixoRadius.borderRadiusMd,
+            borderRadius: FixoRadius.borderRadiusPill,
             border: Border.all(
               color: isSelected
-                  ? activeColor.withValues(alpha: 0.92)
+                  ? activeColor
                   : (isDark
-                      ? Colors.white.withValues(alpha: 0.16)
+                      ? Colors.white.withValues(alpha: 0.18)
                       : Colors.black.withValues(alpha: 0.10)),
-              width: isSelected ? 1.5 : 1.0,
+              width: isSelected ? 1.4 : 1.0,
             ),
             color: isSelected
-                ? activeColor.withValues(alpha: isDark ? 0.22 : 0.18)
+                ? (isDark
+                    ? const Color(0xFF0A1612).withValues(alpha: 0.92)
+                    : Colors.white.withValues(alpha: 0.96))
                 : (isDark
-                    ? const Color(0xFF0C1613).withValues(alpha: 0.78)
-                    : Colors.white.withValues(alpha: 0.88)),
+                    ? const Color(0xFF0A1210).withValues(alpha: 0.72)
+                    : Colors.white.withValues(alpha: 0.82)),
             boxShadow: [
               BoxShadow(
                 color: isSelected
-                    ? activeColor.withValues(alpha: 0.28)
-                    : Colors.black.withValues(alpha: 0.06),
-                blurRadius: 8,
+                    ? activeColor.withValues(alpha: 0.35)
+                    : Colors.black.withValues(alpha: 0.08),
+                blurRadius: isSelected ? 10 : 6,
                 offset: const Offset(0, 2),
               ),
             ],
@@ -534,28 +530,35 @@ class _HotspotArea extends StatelessWidget {
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
+              Container(
+                width: 6,
+                height: 6,
+                decoration: BoxDecoration(
+                  color: activeColor,
+                  shape: BoxShape.circle,
+                ),
+              ),
+              const SizedBox(width: 4),
               Icon(
                 icon,
-                size: 13,
+                size: 12,
                 color: isSelected
                     ? activeColor
                     : (isDark ? Colors.white70 : FixoColors.primaryForest),
               ),
-              const SizedBox(width: FixoSpacing.xs),
-              Flexible(
-                child: Text(
-                  label,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                    fontSize: 10.5,
-                    fontWeight: isSelected ? FontWeight.w800 : FontWeight.w600,
-                    color: isSelected
-                        ? (isDark ? activeColor : FixoColors.deepestForest)
-                        : (isDark
-                            ? Colors.white.withValues(alpha: 0.92)
-                            : FixoColors.primaryForest),
-                  ),
+              const SizedBox(width: 4),
+              Text(
+                label,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  fontSize: 10,
+                  fontWeight: isSelected ? FontWeight.w800 : FontWeight.w600,
+                  color: isSelected
+                      ? (isDark ? activeColor : FixoColors.deepestForest)
+                      : (isDark
+                          ? Colors.white.withValues(alpha: 0.90)
+                          : FixoColors.primaryForest),
                 ),
               ),
             ],
@@ -664,6 +667,50 @@ class _IsometricVillaPainter extends CustomPainter {
       return Offset(isoX, isoY);
     }
 
+    void drawIsoBox(
+      double x1,
+      double y1,
+      double x2,
+      double y2,
+      double zBase,
+      double zTop, {
+      required Color topColor,
+      required Color leftColor,
+      required Color rightColor,
+    }) {
+      final t1 = project(x1, y1, zTop);
+      final t2 = project(x2, y1, zTop);
+      final t3 = project(x2, y2, zTop);
+      final t4 = project(x1, y2, zTop);
+      final b2 = project(x2, y1, zBase);
+      final b3 = project(x2, y2, zBase);
+      final b4 = project(x1, y2, zBase);
+
+      final leftFace = Path()
+        ..moveTo(t4.dx, t4.dy)
+        ..lineTo(t3.dx, t3.dy)
+        ..lineTo(b3.dx, b3.dy)
+        ..lineTo(b4.dx, b4.dy)
+        ..close();
+      canvas.drawPath(leftFace, Paint()..color = leftColor);
+
+      final rightFace = Path()
+        ..moveTo(t3.dx, t3.dy)
+        ..lineTo(t2.dx, t2.dy)
+        ..lineTo(b2.dx, b2.dy)
+        ..lineTo(b3.dx, b3.dy)
+        ..close();
+      canvas.drawPath(rightFace, Paint()..color = rightColor);
+
+      final topFace = Path()
+        ..moveTo(t1.dx, t1.dy)
+        ..lineTo(t2.dx, t2.dy)
+        ..lineTo(t3.dx, t3.dy)
+        ..lineTo(t4.dx, t4.dy)
+        ..close();
+      canvas.drawPath(topFace, Paint()..color = topColor);
+    }
+
     const r = 74.0;
     const wallH = 44.0;
     const slabH = 12.0;
@@ -678,7 +725,7 @@ class _IsometricVillaPainter extends CustomPainter {
       Paint()
         ..shader = RadialGradient(
           colors: [
-            FixoColors.primaryForest.withValues(alpha: isDark ? 0.32 : 0.14),
+            FixoColors.primaryForest.withValues(alpha: isDark ? 0.36 : 0.16),
             Colors.transparent,
           ],
         ).createShader(
@@ -710,9 +757,72 @@ class _IsometricVillaPainter extends CustomPainter {
           begin: Alignment.topCenter,
           end: Alignment.bottomCenter,
           colors: isDark
-              ? const [Color(0xFF1A312A), Color(0xFF0F1E1A)]
+              ? const [Color(0xFF1A312A), Color(0xFF0E1C18)]
               : const [Color(0xFFF6F2E9), Color(0xFFE5DEC9)],
         ).createShader(Offset.zero & size),
+    );
+
+    // Architectural Isometric Floor Tile Grid (6x6)
+    final gridPaint = Paint()
+      ..color = isDark
+          ? Colors.white.withValues(alpha: 0.05)
+          : Colors.black.withValues(alpha: 0.04)
+      ..strokeWidth = 0.8;
+    for (var i = -2; i <= 2; i++) {
+      final step = i * (r / 3);
+      canvas.drawLine(project(step, -r, 0.2), project(step, r, 0.2), gridPaint);
+      canvas.drawLine(project(-r, step, 0.2), project(r, step, 0.2), gridPaint);
+    }
+
+    // Active Quadrant Floor Highlight
+    final (double qx1, double qy1, double qx2, double qy2, Color qColor) =
+        switch (selectedRoom) {
+          HomeRoom.acLiving => (-r, -r, 0.0, 0.0, const Color(0xFF38BDF8)),
+          HomeRoom.plumbingKitchen => (
+            0.0,
+            -r,
+            r,
+            0.0,
+            const Color(0xFF0EA5E9),
+          ),
+          HomeRoom.electricalHub => (
+            -r,
+            0.0,
+            0.0,
+            r,
+            FixoColors.limeAccent,
+          ),
+          HomeRoom.carpentrySuite => (
+            0.0,
+            0.0,
+            r,
+            r,
+            const Color(0xFFF59E0B),
+          ),
+          HomeRoom.paintingDecor => (
+            -r,
+            -r,
+            -r * 0.2,
+            r,
+            FixoColors.goldAccent,
+          ),
+          HomeRoom.satelliteSmart => (
+            -r * 0.5,
+            -r,
+            r * 0.5,
+            -r * 0.2,
+            const Color(0xFFA78BFA),
+          ),
+        };
+    final qPath = Path()
+      ..moveTo(project(qx1, qy1, 0.4).dx, project(qx1, qy1, 0.4).dy)
+      ..lineTo(project(qx2, qy1, 0.4).dx, project(qx2, qy1, 0.4).dy)
+      ..lineTo(project(qx2, qy2, 0.4).dx, project(qx2, qy2, 0.4).dy)
+      ..lineTo(project(qx1, qy2, 0.4).dx, project(qx1, qy2, 0.4).dy)
+      ..close();
+    canvas.drawPath(
+      qPath,
+      Paint()..color = qColor.withValues(alpha: isDark ? 0.14 : 0.12),
     );
 
     // Left & Right Foundation Slab Sides
@@ -813,15 +923,17 @@ class _IsometricVillaPainter extends CustomPainter {
       ..close();
     canvas.drawPath(xWall, partPaint);
 
-    // 4. Draw All 6 Specialized Room Systems
+    // 4. Draw All 6 Specialized Room Systems with 3D Extruded Furniture
     _drawLivingRoomAC(
       canvas,
       project,
+      drawIsoBox,
       isActive: selectedRoom == HomeRoom.acLiving,
     );
     _drawPlumbingKitchen(
       canvas,
       project,
+      drawIsoBox,
       isActive: selectedRoom == HomeRoom.plumbingKitchen,
     );
     _drawElectricalHub(
@@ -832,6 +944,7 @@ class _IsometricVillaPainter extends CustomPainter {
     _drawCarpentrySuite(
       canvas,
       project,
+      drawIsoBox,
       isActive: selectedRoom == HomeRoom.carpentrySuite,
     );
     _drawPaintingFinishes(
@@ -846,37 +959,85 @@ class _IsometricVillaPainter extends CustomPainter {
     );
 
     // 5. Front Garden Terrace Pool Strip (Bottom-Right Exterior)
-    final poolPath = Path()
-      ..moveTo(project(18, r - 12, 1).dx, project(18, r - 12, 1).dy)
-      ..lineTo(project(r - 8, r - 12, 1).dx, project(r - 8, r - 12, 1).dy)
-      ..lineTo(project(r - 8, r - 2, 1).dx, project(r - 8, r - 2, 1).dy)
-      ..lineTo(project(18, r - 2, 1).dx, project(18, r - 2, 1).dy)
-      ..close();
-    canvas.drawPath(
-      poolPath,
-      Paint()
-        ..color = const Color(0xFF0EA5E9).withValues(alpha: isDark ? 0.45 : 0.55),
+    drawIsoBox(
+      18,
+      r - 14,
+      r - 8,
+      r - 3,
+      0,
+      3,
+      topColor: const Color(0xFF38BDF8).withValues(alpha: isDark ? 0.65 : 0.72),
+      leftColor: const Color(0xFF0284C7),
+      rightColor: const Color(0xFF0369A1),
     );
   }
 
   void _drawLivingRoomAC(
     Canvas canvas,
-    Offset Function(double, double, double) project, {
+    Offset Function(double, double, double) project,
+    void Function(
+      double,
+      double,
+      double,
+      double,
+      double,
+      double, {
+      required Color topColor,
+      required Color leftColor,
+      required Color rightColor,
+    })
+    drawIsoBox, {
     required bool isActive,
   }) {
-    // Designer L-Sofa in Top-Left Room (x: -55..-15, y: -50..-15)
-    final sofaPath = Path()
-      ..moveTo(project(-58, -42, 6).dx, project(-58, -42, 6).dy)
-      ..lineTo(project(-20, -42, 6).dx, project(-20, -42, 6).dy)
-      ..lineTo(project(-20, -22, 6).dx, project(-20, -22, 6).dy)
-      ..lineTo(project(-58, -22, 6).dx, project(-58, -22, 6).dy)
+    // Luxury Area Rug
+    final rugPath = Path()
+      ..moveTo(project(-62, -52, 0.8).dx, project(-62, -52, 0.8).dy)
+      ..lineTo(project(-14, -52, 0.8).dx, project(-14, -52, 0.8).dy)
+      ..lineTo(project(-14, -14, 0.8).dx, project(-14, -14, 0.8).dy)
+      ..lineTo(project(-62, -14, 0.8).dx, project(-62, -14, 0.8).dy)
       ..close();
     canvas.drawPath(
-      sofaPath,
+      rugPath,
       Paint()
-        ..color = isActive
-            ? const Color(0xFF2B6CB0)
-            : (isDark ? const Color(0xFF274239) : const Color(0xFFC8B99E)),
+        ..color = isDark
+            ? const Color(0xFF1F3B32).withValues(alpha: 0.75)
+            : const Color(0xFFE6DEC8),
+    );
+
+    // 3D Extruded Designer L-Sofa (Base + Backrest)
+    drawIsoBox(
+      -58,
+      -46,
+      -20,
+      -24,
+      1,
+      9,
+      topColor: isActive
+          ? const Color(0xFF38BDF8)
+          : (isDark ? const Color(0xFF2D4F43) : const Color(0xFFD4C5AA)),
+      leftColor: isActive
+          ? const Color(0xFF0284C7)
+          : (isDark ? const Color(0xFF1E372F) : const Color(0xFFB8A688)),
+      rightColor: isActive
+          ? const Color(0xFF0369A1)
+          : (isDark ? const Color(0xFF162923) : const Color(0xFFA39072)),
+    );
+    drawIsoBox(
+      -58,
+      -46,
+      -20,
+      -40,
+      9,
+      16,
+      topColor: isActive
+          ? const Color(0xFF7DD3FC)
+          : (isDark ? const Color(0xFF396153) : const Color(0xFFE2D6BE)),
+      leftColor: isActive
+          ? const Color(0xFF0284C7)
+          : (isDark ? const Color(0xFF264339) : const Color(0xFFC4B396)),
+      rightColor: isActive
+          ? const Color(0xFF0369A1)
+          : (isDark ? const Color(0xFF1B312A) : const Color(0xFFAD9B7D)),
     );
 
     // Wall Split AC Unit mounted on Back-Left Wall
@@ -897,7 +1058,7 @@ class _IsometricVillaPainter extends CustomPainter {
       Paint()
         ..color = isActive
             ? const Color(0xFF38BDF8)
-            : (isDark ? const Color(0xFFCBD5E1) : Colors.white),
+            : (isDark ? const Color(0xFFE2E8F0) : Colors.white),
     );
 
     // AC louver line
@@ -912,7 +1073,7 @@ class _IsometricVillaPainter extends CustomPainter {
     // Animated cooling airflow waves
     if (isActive) {
       final wavePaint = Paint()
-        ..color = const Color(0xFF38BDF8).withValues(alpha: 0.78)
+        ..color = const Color(0xFF38BDF8).withValues(alpha: 0.82)
         ..strokeWidth = 2.0
         ..style = PaintingStyle.stroke;
 
@@ -931,20 +1092,46 @@ class _IsometricVillaPainter extends CustomPainter {
 
   void _drawPlumbingKitchen(
     Canvas canvas,
-    Offset Function(double, double, double) project, {
+    Offset Function(double, double, double) project,
+    void Function(
+      double,
+      double,
+      double,
+      double,
+      double,
+      double, {
+      required Color topColor,
+      required Color leftColor,
+      required Color rightColor,
+    })
+    drawIsoBox, {
     required bool isActive,
   }) {
-    // Marble Kitchen Counter & Sink in Top-Right Quadrant (x: 15..60, y: -62..-20)
-    final islandPath = Path()
-      ..moveTo(project(18, -56, 10).dx, project(18, -56, 10).dy)
-      ..lineTo(project(58, -56, 10).dx, project(58, -56, 10).dy)
-      ..lineTo(project(58, -32, 10).dx, project(58, -32, 10).dy)
-      ..lineTo(project(18, -32, 10).dx, project(18, -32, 10).dy)
-      ..close();
-    canvas.drawPath(
-      islandPath,
-      Paint()
-        ..color = isDark ? const Color(0xFF28423A) : const Color(0xFFE2E8F0),
+    // 3D Extruded Marble Kitchen Island & Sink Basin in Top-Right Quadrant
+    drawIsoBox(
+      16,
+      -56,
+      58,
+      -30,
+      1,
+      13,
+      topColor: isDark ? const Color(0xFF335248) : const Color(0xFFF1F5F9),
+      leftColor: isDark ? const Color(0xFF223831) : const Color(0xFFCBD5E1),
+      rightColor: isDark ? const Color(0xFF182923) : const Color(0xFF94A3B8),
+    );
+    // Sink Basin inset on island top
+    drawIsoBox(
+      26,
+      -50,
+      46,
+      -36,
+      13,
+      13.6,
+      topColor: isActive
+          ? const Color(0xFF38BDF8)
+          : const Color(0xFF0EA5E9).withValues(alpha: 0.55),
+      leftColor: const Color(0xFF0284C7),
+      rightColor: const Color(0xFF0369A1),
     );
 
     // Pressurized Water Pipeline Network on Back-Right Wall
@@ -1009,9 +1196,9 @@ class _IsometricVillaPainter extends CustomPainter {
     // Glowing Floor Power Conduits connecting rooms
     final conduitPaint = Paint()
       ..color = isActive
-          ? FixoColors.limeAccent.withValues(alpha: 0.85)
-          : FixoColors.limeAccent.withValues(alpha: 0.25)
-      ..strokeWidth = isActive ? 2.2 : 1.2;
+          ? FixoColors.limeAccent.withValues(alpha: 0.90)
+          : FixoColors.limeAccent.withValues(alpha: 0.32)
+      ..strokeWidth = isActive ? 2.4 : 1.3;
 
     canvas.drawLine(
       project(-64, 30, 2),
@@ -1021,6 +1208,11 @@ class _IsometricVillaPainter extends CustomPainter {
     canvas.drawLine(
       project(-12, 30, 2),
       project(-12, -25, 2),
+      conduitPaint,
+    );
+    canvas.drawLine(
+      project(-12, 12, 2),
+      project(32, 12, 2),
       conduitPaint,
     );
 
@@ -1044,34 +1236,56 @@ class _IsometricVillaPainter extends CustomPainter {
 
   void _drawCarpentrySuite(
     Canvas canvas,
-    Offset Function(double, double, double) project, {
+    Offset Function(double, double, double) project,
+    void Function(
+      double,
+      double,
+      double,
+      double,
+      double,
+      double, {
+      required Color topColor,
+      required Color leftColor,
+      required Color rightColor,
+    })
+    drawIsoBox, {
     required bool isActive,
   }) {
-    // Master Bed & Custom Oak Wardrobe in Bottom-Right Room (x: 16..58, y: 16..56)
-    final bedPath = Path()
-      ..moveTo(project(18, 20, 6).dx, project(18, 20, 6).dy)
-      ..lineTo(project(54, 20, 6).dx, project(54, 20, 6).dy)
-      ..lineTo(project(54, 52, 6).dx, project(54, 52, 6).dy)
-      ..lineTo(project(18, 52, 6).dx, project(18, 52, 6).dy)
-      ..close();
-
-    canvas.drawPath(
-      bedPath,
-      Paint()
-        ..color = isActive ? const Color(0xFFD97706) : const Color(0xFFB45309),
+    // 3D Extruded Master Bed Platform + Mattress + Oak Headboard in Bottom-Right Room
+    drawIsoBox(
+      16,
+      18,
+      54,
+      52,
+      1,
+      8,
+      topColor: isActive ? const Color(0xFFF59E0B) : const Color(0xFFD97706),
+      leftColor: const Color(0xFFB45309),
+      rightColor: const Color(0xFF92400E),
     );
-
-    // Headboard / Oak Closet Upright
-    final headboardPath = Path()
-      ..moveTo(project(18, 20, 6).dx, project(18, 20, 6).dy)
-      ..lineTo(project(54, 20, 6).dx, project(54, 20, 6).dy)
-      ..lineTo(project(54, 20, 22).dx, project(54, 20, 22).dy)
-      ..lineTo(project(18, 20, 22).dx, project(18, 20, 22).dy)
-      ..close();
-    canvas.drawPath(
-      headboardPath,
-      Paint()
-        ..color = isActive ? const Color(0xFFF59E0B) : const Color(0xFF92400E),
+    // Crisp White/Cream Mattress Top
+    drawIsoBox(
+      20,
+      22,
+      50,
+      48,
+      8,
+      11,
+      topColor: isDark ? const Color(0xFFE2E8F0) : const Color(0xFFFFFBEB),
+      leftColor: const Color(0xFFCBD5E1),
+      rightColor: const Color(0xFF94A3B8),
+    );
+    // Tall Oak Wardrobe & Headboard Unit
+    drawIsoBox(
+      16,
+      14,
+      54,
+      20,
+      1,
+      24,
+      topColor: isActive ? const Color(0xFFFBBF24) : const Color(0xFFB45309),
+      leftColor: const Color(0xFF92400E),
+      rightColor: const Color(0xFF78350F),
     );
   }
 

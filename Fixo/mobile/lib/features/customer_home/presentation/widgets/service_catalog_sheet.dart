@@ -186,12 +186,32 @@ class _ServiceCatalogSheetState extends ConsumerState<ServiceCatalogSheet> {
                           ),
                         ),
                       if (!_loading && _error == null && _page < _totalPages)
-                        TextButton(
-                          key: const Key('catalog-load-more'),
-                          onPressed: _load,
-                          child: Text(
-                            ar ? 'عرض خدمات أكتر' : 'Load more services',
-                          ),
+                        Wrap(
+                          alignment: WrapAlignment.center,
+                          spacing: 8,
+                          children: [
+                            TextButton(
+                              key: const Key('catalog-load-more'),
+                              onPressed: _load,
+                              child: Text(
+                                ar ? 'عرض خدمات أكتر' : 'Load more services',
+                              ),
+                            ),
+                            TextButton(
+                              key: const Key('catalog-load-all'),
+                              onPressed: () async {
+                                while (mounted &&
+                                    !_loading &&
+                                    _error == null &&
+                                    _page < _totalPages) {
+                                  await _load();
+                                }
+                              },
+                              child: Text(
+                                ar ? 'عرض الكل' : 'Show all',
+                              ),
+                            ),
+                          ],
                         ),
                     ],
                   ),

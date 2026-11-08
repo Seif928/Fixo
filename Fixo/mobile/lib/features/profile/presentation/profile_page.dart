@@ -240,6 +240,7 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
     final textTheme = Theme.of(context).textTheme;
 
     return Scaffold(
+      extendBody: true,
       backgroundColor: palette.canvasBackground,
       appBar: AppBar(
         backgroundColor: palette.canvasBackground,
