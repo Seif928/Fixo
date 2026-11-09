@@ -44,7 +44,7 @@ class _OrderTrackingPageState extends ConsumerState<OrderTrackingPage> {
   bool _cancelling = false;
   String? _error;
   Timer? _pollTimer;
-  bool _use3DView = true;
+  bool _use3DView = false;
 
   @override
   void initState() {
@@ -154,7 +154,9 @@ class _OrderTrackingPageState extends ConsumerState<OrderTrackingPage> {
 
     setState(() => _cancelling = true);
     try {
-      await ref.read(bookingRepositoryProvider).cancelBooking(
+      await ref
+          .read(bookingRepositoryProvider)
+          .cancelBooking(
             widget.orderId,
             reason: reasonText.isEmpty ? null : reasonText,
           );
@@ -162,9 +164,7 @@ class _OrderTrackingPageState extends ConsumerState<OrderTrackingPage> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(
-              ar ? 'تم إلغاء الطلب بنجاح.' : 'Booking cancelled.',
-            ),
+            content: Text(ar ? 'تم إلغاء الطلب بنجاح.' : 'Booking cancelled.'),
           ),
         );
       }
@@ -186,18 +186,22 @@ class _OrderTrackingPageState extends ConsumerState<OrderTrackingPage> {
   }
 
   String _statusHeadline(String status, bool ar) => switch (status) {
-        'DRAFT' => ar ? 'مسودة — بانتظار تأكيد الدفع' : 'Draft — Awaiting Checkout',
-        'PENDING_DISPATCH' || 'OFFERED_TO_PRO' => ar
-            ? 'جارٍ إسناد الطلب لفني معتمد'
-            : 'Matching with Verified Pro',
-        'CONFIRMED' => ar ? 'تم تعيين الفني وتأكيد الموعد' : 'Professional Assigned & Confirmed',
-        'PRO_EN_ROUTE' => ar ? 'الفني في الطريق إلى عنوانك' : 'Professional En Route to Address',
-        'ARRIVED' => ar ? 'وصل الفني إلى موقع الخدمة' : 'Professional Arrived at Location',
-        'IN_PROGRESS' => ar ? 'الخدمة قيد التنفيذ حالياً' : 'Service Work In Progress',
-        'COMPLETED' => ar ? 'اكتملت الخدمة بنجاح' : 'Service Completed Successfully',
-        'CANCELLED' => ar ? 'تم إلغاء الطلب' : 'Booking Cancelled',
-        _ => status,
-      };
+    'DRAFT' => ar ? 'مسودة — بانتظار تأكيد الدفع' : 'Draft — Awaiting Checkout',
+    'PENDING_DISPATCH' || 'OFFERED_TO_PRO' =>
+      ar ? 'جارٍ إسناد الطلب لفني معتمد' : 'Matching with Verified Pro',
+    'CONFIRMED' =>
+      ar ? 'تم تعيين الفني وتأكيد الموعد' : 'Professional Assigned & Confirmed',
+    'PRO_EN_ROUTE' =>
+      ar ? 'الفني في الطريق إلى عنوانك' : 'Professional En Route to Address',
+    'ARRIVED' =>
+      ar ? 'وصل الفني إلى موقع الخدمة' : 'Professional Arrived at Location',
+    'IN_PROGRESS' =>
+      ar ? 'الخدمة قيد التنفيذ حالياً' : 'Service Work In Progress',
+    'COMPLETED' =>
+      ar ? 'اكتملت الخدمة بنجاح' : 'Service Completed Successfully',
+    'CANCELLED' => ar ? 'تم إلغاء الطلب' : 'Booking Cancelled',
+    _ => status,
+  };
 
   @override
   Widget build(BuildContext context) {
@@ -261,47 +265,44 @@ class _OrderTrackingPageState extends ConsumerState<OrderTrackingPage> {
         ),
         body: SafeArea(
           child: _loading
-              ? const FixoListSkeleton(
-                  itemCount: 3,
-                  showHeaderBanner: true,
-                )
+              ? const FixoListSkeleton(itemCount: 3, showHeaderBanner: true)
               : _error != null || _tracking == null
-                  ? Center(
-                      child: Padding(
-                        padding: const EdgeInsets.all(FixoSpacing.lg),
-                        child: FixoSurfaceCard(
-                          padding: const EdgeInsets.all(FixoSpacing.lg),
-                          borderRadius: FixoRadius.borderRadiusLg,
-                          child: Column(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              const Icon(
-                                Icons.error_outline_rounded,
-                                color: FixoColors.error,
-                                size: 32,
-                              ),
-                              const SizedBox(height: 8),
-                              Text(
-                                ar
-                                    ? 'تعذّر تحميل بيانات متابعة الطلب.'
-                                    : 'Could not load order tracking details.',
-                                textAlign: TextAlign.center,
-                                style: FixoTypography.bodyMd(
-                                  color: palette.inkText,
-                                ).copyWith(fontWeight: FontWeight.w600),
-                              ),
-                              const SizedBox(height: 12),
-                              FilledButton.icon(
-                                onPressed: () => _loadTracking(),
-                                icon: const Icon(Icons.refresh_rounded, size: 18),
-                                label: Text(ar ? 'إعادة المحاولة' : 'Retry'),
-                              ),
-                            ],
+              ? Center(
+                  child: Padding(
+                    padding: const EdgeInsets.all(FixoSpacing.lg),
+                    child: FixoSurfaceCard(
+                      padding: const EdgeInsets.all(FixoSpacing.lg),
+                      borderRadius: FixoRadius.borderRadiusLg,
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(
+                            Icons.error_outline_rounded,
+                            color: FixoColors.error,
+                            size: 32,
                           ),
-                        ),
+                          const SizedBox(height: 8),
+                          Text(
+                            ar
+                                ? 'تعذّر تحميل بيانات متابعة الطلب.'
+                                : 'Could not load order tracking details.',
+                            textAlign: TextAlign.center,
+                            style: FixoTypography.bodyMd(
+                              color: palette.inkText,
+                            ).copyWith(fontWeight: FontWeight.w600),
+                          ),
+                          const SizedBox(height: 12),
+                          FilledButton.icon(
+                            onPressed: () => _loadTracking(),
+                            icon: const Icon(Icons.refresh_rounded, size: 18),
+                            label: Text(ar ? 'إعادة المحاولة' : 'Retry'),
+                          ),
+                        ],
                       ),
-                    )
-                  : _buildContent(context, _tracking!, ar, inset),
+                    ),
+                  ),
+                )
+              : _buildContent(context, _tracking!, ar, inset),
         ),
       ),
     );
@@ -332,7 +333,12 @@ class _OrderTrackingPageState extends ConsumerState<OrderTrackingPage> {
         .split('');
 
     return ListView(
-      padding: EdgeInsets.fromLTRB(inset, FixoSpacing.md, inset, FixoSpacing.xl),
+      padding: EdgeInsets.fromLTRB(
+        inset,
+        FixoSpacing.md,
+        inset,
+        FixoSpacing.xl,
+      ),
       children: [
         // 1. Order Status & Saved Location Card (Screen 06 Hero)
         FixoSurfaceCard(
@@ -421,13 +427,20 @@ class _OrderTrackingPageState extends ConsumerState<OrderTrackingPage> {
                 ),
               ),
               Padding(
-                padding: const EdgeInsets.fromLTRB(FixoSpacing.md, 10, FixoSpacing.md, 6),
+                padding: const EdgeInsets.fromLTRB(
+                  FixoSpacing.md,
+                  10,
+                  FixoSpacing.md,
+                  6,
+                ),
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Text(
                       ar ? 'منظور التتبع الحي' : 'Live Tracking View',
-                      style: FixoTypography.labelMd(color: palette.deepForest).copyWith(fontWeight: FontWeight.bold),
+                      style: FixoTypography.labelMd(
+                        color: palette.deepForest,
+                      ).copyWith(fontWeight: FontWeight.bold),
                     ),
                     SegmentedButton<bool>(
                       segments: [
@@ -443,7 +456,8 @@ class _OrderTrackingPageState extends ConsumerState<OrderTrackingPage> {
                         ),
                       ],
                       selected: {_use3DView},
-                      onSelectionChanged: (vals) => setState(() => _use3DView = vals.first),
+                      onSelectionChanged: (vals) =>
+                          setState(() => _use3DView = vals.first),
                       style: const ButtonStyle(
                         visualDensity: VisualDensity.compact,
                         tapTargetSize: MaterialTapTargetSize.shrinkWrap,
@@ -454,12 +468,20 @@ class _OrderTrackingPageState extends ConsumerState<OrderTrackingPage> {
               ),
               if (_use3DView)
                 Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: FixoSpacing.md),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: FixoSpacing.md,
+                  ),
                   child: Isometric3DTrackingCanvas(
                     isArabic: ar,
                     status: booking.status,
-                    addressLabel: (addr['label'] as String?) ?? (ar ? 'عنوان العميل' : 'Customer Address'),
-                    technicianName: ((booking.proProfile?['user'] as Map<String, dynamic>?)?['fullName'] as String?) ?? (ar ? 'فني فيكسو المعتمد' : 'Assigned Technician'),
+                    addressLabel:
+                        (addr['label'] as String?) ??
+                        (ar ? 'عنوان العميل' : 'Customer Address'),
+                    technicianName:
+                        ((booking.proProfile?['user']
+                                as Map<String, dynamic>?)?['fullName']
+                            as String?) ??
+                        (ar ? 'فني فيكسو المعتمد' : 'Assigned Technician'),
                   ),
                 )
               else if (hasValidCoords)
@@ -547,7 +569,9 @@ class _OrderTrackingPageState extends ConsumerState<OrderTrackingPage> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            ar ? 'كود وصول الفني (٤ أرقام)' : 'Artisan Arrival Code',
+                            ar
+                                ? 'كود وصول الفني (٤ أرقام)'
+                                : 'Artisan Arrival Code',
                             style: FixoTypography.labelLg(
                               color: palette.deepForest,
                             ).copyWith(fontWeight: FontWeight.w800),
@@ -646,7 +670,9 @@ class _OrderTrackingPageState extends ConsumerState<OrderTrackingPage> {
                 runSpacing: 6,
                 children: [
                   Text(
-                    ar ? 'إجمالي قيمة الخدمة' : 'Service Total (Cash on Service)',
+                    ar
+                        ? 'إجمالي قيمة الخدمة'
+                        : 'Service Total (Cash on Service)',
                     style: FixoTypography.bodyMd(
                       color: palette.mutedText,
                     ).copyWith(fontWeight: FontWeight.w600),
@@ -906,18 +932,18 @@ class _OrderTrackingPageState extends ConsumerState<OrderTrackingPage> {
     final Color dotColor = isCompleted
         ? FixoColors.secondary
         : isCurrent
-            ? palette.primaryBrand
-            : isCancelled
-                ? FixoColors.error
-                : palette.surfaceHigh;
+        ? palette.primaryBrand
+        : isCancelled
+        ? FixoColors.error
+        : palette.surfaceHigh;
 
     final IconData iconData = isCompleted
         ? Icons.check_rounded
         : isCurrent
-            ? Icons.radio_button_checked_rounded
-            : isCancelled
-                ? Icons.close_rounded
-                : Icons.circle_outlined;
+        ? Icons.radio_button_checked_rounded
+        : isCancelled
+        ? Icons.close_rounded
+        : Icons.circle_outlined;
 
     DateTime? parsedTime;
     if (milestone.timestamp != null) {
@@ -980,9 +1006,9 @@ class _OrderTrackingPageState extends ConsumerState<OrderTrackingPage> {
                       ),
                       if (parsedTime != null)
                         Text(
-                          DateFormat.jm(ar ? 'ar' : 'en').format(
-                            parsedTime.toLocal(),
-                          ),
+                          DateFormat.jm(
+                            ar ? 'ar' : 'en',
+                          ).format(parsedTime.toLocal()),
                           style: FixoTypography.bodySm(
                             color: palette.mutedText,
                           ),
@@ -1003,4 +1029,3 @@ class _OrderTrackingPageState extends ConsumerState<OrderTrackingPage> {
     );
   }
 }
-

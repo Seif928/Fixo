@@ -1,11 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import '../../../../core/theme/fixo_colors.dart';
 import '../../../../core/theme/fixo_spacing.dart';
 import '../../../../core/theme/fixo_typography.dart';
 import '../../../../core/widgets/fixo_tilt_3d.dart';
 import '../../../../core/widgets/fixo_holographic_pro_badge.dart';
-import '../../../../core/widgets/fixo_liquid_glass_layer.dart';
 import '../../domain/marketplace_models.dart';
 
 /// Maps Stitch Material Symbol names to native Flutter `IconData`.
@@ -103,10 +101,10 @@ class FixoArtisanAvatar extends StatelessWidget {
         child: CustomPaint(
           painter: _PortraitAvatarPainter(
             shirtColor: isCustomer
-                ? const Color(0xFF245B4B)
+                ? const Color(0xFF4E4942)
                 : isHassan
                 ? const Color(0xFF1A3047) // Navy HVAC uniform
-                : const Color(0xFF173F35), // Dark green FIXO polo
+                : const Color(0xFF24262B), // Dark green FIXO polo
             hasHvacGaugeBadge: isHassan,
           ),
         ),
@@ -204,11 +202,7 @@ class SeasonalPromoHeroCard extends StatelessWidget {
         gradient: const LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
-          colors: [
-            Color(0xFF1F5446),
-            Color(0xFF11332A),
-            Color(0xFF071914),
-          ],
+          colors: [Color(0xFF38332B), Color(0xFF24262B), Color(0xFF17191C)],
         ),
         borderRadius: FixoRadius.borderRadiusLg,
         border: Border.all(
@@ -620,7 +614,9 @@ class ServiceOfferCatalogCard extends StatelessWidget {
           decoration: BoxDecoration(
             borderRadius: FixoRadius.borderRadiusMd,
             border: Border.all(
-              color: palette.subtleBorder.withValues(alpha: isDark ? 0.85 : 0.7),
+              color: palette.subtleBorder.withValues(
+                alpha: isDark ? 0.85 : 0.7,
+              ),
               width: 1,
             ),
             boxShadow: FixoShadows.level1CardResting,
@@ -632,7 +628,9 @@ class ServiceOfferCatalogCard extends StatelessWidget {
                 width: 44,
                 height: 44,
                 decoration: BoxDecoration(
-                  color: isDark ? palette.surfaceHigh : palette.surfaceContainer,
+                  color: isDark
+                      ? palette.surfaceHigh
+                      : palette.surfaceContainer,
                   borderRadius: FixoRadius.borderRadiusSm,
                   border: Border.all(
                     color: palette.subtleBorder.withValues(alpha: 0.5),
@@ -794,7 +792,7 @@ class RecommendedProCard extends StatelessWidget {
                           size: 16,
                           color: isDark
                               ? palette.limeAccent
-                              : const Color(0xFF313D00),
+                              : const Color(0xFF473923),
                         ),
                         const SizedBox(width: 4),
                         Text(
@@ -873,44 +871,44 @@ class RecommendedProCard extends StatelessWidget {
                         isCompact: true,
                       )
                     : Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 10,
-                    vertical: 5,
-                  ),
-                  decoration: BoxDecoration(
-                    color: isFastResponder
-                        ? FixoColors.secondaryContainer
-                        : palette.surfaceHigh,
-                    borderRadius: FixoRadius.borderRadiusPill,
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(
-                        isFastResponder
-                            ? Icons.bolt_rounded
-                            : Icons.verified_user_rounded,
-                        size: 14,
-                        color: isFastResponder
-                            ? FixoColors.onSecondaryContainer
-                            : palette.deepForest,
-                      ),
-                      const SizedBox(width: 4),
-                      Flexible(
-                        child: Text(
-                          professional.localizedBadge(isArabic),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: FixoTypography.labelMd(
-                            color: isFastResponder
-                                ? FixoColors.onSecondaryContainer
-                                : palette.deepForest,
-                          ).copyWith(fontWeight: FontWeight.w700),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 10,
+                          vertical: 5,
+                        ),
+                        decoration: BoxDecoration(
+                          color: isFastResponder
+                              ? FixoColors.secondaryContainer
+                              : palette.surfaceHigh,
+                          borderRadius: FixoRadius.borderRadiusPill,
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(
+                              isFastResponder
+                                  ? Icons.bolt_rounded
+                                  : Icons.verified_user_rounded,
+                              size: 14,
+                              color: isFastResponder
+                                  ? FixoColors.onSecondaryContainer
+                                  : palette.deepForest,
+                            ),
+                            const SizedBox(width: 4),
+                            Flexible(
+                              child: Text(
+                                professional.localizedBadge(isArabic),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: FixoTypography.labelMd(
+                                  color: isFastResponder
+                                      ? FixoColors.onSecondaryContainer
+                                      : palette.deepForest,
+                                ).copyWith(fontWeight: FontWeight.w700),
+                              ),
+                            ),
+                          ],
                         ),
                       ),
-                    ],
-                  ),
-                ),
               Material(
                 color: palette.primaryBrand,
                 borderRadius: FixoRadius.borderRadiusMd,
@@ -1018,358 +1016,90 @@ class ConciergeQuoteBanner extends StatelessWidget {
 
 /// Customer 4-Tab Bottom Navigation Bar (`Home`, `Orders`, `Chat`, `Profile`)
 /// styled as a compact, draggable Apple VisionOS / iOS 27 Liquid Glass Dock.
-class FixoCustomerBottomNav extends StatefulWidget {
+class FixoCustomerBottomNav extends StatelessWidget {
   const FixoCustomerBottomNav({
     super.key,
     required this.currentIndex,
     required this.onTabSelected,
     required this.isArabic,
   });
-
   final int currentIndex;
   final ValueChanged<int> onTabSelected;
   final bool isArabic;
-
-  @override
-  State<FixoCustomerBottomNav> createState() => _FixoCustomerBottomNavState();
-}
-
-class _FixoCustomerBottomNavState extends State<FixoCustomerBottomNav> {
-  double? _dragTabPosition;
-  double _barTranslateX = 0.0;
-  bool _isDragging = false;
-  int? _lastHapticIndex;
-
-  void _updateDragFromLocalDx(
-    double localDx,
-    double trackWidth,
-    bool isRtl,
-  ) {
-    if (trackWidth <= 0) return;
-    final normalized = (localDx / trackWidth).clamp(0.0, 1.0);
-    final effectiveFraction = isRtl ? (1.0 - normalized) : normalized;
-    final tabPos = (effectiveFraction * 3.0).clamp(0.0, 3.0);
-    final hoveredIndex = tabPos.round().clamp(0, 3);
-    if (_lastHapticIndex != hoveredIndex) {
-      _lastHapticIndex = hoveredIndex;
-      HapticFeedback.selectionClick();
-    }
-    final centerDelta = ((localDx / trackWidth) - 0.5) * 14.0;
-    setState(() {
-      _isDragging = true;
-      _dragTabPosition = tabPos;
-      _barTranslateX = centerDelta.clamp(-10.0, 10.0);
-    });
-  }
-
-  void _finishDrag() {
-    final targetPos = _dragTabPosition;
-    _lastHapticIndex = null;
-    setState(() {
-      _isDragging = false;
-      _dragTabPosition = null;
-      _barTranslateX = 0.0;
-    });
-    if (targetPos != null) {
-      final targetIndex = targetPos.round().clamp(0, 3);
-      if (targetIndex != widget.currentIndex) {
-        HapticFeedback.lightImpact();
-        widget.onTabSelected(targetIndex);
-      }
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
-    final palette = context.fixoPalette;
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final isRtl = Directionality.of(context) == TextDirection.rtl;
-    final items = <_NavTabItem>[
-      _NavTabItem(
-        keyName: 'nav-tab-home',
-        icon: Icons.home_outlined,
-        activeIcon: Icons.home_rounded,
-        label: widget.isArabic ? 'الرئيسية' : 'Home',
-      ),
-      _NavTabItem(
-        keyName: 'nav-tab-orders',
-        icon: Icons.receipt_long_outlined,
-        activeIcon: Icons.receipt_long_rounded,
-        label: widget.isArabic ? 'طلباتي' : 'Orders',
-      ),
-      _NavTabItem(
-        keyName: 'nav-tab-chat',
-        icon: Icons.chat_bubble_outline_rounded,
-        activeIcon: Icons.chat_bubble_rounded,
-        label: widget.isArabic ? 'المحادثات' : 'Chat',
-      ),
-      _NavTabItem(
-        keyName: 'nav-tab-profile',
-        icon: Icons.account_circle_outlined,
-        activeIcon: Icons.account_circle_rounded,
-        label: widget.isArabic ? 'حسابي' : 'Profile',
-      ),
+    final p = context.fixoPalette;
+    final labels = isArabic
+        ? ['الرئيسية', 'طلباتي', 'الرسائل', 'حسابي']
+        : ['Home', 'Orders', 'Messages', 'Profile'];
+    const icons = [
+      Icons.home_outlined,
+      Icons.receipt_long_outlined,
+      Icons.chat_bubble_outline_rounded,
+      Icons.person_outline_rounded,
     ];
-
-    final activePosition =
-        (_dragTabPosition ?? widget.currentIndex.toDouble()).clamp(0.0, 3.0);
-    final activeIndex = activePosition.round().clamp(0, 3);
-
-    return SafeArea(
-      top: false,
-      minimum: const EdgeInsets.fromLTRB(
-        FixoSpacing.md,
-        0,
-        FixoSpacing.md,
-        FixoSpacing.sm,
-      ),
-      child: Align(
-        alignment: Alignment.bottomCenter,
-        heightFactor: 1.0,
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 316),
-          child: AnimatedContainer(
-            duration: Duration(milliseconds: _isDragging ? 30 : 260),
-            curve: Curves.easeOutBack,
-            transform: Matrix4.translationValues(
-              _barTranslateX,
-              _isDragging ? -2.0 : 0.0,
-              0.0,
-            ),
-            child: LayoutBuilder(
-              builder: (context, constraints) {
-                final pillWidth = constraints.maxWidth.isFinite
-                    ? constraints.maxWidth
-                    : 316.0;
-                final innerTrackWidth = (pillWidth - 8.0).clamp(160.0, 308.0);
-                final tabWidth = innerTrackWidth / items.length;
-                final lensLeft = isRtl
-                    ? ((3.0 - activePosition) * tabWidth)
-                    : (activePosition * tabWidth);
-
-                return GestureDetector(
-                  behavior: HitTestBehavior.opaque,
-                  onHorizontalDragStart: (details) => _updateDragFromLocalDx(
-                    details.localPosition.dx - 4.0,
-                    innerTrackWidth,
-                    isRtl,
-                  ),
-                  onHorizontalDragUpdate: (details) => _updateDragFromLocalDx(
-                    details.localPosition.dx - 4.0,
-                    innerTrackWidth,
-                    isRtl,
-                  ),
-                  onHorizontalDragEnd: (_) => _finishDrag(),
-                  onHorizontalDragCancel: _finishDrag,
-                  child: LiquidGlassLayer(
-                    key: const Key('customer-bottom-nav'),
-                    borderRadius: FixoRadius.borderRadiusPill,
-                    blurSigma: 28.0,
-                    tintOpacity: isDark ? 0.54 : 0.72,
-                    specularIntensity: 0.76,
-                    borderWidth: 1.15,
-                    enableInteractiveCaustics: true,
-                    padding: const EdgeInsets.all(FixoSpacing.xs),
-                    child: SizedBox(
-                      height: 50,
-                      child: Stack(
-                        clipBehavior: Clip.none,
-                        alignment: Alignment.center,
+    const keys = [
+      'nav-tab-home',
+      'nav-tab-orders',
+      'nav-tab-chat',
+      'nav-tab-profile',
+    ];
+    return Material(
+      color: p.cardSurface,
+      child: SafeArea(
+        top: false,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+          child: Row(
+            children: List.generate(
+              4,
+              (i) => Expanded(
+                child: Semantics(
+                  selected: i == currentIndex,
+                  button: true,
+                  child: InkWell(
+                    key: Key(keys[i]),
+                    borderRadius: BorderRadius.circular(16),
+                    onTap: () => onTabSelected(i),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(
+                        vertical: 8,
+                        horizontal: 2,
+                      ),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
                         children: [
-                          // Top Prismatic Specular Rim Reflection
-                          Positioned(
-                            top: 0,
-                            left: 24,
-                            right: 24,
-                            child: IgnorePointer(
-                              child: Container(
-                                height: 1.0,
-                                decoration: BoxDecoration(
-                                  borderRadius: FixoRadius.borderRadiusPill,
-                                  gradient: LinearGradient(
-                                    colors: [
-                                      Colors.white.withValues(alpha: 0.0),
-                                      Colors.white.withValues(
-                                        alpha: isDark ? 0.48 : 0.88,
-                                      ),
-                                      FixoColors.goldBright.withValues(
-                                        alpha: isDark ? 0.42 : 0.35,
-                                      ),
-                                      Colors.white.withValues(
-                                        alpha: isDark ? 0.48 : 0.88,
-                                      ),
-                                      Colors.white.withValues(alpha: 0.0),
-                                    ],
-                                    stops: const [0.0, 0.25, 0.50, 0.75, 1.0],
-                                  ),
-                                ),
-                              ),
-                            ),
+                          Icon(
+                            icons[i],
+                            color: i == currentIndex
+                                ? p.deepForest
+                                : p.mutedText,
                           ),
-                          // Sliding Apple VisionOS Liquid Glass Lens Pill
-                          AnimatedPositioned(
-                            duration: Duration(
-                              milliseconds: _isDragging ? 16 : 240,
-                            ),
-                            curve: _isDragging
-                                ? Curves.linear
-                                : Curves.easeOutCubic,
-                            left: lensLeft,
-                            top: 1,
-                            bottom: 1,
-                            width: tabWidth,
-                            child: IgnorePointer(
-                              child: AnimatedScale(
-                                duration: const Duration(milliseconds: 180),
-                                scale: _isDragging ? 1.06 : 1.0,
-                                child: Container(
-                                  decoration: BoxDecoration(
-                                    borderRadius: FixoRadius.borderRadiusPill,
-                                    gradient: LinearGradient(
-                                      begin: Alignment.topCenter,
-                                      end: Alignment.bottomCenter,
-                                      colors: isDark
-                                          ? [
-                                              Colors.white.withValues(
-                                                alpha: _isDragging ? 0.28 : 0.20,
-                                              ),
-                                              palette.primaryBrand.withValues(
-                                                alpha: 0.52,
-                                              ),
-                                              Colors.white.withValues(
-                                                alpha: 0.08,
-                                              ),
-                                            ]
-                                          : [
-                                              Colors.white.withValues(
-                                                alpha: 0.96,
-                                              ),
-                                              Colors.white.withValues(
-                                                alpha: 0.74,
-                                              ),
-                                              palette.primaryBrand.withValues(
-                                                alpha: 0.10,
-                                              ),
-                                            ],
-                                      stops: const [0.0, 0.52, 1.0],
-                                    ),
-                                    border: Border.all(
-                                      color: isDark
-                                          ? Colors.white.withValues(
-                                              alpha: _isDragging ? 0.52 : 0.32,
-                                            )
-                                          : Colors.white.withValues(
-                                              alpha: 0.95,
-                                            ),
-                                      width: 1.0,
-                                    ),
-                                    boxShadow: [
-                                      BoxShadow(
-                                        color: (isDark
-                                                ? palette.limeAccent
-                                                : palette.primaryBrand)
-                                            .withValues(
-                                              alpha: _isDragging
-                                                  ? 0.28
-                                                  : (isDark ? 0.16 : 0.10),
-                                            ),
-                                        blurRadius: _isDragging ? 16 : 10,
-                                        offset: const Offset(0, 2),
-                                      ),
-                                    ],
-                                  ),
+                          const SizedBox(height: 4),
+                          Text(
+                            labels[i],
+                            textAlign: TextAlign.center,
+                            style:
+                                FixoTypography.labelSm(
+                                  color: i == currentIndex
+                                      ? p.deepForest
+                                      : p.mutedText,
+                                ).copyWith(
+                                  fontWeight: i == currentIndex
+                                      ? FontWeight.w700
+                                      : FontWeight.w500,
                                 ),
-                              ),
-                            ),
-                          ),
-                          // 4 Interactive Tab Items
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceAround,
-                            children: List<Widget>.generate(
-                              items.length,
-                              (index) {
-                                final item = items[index];
-                                final isSelected = index == activeIndex;
-                                final fgColor = isSelected
-                                    ? (isDark
-                                          ? palette.limeAccent
-                                          : palette.deepForest)
-                                    : palette.mutedText;
-
-                                return Expanded(
-                                  child: Semantics(
-                                    selected: isSelected,
-                                    button: true,
-                                    child: InkWell(
-                                      key: Key(item.keyName),
-                                      borderRadius: FixoRadius.borderRadiusPill,
-                                      onTap: () => widget.onTabSelected(index),
-                                      child: Padding(
-                                        padding: const EdgeInsets.symmetric(
-                                          horizontal: FixoSpacing.xxs,
-                                          vertical: 3,
-                                        ),
-                                        child: Column(
-                                          mainAxisAlignment:
-                                              MainAxisAlignment.center,
-                                          mainAxisSize: MainAxisSize.min,
-                                          children: [
-                                            Icon(
-                                              isSelected
-                                                  ? item.activeIcon
-                                                  : item.icon,
-                                              size: 19,
-                                              color: fgColor,
-                                            ),
-                                            const SizedBox(height: 1),
-                                            Text(
-                                              item.label,
-                                              maxLines: 1,
-                                              overflow: TextOverflow.ellipsis,
-                                              style:
-                                                  FixoTypography.labelSm(
-                                                    color: fgColor,
-                                                  ).copyWith(
-                                                    fontSize: 10.5,
-                                                    height: 1.1,
-                                                    fontWeight: isSelected
-                                                        ? FontWeight.w800
-                                                        : FontWeight.w600,
-                                                  ),
-                                            ),
-                                          ],
-                                        ),
-                                      ),
-                                    ),
-                                  ),
-                                );
-                              },
-                            ),
                           ),
                         ],
                       ),
                     ),
                   ),
-                );
-              },
+                ),
+              ),
             ),
           ),
         ),
       ),
     );
   }
-}
-
-class _NavTabItem {
-  const _NavTabItem({
-    required this.keyName,
-    required this.icon,
-    required this.activeIcon,
-    required this.label,
-  });
-
-  final String keyName;
-  final IconData icon;
-  final IconData activeIcon;
-  final String label;
 }

@@ -4,7 +4,6 @@ import {
   TransportMode,
   UserRole,
 } from '@prisma/client';
-import { CATALOG_DRAFT_GROUPS } from '../modules/admin/admin-catalog.seed';
 import { EGYPT_GOVERNORATES } from './egypt-governorates';
 
 export interface SeedCoverageZone {
@@ -774,39 +773,7 @@ export const EGYPT_SERVICE_OFFERINGS: SeedServiceOffering[] = [
     isSeasonalPromo: false,
     isBundle: false,
   },
-  ...CATALOG_DRAFT_GROUPS.flatMap((group) => {
-    const category = EGYPT_SERVICE_CATEGORIES.find((c) => c.slug === group.slug);
-    const categoryId = category?.id ?? `cat-${group.slug}`;
-    const basePrice = category?.startingPriceEgp ?? 300;
-    return group.services.map(([key, titleEn, titleAr], idx) => {
-      const inspectionEgp = Math.max(100, Math.round((basePrice * 0.35) / 10) * 10);
-      const serviceFeeEgp = Math.max(
-        120,
-        basePrice - inspectionEgp + (idx % 3) * 30,
-      );
-      const flatPriceEgp = inspectionEgp + serviceFeeEgp;
-      return {
-        id: `off-home-${key}`,
-        categoryId,
-        categorySlug: group.slug,
-        slug: `home-${key}`,
-        titleEn,
-        titleAr,
-        descriptionEn: `${titleEn} by verified FIXO specialists (${group.en}).`,
-        descriptionAr: `${titleAr} بواسطة فنيين معتمدين من فيكسو (${group.ar}).`,
-        badgeEn: null,
-        badgeAr: null,
-        providerTagEn: 'Verified FIXO Pro',
-        providerTagAr: 'فني فيكسو معتمد',
-        baseInspectionEgp: inspectionEgp,
-        serviceFeeEgp,
-        flatPriceEgp,
-        estimatedDurationMins: 60 + (idx % 3) * 30,
-        isSeasonalPromo: false,
-        isBundle: false,
-      };
-    });
-  }),
+
 ];
 
 /**

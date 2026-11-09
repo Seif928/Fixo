@@ -268,7 +268,7 @@ void main() {
 
   for (final width in [360.0, 390.0, 412.0]) {
     testWidgets(
-      'logo preserves selection and both location controls open governorates at $width',
+      'logo preserves selection and the location control opens governorates at $width',
       (tester) async {
         final result = await pump(tester, width: width, arabic: true);
         await tester.tap(find.byKey(const Key('home-brand')));
@@ -303,7 +303,7 @@ void main() {
         );
         expect(result.market.zones.last, 'aswan');
 
-        await tester.tap(find.byKey(const Key('location-picker-btn')));
+        await tester.tap(find.byKey(const Key('home-governorate-picker')));
         await tester.pumpAndSettle();
         expect(find.text('ابحث عن المحافظة'), findsOneWidget);
         await tester.tap(find.byTooltip('إغلاق'));

@@ -111,10 +111,7 @@ class CheckoutPage extends ConsumerWidget {
     bool isArabic,
   ) {
     if (state.isLoading) {
-      return const FixoListSkeleton(
-        itemCount: 3,
-        showHeaderBanner: true,
-      );
+      return const FixoListSkeleton(itemCount: 3, showHeaderBanner: true);
     }
 
     if (state.booking == null && state.errorMessage != null) {
@@ -133,9 +130,7 @@ class CheckoutPage extends ConsumerWidget {
               Text(
                 state.errorMessage!,
                 textAlign: TextAlign.center,
-                style: FixoTypography.bodyMd(
-                  color: palette.mutedText,
-                ),
+                style: FixoTypography.bodyMd(color: palette.mutedText),
               ),
               const SizedBox(height: FixoSpacing.md),
               ElevatedButton.icon(
@@ -256,9 +251,7 @@ class CheckoutPage extends ConsumerWidget {
                   Flexible(
                     child: Text(
                       isArabic ? 'يستحق بعد التنفيذ' : 'Due Upon Completion',
-                      style: FixoTypography.labelMd(
-                        color: palette.mutedText,
-                      ),
+                      style: FixoTypography.labelMd(color: palette.mutedText),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                     ),
@@ -318,32 +311,16 @@ class CheckoutPage extends ConsumerWidget {
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
                             Icon(
-                              state.selectedPaymentMethod ==
-                                      'SMART_WALLET_SANDBOX'
-                                  ? Icons.apple_rounded
-                                  : state.selectedPaymentMethod ==
-                                          'CARD_MEEZA_SANDBOX'
-                                      ? Icons.credit_card_rounded
-                                      : Icons.check_circle_outline_rounded,
+                              Icons.check_circle_outline_rounded,
                               size: 18,
                               color: Colors.white,
                             ),
                             const SizedBox(width: 8),
                             Flexible(
                               child: Text(
-                                state.selectedPaymentMethod ==
-                                        'SMART_WALLET_SANDBOX'
-                                    ? (isArabic
-                                        ? 'الدفع عبر Apple Pay (${booking.pricing.totalEgp} ج.م)'
-                                        : 'Pay with Apple Pay (${booking.pricing.totalEgp} EGP)')
-                                    : state.selectedPaymentMethod ==
-                                            'CARD_MEEZA_SANDBOX'
-                                        ? (isArabic
-                                            ? 'ادفع ببطاقة فيزا / ماستركارد (${booking.pricing.totalEgp} ج.م)'
-                                            : 'Pay with Visa / Mastercard (${booking.pricing.totalEgp} EGP)')
-                                        : (isArabic
-                                            ? 'تأكيد الحجز (دفع نقدي لاحقاً)'
-                                            : 'Confirm Booking (Pay Cash Later)'),
+                                isArabic
+                                    ? 'تأكيد الحجز (دفع نقدي لاحقاً)'
+                                    : 'Confirm Booking (Pay Cash Later)',
                                 textAlign: TextAlign.center,
                                 style: FixoTypography.labelLg(
                                   color: Colors.white,

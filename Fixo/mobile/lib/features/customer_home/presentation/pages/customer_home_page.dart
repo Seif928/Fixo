@@ -22,7 +22,7 @@ import '../../domain/marketplace_models.dart';
 import '../../data/marketplace_repository.dart';
 import '../controllers/customer_home_controller.dart';
 import '../widgets/customer_home_widgets.dart';
-import '../widgets/interactive_3d_home_scene.dart';
+import '../widgets/cinematic_home_hero.dart';
 import '../widgets/service_catalog_sheet.dart';
 
 /// Native Flutter implementation of live Stitch Screen 03 (`03 — Customer Home`,
@@ -228,14 +228,17 @@ class _CustomerHomePageState extends ConsumerState<CustomerHomePage> {
     return Scaffold(
       extendBody: true,
       backgroundColor: palette.canvasBackground,
-      bottomNavigationBar: FixoCustomerBottomNav(
-        currentIndex: 0,
-        isArabic: isArabic,
-        onTabSelected: (index) {
-          homeNotifier.setActiveBottomTab(0);
-          navigateCustomerTab(context, index);
-        },
-      ),
+      bottomNavigationBar: MediaQuery.sizeOf(context).width >= 1000
+          ? null
+          : FixoCustomerBottomNav(
+              key: const Key('customer-bottom-nav'),
+              currentIndex: 0,
+              isArabic: isArabic,
+              onTabSelected: (index) {
+                homeNotifier.setActiveBottomTab(0);
+                navigateCustomerTab(context, index);
+              },
+            ),
       body: SafeArea(
         bottom: false,
         child: Column(
@@ -416,7 +419,7 @@ class _CustomerHomePageState extends ConsumerState<CustomerHomePage> {
                 ),
                 const SizedBox(width: 6),
                 _buildDesktopNavButton(
-                  label: isArabic ? 'الـ 146 خدمة' : '146 Services',
+                  label: isArabic ? 'الخدمات' : 'Services',
                   icon: Icons.grid_view_rounded,
                   isActive: _showAllServices,
                   palette: palette,
@@ -521,73 +524,17 @@ class _CustomerHomePageState extends ConsumerState<CustomerHomePage> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Flexible(
-                child: Material(
-                  color: palette.surfaceContainer,
-                  borderRadius: FixoRadius.borderRadiusPill,
-                  child: InkWell(
-                    key: const Key('location-picker-btn'),
-                    onTap: _chooseArea,
-                    borderRadius: FixoRadius.borderRadiusPill,
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 12,
-                        vertical: 7,
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(
-                            Icons.location_on_rounded,
-                            size: 16,
-                            color: palette.deepForest,
-                          ),
-                          const SizedBox(width: 6),
-                          Flexible(
-                            child: Text(
-                              homeState.selectedArea?.label(isArabic) ??
-                                  (isArabic
-                                      ? 'اختار مكانك'
-                                      : 'Choose your area'),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: FixoTypography.labelMd(
-                                color: palette.deepForest,
-                              ).copyWith(fontWeight: FontWeight.w700),
-                            ),
-                          ),
-                          const SizedBox(width: 4),
-                          Icon(
-                            Icons.expand_more_rounded,
-                            size: 16,
-                            color: palette.mutedText,
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-              if (homeState.selectedCategorySlug != null ||
-                  homeState.searchQuery.isNotEmpty)
-                TextButton(
-                  key: const Key('btn-clear-home-filters'),
-                  onPressed: homeNotifier.clearFilters,
-                  child: Text(
-                    isArabic ? 'مسح الفلتر' : 'Reset',
-                    style: FixoTypography.labelMd(
-                      color: FixoColors.secondary,
-                    ).copyWith(fontWeight: FontWeight.w700),
-                  ),
-                ),
-            ],
-          ),
-          const SizedBox(height: 10),
-
           // Search Bar with Filter Icon
+          if (homeState.selectedCategorySlug != null ||
+              homeState.searchQuery.isNotEmpty)
+            Align(
+              alignment: AlignmentDirectional.centerEnd,
+              child: TextButton(
+                key: const Key('btn-clear-home-filters'),
+                onPressed: homeNotifier.clearFilters,
+                child: Text(isArabic ? 'مسح الفلتر' : 'Reset'),
+              ),
+            ),
           Container(
             decoration: BoxDecoration(
               color: palette.cardSurface,
@@ -619,7 +566,7 @@ class _CustomerHomePageState extends ConsumerState<CustomerHomePage> {
                         horizontal: 10,
                         vertical: 12,
                       ),
-                       hintText: isArabic
+                      hintText: isArabic
                           ? 'ابحث عن كهرباء، سباكة، صيانة تكييف...'
                           : 'Search electrical, plumbing, AC repair...',
                     ),
@@ -820,133 +767,20 @@ class _CustomerHomePageState extends ConsumerState<CustomerHomePage> {
       for (final c in feed.categories) c.slug: c.iconName,
     };
 
-    final isDesktopWeb = MediaQuery.sizeOf(context).width >= 1000;
-
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        if (isDesktopWeb)
+        CinematicHomeHero(isArabic: isArabic, onBrowse: _browseServices),
+        if (seasonalPromo != null)
           Padding(
-            key: const Key('desktop-split-hero-section'),
-            padding: const EdgeInsets.fromLTRB(
-              FixoSpacing.md,
-              8,
-              FixoSpacing.md,
-              14,
+            padding: const EdgeInsets.fromLTRB(16, 0, 16, 20),
+            child: SeasonalPromoHeroCard(
+              offer: seasonalPromo,
+              isArabic: isArabic,
+              onBookNow: () =>
+                  _navigateToCreateBooking(offering: seasonalPromo),
             ),
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Expanded(
-                  flex: 11,
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.all(20),
-                        decoration: BoxDecoration(
-                          color: palette.cardSurface,
-                          borderRadius: FixoRadius.borderRadiusLg,
-                          border: Border.all(
-                            color: isDark
-                                ? FixoColors.goldAccent.withValues(alpha: 0.45)
-                                : palette.subtleBorder,
-                          ),
-                        ),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Container(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 10,
-                                vertical: 4,
-                              ),
-                              decoration: BoxDecoration(
-                                color: FixoColors.primaryForest,
-                                borderRadius: FixoRadius.borderRadiusPill,
-                              ),
-                              child: Text(
-                                isArabic
-                                    ? 'بوابة فيكسو للويب • 21 قسماً و146 خدمة معتمدة'
-                                    : 'FIXO ATELIER WEB PORTAL • 21 TRADES & 146 SERVICES',
-                                style: FixoTypography.labelSm(
-                                  color: FixoColors.limeAccent,
-                                ).copyWith(fontWeight: FontWeight.w800),
-                              ),
-                            ),
-                            const SizedBox(height: 10),
-                            Text(
-                              isArabic
-                                  ? 'هندسة الصيانة المنزلية الفاخرة في مصر'
-                                  : 'Luxury Residential Engineering Across Egypt',
-                              style: FixoTypography.headlineMd(
-                                color: palette.inkText,
-                              ).copyWith(fontWeight: FontWeight.w800),
-                            ),
-                            const SizedBox(height: 6),
-                            Text(
-                              isArabic
-                                  ? 'استكشف الفيلا ثلاثية الأبعاد، اختر من بين 146 خدمة بسعر ثابت، وادفع نقداً بعد التنفيذ أو عبر Apple Pay وفيزا 3D.'
-                                  : 'Inspect our interactive 3D Villa, choose from 146 fixed-rate services, and checkout via Cash, Apple Pay, or 3D Visa.',
-                              style: FixoTypography.bodySm(
-                                color: palette.mutedText,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      if (seasonalPromo != null) ...[
-                        const SizedBox(height: 12),
-                        SeasonalPromoHeroCard(
-                          offer: seasonalPromo,
-                          isArabic: isArabic,
-                          onBookNow: () =>
-                              _navigateToCreateBooking(offering: seasonalPromo),
-                        ),
-                      ],
-                    ],
-                  ),
-                ),
-                const SizedBox(width: 16),
-                Expanded(
-                  flex: 13,
-                  child: Interactive3DHomeScene(
-                    key: const Key('interactive-3d-home-scene'),
-                    isArabic: isArabic,
-                    selectedCategorySlug: selectedCategory,
-                    onSelectCategory: homeNotifier.selectCategory,
-                  ),
-                ),
-              ],
-            ),
-          )
-        else ...[
-          // 0. Interactive 3D Residence Cutaway (Mobile Layout)
-          Interactive3DHomeScene(
-            key: const Key('interactive-3d-home-scene'),
-            isArabic: isArabic,
-            selectedCategorySlug: selectedCategory,
-            onSelectCategory: homeNotifier.selectCategory,
           ),
-
-          // 1. Featured Seasonal Promo Card (Flat 350 EGP)
-          if (seasonalPromo != null)
-            Padding(
-              padding: const EdgeInsets.fromLTRB(
-                FixoSpacing.md,
-                8,
-                FixoSpacing.md,
-                12,
-              ),
-              child: SeasonalPromoHeroCard(
-                offer: seasonalPromo,
-                isArabic: isArabic,
-                onBookNow: () =>
-                    _navigateToCreateBooking(offering: seasonalPromo),
-              ),
-            ),
-        ],
-
         // 1B. Pinned Liquid Glass Category & Sort Bar
         _buildLiquidGlassFilterAndSortBar(
           context,
@@ -1438,13 +1272,14 @@ class _CustomerHomePageState extends ConsumerState<CustomerHomePage> {
               const SizedBox(width: 6),
               Text(
                 label,
-                style: FixoTypography.labelMd(
-                  color: isActive
-                      ? (isDark ? Colors.white : palette.deepForest)
-                      : palette.mutedText,
-                ).copyWith(
-                  fontWeight: isActive ? FontWeight.w800 : FontWeight.w600,
-                ),
+                style:
+                    FixoTypography.labelMd(
+                      color: isActive
+                          ? (isDark ? Colors.white : palette.deepForest)
+                          : palette.mutedText,
+                    ).copyWith(
+                      fontWeight: isActive ? FontWeight.w800 : FontWeight.w600,
+                    ),
               ),
             ],
           ),
@@ -1462,41 +1297,31 @@ class _CustomerHomePageState extends ConsumerState<CustomerHomePage> {
     required FixoPaletteExtension palette,
   }) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final sortOptions = <({String id, String labelAr, String labelEn, IconData icon})>[
-      (
-        id: 'default',
-        labelAr: 'الكل',
-        labelEn: 'All',
-        icon: Icons.auto_awesome_rounded,
-      ),
-      (
-        id: 'top_rated',
-        labelAr: 'الأعلى تقييماً ⭐',
-        labelEn: 'Top Rated ⭐',
-        icon: Icons.star_rounded,
-      ),
-      (
-        id: 'lowest_price',
-        labelAr: 'الأقل سعراً 💰',
-        labelEn: 'Lowest Price 💰',
-        icon: Icons.sell_outlined,
-      ),
-      (
-        id: 'fastest',
-        labelAr: 'الأسرع استجابة ⚡',
-        labelEn: 'Fastest ⚡',
-        icon: Icons.bolt_rounded,
-      ),
-    ];
+    final sortOptions =
+        <({String id, String labelAr, String labelEn, IconData icon})>[
+          (
+            id: 'default',
+            labelAr: 'الكل',
+            labelEn: 'All',
+            icon: Icons.auto_awesome_rounded,
+          ),
+          (
+            id: 'lowest_price',
+            labelAr: 'الأقل سعرًا',
+            labelEn: 'Lowest price',
+            icon: Icons.sell_outlined,
+          ),
+          (
+            id: 'fastest',
+            labelAr: 'الأقصر مدة',
+            labelEn: 'Shortest duration',
+            icon: Icons.bolt_rounded,
+          ),
+        ];
 
     return Padding(
       key: const Key('pinned-liquid-glass-filter-bar'),
-      padding: const EdgeInsets.fromLTRB(
-        FixoSpacing.md,
-        4,
-        FixoSpacing.md,
-        8,
-      ),
+      padding: const EdgeInsets.fromLTRB(FixoSpacing.md, 4, FixoSpacing.md, 8),
       child: LiquidGlassLayer(
         borderRadius: FixoRadius.borderRadiusMd,
         blurSigma: 20.0,

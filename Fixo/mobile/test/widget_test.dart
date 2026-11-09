@@ -8,14 +8,14 @@ import 'package:flutter_test/flutter_test.dart';
 
 void main() {
   group('FIXO Design System Tokens & Themes', () {
-    test('FixoColors match reconciled Stitch & DESIGN.md hex values', () {
-      expect(FixoColors.deepestForest, const Color(0xFF002920));
-      expect(FixoColors.primaryForest, const Color(0xFF173F35));
-      expect(FixoColors.secondaryForest, const Color(0xFF245B4B));
-      expect(FixoColors.limeAccent, const Color(0xFFD5EE76));
-      expect(FixoColors.limeHighlight, const Color(0xFFD7F078));
-      expect(FixoColors.warmCream, const Color(0xFFF7F5EF));
-      expect(FixoColors.surfaceBotanical, const Color(0xFFF1FCF5));
+    test('FixoColors match approved cinematic DESIGN.md hex values', () {
+      expect(FixoColors.deepestForest, const Color(0xFF17191C));
+      expect(FixoColors.primaryForest, const Color(0xFF24262B));
+      expect(FixoColors.secondaryForest, const Color(0xFF4E4942));
+      expect(FixoColors.limeAccent, const Color(0xFFC6A779));
+      expect(FixoColors.limeHighlight, const Color(0xFFD8BC90));
+      expect(FixoColors.warmCream, const Color(0xFFF6F2EB));
+      expect(FixoColors.surfaceBotanical, const Color(0xFFF6F2EB));
       expect(FixoColors.coral, const Color(0xFFFF795F));
     });
 

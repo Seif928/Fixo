@@ -95,10 +95,7 @@ class ProfileController extends Notifier<ProfileState> {
           activeSession.user.id != initialSession.user.id) {
         return;
       }
-      state = state.copyWith(
-        isLoading: false,
-        errorMessage: e.message,
-      );
+      state = state.copyWith(isLoading: false, errorMessage: e.message);
     } catch (_) {
       final activeSession = ref.read(authControllerProvider).session;
       if (_disposed ||
@@ -145,7 +142,9 @@ class ProfileController extends Notifier<ProfileState> {
 
       state = state.copyWith(
         isSaving: false,
-        profile: updatedProfile,
+        profile: updatedProfile.copyWith(
+          addresses: state.profile?.addresses ?? const [],
+        ),
         clearError: true,
       );
     } catch (e) {
@@ -260,10 +259,7 @@ class ProfileController extends Notifier<ProfileState> {
     final activeSession = ref.read(authControllerProvider).session;
     if (_disposed || activeSession == null || state.profile == null) return;
     state = state.copyWith(
-      profile: state.profile!.copyWith(
-        hasAvatar: true,
-        avatarVersion: version,
-      ),
+      profile: state.profile!.copyWith(hasAvatar: true, avatarVersion: version),
     );
   }
 }

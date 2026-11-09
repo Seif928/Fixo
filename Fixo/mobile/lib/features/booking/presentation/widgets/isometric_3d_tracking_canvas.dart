@@ -45,8 +45,9 @@ class _Isometric3DTrackingCanvasState extends State<Isometric3DTrackingCanvas>
       vsync: this,
       duration: const Duration(seconds: 6),
     );
-    final isTest =
-        WidgetsBinding.instance.runtimeType.toString().contains('Test');
+    final isTest = WidgetsBinding.instance.runtimeType.toString().contains(
+      'Test',
+    );
     if (!isTest) {
       _animController.repeat();
     } else {
@@ -86,8 +87,10 @@ class _Isometric3DTrackingCanvasState extends State<Isometric3DTrackingCanvas>
               onHorizontalDragStart: (e) => _dragStart = _viewOrbit,
               onHorizontalDragUpdate: (e) {
                 setState(() {
-                  _viewOrbit = (_dragStart + e.delta.dx * 0.005)
-                      .clamp(-0.25, 0.25);
+                  _viewOrbit = (_dragStart + e.delta.dx * 0.005).clamp(
+                    -0.25,
+                    0.25,
+                  );
                 });
               },
               onHorizontalDragEnd: (_) {
@@ -119,7 +122,7 @@ class _Isometric3DTrackingCanvasState extends State<Isometric3DTrackingCanvas>
                 padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
                 decoration: BoxDecoration(
                   color: isDark
-                      ? const Color(0xFF173F35).withValues(alpha: 0.9)
+                      ? const Color(0xFF24262B).withValues(alpha: 0.9)
                       : Colors.white.withValues(alpha: 0.92),
                   borderRadius: BorderRadius.circular(FixoRadius.pill),
                   border: Border.all(
@@ -147,14 +150,11 @@ class _Isometric3DTrackingCanvasState extends State<Isometric3DTrackingCanvas>
                     const SizedBox(width: 6),
                     Text(
                       widget.isArabic
-                          ? '3D رادار المسار المباشر'
-                          : '3D Live Route Radar',
+                          ? 'رسم توضيحي — ليس تتبعًا مباشرًا'
+                          : 'Illustration · not live location',
                       style: FixoTypography.labelMd(
                         color: isDark ? Colors.white : FixoColors.deepestForest,
-                      ).copyWith(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 10.5,
-                      ),
+                      ).copyWith(fontWeight: FontWeight.bold, fontSize: 10.5),
                     ),
                   ],
                 ),
@@ -167,7 +167,10 @@ class _Isometric3DTrackingCanvasState extends State<Isometric3DTrackingCanvas>
               right: 12,
               left: 12,
               child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 8,
+                ),
                 decoration: BoxDecoration(
                   color: isDark
                       ? const Color(0xFF14241F).withValues(alpha: 0.94)
@@ -210,13 +213,15 @@ class _Isometric3DTrackingCanvasState extends State<Isometric3DTrackingCanvas>
                           Text(
                             widget.technicianName,
                             style: FixoTypography.labelMd(
-                              color: isDark ? Colors.white : FixoColors.deepestForest,
+                              color: isDark
+                                  ? Colors.white
+                                  : FixoColors.deepestForest,
                             ).copyWith(fontWeight: FontWeight.bold),
                           ),
                           Text(
                             widget.isArabic
-                                ? 'في الطريق إليك • مجهز بالمعدات المعتمدة'
-                                : 'On route with certified tools',
+                                ? 'تابع تحديثات الطلب بالأسفل'
+                                : 'View booking updates below',
                             style: FixoTypography.bodySm(
                               color: palette.mutedText,
                             ).copyWith(fontSize: 10.5),
@@ -387,11 +392,7 @@ class _CairoIsometric3DPainter extends CustomPainter {
         ..style = PaintingStyle.stroke
         ..strokeWidth = 2,
     );
-    canvas.drawCircle(
-      routeEnd,
-      5,
-      Paint()..color = FixoColors.coral,
-    );
+    canvas.drawCircle(routeEnd, 5, Paint()..color = FixoColors.coral);
 
     // 6. 3D Vehicle Marker moving along route
     final t = (progress * 1.2).clamp(0.0, 1.0);
@@ -404,11 +405,7 @@ class _CairoIsometric3DPainter extends CustomPainter {
       6.5,
       Paint()..color = FixoColors.deepestForest,
     );
-    canvas.drawCircle(
-      currentPos,
-      4.5,
-      Paint()..color = FixoColors.limeAccent,
-    );
+    canvas.drawCircle(currentPos, 4.5, Paint()..color = FixoColors.limeAccent);
   }
 
   @override
@@ -418,4 +415,3 @@ class _CairoIsometric3DPainter extends CustomPainter {
         oldDelegate.isDark != isDark;
   }
 }
-

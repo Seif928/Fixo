@@ -115,7 +115,7 @@ describe('Catalog Seed Integration Suite (fixo_test)', () => {
   it('verifies catalog definitions match expected record counts', () => {
     expect(EGYPT_COVERAGE_ZONES.length).toBe(32);
     expect(EGYPT_SERVICE_CATEGORIES.length).toBe(21);
-    expect(EGYPT_SERVICE_OFFERINGS.length).toBe(146);
+    expect(EGYPT_SERVICE_OFFERINGS.length).toBe(8);
   });
 
   it('seeds catalog data cleanly on first run and creates no non-catalog entities', async () => {
