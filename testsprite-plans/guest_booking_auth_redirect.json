@@ -1,0 +1,20 @@
+{
+  "$schema": "https://raw.githubusercontent.com/TestSprite/testsprite-cli/v0.16.0/schemas/plan.schema.json",
+  "projectId": "235a25d4-137f-4ec5-a31b-90cb6dba7026",
+  "type": "frontend",
+  "name": "Guest booking prompts user authentication screen",
+  "planSteps": [
+    {
+      "type": "action",
+      "description": "Navigate to the home services entry page"
+    },
+    {
+      "type": "action",
+      "description": "Click the action to start booking"
+    },
+    {
+      "type": "assertion",
+      "description": "Verify the FIXO sign in form appears prompting the user to authenticate"
+    }
+  ]
+}

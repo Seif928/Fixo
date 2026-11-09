@@ -43,10 +43,8 @@ class CheckoutState {
 
 /// StateNotifier managing checkout state machine, duplicate prevention, and API operations.
 class CheckoutController extends StateNotifier<CheckoutState> {
-  CheckoutController({
-    required this.bookingId,
-    required this.repository,
-  }) : super(const CheckoutState()) {
+  CheckoutController({required this.bookingId, required this.repository})
+    : super(const CheckoutState()) {
     loadBooking();
   }
 
@@ -63,7 +61,8 @@ class CheckoutController extends StateNotifier<CheckoutState> {
       final booking = await repository.getBookingById(bookingId);
 
       // Check if this booking is already checked out (idempotent reopening)
-      final isAlreadyCheckedOut = booking.status == 'PENDING_DISPATCH' &&
+      final isAlreadyCheckedOut =
+          booking.status == 'PENDING_DISPATCH' &&
           booking.payment != null &&
           (booking.payment?.status == 'PENDING' ||
               booking.payment?.status == 'PAID');
@@ -85,15 +84,9 @@ class CheckoutController extends StateNotifier<CheckoutState> {
       );
     } on DioException catch (e) {
       final errorMsg = _mapDioError(e);
-      state = state.copyWith(
-        isLoading: false,
-        errorMessage: errorMsg,
-      );
+      state = state.copyWith(isLoading: false, errorMessage: errorMsg);
     } catch (e) {
-      state = state.copyWith(
-        isLoading: false,
-        errorMessage: e.toString(),
-      );
+      state = state.copyWith(isLoading: false, errorMessage: e.toString());
     }
   }
 
@@ -101,10 +94,7 @@ class CheckoutController extends StateNotifier<CheckoutState> {
   /// or `CARD_MEEZA_SANDBOX` for Visa / Mastercard Credit Card).
   void selectPaymentMethod(String method) {
     if (state.isSubmitting || state.checkoutSuccess) return;
-    state = state.copyWith(
-      selectedPaymentMethod: method,
-      errorMessage: null,
-    );
+    state = state.copyWith(selectedPaymentMethod: method, errorMessage: null);
   }
 
   /// Submits checkout via `POST /api/v1/bookings/:bookingId/checkout`.
@@ -130,7 +120,8 @@ class CheckoutController extends StateNotifier<CheckoutState> {
 
       // Validate confirmation invariants:
       // Status must be PENDING_DISPATCH and payment record must exist.
-      final isConfirmed = updatedBooking.status == 'PENDING_DISPATCH' &&
+      final isConfirmed =
+          updatedBooking.status == 'PENDING_DISPATCH' &&
           updatedBooking.payment != null &&
           (updatedBooking.payment?.status == 'PENDING' ||
               updatedBooking.payment?.status == 'PAID');
@@ -161,16 +152,10 @@ class CheckoutController extends StateNotifier<CheckoutState> {
       return false;
     } on DioException catch (e) {
       final errorMsg = _mapDioError(e);
-      state = state.copyWith(
-        isSubmitting: false,
-        errorMessage: errorMsg,
-      );
+      state = state.copyWith(isSubmitting: false, errorMessage: errorMsg);
       return false;
     } catch (e) {
-      state = state.copyWith(
-        isSubmitting: false,
-        errorMessage: e.toString(),
-      );
+      state = state.copyWith(isSubmitting: false, errorMessage: e.toString());
       return false;
     }
   }
@@ -214,10 +199,6 @@ class CheckoutController extends StateNotifier<CheckoutState> {
 /// Auto-disposing family provider for Screen 05 CheckoutController.
 final checkoutControllerProvider = StateNotifierProvider.autoDispose
     .family<CheckoutController, CheckoutState, String>((ref, bookingId) {
-  final repository = ref.watch(bookingRepositoryProvider);
-  return CheckoutController(
-    bookingId: bookingId,
-    repository: repository,
-  );
-});
-
+      final repository = ref.watch(bookingRepositoryProvider);
+      return CheckoutController(bookingId: bookingId, repository: repository);
+    });
