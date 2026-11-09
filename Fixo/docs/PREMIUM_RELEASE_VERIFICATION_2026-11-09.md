@@ -27,7 +27,7 @@ Design reference: https://www.figma.com/design/xAym32AGTmERySxtIyBbob
 
 ## Release and remaining external checks
 - Application production deployment has NOT occurred. Automatic approval review previously required approval of a concrete tested release. Vercel MCP currently requires renewed team access.
-- Android debug APK build is in progress; do not claim device verification from build alone.
+- Android debug APK build succeeded (222.1 seconds): mobile/build/app/outputs/flutter-apk/app-debug.apk. This is a test build, not a store-signed release or proof of device/provider verification. Compiler warnings originate in plugin Java compatibility/deprecation settings.
 - iOS build/device verification requires macOS/Xcode and remains unverified. No paid Apple program or service enabled.
 - Real Google login, camera/gallery upload and push delivery on physical devices require provider/device smoke checks after deployment; widget/integration tests do not prove them.
 - Apple provider configuration has not been verified; failures now reject safely rather than create a false session.
