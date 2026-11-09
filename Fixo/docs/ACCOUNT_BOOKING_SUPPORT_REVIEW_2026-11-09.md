@@ -27,4 +27,16 @@ This is an implementation and focused source/security-boundary review, not proof
 
 Apple sign-in still requires the user's Apple provider setup; electronic payment methods require approved merchant accounts/credentials. No gateway, SMS, paid Apple membership or billing has been activated. Real Google/Apple login, camera/gallery and push delivery on physical devices need user/device smoke checks. iOS build/device validation still requires macOS/Xcode. Firebase project/provider permissions were not changed in this release.
 
-Production release status: application deployment pending build verification. Database additions are already present and backward compatible with the running old API. Keep the previous deployment IDs for rollback. Do not remove the new tables or disable RLS to fix application deployment errors.
+Production release status: API, Vercel web and Firebase Hosting successfully deployed. Final public checks and artifact hashes are recorded below. Database additions are backward compatible. Do not remove the new tables or disable RLS to fix application deployment errors.
+
+## Completed production rollout
+- Application source: 57802fd; GitHub branch codex/fixo-premium-repair pushed.
+- API: dpl_9M2L5nSxqyqe6Mx8MqFv7s7aULuP (READY), https://fixo-api.vercel.app.
+- Web: dpl_5NKL1qnKYhCofcJEdkUghDJ6RS1v (READY), https://fixo-web-blue.vercel.app.
+- Firebase Hosting deploy completed at https://fixo-home-services-6507.web.app using firebase.release.json and build/web-final.
+- Production readiness: ready, databaseReady true. Unauthenticated support/user and support/admin requests return 401. Apple exchange without a token returns 400.
+- Firebase public flutter_bootstrap.js, main.dart.js and firebase-messaging-sw.js SHA-256 hashes match the tested release.
+- Previous API rollback: dpl_BdddbQB9b79d1D9eGjh1atWayhyT / fixo-jyqlda49c-gamal6507-3315.vercel.app.
+- Previous web rollback: dpl_4JemSNRXi1g5FW8czLWqMbsZ7PGE / fixo-huym1wrfo-gamal6507-3315.vercel.app.
+- Android debug test artifact: mobile/build/app/outputs/flutter-apk/app-debug.apk (not a store-signed release).
+- No billing, paid service, provider-access or merchant configuration changes.- Vercel public flutter_bootstrap.js, main.dart.js and firebase-messaging-sw.js SHA-256 hashes also match. Direct /support page returns HTTP 200 with the Flutter bootstrap.
