@@ -517,7 +517,7 @@ export async function seedAdminCatalogDrafts(db: PrismaClient) {
       publishedVersion: 1,
     }));
     return tx.adminCatalogDraft.createMany({
-      data: [...CATALOG_DRAFTS, ...linked],
+      data: [...linked, ...CATALOG_DRAFTS],
       skipDuplicates: true,
     });
   });

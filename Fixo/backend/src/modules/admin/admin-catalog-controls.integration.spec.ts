@@ -364,7 +364,7 @@ describe('Admin Catalog Controls (Guarded PostgreSQL)', () => {
     offerings.push(publishedDraft.offeringId);
 
     // Verify service appears in public listing
-    const publicServicesRes = await fetch(`${url}/api/v1/services`);
+    const publicServicesRes = await fetch(`${url}/api/v1/services?limit=250`);
     expect(publicServicesRes.status).toBe(200);
     const publicServices = await publicServicesRes.json();
     const foundInPublic = publicServices.items.some(
@@ -475,7 +475,7 @@ describe('Admin Catalog Controls (Guarded PostgreSQL)', () => {
 
     // Verify service REAPPEARS in public listing
     const publicServicesAfterReact = await (
-      await fetch(`${url}/api/v1/services`)
+      await fetch(`${url}/api/v1/services?limit=250`)
     ).json();
     const foundAfterReact = publicServicesAfterReact.items.some(
       (s: any) => s.id === publishedDraft.offeringId,
@@ -697,7 +697,7 @@ describe('Admin Catalog Controls (Guarded PostgreSQL)', () => {
     expect(offeringDb.isActive).toBe(true);
     expect(offeringDb.flatPriceEgp).toBe(300);
 
-    const publicServicesRes = await fetch(`${url}/api/v1/services`);
+    const publicServicesRes = await fetch(`${url}/api/v1/services?limit=250`);
     const publicServices = await publicServicesRes.json();
     const serviceInPublic = publicServices.items.find(
       (s: any) => s.id === publishedA.offeringId,
@@ -724,7 +724,7 @@ describe('Admin Catalog Controls (Guarded PostgreSQL)', () => {
     expect(offeringDb.flatPriceEgp).toBe(400);
 
     // Public listing now shows priceB (400)
-    const publicAfterFinal = await (await fetch(`${url}/api/v1/services`)).json();
+    const publicAfterFinal = await (await fetch(`${url}/api/v1/services?limit=250`)).json();
     const publicServiceFinal = publicAfterFinal.items.find(
       (s: any) => s.id === publishedA.offeringId,
     );

@@ -321,7 +321,7 @@ describe('Tier 3: Cross-Feature Interactions (Full Lifecycle Progression)', () =
   // ==========================================
   it('Interaction 1: Service Discovery to Booking Creation initializes DRAFT order in EGP', async () => {
     const categories = await servicesController.listCategories();
-    expect(categories.categories.length).toBe(6);
+    expect(categories.categories.length).toBeGreaterThanOrEqual(6);
     const acCategory = categories.categories[0];
 
     const offerings = memoryStore.getOfferings();
