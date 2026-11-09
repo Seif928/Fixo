@@ -9,6 +9,7 @@ import '../../features/auth/presentation/controllers/account_entry_controller.da
 import '../../features/auth/presentation/pages/phone_auth_page.dart';
 import '../../features/auth/presentation/pages/email_auth_page.dart';
 import '../../features/auth/presentation/pages/phone_password_page.dart';
+import '../../features/auth/presentation/pages/logout_page.dart';
 import '../../features/chat/presentation/chat_page.dart';
 import '../../features/profile/presentation/profile_page.dart';
 import '../../features/favorites/presentation/pages/favorites_page.dart';
@@ -128,6 +129,11 @@ GoRouter createAppRouter({
         path: AppRoutes.customerProfile,
         name: 'customerProfile',
         builder: (_, _) => const ProfilePage(),
+      ),
+      _motionRoute(
+        path: AppRoutes.logout,
+        name: 'logout',
+        builder: (_, _) => const LogoutPage(),
       ),
       _motionRoute(
         path: AppRoutes.favorites,

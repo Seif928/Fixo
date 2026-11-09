@@ -956,12 +956,9 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
                 style: TextButton.styleFrom(foregroundColor: FixoColors.error),
                 onPressed: _saving
                     ? null
-                    : () => _save(() async {
-                        await ref
-                            .read(authControllerProvider.notifier)
-                            .logout();
-                        if (context.mounted) context.go('/auth/phone');
-                      }),
+                    : () {
+                        context.push(AppRoutes.logout);
+                      },
                 icon: const Icon(Icons.logout_rounded),
                 label: Text(ar ? 'تسجيل الخروج' : 'Sign out'),
               ),
