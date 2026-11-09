@@ -62,11 +62,7 @@ class _FixoBrandMarkState extends State<FixoBrandMark>
         gradient: const LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
-          colors: [
-            Color(0xFF1F5446),
-            Color(0xFF0E2B23),
-            Color(0xFF05130F),
-          ],
+          colors: [Color(0xFF38332B), Color(0xFF24262B), Color(0xFF17191C)],
         ),
         border: Border.all(
           color: FixoColors.goldAccent.withValues(alpha: isDark ? 0.65 : 0.48),
@@ -92,9 +88,7 @@ class _FixoBrandMarkState extends State<FixoBrandMark>
                 ),
               ),
             )
-          : const CustomPaint(
-              painter: _FixoLuxuryCrestPainter(progress: 0.35),
-            ),
+          : const CustomPaint(painter: _FixoLuxuryCrestPainter(progress: 0.35)),
     );
 
     return Row(
@@ -183,10 +177,7 @@ class _FixoLuxuryCrestPainter extends CustomPainter {
       ..shader = const LinearGradient(
         begin: Alignment.topCenter,
         end: Alignment.bottomCenter,
-        colors: [
-          Color(0xFF1A473B),
-          Color(0xFF0A201A),
-        ],
+        colors: [Color(0xFF1A473B), Color(0xFF0A201A)],
       ).createShader(Offset.zero & size);
     canvas.drawPath(shieldPath, shieldFill);
 
@@ -213,10 +204,7 @@ class _FixoLuxuryCrestPainter extends CustomPainter {
       ..shader = const LinearGradient(
         begin: Alignment.topLeft,
         end: Alignment.bottomRight,
-        colors: [
-          FixoColors.limeHighlight,
-          FixoColors.goldBright,
-        ],
+        colors: [FixoColors.limeHighlight, FixoColors.goldBright],
       ).createShader(Offset.zero & size);
 
     final roofPath = Path()
@@ -262,10 +250,7 @@ class _FixoLuxuryCrestPainter extends CustomPainter {
       ..lineTo(sparkCenter.dx - sparkR, sparkCenter.dy)
       ..lineTo(sparkCenter.dx - sparkInner, sparkCenter.dy - sparkInner)
       ..close();
-    canvas.drawPath(
-      sparkPath,
-      Paint()..color = FixoColors.limeHighlight,
-    );
+    canvas.drawPath(sparkPath, Paint()..color = FixoColors.limeHighlight);
 
     // 5. Animated diagonal specular light sweep across the emblem
     final sweepPos = -0.6 + (progress * 2.2);

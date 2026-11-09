@@ -299,7 +299,7 @@ class _PhonePasswordPageState extends ConsumerState<PhonePasswordPage> {
                                 : 'Save your name and phone and choose a FIXO password. Your phone is your sign-in name, without SMS.')
                           : (ar
                                 ? 'ادخل برقمك وكلمة مرورك. أول مرة؟ اربط حساب جوجل أدناه.'
-                                : 'Sign in with your phone and password. First time? Connect Google below.'),
+                                : 'Sign in, or create your account with Google.'),
                       style: FixoTypography.bodyMd(
                         color: palette.mutedText,
                         locale: locale,
@@ -339,7 +339,7 @@ class _PhonePasswordPageState extends ConsumerState<PhonePasswordPage> {
                                           : 'Account Profile Setup')
                                     : (ar
                                           ? 'الدخول برقم الموبايل وكلمة المرور'
-                                          : 'Phone & Password Access'),
+                                          : 'Welcome back'),
                                 style: FixoTypography.labelMd(
                                   color: palette.deepForest,
                                   locale: locale,
@@ -674,7 +674,10 @@ class _PhonePasswordPageState extends ConsumerState<PhonePasswordPage> {
                                       }
                                       await _accept(value);
                                     }),
-                              icon: const Icon(Icons.g_mobiledata_rounded, size: 24),
+                              icon: const Icon(
+                                Icons.g_mobiledata_rounded,
+                                size: 24,
+                              ),
                               label: Text(
                                 ar
                                     ? 'أول مرة؟ تابع بحساب Google'
@@ -752,9 +755,7 @@ class _PhonePasswordPageState extends ConsumerState<PhonePasswordPage> {
                               const SizedBox(width: 4),
                               Flexible(
                                 child: Text(
-                                  ar
-                                      ? 'حساب جوجل بدون رسائل SMS'
-                                      : 'Google Account • No SMS Fees',
+                                  ar ? 'حسابك في فيكسو' : 'Your FIXO account',
                                   style: FixoTypography.bodySm(
                                     color: palette.mutedText,
                                     locale: locale,

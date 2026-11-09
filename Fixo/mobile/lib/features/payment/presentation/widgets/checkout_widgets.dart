@@ -35,9 +35,7 @@ class CheckoutReassuranceBanner extends StatelessWidget {
                 const SizedBox(width: FixoSpacing.xs),
                 Flexible(
                   child: Text(
-                    isArabic
-                        ? 'تأكيد الدفع نقداً عند التنفيذ'
-                        : 'Cash on Service Checkout',
+                    isArabic ? 'تفاصيل الدفع' : 'Payment details',
                     style: FixoTypography.labelMd(color: palette.mutedText),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
@@ -478,142 +476,13 @@ class CheckoutPaymentMethodsSection extends StatelessWidget {
             ),
           ),
           const SizedBox(height: FixoSpacing.sm),
-
-          // Option 2: InstaPay (Disabled)
-          _buildDisabledPaymentOption(
-            palette: palette,
-            key: const Key('payment-method-instapay'),
-            icon: Icons.bolt_rounded,
-            title: isArabic ? 'انستاباي مصر' : 'InstaPay Egypt',
-            subtitle: isArabic
-                ? 'تحويل بنكي لحظي / محفظة إلكترونية'
-                : 'Direct Bank Transfer / Mobile Wallet',
-            badge: isArabic ? 'قريباً' : 'Coming Soon',
-          ),
-          const SizedBox(height: FixoSpacing.sm),
-
-          // Option 3: Smart Wallets (Disabled)
-          _buildDisabledPaymentOption(
-            palette: palette,
-            key: const Key('payment-method-wallets'),
-            icon: Icons.account_balance_wallet_outlined,
-            title: isArabic ? 'المحافظ الإلكترونية' : 'Smart Wallets',
-            subtitle: isArabic
-                ? 'فودافون كاش، أورنج، اتصالات، وي'
-                : 'Vodafone Cash, Orange, Etisalat & WE',
-            badge: isArabic ? 'قريباً' : 'Coming Soon',
-          ),
-          const SizedBox(height: FixoSpacing.sm),
-
-          // Option 4: Cards & Meeza (Disabled)
-          _buildDisabledPaymentOption(
-            palette: palette,
-            key: const Key('payment-method-cards'),
-            icon: Icons.credit_card_outlined,
-            title: isArabic ? 'البطاقات وكارت ميزة' : 'Cards & Meeza',
-            subtitle: isArabic
-                ? 'فيزا، ماستركارد، وميزة الوطنية'
-                : 'Visa, Mastercard, & National Meeza Card',
-            badge: isArabic ? 'قريباً' : 'Coming Soon',
-          ),
-          const SizedBox(height: FixoSpacing.sm),
-
-          // Option 5: Fawry Pay (Disabled)
-          _buildDisabledPaymentOption(
-            palette: palette,
-            key: const Key('payment-method-fawry'),
-            icon: Icons.storefront_outlined,
-            title: isArabic ? 'منافذ فوري' : 'Fawry Pay Kiosk',
-            subtitle: isArabic ? 'غير متاح حالياً' : 'Not available yet',
-            badge: isArabic ? 'قريباً' : 'Coming Soon',
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildDisabledPaymentOption({
-    required FixoPaletteExtension palette,
-    required Key key,
-    required IconData icon,
-    required String title,
-    required String subtitle,
-    required String badge,
-  }) {
-    return Container(
-      key: key,
-      padding: const EdgeInsets.all(FixoSpacing.md),
-      decoration: BoxDecoration(
-        color: palette.cardSurface.withValues(alpha: 0.65),
-        borderRadius: BorderRadius.circular(FixoRadius.lg),
-        border: Border.all(color: palette.subtleBorder.withValues(alpha: 0.6)),
-      ),
-      child: Row(
-        children: [
-          Container(
-            width: 40,
-            height: 40,
-            decoration: BoxDecoration(
-              color: palette.surfaceContainer,
-              borderRadius: BorderRadius.circular(FixoRadius.md),
-            ),
-            child: Icon(icon, color: palette.mutedText, size: 22),
-          ),
-          const SizedBox(width: FixoSpacing.sm),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Wrap(
-                  spacing: 8,
-                  runSpacing: 4,
-                  crossAxisAlignment: WrapCrossAlignment.center,
-                  children: [
-                    Text(
-                      title,
-                      style: FixoTypography.labelLg(
-                        color: palette.mutedText,
-                      ).copyWith(fontWeight: FontWeight.bold),
-                    ),
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 6,
-                        vertical: 2,
-                      ),
-                      decoration: BoxDecoration(
-                        color: palette.surfaceHigh,
-                        borderRadius: BorderRadius.circular(FixoRadius.pill),
-                      ),
-                      child: Text(
-                        badge,
-                        style: FixoTypography.labelMd(color: palette.mutedText),
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  subtitle,
-                  style: FixoTypography.bodySm(color: palette.mutedText),
-                ),
-              ],
-            ),
-          ),
-          Container(
-            width: 20,
-            height: 20,
-            decoration: BoxDecoration(
-              border: Border.all(color: palette.subtleBorder, width: 1.5),
-              shape: BoxShape.circle,
-            ),
-          ),
         ],
       ),
     );
   }
 }
 
-/// Receipt fare breakdown card showing transparent fees in EGP.
+/// Receipt based on actual booking prices.
 class CheckoutReceiptCard extends StatelessWidget {
   const CheckoutReceiptCard({super.key, required this.pricing});
 
@@ -837,8 +706,8 @@ class CheckoutTrustFootnote extends StatelessWidget {
           const SizedBox(height: 4),
           Text(
             isArabic
-                ? 'الدفع نقداً يتم بالكامل في يد الفني فقط بعد انتهاء ومعاينة الخدمة.'
-                : 'Cash payment is collected entirely in person only after service is completed and inspected.',
+                ? 'ادفع للفني بعد إتمام الخدمة.'
+                : 'Pay your technician after the service.',
             style: FixoTypography.bodySm(color: palette.mutedText),
             textAlign: TextAlign.center,
           ),
