@@ -1,3 +1,4 @@
+import { cairoBookingTime } from "./cairo-booking-time";
 import {
   BadRequestException,
   ConflictException,
@@ -111,7 +112,12 @@ export class BookingsService {
     dto: CreateBookingDto,
   ): Promise<BookingDetailResponse> {
     // 1. Validate scheduledDate format and ensure it is not in the past
-    const parsedDate = new Date(dto.scheduledDate);
+    const parsedDate = dto.scheduledTime
+      ? cairoBookingTime(dto.scheduledDate, dto.scheduledTime)
+      : new Date(dto.scheduledDate);
+    if (dto.scheduledTime && parsedDate.getTime() <= Date.now()) {
+      throw new BadRequestException("Appointment time must be in the future.");
+    }
     if (Number.isNaN(parsedDate.getTime())) {
       throw new BadRequestException("Invalid scheduledDate format.");
     }
@@ -206,6 +212,7 @@ export class BookingsService {
           addressId: address.id,
           status: BookingStatus.DRAFT,
           scheduledDate: parsedDate,
+          scheduledTime: dto.scheduledTime ?? null,
           timeWindow: dto.timeWindow,
           issueDescription: dto.issueDescription?.trim() || null,
           issuePhotoUrls: dto.issuePhotoUrls ?? [],
@@ -684,10 +691,17 @@ export class BookingsService {
         issuedAtDate instanceof Date
           ? issuedAtDate.toISOString()
           : String(issuedAtDate),
-      scheduledDate:
-        booking.scheduledDate instanceof Date
+      scheduledDate: booking.scheduledTime
+        ? new Intl.DateTimeFormat("sv-SE", {
+            timeZone: "Africa/Cairo",
+            year: "numeric",
+            month: "2-digit",
+            day: "2-digit",
+          }).format(new Date(booking.scheduledDate))
+        : booking.scheduledDate instanceof Date
           ? booking.scheduledDate.toISOString()
           : String(booking.scheduledDate),
+      scheduledTime: booking.scheduledTime ?? null,
       timeWindow: booking.timeWindow,
       completedAt: booking.completedAt
         ? booking.completedAt instanceof Date
@@ -1252,10 +1266,17 @@ export class BookingsService {
       addressId: booking.addressId,
       status: booking.status,
       cancellationReason: booking.cancellationReason ?? null,
-      scheduledDate:
-        booking.scheduledDate instanceof Date
+      scheduledDate: booking.scheduledTime
+        ? new Intl.DateTimeFormat("sv-SE", {
+            timeZone: "Africa/Cairo",
+            year: "numeric",
+            month: "2-digit",
+            day: "2-digit",
+          }).format(new Date(booking.scheduledDate))
+        : booking.scheduledDate instanceof Date
           ? booking.scheduledDate.toISOString()
           : String(booking.scheduledDate),
+      scheduledTime: booking.scheduledTime ?? null,
       timeWindow: booking.timeWindow,
       issueDescription: booking.issueDescription ?? null,
       issuePhotoUrls: booking.issuePhotoUrls ?? [],

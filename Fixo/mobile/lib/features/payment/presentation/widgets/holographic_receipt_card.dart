@@ -227,7 +227,7 @@ class _Holographic3DReceiptCardState extends State<Holographic3DReceiptCard>
                             const SizedBox(height: 6),
                             _receiptRow(
                               widget.isArabic ? 'تاريخ الخدمة' : 'Service Date',
-                              '${booking.scheduledDate} (${booking.timeWindow})',
+                              '${booking.scheduledDate} (${booking.scheduledTime ?? booking.timeWindow})',
                               palette,
                             ),
                             const SizedBox(height: 6),

@@ -658,6 +658,24 @@ class BookingDateSelector extends StatelessWidget {
             ],
           ),
           const SizedBox(height: FixoSpacing.sm),
+          OutlinedButton.icon(
+            key: const Key('booking-open-calendar'),
+            icon: const Icon(Icons.calendar_month_outlined),
+            label: Text(isArabic ? 'اختار من التقويم' : 'Choose from calendar'),
+            onPressed: () async {
+              final first = DateTime(now.year, now.month, now.day);
+              final chosen = await showDatePicker(
+                context: context,
+                initialDate: selectedDate.isBefore(first)
+                    ? first
+                    : selectedDate,
+                firstDate: first,
+                lastDate: DateTime(2100, 12, 31),
+              );
+              if (chosen != null) onSelectDate(chosen);
+            },
+          ),
+          const SizedBox(height: FixoSpacing.sm),
           Row(
             children: dates.map((d) {
               final isSelected =

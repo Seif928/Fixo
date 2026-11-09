@@ -588,11 +588,7 @@ void main() {
         // 5. Select Date Card
         expect(find.text('Select Date'), findsOneWidget);
 
-        // 6. Preferred Time Window
-        expect(find.text('Preferred Time Window'), findsOneWidget);
-        expect(find.text('Morning Window'), findsOneWidget);
-        expect(find.text('Afternoon Window'), findsOneWidget);
-        expect(find.text('Evening Window'), findsOneWidget);
+        expect(find.byKey(const Key('booking-exact-time')), findsOneWidget);
 
         // 7. Issue Description
         expect(find.text('Issue Description'), findsOneWidget);
@@ -633,9 +629,31 @@ void main() {
       await tester.pumpWidget(buildTestableApp());
       await tester.pumpAndSettle();
 
-      // Tap Evening Window
-      await tester.tap(find.text('Evening Window'));
+      await tester.tap(find.byKey(const Key('booking-exact-time')));
       await tester.pumpAndSettle();
+      await tester.tap(find.byTooltip('Switch to text input mode'));
+      await tester.pumpAndSettle();
+      await tester.enterText(
+        find
+            .descendant(
+              of: find.byType(TimePickerDialog),
+              matching: find.byType(TextField),
+            )
+            .at(0),
+        '21',
+      );
+      await tester.enterText(
+        find
+            .descendant(
+              of: find.byType(TimePickerDialog),
+              matching: find.byType(TextField),
+            )
+            .at(1),
+        '45',
+      );
+      await tester.tap(find.text('OK'));
+      await tester.pumpAndSettle();
+      expect(find.text('Time: 21:45'), findsOneWidget);
 
       // Enter issue description
       await tester.enterText(
@@ -1015,7 +1033,7 @@ void main() {
       expect(find.text('تحديد موعد الخدمة'), findsOneWidget);
       expect(find.text('الخطوة ١ من ٢'), findsOneWidget);
       expect(find.text('موقع تقديم الخدمة'), findsOneWidget);
-      expect(find.text('الفترة الزمنية المفضلة'), findsOneWidget);
+      expect(find.byKey(const Key('booking-exact-time')), findsOneWidget);
       expect(find.text('تفاصيل السعر'), findsOneWidget);
       expect(find.text('تأكيد مسودة الحجز'), findsOneWidget);
       expect(tester.takeException(), isNull);

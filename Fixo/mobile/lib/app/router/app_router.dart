@@ -1,3 +1,4 @@
+import '../../features/support/support_page.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart';
 import '../../core/motion/fixo_motion.dart';
@@ -9,6 +10,7 @@ import '../../features/auth/presentation/controllers/account_entry_controller.da
 import '../../features/auth/presentation/pages/phone_auth_page.dart';
 import '../../features/auth/presentation/pages/email_auth_page.dart';
 import '../../features/auth/presentation/pages/phone_password_page.dart';
+import '../../features/auth/presentation/pages/logout_page.dart';
 import '../../features/chat/presentation/chat_page.dart';
 import '../../features/profile/presentation/profile_page.dart';
 import '../../features/favorites/presentation/pages/favorites_page.dart';
@@ -84,7 +86,10 @@ GoRouter createAppRouter({
       final authed = isAuthenticated();
       final path = state.uri.path;
       final account = state.uri.queryParameters['account'];
-      final wantsPro = account == 'pro' || (account != 'customer' && (professionalIntent?.call() == true || path.startsWith('/pro')));
+      final wantsPro =
+          account == 'pro' ||
+          (account != 'customer' &&
+              (professionalIntent?.call() == true || path.startsWith('/pro')));
       final authPath =
           '${AppRoutes.phoneAuth}${wantsPro ? '?account=pro' : ''}';
       final setupRequired = authed && requiresProfileSetup?.call() == true;
@@ -94,7 +99,10 @@ GoRouter createAppRouter({
 
       // Protect customer and pro routes when unauthenticated
       if (!authed &&
-          (path.startsWith('/customer') || path.startsWith('/pro') || path.startsWith('/admin'))) {
+          (path.startsWith('/customer') ||
+              path.startsWith('/pro') ||
+              path.startsWith('/admin') ||
+              path.startsWith('/support'))) {
         return authPath;
       }
 
@@ -128,6 +136,21 @@ GoRouter createAppRouter({
         path: AppRoutes.customerProfile,
         name: 'customerProfile',
         builder: (_, _) => const ProfilePage(),
+      ),
+      _motionRoute(
+        path: '/support',
+        name: 'support',
+        builder: (_, _) => const SupportPage(),
+      ),
+      _motionRoute(
+        path: '/admin/support',
+        name: 'adminSupport',
+        builder: (_, _) => const SupportPage(admin: true),
+      ),
+      _motionRoute(
+        path: AppRoutes.logout,
+        name: 'logout',
+        builder: (_, _) => const LogoutPage(),
       ),
       _motionRoute(
         path: AppRoutes.favorites,
@@ -287,4 +310,3 @@ GoRoute _motionRoute({
         ),
   ),
 );
-

@@ -101,6 +101,7 @@ export interface BookingDetailResponse {
   status: BookingStatus;
   cancellationReason?: string | null;
   scheduledDate: string;
+  scheduledTime?: string | null;
   timeWindow: TimeWindow;
   issueDescription: string | null;
   issuePhotoUrls: string[];
@@ -169,6 +170,7 @@ export interface BookingReceiptResponse {
   status: BookingStatus;
   issuedAt: string;
   scheduledDate: string;
+  scheduledTime?: string | null;
   timeWindow: TimeWindow;
   completedAt: string | null;
   customerName: string;

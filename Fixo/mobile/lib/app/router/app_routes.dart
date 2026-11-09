@@ -7,6 +7,8 @@ abstract final class AppRoutes {
   // Customer Flow (01–10)
   static const String onboarding = '/onboarding'; // 01_onboarding
   static const String phoneAuth = '/auth/phone'; // 02_phone_auth_otp
+  static const String logout =
+      '/auth/logout'; // Premium Logout and Session Security
   static const String customerHome = '/customer/home'; // 03_customer_home
   static const String createBooking =
       '/customer/bookings/new'; // 04_create_booking

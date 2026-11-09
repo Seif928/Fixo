@@ -677,7 +677,9 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
                               width: 36,
                               height: 36,
                               decoration: BoxDecoration(
-                                color: palette.primaryBrand.withValues(alpha: 0.15),
+                                color: palette.primaryBrand.withValues(
+                                  alpha: 0.15,
+                                ),
                                 shape: BoxShape.circle,
                               ),
                               alignment: Alignment.center,
@@ -732,7 +734,9 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
                                 ? null
                                 : (enabled) => _save(() async {
                                     await ref
-                                        .read(profileControllerProvider.notifier)
+                                        .read(
+                                          profileControllerProvider.notifier,
+                                        )
                                         .updateNotificationPreferences(
                                           arrivalAlertsEnabled: enabled,
                                         );
@@ -944,6 +948,11 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
             ),
             const SizedBox(height: FixoSpacing.md),
 
+            ListTile(
+              leading: const Icon(Icons.support_agent),
+              title: Text(ar ? 'خدمة العملاء' : 'Customer support'),
+              onTap: () => context.push('/support'),
+            ),
             // 6. Sign Out & Editorial Brand Metadata
             FixoSurfaceCard(
               padding: const EdgeInsets.symmetric(
@@ -956,12 +965,9 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
                 style: TextButton.styleFrom(foregroundColor: FixoColors.error),
                 onPressed: _saving
                     ? null
-                    : () => _save(() async {
-                        await ref
-                            .read(authControllerProvider.notifier)
-                            .logout();
-                        if (context.mounted) context.go('/auth/phone');
-                      }),
+                    : () {
+                        context.push(AppRoutes.logout);
+                      },
                 icon: const Icon(Icons.logout_rounded),
                 label: Text(ar ? 'تسجيل الخروج' : 'Sign out'),
               ),
@@ -981,7 +987,9 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
                 onPressed: _saving ? null : _confirmDeleteAccount,
                 icon: const Icon(Icons.delete_forever_outlined, size: 20),
                 label: Text(
-                  ar ? 'حذف الحساب والبيانات الشخصية' : 'Delete account & privacy data',
+                  ar
+                      ? 'حذف الحساب والبيانات الشخصية'
+                      : 'Delete account & privacy data',
                   style: const TextStyle(fontSize: 13),
                 ),
               ),

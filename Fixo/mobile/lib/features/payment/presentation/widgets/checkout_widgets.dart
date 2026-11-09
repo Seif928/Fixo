@@ -225,7 +225,7 @@ class CheckoutOrderSummaryCard extends StatelessWidget {
                         const SizedBox(width: 4),
                         Expanded(
                           child: Text(
-                            '${booking.scheduledDate} • ${_formatTimeWindow(booking.timeWindow, isArabic)}',
+                            '${booking.scheduledDate} • ${booking.scheduledTime ?? _formatTimeWindow(booking.timeWindow, isArabic)}',
                             style: FixoTypography.bodySm(
                               color: palette.mutedText,
                             ),

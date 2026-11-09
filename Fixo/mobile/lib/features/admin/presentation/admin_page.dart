@@ -234,6 +234,11 @@ class _AdminPageState extends ConsumerState<AdminPage> {
         title: Text(ar ? 'إدارة FIXO' : 'FIXO Administration'),
         actions: [
           IconButton(
+            tooltip: ar ? 'خدمة العملاء' : 'Customer support',
+            onPressed: () => context.push('/admin/support'),
+            icon: const Icon(Icons.support_agent),
+          ),
+          IconButton(
             tooltip: ar ? 'تحديث البيانات' : 'Refresh data',
             onPressed: _refresh,
             icon: const Icon(Icons.refresh_rounded),

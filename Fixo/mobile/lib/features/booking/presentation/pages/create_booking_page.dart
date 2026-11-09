@@ -465,10 +465,33 @@ class _CreateBookingPageState extends ConsumerState<CreateBookingPage> {
                         const SizedBox(height: FixoSpacing.sm),
 
                         // Preferred Time Window Group
-                        BookingTimeWindowSelector(
-                          selectedWindow: state.selectedTimeWindow,
-                          onSelectWindow: controller.selectTimeWindow,
-                          isArabic: isArabic,
+                        OutlinedButton.icon(
+                          key: const Key('booking-exact-time'),
+                          icon: const Icon(Icons.schedule),
+                          label: Text(
+                            '${isArabic ? 'الساعة' : 'Time'}: ${state.scheduledTime}',
+                          ),
+                          onPressed: () async {
+                            final parts = state.scheduledTime.split(':');
+                            final time = await showTimePicker(
+                              context: context,
+                              builder: (context, child) => MediaQuery(
+                                data: MediaQuery.of(
+                                  context,
+                                ).copyWith(alwaysUse24HourFormat: true),
+                                child: child!,
+                              ),
+                              initialTime: TimeOfDay(
+                                hour: int.parse(parts[0]),
+                                minute: int.parse(parts[1]),
+                              ),
+                            );
+                            if (time != null) {
+                              controller.selectExactTime(
+                                '${time.hour.toString().padLeft(2, '0')}:${time.minute.toString().padLeft(2, '0')}',
+                              );
+                            }
+                          },
                         ),
                         const SizedBox(height: FixoSpacing.sm),
 
@@ -575,7 +598,8 @@ class _CreateBookingPageState extends ConsumerState<CreateBookingPage> {
                                 categorySlug: offering.categorySlug,
                                 isArabic: isArabic,
                                 onPinSelected: (diagnosticDetail) {
-                                  final currentText = _issueDescriptionController.text.trim();
+                                  final currentText =
+                                      _issueDescriptionController.text.trim();
                                   final newText = currentText.isEmpty
                                       ? diagnosticDetail
                                       : '$currentText - $diagnosticDetail';
