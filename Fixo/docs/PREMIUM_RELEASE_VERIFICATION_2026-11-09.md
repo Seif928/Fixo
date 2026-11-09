@@ -26,7 +26,7 @@ Design reference: https://www.figma.com/design/xAym32AGTmERySxtIyBbob
 - Eight additive booking/message query indexes applied and verified valid. No RLS/billing changes.
 
 ## Release and remaining external checks
-- Application production deployment has NOT occurred. Automatic approval review previously required approval of a concrete tested release. Vercel MCP currently requires renewed team access.
+- User explicitly approved production deployment and GitHub branch push. Both deployments are READY. Vercel MCP still lacks a team grant; the already-authorized CLI was verified against the exact existing team and project IDs and used successfully.
 - Android debug APK build succeeded (222.1 seconds): mobile/build/app/outputs/flutter-apk/app-debug.apk. This is a test build, not a store-signed release or proof of device/provider verification. Compiler warnings originate in plugin Java compatibility/deprecation settings.
 - iOS build/device verification requires macOS/Xcode and remains unverified. No paid Apple program or service enabled.
 - Real Google login, camera/gallery upload and push delivery on physical devices require provider/device smoke checks after deployment; widget/integration tests do not prove them.
@@ -36,3 +36,15 @@ Design reference: https://www.figma.com/design/xAym32AGTmERySxtIyBbob
 
 ## Deployment/rollback plan
 Deploy the tested backend first, then build/web to the existing fixo-web project. Preserve environment settings and billing. Smoke-check health and public catalog before and after web rollout. Record current production deployment IDs before promotion; roll back to those exact IDs if smoke checks fail. Do not roll back approved data repairs automatically or re-enable fabricated catalog prices.
+
+## Production release completed
+- Application source: 3030fea; verification-only documentation: 6932ea8.
+- GitHub branch: codex/fixo-premium-repair (pushed).
+- API deployment: dpl_3zbvw9rw2QP8d8C8DNhwrtwtVynk; https://fixo-api.vercel.app.
+- Web deployment: dpl_7bTnS7EgDaRvgb8ifJGy7MJZeNzr; https://fixo-web-blue.vercel.app.
+- API readiness: ready, databaseReady true. Public catalog: 11 active services, databaseConnected true.
+- Missing-token Apple exchange: HTTP 400, no user identity supplied.
+- Public website: HTTP 200. Remote flutter_bootstrap.js, main.dart.wasm and firebase-messaging-sw.js SHA-256 hashes match tested local build artifacts.
+- Previous API deployment: https://fixo-r874lvl06-gamal6507-3315.vercel.app.
+- Previous web deployment: https://fixo-lx32dqb3v-gamal6507-3315.vercel.app.
+- No environment, account permissions or billing changes. Physical-device login/push checks remain outstanding as documented above.

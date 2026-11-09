@@ -22,4 +22,4 @@ Use Figma (connected) because Stitch live tools are unavailable. Cinematic warmt
 
 ## Progress
 - Isolated latest Gemini revision; reference review stored outside repository.
-- Implementation and local regression verification completed; see docs/PREMIUM_RELEASE_VERIFICATION_2026-11-09.md for evidence, build status and external checks. Production release pending approval/access.
+- Implementation and local regression verification completed; see docs/PREMIUM_RELEASE_VERIFICATION_2026-11-09.md for evidence, build status and external checks. Production API and web release completed after explicit user approval via authorized Vercel CLI; GitHub branch pushed.
