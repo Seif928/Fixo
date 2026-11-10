@@ -6,7 +6,7 @@ import '../../../app/router/customer_tab_navigation.dart';
 
 import '../../../core/l10n/app_locale_controller.dart';
 import '../domain/profile_models.dart';
-import '../data/profile_repository.dart';
+import 'package:fixo_mobile/app/providers/profile_providers.dart';
 import 'controllers/profile_controller.dart';
 import '../../../core/notifications/device_push_service.dart';
 import '../../../core/theme/fixo_colors.dart';

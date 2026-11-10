@@ -1,3 +1,4 @@
+import 'package:fixo_mobile/app/providers/profile_providers.dart';
 import 'dart:async';
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';

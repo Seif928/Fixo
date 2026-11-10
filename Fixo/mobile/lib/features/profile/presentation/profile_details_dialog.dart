@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../auth/domain/auth_models.dart';
 import '../../auth/presentation/controllers/auth_controller.dart';
-import '../data/profile_repository.dart';
+import 'package:fixo_mobile/app/providers/profile_providers.dart';
 import 'controllers/profile_controller.dart';
 
 class ProfileDetailsDialog extends ConsumerStatefulWidget {

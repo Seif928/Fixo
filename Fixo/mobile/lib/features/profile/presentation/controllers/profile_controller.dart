@@ -1,7 +1,7 @@
 import 'dart:async';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../auth/presentation/controllers/auth_controller.dart';
-import '../../data/profile_repository.dart';
+import 'package:fixo_mobile/app/providers/profile_providers.dart';
 import '../../domain/profile_models.dart';
 
 class ProfileState {

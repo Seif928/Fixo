@@ -422,9 +422,7 @@ class _PhonePasswordPageState extends ConsumerState<PhonePasswordPage> {
         ),
         const SizedBox(height: 20),
         Text(
-          ar
-              ? 'مرحباً بك في عالم\nالعناية الفندقية بمنزلك'
-              : 'Welcome to the Royal\nStandard of Home Living',
+          ar ? 'خدمات منزلك،\nبكل سهولة' : 'Home services,\nmade simple',
           style: TextStyle(
             fontSize: 38,
             fontWeight: FontWeight.w900,
@@ -583,8 +581,8 @@ class _PhonePasswordPageState extends ConsumerState<PhonePasswordPage> {
           Text(
             setup
                 ? (ar
-                      ? 'احفظ اسمك ورقمك واختر كلمة مرور FIXO. الرقم سيكون اسم الدخول، بدون رسائل SMS.'
-                      : 'Save your name and phone and choose a FIXO password. Your phone is your sign-in name, without SMS.')
+                      ? 'أضف اسمك ورقمك واختر كلمة مرور لحسابك.'
+                      : 'Add your name, phone number and a password.')
                 : (ar
                       ? 'ادخل برقمك وكلمة مرورك. أول مرة؟ اربط حساب جوجل أدناه.'
                       : 'Sign in, or create your account with Google.'),
@@ -592,53 +590,6 @@ class _PhonePasswordPageState extends ConsumerState<PhonePasswordPage> {
               color: palette.mutedText,
               locale: locale,
             ).copyWith(height: 1.45),
-          ),
-          const SizedBox(height: 16),
-
-          // Segmented Step / Mode Indicator Pill (Screen 02 exact Key & Text consistency)
-          Align(
-            alignment: AlignmentDirectional.centerStart,
-            child: Container(
-              key: const Key('tab-phone-input'),
-              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-              decoration: BoxDecoration(
-                color: isDark ? const Color(0xFF292C31) : palette.surfaceHigh,
-                borderRadius: FixoRadius.borderRadiusPill,
-                border: Border.all(
-                  color: isDark
-                      ? Colors.white.withValues(alpha: 0.08)
-                      : Colors.black.withValues(alpha: 0.05),
-                ),
-              ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(
-                    setup
-                        ? Icons.verified_user_outlined
-                        : Icons.phone_android_rounded,
-                    size: 16,
-                    color: FixoColors.secondaryForest,
-                  ),
-                  const SizedBox(width: 8),
-                  Flexible(
-                    child: Text(
-                      setup
-                          ? (ar
-                                ? 'تأكيد بيانات الحساب'
-                                : 'Account Profile Setup')
-                          : (ar
-                                ? 'الدخول برقم الموبايل وكلمة المرور'
-                                : 'Your FIXO account'),
-                      style: FixoTypography.labelMd(
-                        color: palette.deepForest,
-                        locale: locale,
-                      ).copyWith(fontWeight: FontWeight.w700),
-                    ),
-                  ),
-                ],
-              ),
-            ),
           ),
           const SizedBox(height: 16),
 
@@ -782,7 +733,11 @@ class _PhonePasswordPageState extends ConsumerState<PhonePasswordPage> {
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          const Text('🇪🇬', style: TextStyle(fontSize: 18)),
+                          Icon(
+                            Icons.phone_android_outlined,
+                            size: 18,
+                            color: palette.mutedText,
+                          ),
                           const SizedBox(width: 6),
                           Text(
                             '+20',
