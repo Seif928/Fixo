@@ -203,14 +203,19 @@ export class UsersService {
 
     const user = await this.prisma.user.findUnique({
       where: { id: userId },
-      include: { proProfile: true },
+      include: { proProfile: true, adminMembership: true },
     });
 
     if (!user || user.isDeleted) {
       throw new NotFoundException('Account not found.');
     }
 
-    if (user.role === UserRole.ADMIN) {
+    const membership = user.adminMembership;
+    const protectedMembership = membership && (
+      membership.role === 'OWNER' ||
+      (membership.isActive && (!membership.expiresAt || membership.expiresAt > new Date()))
+    );
+    if (user.role === UserRole.ADMIN || protectedMembership) {
       throw new ForbiddenException({
         code: 'ADMIN_ACCOUNT_PROTECTED',
         message: 'Admin accounts cannot be self-deleted.',

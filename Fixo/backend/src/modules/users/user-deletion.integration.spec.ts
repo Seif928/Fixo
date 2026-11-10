@@ -304,6 +304,38 @@ describe('Self-Service Account Deletion & Privacy (Guarded PostgreSQL)', () => {
   }
 
   describe('Milestone 3: Self-Service Account Deletion Invariants', () => {
+    it.each([{ role: 'OWNER', isActive: true }, { role: 'OWNER', isActive: false }, { role: 'ADMIN', isActive: true }] as const)('protects private $role (active=$isActive) even when the app role is CUSTOMER', async ({ role, isActive }) => {
+      const member = await createUser(UserRole.CUSTOMER);
+      const slot = role === 'OWNER' ? 1 : 2;
+      expect(await prisma.adminMembership.findUnique({ where: { slot } })).toBeNull();
+      await prisma.adminMembership.create({ data: { slot, role, isActive, userId: member.id, email: member.email! } });
+      try {
+        const token = await getAuthToken(member);
+        const res = await fetch(`${url}/api/v1/users/me/delete-account`, { method: 'POST', headers: { Authorization: `Bearer ${token}` } });
+        expect(res.status).toBe(403);
+        expect((await res.json()).code).toBe('ADMIN_ACCOUNT_PROTECTED');
+        expect((await prisma.user.findUniqueOrThrow({ where: { id: member.id } })).isDeleted).toBe(false);
+        expect(await prisma.refreshToken.count({ where: { userId: member.id } })).toBeGreaterThan(0);
+      } finally {
+        await prisma.adminMembership.deleteMany({ where: { userId: member.id } });
+      }
+    });
+
+    it('does not turn a revoked administrator into a permanently undeletable customer account', async () => {
+      const formerAdmin = await createUser(UserRole.CUSTOMER);
+      expect(await prisma.adminMembership.findUnique({ where: { slot: 2 } })).toBeNull();
+      await prisma.adminMembership.create({ data: { slot: 2, role: 'ADMIN', isActive: false, userId: formerAdmin.id, email: formerAdmin.email! } });
+      try {
+        const token = await getAuthToken(formerAdmin);
+        const res = await fetch(`${url}/api/v1/users/me/delete-account`, { method: 'POST', headers: { Authorization: `Bearer ${token}` } });
+        expect(res.status).toBe(200);
+        expect((await prisma.user.findUniqueOrThrow({ where: { id: formerAdmin.id } })).isDeleted).toBe(true);
+        expect(await prisma.refreshToken.count({ where: { userId: formerAdmin.id } })).toBe(0);
+      } finally {
+        await prisma.adminMembership.deleteMany({ where: { userId: formerAdmin.id } });
+      }
+    });
+
     it('protects admin accounts from self-deletion', async () => {
       const token = await getAuthToken(adminUser);
       const res = await fetch(`${url}/api/v1/users/me/delete-account`, {

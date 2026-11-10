@@ -38,6 +38,20 @@ describe('AvatarService', () => {
       .png()
       .toBuffer();
 
+  it('rejects an upload that finishes after the account was deleted and cleans its new object', async () => {
+    prisma.user.findUnique.mockResolvedValue({ id: 'user-test', isDeleted: true, avatarUrl: null });
+    const bytes = await image();
+    await expect(service.save('user-test', { buffer: bytes, mimetype: 'image/png', size: bytes.length })).rejects.toThrow(NotFoundException);
+    expect(prisma.user.update).not.toHaveBeenCalled();
+    expect(storage.remove).toHaveBeenCalledWith(storage.put.mock.calls[0][0]);
+  });
+
+  it('never downloads a retained private avatar for a deleted account', async () => {
+    prisma.user.findUnique.mockResolvedValue({ id: 'user-test', isDeleted: true, avatarUrl: 'avatars/user-test/old.webp' });
+    await expect(service.read('user-test')).rejects.toThrow(NotFoundException);
+    expect(storage.get).not.toHaveBeenCalled();
+  });
+
   it('rejects a photo whose declared type differs from its decoded format', async () => {
     const bytes = await image();
     await expect(

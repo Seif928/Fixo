@@ -42,3 +42,5 @@ Do not modify production bookings/payments or activate unpriced catalog drafts t
 - Backend now passes all 493 tests in 55 suites, including real local PostgreSQL photo persistence/ownership and HTTP multipart/authorization tests. Private object storage was substituted in the integration test; this does not prove cloud media delivery.
 - Fixed a reproduced push opt-in/logout race: Firebase initialization completing after logout can no longer trigger a stale OS permission prompt or proceed to registration.
 - No merchant or Apple activation, billing change, production booking or real professional approval was performed.
+
+Account follow-up: [administrator self-deletion and delayed avatar corrections](ACCOUNT_PRIVACY_REVIEW_2026-11-10.md). Broader deletion concurrency/retention and external device checks remain open; do not infer complete coverage from these fixes.
