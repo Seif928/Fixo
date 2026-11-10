@@ -25,6 +25,7 @@
     "seed:catalog:supabase": "node --env-file=.env.supabase -r ts-node/register src/prisma/seed-catalog.ts"
   },
   "dependencies": {
+    "@clerk/backend": "3.27.0",
     "@nestjs/common": "^11.0.0",
     "@nestjs/core": "^11.0.0",
     "@nestjs/platform-express": "^11.0.0",
