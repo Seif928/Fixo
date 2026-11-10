@@ -108,10 +108,13 @@ class DevicePushService {
           (client.platform == 'IOS' && status['iosConfigured'] != true)) {
         return PushOptInResult.unavailable;
       }
+      if (!await _isCurrent(owner, generation)) return PushOptInResult.unavailable;
       await client.initialize();
+      if (!await _isCurrent(owner, generation)) return PushOptInResult.unavailable;
       if (!await client.permission(request: requestPermission)) {
         return PushOptInResult.denied;
       }
+      if (!await _isCurrent(owner, generation)) return PushOptInResult.unavailable;
       final token = await client.token(vapid);
       if (token == null || token.isEmpty) return PushOptInResult.unavailable;
       if (!await _register(owner, token, generation)) {
@@ -159,6 +162,11 @@ class DevicePushService {
     if (generation != _generation || (await storage.readTokens())?.userId != owner) { return false; }
     await preferences?.setString('fixo.push.device.$owner', id);
     return true;
+  }
+
+  Future<bool> _isCurrent(String owner, int generation) async {
+    final session = await storage.readTokens();
+    return generation == _generation && session?.userId == owner;
   }
 
   Future<void> resume() async {

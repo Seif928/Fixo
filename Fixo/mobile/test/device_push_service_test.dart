@@ -10,12 +10,16 @@ class FakePushClient extends PushPlatformClient {
   int prompts = 0, deletions = 0;
   final activities = StreamController<void>.broadcast(sync: true);
   final opens = StreamController<String>.broadcast(sync: true);
+  Completer<void>? initializeGate, initializeEntered;
   @override
   bool get supported => true;
   @override
   String get platform => 'ANDROID';
   @override
-  Future<void> initialize() async {}
+  Future<void> initialize() async {
+    initializeEntered?.complete();
+    await initializeGate?.future;
+  }
   @override
   Future<bool> permission({required bool request}) async {
     if (request) prompts++;
@@ -130,6 +134,19 @@ void main() {
       await client.opens.close();
     });
   });
+  test(
+    'logout during Firebase initialization cannot prompt the next account',
+    () async {
+      client.initializeGate = Completer<void>();
+      client.initializeEntered = Completer<void>();
+      final enabling = service.enable();
+      await client.initializeEntered!.future;
+      await service.disable();
+      client.initializeGate!.complete();
+      expect(await enabling, PushOptInResult.unavailable);
+      expect(client.prompts, 0);
+    },
+  );
   test(
     'unconfigured sender does not trigger an OS permission prompt',
     () async {

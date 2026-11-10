@@ -1,4 +1,8 @@
 import 'dart:async';
+import 'dart:convert';
+import 'dart:typed_data';
+import 'package:image_picker/image_picker.dart';
+import '../../../core/uploads/device_media_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/theme/fixo_colors.dart';
@@ -171,6 +175,127 @@ class _ChatPageState extends ConsumerState<ChatPage>
     }
   }
 
+  Future<void> _attach() async {
+    if (!_writable || _sending) return;
+    final owner = ref.read(authControllerProvider).session?.user.id;
+    if (owner == null) return;
+    final picker = ref.read(deviceMediaPickerProvider);
+    PickedPrivateMedia? recovered;
+    try {
+      recovered = await picker.recoveredFor('chat:${widget.bookingId}');
+    } catch (_) {
+      if (mounted) {
+        setState(
+          () => _error = _ar
+              ? 'تعذر استعادة الصورة السابقة. اخترها من جديد.'
+              : 'Interrupted photo unavailable. Choose it again.',
+        );
+      }
+    }
+    if (!mounted || ref.read(authControllerProvider).session?.user.id != owner) {
+      return;
+    }
+    final source = await showModalBottomSheet<Object>(
+      context: context,
+      builder: (context) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (recovered != null)
+              ListTile(
+                leading: const Icon(Icons.restore),
+                title: Text(
+                  _ar ? 'مراجعة الصورة السابقة' : 'Review interrupted photo',
+                ),
+                onTap: () => Navigator.pop(context, recovered),
+              ),
+            ListTile(
+              leading: const Icon(Icons.photo_library_outlined),
+              title: Text(_ar ? 'معرض الصور' : 'Photo library'),
+              onTap: () => Navigator.pop(context, ImageSource.gallery),
+            ),
+            if (picker.supportsCamera)
+              ListTile(
+                leading: const Icon(Icons.camera_alt_outlined),
+                title: Text(_ar ? 'التقاط صورة' : 'Take a photo'),
+                onTap: () => Navigator.pop(context, ImageSource.camera),
+              ),
+          ],
+        ),
+      ),
+    );
+    if (source == null || !mounted) return;
+    setState(() {
+      _sending = true;
+      _error = null;
+    });
+    try {
+      final photo = source is PickedPrivateMedia
+          ? await picker.takeRecovered('chat:${widget.bookingId}')
+          : await picker.pickFor(
+              source as ImageSource,
+              scope: 'chat:${widget.bookingId}',
+            );
+      if (!mounted ||
+          photo == null ||
+          ref.read(authControllerProvider).session?.user.id != owner) {
+        return;
+      }
+      final previewBytes = base64Decode(photo.contentBase64);
+      final confirmed = await showDialog<bool>(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: Text(_ar ? 'إرسال الصورة؟' : 'Send photo?'),
+          content: Image.memory(
+            previewBytes,
+            height: 240,
+            fit: BoxFit.contain,
+            errorBuilder: (_, _, _) =>
+                Text(_ar ? 'تعذر عرض الصورة' : 'Could not display photo'),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: Text(_ar ? 'إلغاء' : 'Cancel'),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.pop(context, true),
+              child: Text(_ar ? 'إرسال' : 'Send'),
+            ),
+          ],
+        ),
+      );
+      await MemoryImage(previewBytes).evict();
+      if (!mounted ||
+          confirmed != true ||
+          !_writable ||
+          ref.read(authControllerProvider).session?.user.id != owner) {
+        return;
+      }
+      final message = await ref
+          .read(communicationsRepositoryProvider)
+          .sendPhoto(widget.bookingId, photo);
+      if (!mounted ||
+          ref.read(authControllerProvider).session?.user.id != owner) {
+        return;
+      }
+      setState(() {
+        _messages.removeWhere((m) => m.id == message.id);
+        _messages.insert(0, message);
+      });
+    } catch (_) {
+      if (mounted) {
+        setState(
+          () => _error = _ar
+              ? 'تعذر تأكيد إرسال الصورة. اختر صورة حتى ٢ ميجابايت، وحدّث المحادثة قبل إعادة الإرسال.'
+              : 'Photo could not be confirmed. Choose a photo up to 2 MB and refresh before sending again.',
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _sending = false);
+    }
+  }
+
   void _seen(ChatMessageModel message, String actor) {
     if (!_foreground ||
         !(ModalRoute.of(context)?.isCurrent ?? true) ||
@@ -195,9 +320,13 @@ class _ChatPageState extends ConsumerState<ChatPage>
     });
   }
 
-  void _showBookingSummarySheet(BuildContext context, BookingDetailModel booking) {
+  void _showBookingSummarySheet(
+    BuildContext context,
+    BookingDetailModel booking,
+  ) {
     final palette = context.fixoPalette;
-    final title = booking.offering[_ar ? 'titleAr' : 'titleEn'] as String? ??
+    final title =
+        booking.offering[_ar ? 'titleAr' : 'titleEn'] as String? ??
         booking.offering['titleEn'] as String? ??
         (_ar ? 'خدمة منزلية' : 'Home Service');
     final addressLabel = booking.address['label'] as String? ?? '';
@@ -243,9 +372,10 @@ class _ChatPageState extends ConsumerState<ChatPage>
                 if (addressLabel.isNotEmpty || districtLine.isNotEmpty) ...[
                   const SizedBox(height: 6),
                   Text(
-                    [addressLabel, districtLine]
-                        .where((s) => s.isNotEmpty)
-                        .join(' — '),
+                    [
+                      addressLabel,
+                      districtLine,
+                    ].where((s) => s.isNotEmpty).join(' — '),
                     style: FixoTypography.bodySm(color: palette.mutedText),
                   ),
                 ],
@@ -292,7 +422,8 @@ class _ChatPageState extends ConsumerState<ChatPage>
         _booking?.offering[_ar ? 'titleAr' : 'titleEn'] as String? ??
         _booking?.offering['titleEn'] as String? ??
         '';
-    final district = _booking?.address['districtLine'] as String? ??
+    final district =
+        _booking?.address['districtLine'] as String? ??
         _booking?.address['label'] as String? ??
         '';
 
@@ -355,10 +486,7 @@ class _ChatPageState extends ConsumerState<ChatPage>
                     Row(
                       children: [
                         if (hasAssignedPro)
-                          FixoArtisanAvatar(
-                            identifier: name ?? 'pro',
-                            size: 46,
-                          )
+                          FixoArtisanAvatar(identifier: name ?? 'pro', size: 46)
                         else
                           Container(
                             width: 46,
@@ -669,14 +797,21 @@ class _ChatPageState extends ConsumerState<ChatPage>
                               crossAxisAlignment: CrossAxisAlignment.start,
                               mainAxisSize: MainAxisSize.min,
                               children: [
-                                Text(
-                                  message.body,
-                                  style: FixoTypography.bodyMd(
-                                    color: mine
-                                        ? Colors.white
-                                        : palette.inkText,
+                                if (message.hasAttachment)
+                                  _ChatPhoto(
+                                    key: ValueKey('$actor:${message.id}'),
+                                    bookingId: widget.bookingId,
+                                    messageId: message.id,
                                   ),
-                                ),
+                                if (message.body.isNotEmpty)
+                                  Text(
+                                    message.body,
+                                    style: FixoTypography.bodyMd(
+                                      color: mine
+                                          ? Colors.white
+                                          : palette.inkText,
+                                    ),
+                                  ),
                                 const SizedBox(height: 6),
                                 Row(
                                   mainAxisSize: MainAxisSize.min,
@@ -784,7 +919,10 @@ class _ChatPageState extends ConsumerState<ChatPage>
                   border: Border(top: BorderSide(color: palette.subtleBorder)),
                 ),
                 child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 6,
+                    vertical: 4,
+                  ),
                   decoration: BoxDecoration(
                     color: palette.cardSurface,
                     borderRadius: BorderRadius.circular(28),
@@ -794,22 +932,11 @@ class _ChatPageState extends ConsumerState<ChatPage>
                   child: Row(
                     crossAxisAlignment: CrossAxisAlignment.end,
                     children: [
-                      Tooltip(
-                        message: _ar
-                            ? 'إرفاق الصور سيتوفر قريبًا'
-                            : 'Photo attachments coming soon',
-                        child: Padding(
-                          padding: const EdgeInsets.only(bottom: 4, left: 4, right: 4),
-                          child: CircleAvatar(
-                            radius: 18,
-                            backgroundColor: palette.surfaceContainer,
-                            child: Icon(
-                              Icons.add_rounded,
-                              size: 20,
-                              color: palette.mutedText.withValues(alpha: 0.6),
-                            ),
-                          ),
-                        ),
+                      IconButton(
+                        key: const Key('attach-chat-photo'),
+                        tooltip: _ar ? 'إرفاق صورة' : 'Attach photo',
+                        onPressed: _writable && !_sending ? _attach : null,
+                        icon: const Icon(Icons.add_photo_alternate_outlined),
                       ),
                       Expanded(
                         child: TextField(
@@ -852,7 +979,9 @@ class _ChatPageState extends ConsumerState<ChatPage>
                             ? const SizedBox(
                                 width: 20,
                                 height: 20,
-                                child: CircularProgressIndicator(strokeWidth: 2),
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                ),
                               )
                             : const Icon(Icons.arrow_upward),
                       ),
@@ -864,6 +993,78 @@ class _ChatPageState extends ConsumerState<ChatPage>
           ],
         ),
       ),
+    );
+  }
+}
+
+class _ChatPhoto extends ConsumerStatefulWidget {
+  const _ChatPhoto({
+    super.key,
+    required this.bookingId,
+    required this.messageId,
+  });
+  final String bookingId, messageId;
+  @override
+  ConsumerState<_ChatPhoto> createState() => _ChatPhotoState();
+}
+
+class _ChatPhotoState extends ConsumerState<_ChatPhoto> {
+  late Future<Uint8List> _bytes;
+  Future<Uint8List> _load() => ref
+      .read(communicationsRepositoryProvider)
+      .photo(widget.bookingId, widget.messageId);
+  @override
+  void initState() {
+    super.initState();
+    _bytes = _load();
+  }
+
+  @override
+  void dispose() {
+    // Private images must not remain in Flutter's shared decoded-image cache.
+    unawaited(
+      _bytes.then<void>((bytes) {
+        unawaited(MemoryImage(bytes).evict());
+      }, onError: (Object _, StackTrace _) {}),
+    );
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final ar = Directionality.of(context) == TextDirection.rtl;
+    return FutureBuilder<Uint8List>(
+      future: _bytes,
+      builder: (context, snapshot) {
+        if (snapshot.hasError) {
+          return TextButton.icon(
+            onPressed: () => setState(() => _bytes = _load()),
+            icon: const Icon(Icons.refresh),
+            label: Text(ar ? 'إعادة تحميل الصورة' : 'Retry photo'),
+          );
+        }
+        if (!snapshot.hasData) {
+          return const SizedBox(
+            width: 180,
+            height: 120,
+            child: Center(child: CircularProgressIndicator()),
+          );
+        }
+        return ClipRRect(
+          borderRadius: BorderRadius.circular(12),
+          child: Image.memory(
+            snapshot.data!,
+            width: 220,
+            height: 180,
+            fit: BoxFit.contain,
+            semanticLabel: ar
+                ? 'صورة خاصة بالمحادثة'
+                : 'Private conversation photo',
+            errorBuilder: (_, _, _) =>
+                Text(ar ? 'تعذر عرض الصورة' : 'Could not display photo'),
+          ),
+        );
+      },
     );
   }
 }

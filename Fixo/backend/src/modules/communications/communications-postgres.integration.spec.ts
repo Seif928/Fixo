@@ -8,6 +8,7 @@ import { seedCatalog } from '../../prisma/seed-catalog';
 import { assertCurrentDatabaseIsTest, validateTestDatabaseTarget } from '../../prisma/test-database-safety.util';
 import { CommunicationsService } from './communications.service';
 import { PushService, PushSender } from './push.service';
+import { PrivateStorageService } from '../media/private-storage.service';
 
 dotenv.config({ path: path.resolve(__dirname, '../../../.env') });
 
@@ -115,5 +116,28 @@ describe('Communications persisted in local fixo_test', () => {
     expect(JSON.stringify(feed)).not.toContain('arrivalPinCode');
     await db.user.update({ where: { id: customerId }, data: { arrivalAlertsEnabled: false } });
     expect((await service.notificationFeed(customerId)).items.some(n => n.kind === 'BOOKING_STATUS')).toBe(false);
+  });
+
+  it('persists photo ownership in PostgreSQL and serves only to current participants', async () => {
+    const objects = new Map<string, Buffer>();
+    const storage = {
+      put: async (key: string, bytes: Buffer) => { objects.set(key, bytes); return key; },
+      get: async (key: string) => objects.get(key)!,
+      remove: async (key: string) => { objects.delete(key); },
+    } as unknown as PrivateStorageService;
+    const photos = new CommunicationsService(Object.assign(db, { isDatabaseConnected: () => true }) as unknown as PrismaService, undefined, storage);
+    const sharp = require('sharp');
+    const buffer = await sharp({ create: { width: 2, height: 2, channels: 3, background: '#556677' } }).png().toBuffer();
+    const sent = await photos.sendPhoto(customerId, bookingId, { buffer, mimetype: 'image/png' });
+    const persisted = await db.chatMessage.findUniqueOrThrow({ where: { id: sent.id } });
+    expect(persisted).toMatchObject({ bookingId, senderUserId: customerId, body: '', readAt: null });
+    expect(persisted.attachmentUrl).toMatch(new RegExp(`^bookings/${bookingId}/chat-`));
+    expect(sent).not.toHaveProperty('attachmentUrl');
+    const page = await photos.listMessages(proUserId, bookingId, {});
+    expect(page.items.find(item => item.id === sent.id)).toMatchObject({ hasAttachment: true });
+    expect(JSON.stringify(page)).not.toContain(persisted.attachmentUrl!);
+    expect(await photos.readPhoto(proUserId, bookingId, sent.id)).toEqual(objects.get(persisted.attachmentUrl!));
+    await expect(photos.readPhoto(outsiderId, bookingId, sent.id)).rejects.toThrow(ForbiddenException);
+    await db.chatMessage.delete({ where: { id: sent.id } });
   });
 });
