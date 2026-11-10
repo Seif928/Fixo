@@ -1,5 +1,7 @@
 # FIXO — consolidated approved work and remaining scope
 
+2026-11-11 scope update: [Dart backend migration, Flutter architecture and cleanup](DART_ARCHITECTURE_2026-11-11.md). User now requests a Dart backend too. The Dart service is an incomplete parallel migration, not the live API replacement; follow the route checklist and cutover gates.
+
 Latest checkpoint: [2026-11-10 remaining work](REMAINING_2026-11-10.md) and [released chat media/push correction](CHAT_MEDIA_DELIVERY_2026-11-10.md). The November 3 counts and pending list below are historical and must not be treated as the current release status.
 
 Updated: 2026-11-03, Africa/Cairo. This is the current scope index, not a claim that the whole product is finished. Older progress notes are chronological evidence and may contain superseded pending/deployment statements.

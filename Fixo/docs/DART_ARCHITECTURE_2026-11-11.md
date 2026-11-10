@@ -21,3 +21,5 @@ Do not delete backend/ until all contracts, authorization, transaction/concurren
 References checked: https://dart.dev/server ; https://pub.dev/packages/postgres ; https://vercel.com/docs/functions/runtimes .
 
 Verification: Flutter analyze clean; 547 Flutter tests passed with two deliberate live opt-in skips. New Dart service analyze clean; seven tests passed including explicit local PostgreSQL. These are separate results, not 499 migrated backend tests. Login golden changes were visually inspected in Arabic/dark and English/light before acceptance. No cloud data or account was altered.
+
+Release: source 18c2a9a pushed. Web and ordinary Android debug APK builds passed. Web deployment dpl_J9NYJppnRu2fA27ZXKxpofSX2kJ4 is Ready at https://fixo-web-blue.vercel.app, mirrored on Firebase. Tested/Vercel/Firebase main.dart.js SHA256 all match B0A60FAE557D4C509C80E7D36B187761EF02DF08C07A5FBC739BD68AE977F184. Live existing API still reports healthy PostgreSQL connectivity. backend_dart remains local/source only; no API cutover or hosting/billing change occurred.
