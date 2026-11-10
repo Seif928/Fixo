@@ -16,3 +16,7 @@ This does not establish working native Apple OAuth. Apple Developer/App ID/provi
 The separate Clerk-hosted DEVELOPMENT portal is not the Flutter app. Its existing Apple connection was not disabled globally: doing so would also affect any future native Clerk flow. When the Clerk-to-FIXO identity exchange and client integration are completed, the same client platform policy must govern its entry points. Do not claim the hosted test portal is already platform-filtered or the production FIXO login already uses Clerk.
 
 Other remaining delivery work is unchanged: Clerk identity linking/session revocation and role continuity, actual push/photo/device verification, iOS runtime and merchant/Apple production activation. NestJS remains the live API; the Dart rewrite stays stopped.
+
+## Released
+
+Source bc4837e pushed; Web release and ordinary Android debug APK builds passed. Vercel deployment dpl_C7GCCrBbKZTx5C6MdioyqfrVaY3x is Ready at https://fixo-web-blue.vercel.app; Firebase mirror also released. Tested/Vercel/Firebase main.dart.js SHA256 matches C56ABBBC581FCB302ABD9B52AABEA00C10507713DAD800AFCC8F2F0ADA183E0B. Real browser inspection of the stable phone-login route showed Google and phone/password controls with no Apple entry. iOS visibility was verified with widget platform variants, not a real iPhone or macOS build.

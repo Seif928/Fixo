@@ -1,5 +1,7 @@
 # FIXO — consolidated approved work and remaining scope
 
+Latest client release: [native-iOS-only Apple entry](APPLE_IOS_ONLY_2026-11-11.md), 559 Flutter tests passed. Apple provisioning/provider activation and actual iOS runtime remain open. Clerk remains an isolated trial, not the active FIXO identity provider.
+
 Latest authentication experiment: [isolated Clerk trial](CLERK_TRIAL_2026-11-11.md). Hosted Google sign-in/sign-out passed and phone sign-up/sign-in were disabled with approval. Clerk is NOT the live FIXO identity provider yet; twelve verifier regressions are prepared, no accounts imported/linked. Latest existing-client push cleanup release: [549 Flutter tests and rollout](PUSH_CLEANUP_2026-11-11.md).
 
 2026-11-11 latest user decision: stop the Dart backend migration; keep and improve the working NestJS/TypeScript API. Flutter/Dart remains the client/Web/admin stack. The 93 pending Dart ports are no longer required work. backend_dart is a retained, inactive experiment; do not deploy it or resume conversion without a new user request. Prior migration details remain historical in DART_ARCHITECTURE_2026-11-11.md.
