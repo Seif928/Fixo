@@ -12,3 +12,5 @@ Two regression cases failed before the correction and passed afterward. The focu
 These are mocked platform/network regressions, not proof of OS notification delivery. Actual Android/browser receipt, APNs/iOS and offline provider failures still require device verification. Failure of both native and server cleanup cannot be represented as guaranteed cleanup.
 
 Full Flutter verification: 549 passed with two intentional live opt-in skips; analyze clean. No backend source, schema, credentials or billing setting changed.
+
+Released source 7109382: Web release and ordinary Android debug APK builds succeeded. Vercel deployment dpl_5KvFuMW5BXBwapqBiUZvSLJMdSWq is Ready at https://fixo-web-blue.vercel.app, mirrored on Firebase. Tested and both public main.dart.js hashes match 6E05C386F20B3D249151E51EFD41649594746BC47B44CEC41041AD2DA9242BD4. No UI redesign or API cutover was included.
