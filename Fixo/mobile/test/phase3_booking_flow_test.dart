@@ -553,6 +553,29 @@ void main() {
   }
 
   group('Screen 04: Create Booking Page — Approved Stitch Design & Elements', () {
+    testWidgets('saved-address snackbar does not cover booking confirmation', (
+      tester,
+    ) async {
+      tester.view.physicalSize = const Size(1280, 900);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+      await tester.pumpWidget(buildTestableApp());
+      await tester.pumpAndSettle();
+      final confirm = find.byKey(const Key('confirm-booking-draft-btn'));
+      ScaffoldMessenger.of(tester.element(confirm)).showSnackBar(
+        const SnackBar(content: Text('Address saved and selected.')),
+      );
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 350));
+      expect(
+        tester.getRect(find.byType(SnackBar)).bottom,
+        lessThanOrEqualTo(tester.getRect(confirm).top),
+      );
+      await tester.tap(confirm);
+      await tester.pumpAndSettle();
+      expect(fakeBookingRepo.lastCreatedRequest, isNotNull);
+    });
     testWidgets(
       'renders all approved Stitch Screen 04 sections and truthful EGP fare breakdown',
       (tester) async {
