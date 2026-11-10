@@ -49,5 +49,8 @@ The test selects an actual seeded offering, saves a synthetic address through th
 - Regression reproduced before the application fix: the saved-address snackbar covered the confirmation button. The footer now uses `Scaffold.bottomNavigationBar`, reserving space above it for snackbars.
 - Draft-success notification no longer follows navigation to checkout, where it previously covered the return-home action. Standalone callers retain their fallback notice.
 - Full offline Flutter suite after the fix: 543 passed, two explicit live opt-ins skipped; analysis clean.
+- Application/test commit: `6c42177`. Vercel deployment `dpl_Ew72Za6NQudrMggnYivcgq31WNVd` is ready, and Firebase Hosting was synchronized. The `main.dart.js` SHA-256 on both production origins matched the tested release build.
+- Updated Android debug APK built successfully from the normal `lib/main.dart` entrypoint. This build result does not add native authenticated booking coverage.
+- The local verification API was stopped after testing. TestSprite's existing backend credential file remained inaccessible (`EPERM`) when retried after quota recovery; no new TestSprite backend success was claimed.
 
 Native provider login, OS push display, iOS and production end-to-end bookings require separate verification and are not implied by this result.
