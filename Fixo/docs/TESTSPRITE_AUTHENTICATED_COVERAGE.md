@@ -5,7 +5,7 @@ Target API: https://fixo-api.vercel.app/api/v1
 Existing frontend project: 235a25d4-137f-4ec5-a31b-90cb6dba7026
 Existing backend project: ece03c86-c961-419b-9694-76b40bc5aaa4
 
-Status (2026-11-10): browser control restored. The original BKG-003 run stopped at sign-in. Flutter web semantics were enabled and verified locally and on the production Vercel domain. Deployment dpl_9GYCqdsBYxgnaNn3K4fCfnibcSPK is READY. BKG-003 has been revised to explicitly use the configured customer account and inspect the profile; its new cloud run is in progress. Admin, technician and native-device coverage is not yet verified. No API key or password is stored here.
+Status (2026-11-10): browser control restored. The original BKG-003 run stopped at sign-in. Flutter web semantics were enabled and verified locally and on the production Vercel domain. Deployment dpl_9GYCqdsBYxgnaNn3K4fCfnibcSPK is READY. BKG-003 has been revised to explicitly use the configured customer account and inspect the profile; its new cloud run PASSED on 2026-11-10. BKG-006 (259775cb-e21b-4d51-9f4e-b08058dda334) was added for logout cancellation, confirmed logout and protected-profile redirection; the cloud run PASSED (14 actions), including cancellation, confirmed sign-out and rejection of protected-profile access afterward. The accessibility build is also deployed to Firebase Hosting. Admin, technician and native-device coverage is not yet verified. No API key or password is stored here.
 
 ## Required authenticated environments
 - Guest: no credentials; public onboarding and negative access checks.
@@ -33,4 +33,13 @@ Status (2026-11-10): browser control restored. The original BKG-003 run stopped 
 
 ## Reporting and credits
 Read current plan/balance before runs; use only available free credits, no upgrades or auto-topups. Begin with a small selected batch rather than generating/executing every case. Login-required cases with no valid captured session are BLOCKED, not passed. A successful redirect proves route protection only; it does not prove authenticated booking or admin functionality. Report native Android/iOS as untested unless device tests actually run; Flutter Web/API coverage is not native-device coverage.
+
+
+
+## Additional verification (2026-11-10)
+- Targeted Flutter login/logout/home tests: 10 passed.
+- dart analyze lib/main.dart: no issues.
+- Guest admin navigation redirects to the sign-in form.
+- Anonymous support/threads and support/admin/threads requests both return HTTP 401.
+- Three pre-existing frontend cases retain old failed results; they are not represented as passing by these two successful customer-session runs.
 
