@@ -33,6 +33,32 @@ class OnboardingPage extends ConsumerStatefulWidget {
 class _OnboardingPageState extends ConsumerState<OnboardingPage> {
   int _activeStepIndex = 0;
 
+  void _showBookingInfo({required bool pricing, required bool isArabic}) {
+    final title = pricing
+        ? (isArabic ? 'تفاصيل سعر الحجز' : 'How booking pricing works')
+        : (isArabic ? 'الدفع نقداً بعد الخدمة' : 'Cash on service');
+    final message = pricing
+        ? (isArabic
+              ? 'تظهر رسوم المعاينة والخدمة والانتقال والإجمالي بالجنيه المصري للخدمة المختارة قبل تأكيد الحجز. رسوم الانتقال تكون مجانية فقط عندما تكون قيمتها صفراً. اختار الخدمة والعنوان والموعد لعرض السعر الفعلي؛ هذه الشاشة لا تعرض عرض سعر.'
+              : 'Inspection, service and transport fees and the total are shown in EGP for your selected service before you confirm the booking. Transport is free only when its fee is zero. Choose your service, address and time to see actual pricing; this screen is not a quote.')
+        : (isArabic
+              ? 'لا يتم تحصيل أي مبلغ الآن عند اختيار الدفع النقدي. راجع إجمالي حجزك قبل التأكيد وادفع نقداً بعد إتمام الخدمة. إنشاء الحجز لا يعني أنه تم الدفع.'
+              : 'No payment is collected now when you choose cash on service. Review your booking total before confirming and pay cash after the service is completed. Creating a booking does not mark it as paid.');
+    showDialog<void>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: Text(title),
+        content: SingleChildScrollView(child: Text(message)),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(),
+            child: Text(isArabic ? 'إغلاق' : 'Close'),
+          ),
+        ],
+      ),
+    );
+  }
+
   static const List<_OnboardingStepData> _stepsEn = [
     _OnboardingStepData(
       stepTitle: 'Step 1 of 3: Connect Your Account',
@@ -217,12 +243,18 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage> {
                       ),
                       FixoTrustPillarChip(
                         icon: Icons.payments_outlined,
+                        onTap: () =>
+                            _showBookingInfo(pricing: true, isArabic: isArabic),
                         label: isArabic
                             ? 'تفاصيل السعر بالجنيه'
                             : 'EGP Price Breakdown',
                       ),
                       FixoTrustPillarChip(
                         icon: Icons.near_me_outlined,
+                        onTap: () => _showBookingInfo(
+                          pricing: false,
+                          isArabic: isArabic,
+                        ),
                         label: isArabic
                             ? 'الدفع بعد الخدمة'
                             : 'Cash After Service',

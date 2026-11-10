@@ -35,6 +35,30 @@ void main() {
   });
 
   group('Screen 01: OnboardingPage UI & Navigation', () {
+    testWidgets('pricing and cash explanations open without authentication', (
+      tester,
+    ) async {
+      await tester.pumpWidget(const ProviderScope(child: FixoApp()));
+      await tester.pumpAndSettle();
+      await tester.ensureVisible(find.text('EGP Price Breakdown'));
+      await tester.tap(find.text('EGP Price Breakdown'));
+      await tester.pumpAndSettle();
+      expect(find.text('How booking pricing works'), findsOneWidget);
+      expect(
+        find.textContaining('Inspection, service and transport'),
+        findsOneWidget,
+      );
+      await tester.tap(find.text('Close'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Cash After Service'));
+      await tester.pumpAndSettle();
+      expect(find.text('Cash on service'), findsOneWidget);
+      expect(
+        find.textContaining('No payment is collected now'),
+        findsOneWidget,
+      );
+      expect(find.byKey(const Key('phone-password-number')), findsNothing);
+    });
     testWidgets(
       'renders brand header, hero card, compliant trust chips, and CTAs',
       (WidgetTester tester) async {

@@ -45,16 +45,18 @@ class FixoTrustPillarChip extends StatelessWidget {
     super.key,
     required this.icon,
     required this.label,
+    this.onTap,
   });
 
   final IconData icon;
   final String label;
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
     final palette = context.fixoPalette;
 
-    return Container(
+    final content = Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       decoration: BoxDecoration(
         color: palette.cardSurface,
@@ -76,6 +78,15 @@ class FixoTrustPillarChip extends StatelessWidget {
             ),
           ),
         ],
+      ),
+    );
+    if (onTap == null) return content;
+    return Semantics(
+      button: true,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: FixoRadius.borderRadiusSm,
+        child: content,
       ),
     );
   }
@@ -146,4 +157,3 @@ class FixoStatusBadge extends StatelessWidget {
     );
   }
 }
-
