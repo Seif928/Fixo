@@ -1,5 +1,7 @@
 # FIXO Dart API — migration in progress
 
+**Inactive experiment — 2026-11-11:** the user stopped this migration and chose the existing working NestJS API. Do not deploy or continue this rewrite unless explicitly requested again. The pending route checklist is historical, not remaining release work.
+
 Native Dart service with domain/application/infrastructure/presentation boundaries. No Flutter runtime, Node process, Nest proxy or demo database fallback.
 
 Implemented: GET `/api/v1/health`, GET `/api/v1/services/categories` (active PostgreSQL categories/zones), GET `/api/v1/health/ready` (intentionally 503 `MIGRATION_INCOMPLETE`). All other endpoints remain unported, returning 404. **Do not point the production client at this service.**

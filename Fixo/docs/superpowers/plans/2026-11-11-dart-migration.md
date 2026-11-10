@@ -1,5 +1,7 @@
 # FIXO Dart migration implementation plan
 
+STOPPED by the user's subsequent decision on 2026-11-11. Keep the current NestJS backend; prioritize working features over language conversion. Do not execute the remaining migration steps unless the user requests resumption.
+
 Execution: single implementer; preserve the active API until contract parity. User explicitly included backend conversion after initially selecting frontend only.
 
 Goal: Flutter/Dart client, Web and administration, with a separate Dart backend and inward dependencies. Flutter is a UI toolkit, not the server runtime. Native platform launchers, SQL, manifests and deployment configuration remain necessary.

@@ -1,6 +1,8 @@
 # FIXO — consolidated approved work and remaining scope
 
-2026-11-11 scope update: [Dart backend migration, Flutter architecture and cleanup](DART_ARCHITECTURE_2026-11-11.md). User now requests a Dart backend too. The Dart service is an incomplete parallel migration, not the live API replacement; follow the route checklist and cutover gates.
+2026-11-11 latest user decision: stop the Dart backend migration; keep and improve the working NestJS/TypeScript API. Flutter/Dart remains the client/Web/admin stack. The 93 pending Dart ports are no longer required work. backend_dart is a retained, inactive experiment; do not deploy it or resume conversion without a new user request. Prior migration details remain historical in DART_ARCHITECTURE_2026-11-11.md.
+
+Read-only live verification after this decision: existing API health ok, databaseConnected true, readiness HTTP 200. This confirms service/database readiness, not every product journey. Prioritize the existing remaining feature/device verification and bug fixes, keeping the free-only constraint.
 
 Latest checkpoint: [2026-11-10 remaining work](REMAINING_2026-11-10.md) and [released chat media/push correction](CHAT_MEDIA_DELIVERY_2026-11-10.md). The November 3 counts and pending list below are historical and must not be treated as the current release status.
 
