@@ -27,3 +27,12 @@
 - Attachments apply to booking participant chat. Administrator support chat remains a separate text workflow.
 - Existing free storage quota applies; this feature is not unlimited storage and does not enable billing.
 - See REMAINING_2026-11-10.md for the wider unresolved product/account/device work. This delivery is not a claim that all requested integrations or a comprehensive security audit are complete.
+
+## Released
+
+- Source b68aacf pushed to codex/fixo-premium-repair.
+- API dpl_FiFtX4dBth1P737viBReHKSWLYU7 is Ready and aliased to https://fixo-api.vercel.app. Live health reports POSTGRESQL_PRISMA/databaseConnected=true; anonymous access to the new photo-read route returns 401.
+- Web dpl_GeYcyqg6GMvJwXeWza1zjhEMmojB is Ready and aliased to https://fixo-web-blue.vercel.app. Firebase mirror deployed at https://fixo-home-services-6507.web.app.
+- SHA256 of tested and both downloaded main.dart.js artifacts: 608CFC79468B08109C11D801CDFECF8BD8AF64F61A8EE35683BBAE220C480733.
+- Final Flutter analyze reports no issues. Web release and ordinary main.dart Android debug APK builds succeeded. The APK is a development artifact, not a signed store release.
+- No billing, schema change, payment activation or production booking mutation was needed.
