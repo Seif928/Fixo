@@ -16,3 +16,9 @@ These were tested with synthetic local accounts and mocked photo storage. No rea
 ## Release verification
 
 All 499 backend tests in 55 suites passed against the local test setup; TypeScript checking and the Nest build passed. No Flutter source changed in this follow-up; the previously verified 545-test Web/Android release remains in place. Deployment evidence follows after release verification.
+
+- Source 95d6563 pushed to codex/fixo-premium-repair.
+- API deployment dpl_C3GicdSKgowQN88YezkjpPhgZwxw is Ready and aliased to https://fixo-api.vercel.app.
+- Live health: status ok, POSTGRESQL_PRISMA, databaseConnected true.
+- Anonymous avatar read and self-deletion request both return 401. No real account deletion was attempted.
+- No database migration, live data repair, billing change, Web redeployment or Apple/payment activation was needed.

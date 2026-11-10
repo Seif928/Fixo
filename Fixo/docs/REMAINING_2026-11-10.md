@@ -4,8 +4,8 @@ This checkpoint supersedes the completion/pending counts in the November 2–3 s
 
 ## Latest evidence
 
-- Source: 6c42177, rollout record 0fc54f3, branch codex/fixo-premium-repair.
-- Backend: last full verification 483 tests / 54 suites; Flutter: 543 passed, two deliberately opt-in skips; analyze clean. These are recorded results, not new runs for this status update.
+- Source: API account/avatar correction 95d6563; Web/chat release b68aacf; branch codex/fixo-premium-repair. Booking evidence remains recorded in 6c42177/0fc54f3.
+- Backend: latest full verification 499 tests / 55 suites, TypeScript check and build passed. Flutter: last verified Web/Android release has 545 passed, two deliberately opt-in skips and clean analyze; no Flutter source changed in the API-only follow-up.
 - TestSprite frontend: fresh seven-case batch passed. Backend four-case rerun remains unconfirmed; CLI credential-file EPERM persists and the user's terminal result has not arrived.
 - Real local PostgreSQL booking widget integration passed: full calendar, exact 21:45 time, real pricing, cash confirmation, PENDING_DISPATCH, one pending cash payment, paidAt null, duplicate-safe reopen. This is not a native/browser authenticated booking test. See LOCAL_BOOKING_VERIFICATION.md.
 - Android public-navigation emulator smoke passed. Ordinary APK and Web builds passed. Both Web hosting origins matched the verified artifact.
