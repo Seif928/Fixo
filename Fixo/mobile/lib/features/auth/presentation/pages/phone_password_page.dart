@@ -410,9 +410,7 @@ class _PhonePasswordPageState extends ConsumerState<PhonePasswordPage> {
               ),
               const SizedBox(width: 6),
               Text(
-                ar
-                    ? 'المنصة الأولى المعتمدة لخدمات المنازل الفاخرة'
-                    : 'Egypt’s Premier Certified Home Services Platform',
+                ar ? 'خدمات منزلك مع FIXO' : 'Home services with FIXO',
                 style: const TextStyle(
                   fontSize: 12,
                   fontWeight: FontWeight.w800,
@@ -438,43 +436,41 @@ class _PhonePasswordPageState extends ConsumerState<PhonePasswordPage> {
         const SizedBox(height: 16),
         Text(
           ar
-              ? 'تجربة استثنائية تجمع بين الحرفية المصرية العريقة وأعلى معايير الدقة والأمان. فنيون مدربون على أعلى مستوى وضمان ذهبي كامل.'
-              : 'An unparalleled experience marrying Nilotic heritage with Swiss precision. Vetted professionals, transparent pricing, and 30-day golden warranty.',
+              ? 'اختار الخدمة والعنوان والموعد المناسب لك، وراجع تفاصيل السعر قبل تأكيد حجزك.'
+              : 'Choose your service, address and preferred time, then review the pricing details before confirming your booking.',
           style: TextStyle(fontSize: 16, height: 1.6, color: palette.mutedText),
         ),
         const SizedBox(height: 32),
 
         // 3 Pillars
         _buildPillarRow(
-          icon: Icons.verified_user_rounded,
-          title: ar
-              ? 'فنيون معتمدون وموثقون جنائياً'
-              : 'Criminal-Record Vetted Professionals',
+          icon: Icons.home_repair_service_outlined,
+          title: ar ? 'خدمات تناسب منزلك' : 'Services for your home',
           subtitle: ar
-              ? 'فحص شامل واختبارات فنية معتمدة'
-              : 'Comprehensive skills & background check',
+              ? 'تصفح الخدمات المتاحة وتفاصيلها'
+              : 'Explore available services and their details',
           isDark: isDark,
           palette: palette,
         ),
         const SizedBox(height: 16),
         _buildPillarRow(
-          icon: Icons.speed_rounded,
-          title: ar ? 'وصول فوري خلال 30 دقيقة' : 'Instant 30-Min Arrival',
+          icon: Icons.calendar_month_outlined,
+          title: ar ? 'موعد تختاره أنت' : 'A time that works for you',
           subtitle: ar
-              ? 'تتبع فوري ومباشر للفني حتى باب بيتك'
-              : 'Live real-time tracking to your doorstep',
+              ? 'حدد اليوم والساعة عند طلب الخدمة'
+              : 'Select your preferred day and time when booking',
           isDark: isDark,
           palette: palette,
         ),
         const SizedBox(height: 16),
         _buildPillarRow(
-          icon: Icons.shield_moon_rounded,
+          icon: Icons.receipt_long_outlined,
           title: ar
-              ? 'ضمان فيكسو الذهبي لمدة 30 يوماً'
-              : '30-Day FIXO Golden Warranty',
+              ? 'راجع السعر قبل التأكيد'
+              : 'Review pricing before confirmation',
           subtitle: ar
-              ? 'إعادة الخدمة مجاناً أو استرداد كامل للمبلغ'
-              : 'Complimentary rework or full money back',
+              ? 'تفاصيل الرسوم والإجمالي بالجنيه المصري'
+              : 'See the fee breakdown and total in EGP',
           isDark: isDark,
           palette: palette,
         ),

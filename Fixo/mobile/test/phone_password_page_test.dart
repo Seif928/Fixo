@@ -164,6 +164,45 @@ void main() {
     await tester.pumpAndSettle();
   }
 
+  for (final arabic in [false, true]) {
+    testWidgets(
+      'desktop login uses factual service copy (${arabic ? "ar" : "en"})',
+      (tester) async {
+        tester.view.physicalSize = const Size(1280, 900);
+        tester.view.devicePixelRatio = 1;
+        addTearDown(tester.view.resetPhysicalSize);
+        addTearDown(tester.view.resetDevicePixelRatio);
+        await pump(tester, arabic: arabic);
+        expect(
+          find.text(arabic ? 'موعد تختاره أنت' : 'A time that works for you'),
+          findsOneWidget,
+        );
+        expect(
+          find.text(
+            arabic
+                ? 'راجع السعر قبل التأكيد'
+                : 'Review pricing before confirmation',
+          ),
+          findsOneWidget,
+        );
+        for (final claim in [
+          'Certified',
+          'Criminal-Record',
+          '30-Min',
+          'Golden Warranty',
+          'money back',
+          'معتمدة',
+          'موثقون جنائياً',
+          'وصول فوري',
+          'ضمان ذهبي',
+          'استرداد كامل',
+        ]) {
+          expect(find.textContaining(claim), findsNothing);
+        }
+      },
+    );
+  }
+
   testWidgets(
     'professional login goes to professional onboarding without granting a role',
     (tester) async {
