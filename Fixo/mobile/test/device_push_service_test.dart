@@ -7,6 +7,8 @@ import 'package:fixo_mobile/core/storage/secure_token_storage.dart';
 
 class FakePushClient extends PushPlatformClient {
   bool allowed = true;
+  bool failDeletion = false;
+  Completer<void>? deletionGate, deletionEntered;
   int prompts = 0, deletions = 0;
   final activities = StreamController<void>.broadcast(sync: true);
   final opens = StreamController<String>.broadcast(sync: true);
@@ -20,6 +22,7 @@ class FakePushClient extends PushPlatformClient {
     initializeEntered?.complete();
     await initializeGate?.future;
   }
+
   @override
   Future<bool> permission({required bool request}) async {
     if (request) prompts++;
@@ -32,6 +35,9 @@ class FakePushClient extends PushPlatformClient {
   @override
   Future<void> deleteToken() async {
     deletions++;
+    deletionEntered?.complete();
+    await deletionGate?.future;
+    if (failDeletion) throw StateError('Native unregister unavailable');
   }
 
   @override
@@ -81,7 +87,9 @@ void main() {
           onRequest: (request, handler) {
             calls.add(request);
             if (request.method == 'DELETE') {
-              if (deleteEntered?.isCompleted == false) { deleteEntered!.complete(); }
+              if (deleteEntered?.isCompleted == false) {
+                deleteEntered!.complete();
+              }
               if (unregisterFails) {
                 handler.reject(
                   DioException(
@@ -101,7 +109,9 @@ void main() {
               }
             }
             if (request.method == 'POST') {
-              if (registerEntered?.isCompleted == false) { registerEntered!.complete(); }
+              if (registerEntered?.isCompleted == false) {
+                registerEntered!.complete();
+              }
               if (registerGate != null) {
                 registerGate!.future.then(
                   (_) => handler.resolve(
@@ -134,6 +144,46 @@ void main() {
       await client.opens.close();
     });
   });
+  test(
+    'native unregister failure still removes the server device and remembered ID',
+    () async {
+      expect(await service.enable(), PushOptInResult.enabled);
+      client.failDeletion = true;
+      await expectLater(service.disable(), throwsStateError);
+      expect(calls.last.method, 'DELETE');
+      expect(calls.last.extra['fixo_session_user'], 'owner');
+      expect(prefs.getString('fixo.push.device.owner'), isNull);
+    },
+  );
+  test(
+    'the next account waits for slow native unregister before creating its token',
+    () async {
+      expect(await service.enable(), PushOptInResult.enabled);
+      client.deletionGate = Completer<void>();
+      client.deletionEntered = Completer<void>();
+      final stopping = service.disable();
+      await client.deletionEntered!.future;
+      await storage.saveTokens(
+        const StoredAuthTokens(
+          accessToken: 'new-access',
+          refreshToken: 'new-refresh',
+          userId: 'new-owner',
+          phone: '',
+          role: 'CUSTOMER',
+        ),
+      );
+      final enabling = service.enable();
+      try {
+        await Future<void>.delayed(const Duration(milliseconds: 30));
+        expect(calls.where((r) => r.method == 'POST').length, 1);
+      } finally {
+        client.deletionGate!.complete();
+        await stopping;
+        await enabling;
+      }
+      expect(calls.last.extra['fixo_session_user'], 'new-owner');
+    },
+  );
   test(
     'logout during Firebase initialization cannot prompt the next account',
     () async {
