@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/semantics.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -12,6 +13,10 @@ import 'core/uploads/device_media_picker.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  // Expose real controls to screen readers and browser-based test runners.
+  if (kIsWeb) {
+    SemanticsBinding.instance.ensureSemantics();
+  }
   LicenseRegistry.addLicense(() async* {
     for (final family in ['cairo', 'manrope']) {
       yield LicenseEntryWithLineBreaks([
