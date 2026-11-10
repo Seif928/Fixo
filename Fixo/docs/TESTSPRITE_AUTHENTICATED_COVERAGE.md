@@ -41,5 +41,12 @@ Read current plan/balance before runs; use only available free credits, no upgra
 - dart analyze lib/main.dart: no issues.
 - Guest admin navigation redirects to the sign-in form.
 - Anonymous support/threads and support/admin/threads requests both return HTTP 401.
-- Three pre-existing frontend cases retain old failed results; they are not represented as passing by these two successful customer-session runs.
+- The three previously failed cases were re-run: TC-001 passed after web semantics; BKG-004 and BKG-005 passed after pricing/cash chips gained accessible explanatory dialogs. Their original test plans were preserved. Dashboard now shows 7 passed, 0 failed, 0 blocked. Two onboarding/location cases retain earlier successful runs; this was not a fresh simultaneous run of all seven.
+
+
+## Onboarding repair deployment
+- Source commit: 1a60dfd; production Vercel deployment dpl_Dfm9qndd5smFzWNqbfKoXSJ3up5Z, also synced to Firebase Hosting.
+- Public pricing and cash explanation buttons verified on the production domain; dialogs explain fees/payment without fabricating a price or payment success.
+- Regression test observed failing before implementation, then all 10 widget_test.dart tests passed; full flutter analyze found no issues and release web build succeeded.
+- Remaining scope: authenticated administrator and technician sessions, complete booking/support workflows, and native Android/iOS device testing are not covered by these seven cases.
 
