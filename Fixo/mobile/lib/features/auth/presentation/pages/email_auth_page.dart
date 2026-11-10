@@ -1,4 +1,5 @@
 import 'package:dio/dio.dart';
+import '../../../../core/auth/platform_auth_capabilities.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -304,19 +305,19 @@ class _EmailAuthPageState extends ConsumerState<EmailAuthPage> {
                               onPressed: _busy
                                   ? null
                                   : () => _run(() async {
-                                        final session = await ref
-                                            .read(emailAccessProvider)
-                                            .checkVerification();
-                                        if (session == null && mounted) {
-                                          setState(
-                                            () => _error = ar
-                                                ? 'البريد لم يتأكد بعد.'
-                                                : 'Email is not verified yet.',
-                                          );
-                                          return;
-                                        }
-                                        await _accept(session);
-                                      }),
+                                      final session = await ref
+                                          .read(emailAccessProvider)
+                                          .checkVerification();
+                                      if (session == null && mounted) {
+                                        setState(
+                                          () => _error = ar
+                                              ? 'البريد لم يتأكد بعد.'
+                                              : 'Email is not verified yet.',
+                                        );
+                                        return;
+                                      }
+                                      await _accept(session);
+                                    }),
                               child: Text(
                                 ar ? 'تم تأكيد بريدي' : 'I verified my email',
                               ),
@@ -326,17 +327,17 @@ class _EmailAuthPageState extends ConsumerState<EmailAuthPage> {
                               onPressed: _busy
                                   ? null
                                   : () => _run(() async {
-                                        await ref
-                                            .read(emailAccessProvider)
-                                            .resendVerification();
-                                        if (mounted) {
-                                          setState(
-                                            () => _notice = ar
-                                                ? 'تم إرسال طلب التأكيد.'
-                                                : 'Verification email requested.',
-                                          );
-                                        }
-                                      }),
+                                      await ref
+                                          .read(emailAccessProvider)
+                                          .resendVerification();
+                                      if (mounted) {
+                                        setState(
+                                          () => _notice = ar
+                                              ? 'تم إرسال طلب التأكيد.'
+                                              : 'Verification email requested.',
+                                        );
+                                      }
+                                    }),
                               child: Text(
                                 ar
                                     ? 'إعادة إرسال التأكيد'
@@ -359,25 +360,29 @@ class _EmailAuthPageState extends ConsumerState<EmailAuthPage> {
                               onPressed: _busy
                                   ? null
                                   : () => _run(() async {
-                                        await _accept(
-                                          await ref
-                                              .read(emailAccessProvider)
-                                              .signInWithGoogle(),
-                                        );
-                                      }),
-                              icon: const Icon(Icons.g_mobiledata_rounded, size: 24),
+                                      await _accept(
+                                        await ref
+                                            .read(emailAccessProvider)
+                                            .signInWithGoogle(),
+                                      );
+                                    }),
+                              icon: const Icon(
+                                Icons.g_mobiledata_rounded,
+                                size: 24,
+                              ),
                               label: Text(
                                 ar
                                     ? 'المتابعة بحساب Google'
                                     : 'Continue with Google',
                               ),
                             ),
-                            const SizedBox(height: FixoSpacing.sm),
-                            OutlinedButton.icon(
-                              key: const Key('email-use-apple'),
-                              onPressed: _busy
-                                  ? null
-                                  : () => _run(() async {
+                            if (appleSignInAvailable) ...[
+                              const SizedBox(height: FixoSpacing.sm),
+                              OutlinedButton.icon(
+                                key: const Key('email-use-apple'),
+                                onPressed: _busy
+                                    ? null
+                                    : () => _run(() async {
                                         final session = await ref
                                             .read(emailAccessProvider)
                                             .promptAndSignInWithApple(
@@ -387,13 +392,14 @@ class _EmailAuthPageState extends ConsumerState<EmailAuthPage> {
                                         if (session == null) return;
                                         await _accept(session);
                                       }),
-                              icon: const Icon(Icons.apple_rounded, size: 22),
-                              label: Text(
-                                ar
-                                    ? 'المتابعة بحساب Apple'
-                                    : 'Continue with Apple',
+                                icon: const Icon(Icons.apple_rounded, size: 22),
+                                label: Text(
+                                  ar
+                                      ? 'المتابعة بحساب Apple'
+                                      : 'Continue with Apple',
+                                ),
                               ),
-                            ),
+                            ],
                             const SizedBox(height: FixoSpacing.md),
                             TextFormField(
                               key: const Key('email-sign-in-address'),
@@ -403,8 +409,7 @@ class _EmailAuthPageState extends ConsumerState<EmailAuthPage> {
                               autofillHints: const [AutofillHints.email],
                               textDirection: TextDirection.ltr,
                               decoration: InputDecoration(
-                                labelText:
-                                    ar ? 'البريد الإلكتروني' : 'Email',
+                                labelText: ar ? 'البريد الإلكتروني' : 'Email',
                                 prefixIcon: Icon(
                                   Icons.mail_outline_rounded,
                                   size: 20,
@@ -413,13 +418,13 @@ class _EmailAuthPageState extends ConsumerState<EmailAuthPage> {
                               ),
                               validator: (value) =>
                                   value == null ||
-                                          !RegExp(
-                                            r'^[^\s@]+@[^\s@]+\.[^\s@]+$',
-                                          ).hasMatch(value.trim())
-                                      ? (ar
-                                          ? 'أدخل بريدًا صحيحًا.'
-                                          : 'Enter a valid email.')
-                                      : null,
+                                      !RegExp(
+                                        r'^[^\s@]+@[^\s@]+\.[^\s@]+$',
+                                      ).hasMatch(value.trim())
+                                  ? (ar
+                                        ? 'أدخل بريدًا صحيحًا.'
+                                        : 'Enter a valid email.')
+                                  : null,
                             ),
                             const SizedBox(height: 16),
                             TextFormField(
@@ -454,12 +459,12 @@ class _EmailAuthPageState extends ConsumerState<EmailAuthPage> {
                               ),
                               validator: (value) =>
                                   value == null ||
-                                          value.isEmpty ||
-                                          (_create && value.length < 12)
-                                      ? (ar
-                                          ? 'أدخل كلمة المرور؛ للحساب الجديد 12 حرفًا على الأقل.'
-                                          : 'Enter your password; new accounts require at least 12 characters.')
-                                      : null,
+                                      value.isEmpty ||
+                                      (_create && value.length < 12)
+                                  ? (ar
+                                        ? 'أدخل كلمة المرور؛ للحساب الجديد 12 حرفًا على الأقل.'
+                                        : 'Enter your password; new accounts require at least 12 characters.')
+                                  : null,
                             ),
                             const SizedBox(height: 20),
                             FilledButton(
@@ -485,10 +490,8 @@ class _EmailAuthPageState extends ConsumerState<EmailAuthPage> {
                                 _busy
                                     ? (ar ? 'جارٍ التنفيذ…' : 'Please wait…')
                                     : _create
-                                        ? (ar
-                                            ? 'إنشاء الحساب'
-                                            : 'Create account')
-                                        : (ar ? 'تسجيل الدخول' : 'Sign in'),
+                                    ? (ar ? 'إنشاء الحساب' : 'Create account')
+                                    : (ar ? 'تسجيل الدخول' : 'Sign in'),
                               ),
                             ),
                             const SizedBox(height: 8),
@@ -496,42 +499,42 @@ class _EmailAuthPageState extends ConsumerState<EmailAuthPage> {
                               onPressed: _busy
                                   ? null
                                   : () => setState(() {
-                                        _create = !_create;
-                                        _error = null;
-                                      }),
+                                      _create = !_create;
+                                      _error = null;
+                                    }),
                               child: Text(
                                 _create
                                     ? (ar
-                                        ? 'لدي حساب بالفعل'
-                                        : 'I already have an account')
+                                          ? 'لدي حساب بالفعل'
+                                          : 'I already have an account')
                                     : (ar
-                                        ? 'إنشاء حساب جديد'
-                                        : 'Create an account'),
+                                          ? 'إنشاء حساب جديد'
+                                          : 'Create an account'),
                               ),
                             ),
                             TextButton(
                               onPressed: _busy
                                   ? null
                                   : () => _run(() async {
-                                        if (_email.text.trim().isEmpty) {
-                                          setState(
-                                            () => _error = ar
-                                                ? 'أدخل البريد أولًا.'
-                                                : 'Enter your email first.',
-                                          );
-                                          return;
-                                        }
-                                        await ref
-                                            .read(emailAccessProvider)
-                                            .resetPassword(_email.text);
-                                        if (mounted) {
-                                          setState(
-                                            () => _notice = ar
-                                                ? 'راجع بريدك لاستعادة كلمة المرور.'
-                                                : 'Check your email for password recovery.',
-                                          );
-                                        }
-                                      }),
+                                      if (_email.text.trim().isEmpty) {
+                                        setState(
+                                          () => _error = ar
+                                              ? 'أدخل البريد أولًا.'
+                                              : 'Enter your email first.',
+                                        );
+                                        return;
+                                      }
+                                      await ref
+                                          .read(emailAccessProvider)
+                                          .resetPassword(_email.text);
+                                      if (mounted) {
+                                        setState(
+                                          () => _notice = ar
+                                              ? 'راجع بريدك لاستعادة كلمة المرور.'
+                                              : 'Check your email for password recovery.',
+                                        );
+                                      }
+                                    }),
                               child: Text(
                                 ar ? 'نسيت كلمة المرور؟' : 'Forgot password?',
                               ),
@@ -569,7 +572,9 @@ class _EmailAuthPageState extends ConsumerState<EmailAuthPage> {
                               const SizedBox(width: 4),
                               Flexible(
                                 child: Text(
-                                  ar ? 'بريد إلكتروني مؤكد' : 'Verified Email Auth',
+                                  ar
+                                      ? 'بريد إلكتروني مؤكد'
+                                      : 'Verified Email Auth',
                                   style: FixoTypography.bodySm(
                                     color: palette.mutedText,
                                     locale: locale,
@@ -595,7 +600,9 @@ class _EmailAuthPageState extends ConsumerState<EmailAuthPage> {
                               const SizedBox(width: 4),
                               Flexible(
                                 child: Text(
-                                  ar ? 'دعم القاهرة والجيزة' : 'Cairo & Giza Support',
+                                  ar
+                                      ? 'دعم القاهرة والجيزة'
+                                      : 'Cairo & Giza Support',
                                   style: FixoTypography.bodySm(
                                     color: palette.mutedText,
                                     locale: locale,

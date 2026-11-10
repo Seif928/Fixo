@@ -1,4 +1,5 @@
 import 'package:flutter/foundation.dart';
+import '../../../../core/auth/platform_auth_capabilities.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -150,30 +151,32 @@ class _PhoneAuthPageState extends ConsumerState<PhoneAuthPage> {
                           : 'Continue with email or Google',
                     ),
                   ),
-                  const SizedBox(height: FixoSpacing.sm),
-                  OutlinedButton.icon(
-                    key: const Key('auth-use-apple'),
-                    onPressed: () async {
-                      final session = await ref
-                          .read(emailAccessProvider)
-                          .promptAndSignInWithApple(
-                            context,
-                            isArabic: isArabic,
-                          );
-                      if (session != null && context.mounted) {
-                        await authNotifier.acceptVerifiedSession(session);
-                        if (context.mounted) {
-                          context.go(AppRoutes.customerHome);
+                  if (appleSignInAvailable) ...[
+                    const SizedBox(height: FixoSpacing.sm),
+                    OutlinedButton.icon(
+                      key: const Key('auth-use-apple'),
+                      onPressed: () async {
+                        final session = await ref
+                            .read(emailAccessProvider)
+                            .promptAndSignInWithApple(
+                              context,
+                              isArabic: isArabic,
+                            );
+                        if (session != null && context.mounted) {
+                          await authNotifier.acceptVerifiedSession(session);
+                          if (context.mounted) {
+                            context.go(AppRoutes.customerHome);
+                          }
                         }
-                      }
-                    },
-                    icon: const Icon(Icons.apple_rounded, size: 22),
-                    label: Text(
-                      isArabic
-                          ? 'المتابعة بحساب Apple أو Google'
-                          : 'Continue with Apple or Google',
+                      },
+                      icon: const Icon(Icons.apple_rounded, size: 22),
+                      label: Text(
+                        isArabic
+                            ? 'المتابعة بحساب Apple'
+                            : 'Continue with Apple',
+                      ),
                     ),
-                  ),
+                  ],
                   const SizedBox(height: 18),
 
                   // Editorial Brand Header
@@ -370,7 +373,9 @@ class _PhoneAuthPageState extends ConsumerState<PhoneAuthPage> {
                         const SizedBox(width: 4),
                         Flexible(
                           child: Text(
-                            isArabic ? 'بدون كلمة مرور' : 'No password required',
+                            isArabic
+                                ? 'بدون كلمة مرور'
+                                : 'No password required',
                             style: FixoTypography.bodySm(
                               color: FixoColors.secondary,
                             ).copyWith(fontWeight: FontWeight.w600),
@@ -423,7 +428,9 @@ class _PhoneAuthPageState extends ConsumerState<PhoneAuthPage> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      isArabic ? 'تغطية القاهرة والجيزة' : 'Cairo & Giza Coverage',
+                      isArabic
+                          ? 'تغطية القاهرة والجيزة'
+                          : 'Cairo & Giza Coverage',
                       style: FixoTypography.labelMd(
                         color: palette.inkText,
                       ).copyWith(fontWeight: FontWeight.w700),

@@ -8,6 +8,7 @@ import '../domain/auth_models.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import 'package:google_sign_in/google_sign_in.dart';
+import '../../../core/auth/platform_auth_capabilities.dart';
 
 /// Firebase proves email ownership; NestJS alone issues FIXO roles and sessions.
 class EmailAccessService {
@@ -73,6 +74,9 @@ class EmailAccessService {
   }
 
   Future<AuthSession?> signInWithApple() async {
+    if (!appleSignInAvailable) {
+      throw UnsupportedError('Apple sign-in is available in the iOS app only.');
+    }
     final auth = await _auth();
     final provider = AppleAuthProvider()
       ..addScope('email')

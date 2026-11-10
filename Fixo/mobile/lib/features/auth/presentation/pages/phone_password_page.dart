@@ -1,4 +1,5 @@
 import 'dart:convert';
+import '../../../../core/auth/platform_auth_capabilities.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -1010,45 +1011,45 @@ class _PhonePasswordPageState extends ConsumerState<PhonePasswordPage> {
                       style: const TextStyle(fontWeight: FontWeight.w600),
                     ),
                   ),
-                  const SizedBox(height: FixoSpacing.sm),
-
-                  // Apple Button (Authentic Jet-Black Apple VisionOS)
-                  OutlinedButton.icon(
-                    key: const Key('first-use-apple'),
-                    style: OutlinedButton.styleFrom(
-                      backgroundColor: isDark
-                          ? Colors.black
-                          : const Color(0xFF161616),
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(vertical: 15),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(16),
+                  if (appleSignInAvailable) ...[
+                    const SizedBox(height: FixoSpacing.sm),
+                    OutlinedButton.icon(
+                      key: const Key('first-use-apple'),
+                      style: OutlinedButton.styleFrom(
+                        backgroundColor: isDark
+                            ? Colors.black
+                            : const Color(0xFF161616),
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(vertical: 15),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(16),
+                        ),
+                        side: BorderSide(
+                          color: Colors.white.withValues(alpha: 0.15),
+                        ),
                       ),
-                      side: BorderSide(
-                        color: Colors.white.withValues(alpha: 0.15),
+                      onPressed: _busy
+                          ? null
+                          : () => _run(() async {
+                              final value = await ref
+                                  .read(emailAccessProvider)
+                                  .promptAndSignInWithApple(
+                                    context,
+                                    isArabic: ar,
+                                  );
+                              if (value == null) return;
+                              await _accept(value);
+                            }),
+                      icon: const Icon(Icons.apple_rounded, size: 22),
+                      label: Text(
+                        ar ? 'المتابعة بحساب Apple' : 'Continue with Apple',
+                        style: const TextStyle(
+                          fontWeight: FontWeight.w700,
+                          letterSpacing: 0.2,
+                        ),
                       ),
                     ),
-                    onPressed: _busy
-                        ? null
-                        : () => _run(() async {
-                            final value = await ref
-                                .read(emailAccessProvider)
-                                .promptAndSignInWithApple(
-                                  context,
-                                  isArabic: ar,
-                                );
-                            if (value == null) return;
-                            await _accept(value);
-                          }),
-                    icon: const Icon(Icons.apple_rounded, size: 22),
-                    label: Text(
-                      ar ? 'المتابعة بحساب Apple' : 'Continue with Apple',
-                      style: const TextStyle(
-                        fontWeight: FontWeight.w700,
-                        letterSpacing: 0.2,
-                      ),
-                    ),
-                  ),
+                  ],
                 ] else ...[
                   const SizedBox(height: 8),
                   TextButton(

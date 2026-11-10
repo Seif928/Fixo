@@ -164,6 +164,20 @@ void main() {
     await tester.pumpAndSettle();
   }
 
+  for (final platform in [
+    TargetPlatform.android,
+    TargetPlatform.iOS,
+    TargetPlatform.macOS,
+  ]) {
+    testWidgets('Apple entry is native iOS only on $platform', (tester) async {
+      await pump(tester);
+      expect(
+        find.byKey(const Key('first-use-apple')),
+        platform == TargetPlatform.iOS ? findsOneWidget : findsNothing,
+      );
+      expect(find.byKey(const Key('first-use-google')), findsOneWidget);
+    }, variant: TargetPlatformVariant({platform}));
+  }
   for (final arabic in [false, true]) {
     testWidgets(
       'desktop login uses factual service copy (${arabic ? "ar" : "en"})',
