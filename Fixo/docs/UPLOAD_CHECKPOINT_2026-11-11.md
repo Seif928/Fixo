@@ -1,5 +1,7 @@
 # Upload checkpoint — 2026-11-11
 
+Superseded by [Clerk trial/native push release](CLERK_PUSH_RELEASE_2026-11-11.md): code `9a8e5d3` pushed, API/Web redeployed and Firebase mirror updated after 558 backend and 565 Flutter tests passed. The deployment IDs/hashes and external Clerk/Apple/payment/device prerequisites are recorded there. The earlier upload details below are historical.
+
 User requested all completed changes be uploaded. Source 198cb36 matched origin/codex/fixo-premium-repair. Remaining Windows-generated files had no canonical content diff; staging normalized line endings without creating a code change. No main-branch merge was performed.
 
 - API redeployed from the existing NestJS backend, deployment dpl_BkRc34xrYzyuw1RuozphuuwCGH5r, Ready at https://fixo-api.vercel.app. Live health ok, PostgreSQL connected, readiness 200, anonymous /users/me 401.

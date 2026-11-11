@@ -16,11 +16,15 @@
 - Final full backend suite: **558 tests / 60 suites passed**, against local `fixo_test`; TypeScript lint and Nest build passed.
 - Final Flutter suite: **565 passed, 2 deliberate opt-in skips**; `flutter analyze --no-pub` reported no issues.
 - Native configuration parsed successfully: Android FID opt-in, iOS FID/background modes, APNs entitlement and Debug/Release/Profile environment mappings. This is configuration validation, not an iOS compile/runtime test.
-- Web/APK builds and live rollout are being recorded after their commands finish.
+- Release Web build and ordinary Android debug APK both succeeded from code commit `9a8e5d3`, pushed to `origin/codex/fixo-premium-repair`.
+- API deployment `dpl_9LAuuWLEy5TzKLFrmN8MmPHXGqcJ`, Ready at https://fixo-api.vercel.app (deployment URL https://fixo-pgr57j2sj-gamal6507-3315.vercel.app). Live health 200/ok, PostgreSQL connected, readiness 200, anonymous `/users/me` 401 and gated Clerk exchange 503 as expected while disabled.
+- Web deployment `dpl_MgQ8aX79Ydcw6cExwcui2tuw8Tq3`, Ready at https://fixo-web-blue.vercel.app (deployment URL https://fixo-c5q6u7cby-gamal6507-3315.vercel.app). Firebase Hosting mirror was updated at https://fixo-home-services-6507.web.app.
+- Both deployed `main.dart.js` files match the tested local release SHA256 `E1667CDE13C5909B28C4F43D5CA3309A67EBBF467F1D0A64B7B639D5D280136C`. Live Arabic phone/password/Google login page rendered successfully, with no Web Apple entry.
+- APK is local at `mobile/build/app/outputs/flutter-apk/app-debug.apk`, SHA256 `AA346AEB903019C4382511430FDFC5C0272A0114E1BBFA4358D374CA127E1E01`; not a signed store release.
 
 ## Prerequisites still open
 
-1. Clerk server secret/public signing key and exact trusted origins are not configured on Vercel. A real dual-proof client flow and end-to-end trial must pass before switching login. The hosted Clerk account portal alone is not FIXO integration. No production Clerk instance or bulk migration was created.
+1. Clerk server secret/public signing key and exact trusted origins are not configured on Vercel. User approved transfer of the existing key, but Clerk now displays old secrets only partially (official change 2026-10-19), so the full existing value cannot be recovered from the Dashboard. Creation of a new `fixo-api-trial` key requires separate action-time approval and is pending. No secret was copied to chat/Git or saved in a screenshot. A real dual-proof client flow and end-to-end trial must pass before switching login. The hosted Clerk account portal alone is not FIXO integration. No production Clerk instance or bulk migration was created.
 2. No Android device is currently attached. Native receipt/display and real camera/permission flows remain unproven; synthetic/regression tests are not delivery evidence.
 3. iOS archive, signing, APNs key upload and real-device proof need a Mac/iPhone and the user's Apple account/provisioning. `FIXO_APNS_CONFIGURED` stays false until proof exists. No billing or Apple membership was activated.
 4. Electronic payments still require an approved merchant account/provider and a real adapter/webhook implementation; cash remains available. No method was marked operational merely because its UI exists.
