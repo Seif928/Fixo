@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 
 /// Short, finite motion shared across FIXO. Never delays a user's action.
 abstract final class FixoMotion {
@@ -8,6 +9,10 @@ abstract final class FixoMotion {
   static bool reduced(BuildContext context) =>
       MediaQuery.disableAnimationsOf(context) ||
       MediaQuery.accessibleNavigationOf(context);
+  // Large backdrop filters and pointer-driven perspective are too costly on
+  // low-power Web GPUs; keep the same surfaces and native button feedback.
+  static bool expensiveEffects(BuildContext context) =>
+      !kIsWeb && !reduced(context);
 }
 
 class FixoEntrance extends StatefulWidget {
@@ -89,19 +94,21 @@ class _FixoPressFeedbackState extends State<FixoPressFeedback> {
   }
 
   @override
-  Widget build(BuildContext context) => Semantics(child: AnimatedScale(
-    scale: widget.enabled && _pressed && !FixoMotion.reduced(context)
-        ? .985
-        : 1,
-    duration: FixoMotion.reduced(context) ? Duration.zero : FixoMotion.press,
-    curve: Curves.easeOutCubic,
-    child: Opacity(
-      opacity: widget.enabled ? 1 : .6,
-      child: widget.builder((value) {
-        if (mounted && _pressed != value) setState(() => _pressed = value);
-      }),
+  Widget build(BuildContext context) => Semantics(
+    child: AnimatedScale(
+      scale: widget.enabled && _pressed && !FixoMotion.reduced(context)
+          ? .985
+          : 1,
+      duration: FixoMotion.reduced(context) ? Duration.zero : FixoMotion.press,
+      curve: Curves.easeOutCubic,
+      child: Opacity(
+        opacity: widget.enabled ? 1 : .6,
+        child: widget.builder((value) {
+          if (mounted && _pressed != value) setState(() => _pressed = value);
+        }),
+      ),
     ),
-  ));
+  );
 }
 
 class FixoPageMotion extends StatelessWidget {

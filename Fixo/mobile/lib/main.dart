@@ -7,6 +7,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'core/l10n/app_locale_controller.dart';
 
 import 'app/app.dart';
+import 'app/startup_gate.dart';
 import 'features/auth/presentation/controllers/auth_controller.dart';
 import 'core/notifications/device_push_service.dart';
 import 'core/uploads/device_media_picker.dart';
@@ -28,12 +29,20 @@ Future<void> main() async {
   final container = ProviderContainer(
     overrides: [appPreferencesProvider.overrideWithValue(preferences)],
   );
-  await container.read(authControllerProvider.notifier).restoreSession();
+  final restoration = container
+      .read(authControllerProvider.notifier)
+      .restoreSession();
   runApp(
-    UncontrolledProviderScope(container: container, child: const FixoApp()),
+    UncontrolledProviderScope(
+      container: container,
+      child: FixoStartupGate(
+        restoration: restoration,
+        onReady: () {
+          container.read(deviceMediaPickerProvider).prepareRecovery();
+          container.read(devicePushProvider).resume();
+        },
+        child: const FixoApp(),
+      ),
+    ),
   );
-  WidgetsBinding.instance.addPostFrameCallback((_) {
-    container.read(deviceMediaPickerProvider).prepareRecovery();
-    container.read(devicePushProvider).resume();
-  });
 }

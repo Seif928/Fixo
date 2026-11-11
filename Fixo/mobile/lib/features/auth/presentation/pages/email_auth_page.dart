@@ -15,6 +15,7 @@ import '../../../../core/widgets/fixo_cards.dart';
 import '../../data/email_access_service.dart';
 import '../../domain/auth_models.dart';
 import '../controllers/auth_controller.dart';
+import '../widgets/google_sign_in_button.dart';
 
 /// Email variant of approved Screen 02, retaining the native FIXO auth layout.
 class EmailAuthPage extends ConsumerStatefulWidget {
@@ -40,6 +41,14 @@ class _EmailAuthPageState extends ConsumerState<EmailAuthPage> {
   String _message(Object error) {
     if (error is FirebaseAuthException) {
       switch (error.code) {
+        case 'popup-blocked':
+          return _ar
+              ? 'اسمح بنافذة جوجل المنبثقة في المتصفح وحاول مجددًا.'
+              : 'Allow the Google popup in your browser and retry.';
+        case 'network-request-failed':
+          return _ar
+              ? 'تعذّر الاتصال بجوجل. تحقق من الإنترنت.'
+              : 'Could not reach Google. Check your connection.';
         case 'email-already-in-use':
           return _ar
               ? 'البريد مستخدم بالفعل. سجّل الدخول أو استعد كلمة المرور.'
@@ -80,6 +89,13 @@ class _EmailAuthPageState extends ConsumerState<EmailAuthPage> {
     try {
       await action();
     } catch (error) {
+      if (error is FirebaseAuthException &&
+          const [
+            'popup-closed-by-user',
+            'cancelled-popup-request',
+          ].contains(error.code)) {
+        return;
+      }
       if (mounted) setState(() => _error = _message(error));
     } finally {
       if (mounted) setState(() => _busy = false);
@@ -355,8 +371,9 @@ class _EmailAuthPageState extends ConsumerState<EmailAuthPage> {
                               ),
                             ),
                           ] else ...[
-                            OutlinedButton.icon(
-                              key: const Key('email-use-google'),
+                            GoogleSignInButton(
+                              buttonKey: const Key('email-use-google'),
+                              isArabic: ar,
                               onPressed: _busy
                                   ? null
                                   : () => _run(() async {
@@ -366,10 +383,6 @@ class _EmailAuthPageState extends ConsumerState<EmailAuthPage> {
                                             .signInWithGoogle(),
                                       );
                                     }),
-                              icon: const Icon(
-                                Icons.g_mobiledata_rounded,
-                                size: 24,
-                              ),
                               label: Text(
                                 ar
                                     ? 'المتابعة بحساب Google'

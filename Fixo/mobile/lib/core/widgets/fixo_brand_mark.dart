@@ -7,8 +7,7 @@ import '../theme/fixo_typography.dart';
 /// Animated Ultra-Luxury 3D Architectural Crest Brand Mark for FIXO.
 ///
 /// Features a bespoke faceted emerald-and-gold architectural villa emblem with
-/// a continuous metallic specular shimmer sweep (automatically paused in widget
-/// tests so `pumpAndSettle` completes deterministically).
+/// a short metallic shimmer sweep, then stops painting at rest.
 class FixoBrandMark extends StatefulWidget {
   const FixoBrandMark({
     super.key,
@@ -29,17 +28,23 @@ class _FixoBrandMarkState extends State<FixoBrandMark>
     with SingleTickerProviderStateMixin {
   AnimationController? _shimmerController;
 
-  bool get _isTest =>
-      WidgetsBinding.instance.runtimeType.toString().contains('Test');
-
   @override
   void initState() {
     super.initState();
-    if (!_isTest) {
-      _shimmerController = AnimationController(
-        vsync: this,
-        duration: const Duration(milliseconds: 3200),
-      )..repeat();
+    _shimmerController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 450),
+    );
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (MediaQuery.disableAnimationsOf(context) ||
+        MediaQuery.accessibleNavigationOf(context)) {
+      _shimmerController!.value = 1;
+    } else if (_shimmerController!.status == AnimationStatus.dismissed) {
+      _shimmerController!.forward();
     }
   }
 
@@ -84,7 +89,7 @@ class _FixoBrandMarkState extends State<FixoBrandMark>
               animation: _shimmerController!,
               builder: (context, _) => CustomPaint(
                 painter: _FixoLuxuryCrestPainter(
-                  progress: _shimmerController!.value,
+                  progress: _shimmerController!.value * 0.35,
                 ),
               ),
             )

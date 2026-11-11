@@ -1,6 +1,7 @@
 import 'dart:convert';
 import '../../../../core/auth/platform_auth_capabilities.dart';
 import 'package:dio/dio.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -16,6 +17,7 @@ import '../../domain/auth_models.dart';
 import '../controllers/auth_controller.dart';
 import '../controllers/account_entry_controller.dart';
 import '../../../../core/uploads/private_media_picker_sheet.dart';
+import '../widgets/google_sign_in_button.dart';
 import '../../../profile/data/avatar_repository.dart';
 
 /// Screen 02: Ultra-Premium Luxury Login & Account Setup.
@@ -79,7 +81,29 @@ class _PhonePasswordPageState extends ConsumerState<PhonePasswordPage> {
     } catch (error) {
       if (!mounted) return;
       String message;
-      if (error is DioException && error.response?.statusCode == 401) {
+      if (error is FirebaseAuthException) {
+        switch (error.code) {
+          case 'popup-closed-by-user':
+          case 'cancelled-popup-request':
+            return; // Closing an identity prompt is not a failed password/account.
+          case 'popup-blocked':
+            message = _ar
+                ? 'اسمح بنافذة جوجل المنبثقة من إعدادات المتصفح، ثم حاول مجددًا.'
+                : 'Allow the Google popup in your browser, then try again.';
+          case 'network-request-failed':
+            message = _ar
+                ? 'تعذّر الاتصال بجوجل. تحقق من الإنترنت وحاول مجددًا.'
+                : 'Could not reach Google. Check your connection and retry.';
+          case 'auth-not-ready':
+            message = _ar
+                ? 'جارٍ الاتصال بجوجل. حاول بعد لحظة.'
+                : 'Google is still connecting. Try again in a moment.';
+          default:
+            message = _ar
+                ? 'تعذّر تسجيل الدخول بجوجل. حاول مجددًا.'
+                : 'Google sign-in could not finish. Please retry.';
+        }
+      } else if (error is DioException && error.response?.statusCode == 401) {
         message = error.requestOptions.path == '/auth/phone-password'
             ? (_ar
                   ? 'رقم الموبايل أو كلمة المرور غير صحيحة. راجعهم أو استخدم «نسيت كلمة المرور؟».'
@@ -977,8 +1001,9 @@ class _PhonePasswordPageState extends ConsumerState<PhonePasswordPage> {
                   ),
 
                   // Google Button (Apple-quality Frosted White)
-                  OutlinedButton.icon(
-                    key: const Key('first-use-google'),
+                  GoogleSignInButton(
+                    buttonKey: const Key('first-use-google'),
+                    isArabic: ar,
                     style: OutlinedButton.styleFrom(
                       padding: const EdgeInsets.symmetric(vertical: 15),
                       shape: RoundedRectangleBorder(
@@ -1003,7 +1028,6 @@ class _PhonePasswordPageState extends ConsumerState<PhonePasswordPage> {
                             }
                             await _accept(value);
                           }),
-                    icon: const Icon(Icons.g_mobiledata_rounded, size: 26),
                     label: Text(
                       ar
                           ? 'أول مرة؟ تابع بحساب Google'

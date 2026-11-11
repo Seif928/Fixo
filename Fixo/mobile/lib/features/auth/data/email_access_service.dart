@@ -12,15 +12,52 @@ import '../../../core/auth/platform_auth_capabilities.dart';
 
 /// Firebase proves email ownership; NestJS alone issues FIXO roles and sessions.
 class EmailAccessService {
-  EmailAccessService(this.dio);
+  EmailAccessService(
+    this.dio, {
+    bool isWeb = kIsWeb,
+    Future<FirebaseAuth> Function()? authInitializer,
+  }) : _isWeb = isWeb,
+       _authInitializer = authInitializer;
   final Dio dio;
-  Future<FirebaseAuth> _auth() async {
+  final bool _isWeb;
+  final Future<FirebaseAuth> Function()? _authInitializer;
+  FirebaseAuth? _preparedAuth;
+  Future<FirebaseAuth>? _authPreparation;
+  Future<void>? _googlePreparation;
+  bool _googlePrepared = false;
+  bool get requiresGooglePreparation => _isWeb;
+
+  Future<FirebaseAuth> _auth() => _authPreparation ??= _initializeAuth().then(
+    (auth) {
+      _preparedAuth = auth;
+      return auth;
+    },
+    onError: (Object error, StackTrace stack) {
+      _authPreparation = null;
+      Error.throwWithStackTrace(error, stack);
+    },
+  );
+
+  Future<FirebaseAuth> _initializeAuth() async {
+    if (_authInitializer != null) return _authInitializer();
     if (Firebase.apps.isEmpty) {
       await Firebase.initializeApp(
         options: DefaultFirebaseOptions.currentPlatform,
       );
     }
     return FirebaseAuth.instance;
+  }
+
+  Future<void> prepareGoogle() =>
+      _googlePreparation ??= _prepareGoogle().whenComplete(() {
+        if (!_googlePrepared) _googlePreparation = null;
+      });
+
+  Future<void> _prepareGoogle() async {
+    final auth = await _auth();
+    // Warm the SDK and its persistence before the gesture that opens the popup.
+    await auth.authStateChanges().first.timeout(const Duration(seconds: 12));
+    _googlePrepared = true;
   }
 
   Future<AuthSession?> signIn(
@@ -53,24 +90,42 @@ class EmailAccessService {
     return user != null && user.emailVerified ? _exchange(user) : null;
   }
 
-  Future<AuthSession?> signInWithGoogle() async {
-    final auth = await _auth();
-    UserCredential credential;
-    if (kIsWeb) {
-      credential = await auth.signInWithPopup(GoogleAuthProvider());
-    } else {
-      await GoogleSignIn.instance.initialize();
-      final account = await GoogleSignIn.instance.authenticate();
-      final idToken = account.authentication.idToken;
-      if (idToken == null) {
-        throw StateError('Google identity token unavailable.');
+  Future<AuthSession?> signInWithGoogle() {
+    if (_isWeb) {
+      if (!_googlePrepared || _preparedAuth == null) {
+        return Future.error(
+          FirebaseAuthException(
+            code: 'auth-not-ready',
+            message: 'Google sign-in is still connecting.',
+          ),
+        );
       }
-      credential = await auth.signInWithCredential(
-        GoogleAuthProvider.credential(idToken: idToken),
+      // Deliberately invoke this synchronously, within the original button gesture.
+      return _finishGoogle(
+        _preparedAuth!.signInWithPopup(GoogleAuthProvider()),
       );
     }
-    final user = credential.user!;
-    return user.emailVerified ? _exchange(user) : null;
+    return _signInWithNativeGoogle();
+  }
+
+  Future<AuthSession?> _finishGoogle(Future<UserCredential> pending) async {
+    final user = (await pending).user;
+    return user != null && user.emailVerified ? _exchange(user) : null;
+  }
+
+  Future<AuthSession?> _signInWithNativeGoogle() async {
+    final auth = await _auth();
+    await GoogleSignIn.instance.initialize();
+    final account = await GoogleSignIn.instance.authenticate();
+    final idToken = account.authentication.idToken;
+    if (idToken == null) {
+      throw StateError('Google identity token unavailable.');
+    }
+    return _finishGoogle(
+      auth.signInWithCredential(
+        GoogleAuthProvider.credential(idToken: idToken),
+      ),
+    );
   }
 
   Future<AuthSession?> signInWithApple() async {

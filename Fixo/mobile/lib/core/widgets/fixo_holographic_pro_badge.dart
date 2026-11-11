@@ -43,7 +43,7 @@ class _FixoHolographicProBadgeState extends State<FixoHolographicProBadge>
       'Test',
     );
     if (!isTest) {
-      _shimmerController.repeat();
+      _shimmerController.forward();
     } else {
       _shimmerController.value = 0.5;
     }

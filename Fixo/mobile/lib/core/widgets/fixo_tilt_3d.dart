@@ -2,6 +2,7 @@ import 'dart:math' as math;
 
 import 'package:flutter/gestures.dart' show PointerDeviceKind;
 import 'package:flutter/material.dart';
+import '../motion/fixo_motion.dart';
 
 /// Premium 3D tilt surface for FIXO cards.
 ///
@@ -46,10 +47,16 @@ class FixoTilt3D extends StatefulWidget {
 
 class _FixoTilt3DState extends State<FixoTilt3D>
     with SingleTickerProviderStateMixin {
-  late final AnimationController _controller = AnimationController(
-    vsync: this,
-    duration: const Duration(milliseconds: 140),
-  );
+  late final AnimationController _controller;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 140),
+    );
+  }
 
   Offset _from = Offset.zero;
   Offset _to = Offset.zero;
@@ -96,7 +103,7 @@ class _FixoTilt3DState extends State<FixoTilt3D>
 
   @override
   Widget build(BuildContext context) {
-    if (MediaQuery.maybeDisableAnimationsOf(context) ?? false) {
+    if (!FixoMotion.expensiveEffects(context)) {
       return widget.child;
     }
 

@@ -49,7 +49,7 @@ class _Isometric3DTrackingCanvasState extends State<Isometric3DTrackingCanvas>
       'Test',
     );
     if (!isTest) {
-      _animController.repeat();
+      _animController.forward();
     } else {
       _animController.value = 0.5;
     }

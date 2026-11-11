@@ -1,6 +1,7 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import '../theme/fixo_spacing.dart';
+import '../motion/fixo_motion.dart';
 
 /// Apple-style Liquid Glass Layer (VisionOS & iOS 18 fluid frosted glass).
 ///
@@ -72,6 +73,9 @@ class _LiquidGlassLayerState extends State<LiquidGlassLayer> {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final interactive =
+        widget.enableInteractiveCaustics &&
+        FixoMotion.expensiveEffects(context);
     final isTest = WidgetsBinding.instance.runtimeType.toString().contains(
       'Test',
     );
@@ -137,9 +141,9 @@ class _LiquidGlassLayerState extends State<LiquidGlassLayer> {
         ),
         child: Stack(
           children: [
-            widget.child,
+            RepaintBoundary(child: widget.child),
             // Liquid Caustic Specular Glare Overlay
-            if (widget.enableInteractiveCaustics && !isTest)
+            if (interactive && !isTest)
               Positioned.fill(
                 child: IgnorePointer(
                   child: ClipRRect(
@@ -198,6 +202,7 @@ class _LiquidGlassLayerState extends State<LiquidGlassLayer> {
         borderRadius: widget.borderRadius,
         child: widget.enableBlur
             ? BackdropFilter(
+                enabled: FixoMotion.expensiveEffects(context),
                 filter: ImageFilter.blur(
                   sigmaX: isTest ? 0.1 : widget.blurSigma,
                   sigmaY: isTest ? 0.1 : widget.blurSigma,
@@ -208,7 +213,7 @@ class _LiquidGlassLayerState extends State<LiquidGlassLayer> {
       ),
     );
 
-    if (!widget.enableInteractiveCaustics || isTest) {
+    if (!interactive || isTest) {
       return glassContainer;
     }
 

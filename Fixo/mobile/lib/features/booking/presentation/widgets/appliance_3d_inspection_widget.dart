@@ -53,7 +53,8 @@ class _AppliancePin {
   String detail(bool ar) => ar ? detailAr : detailEn;
 }
 
-class _Appliance3DInspectionWidgetState extends State<Appliance3DInspectionWidget>
+class _Appliance3DInspectionWidgetState
+    extends State<Appliance3DInspectionWidget>
     with SingleTickerProviderStateMixin {
   late final AnimationController _pulseController;
   _AppliancePin? _selectedPin;
@@ -67,10 +68,11 @@ class _Appliance3DInspectionWidgetState extends State<Appliance3DInspectionWidge
       vsync: this,
       duration: const Duration(milliseconds: 1800),
     );
-    final isTest =
-        WidgetsBinding.instance.runtimeType.toString().contains('Test');
+    final isTest = WidgetsBinding.instance.runtimeType.toString().contains(
+      'Test',
+    );
     if (!isTest) {
-      _pulseController.repeat(reverse: true);
+      _pulseController.forward();
     } else {
       _pulseController.value = 0.5;
     }
@@ -168,7 +170,8 @@ class _Appliance3DInspectionWidgetState extends State<Appliance3DInspectionWidge
           titleAr: 'ضعف التبريد',
           titleEn: 'Weak Cooling',
           detailAr: 'خروج هواء دافئ وضعف ملحوظ في التبريد (نقص فريون)',
-          detailEn: 'Blowing warm air with low cooling output (refrigerant leak)',
+          detailEn:
+              'Blowing warm air with low cooling output (refrigerant leak)',
           xPercent: 0.52,
           yPercent: 0.45,
           icon: Icons.ac_unit_rounded,
@@ -247,10 +250,7 @@ class _Appliance3DInspectionWidgetState extends State<Appliance3DInspectionWidge
                         widget.isArabic ? 'معاينة 3D' : '3D Defect Pinning',
                         style: FixoTypography.labelMd(
                           color: Colors.white,
-                        ).copyWith(
-                          fontWeight: FontWeight.bold,
-                          fontSize: 11,
-                        ),
+                        ).copyWith(fontWeight: FontWeight.bold, fontSize: 11),
                       ),
                     ],
                   ),
@@ -289,8 +289,10 @@ class _Appliance3DInspectionWidgetState extends State<Appliance3DInspectionWidge
             onHorizontalDragStart: (e) => _dragStartTilt = _tiltAngle,
             onHorizontalDragUpdate: (e) {
               setState(() {
-                _tiltAngle = (_dragStartTilt + e.delta.dx * 0.006)
-                    .clamp(-0.25, 0.25);
+                _tiltAngle = (_dragStartTilt + e.delta.dx * 0.006).clamp(
+                  -0.25,
+                  0.25,
+                );
               });
             },
             onHorizontalDragEnd: (_) => setState(() => _tiltAngle = 0),
@@ -301,7 +303,9 @@ class _Appliance3DInspectionWidgetState extends State<Appliance3DInspectionWidge
                 height: 180,
                 margin: const EdgeInsets.symmetric(horizontal: 10),
                 decoration: BoxDecoration(
-                  color: isDark ? const Color(0xFF0F1B17) : const Color(0xFFF9F8F5),
+                  color: isDark
+                      ? const Color(0xFF0F1B17)
+                      : const Color(0xFFF9F8F5),
                   borderRadius: BorderRadius.circular(14),
                   border: Border.all(
                     color: isDark
@@ -310,107 +314,111 @@ class _Appliance3DInspectionWidgetState extends State<Appliance3DInspectionWidge
                   ),
                 ),
                 child: Stack(
-                children: [
-                  // 3D Appliance Vector Graphic
-                  Positioned.fill(
-                    child: CustomPaint(
-                      painter: _Appliance3DPainter(
-                        categorySlug: widget.categorySlug,
-                        tiltAngle: _tiltAngle,
-                        isDark: isDark,
+                  children: [
+                    // 3D Appliance Vector Graphic
+                    Positioned.fill(
+                      child: CustomPaint(
+                        painter: _Appliance3DPainter(
+                          categorySlug: widget.categorySlug,
+                          tiltAngle: _tiltAngle,
+                          isDark: isDark,
+                        ),
                       ),
                     ),
-                  ),
 
-                  // Pins Overlay
-                  ...pins.map((pin) {
-                    final isSelected = _selectedPin?.id == pin.id;
-                    return AnimatedBuilder(
-                      animation: _pulseController,
-                      builder: (context, _) {
-                        final pulse = _pulseController.value;
-                        return Positioned(
-                          left: pin.xPercent * 280,
-                          top: pin.yPercent * 150,
-                          child: GestureDetector(
-                            onTap: () => _onTapPin(pin),
-                            child: Column(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Stack(
-                                  alignment: Alignment.center,
-                                  children: [
-                                    if (isSelected)
+                    // Pins Overlay
+                    ...pins.map((pin) {
+                      final isSelected = _selectedPin?.id == pin.id;
+                      return AnimatedBuilder(
+                        animation: _pulseController,
+                        builder: (context, _) {
+                          final pulse = _pulseController.value;
+                          return Positioned(
+                            left: pin.xPercent * 280,
+                            top: pin.yPercent * 150,
+                            child: GestureDetector(
+                              onTap: () => _onTapPin(pin),
+                              child: Column(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Stack(
+                                    alignment: Alignment.center,
+                                    children: [
+                                      if (isSelected)
+                                        Container(
+                                          width: 28 + pulse * 8,
+                                          height: 28 + pulse * 8,
+                                          decoration: BoxDecoration(
+                                            shape: BoxShape.circle,
+                                            color: FixoColors.limeAccent
+                                                .withValues(
+                                                  alpha: 0.3 * (1 - pulse),
+                                                ),
+                                          ),
+                                        ),
                                       Container(
-                                        width: 28 + pulse * 8,
-                                        height: 28 + pulse * 8,
+                                        width: 26,
+                                        height: 26,
                                         decoration: BoxDecoration(
                                           shape: BoxShape.circle,
-                                          color: FixoColors.limeAccent
-                                              .withValues(alpha: 0.3 * (1 - pulse)),
-                                        ),
-                                      ),
-                                    Container(
-                                      width: 26,
-                                      height: 26,
-                                      decoration: BoxDecoration(
-                                        shape: BoxShape.circle,
-                                        color: isSelected
-                                            ? FixoColors.limeAccent
-                                            : FixoColors.primaryForest,
-                                        border: Border.all(
-                                          color: Colors.white,
-                                          width: 2,
-                                        ),
-                                        boxShadow: [
-                                          BoxShadow(
-                                            color: Colors.black.withValues(alpha: 0.25),
-                                            blurRadius: 6,
-                                            offset: const Offset(0, 2),
+                                          color: isSelected
+                                              ? FixoColors.limeAccent
+                                              : FixoColors.primaryForest,
+                                          border: Border.all(
+                                            color: Colors.white,
+                                            width: 2,
                                           ),
-                                        ],
+                                          boxShadow: [
+                                            BoxShadow(
+                                              color: Colors.black.withValues(
+                                                alpha: 0.25,
+                                              ),
+                                              blurRadius: 6,
+                                              offset: const Offset(0, 2),
+                                            ),
+                                          ],
+                                        ),
+                                        child: Icon(
+                                          pin.icon,
+                                          size: 13,
+                                          color: isSelected
+                                              ? FixoColors.deepestForest
+                                              : Colors.white,
+                                        ),
                                       ),
-                                      child: Icon(
-                                        pin.icon,
-                                        size: 13,
-                                        color: isSelected
-                                            ? FixoColors.deepestForest
-                                            : Colors.white,
+                                    ],
+                                  ),
+                                  const SizedBox(height: 3),
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 6,
+                                      vertical: 2,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      color: isSelected
+                                          ? FixoColors.primaryForest
+                                          : Colors.black.withValues(alpha: 0.7),
+                                      borderRadius: BorderRadius.circular(6),
+                                    ),
+                                    child: Text(
+                                      pin.title(widget.isArabic),
+                                      style: const TextStyle(
+                                        color: Colors.white,
+                                        fontSize: 10,
+                                        fontWeight: FontWeight.bold,
                                       ),
                                     ),
-                                  ],
-                                ),
-                                const SizedBox(height: 3),
-                                Container(
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 6,
-                                    vertical: 2,
                                   ),
-                                  decoration: BoxDecoration(
-                                    color: isSelected
-                                        ? FixoColors.primaryForest
-                                        : Colors.black.withValues(alpha: 0.7),
-                                    borderRadius: BorderRadius.circular(6),
-                                  ),
-                                  child: Text(
-                                    pin.title(widget.isArabic),
-                                    style: const TextStyle(
-                                      color: Colors.white,
-                                      fontSize: 10,
-                                      fontWeight: FontWeight.bold,
-                                    ),
-                                  ),
-                                ),
-                              ],
+                                ],
+                              ),
                             ),
-                          ),
-                        );
-                      },
-                    );
-                  }),
-                ],
+                          );
+                        },
+                      );
+                    }),
+                  ],
+                ),
               ),
-            ),
             ),
           ),
 
@@ -441,7 +449,9 @@ class _Appliance3DInspectionWidgetState extends State<Appliance3DInspectionWidge
                       child: Text(
                         _selectedPin!.detail(widget.isArabic),
                         style: FixoTypography.bodySm(
-                          color: isDark ? Colors.white : FixoColors.onSecondaryContainer,
+                          color: isDark
+                              ? Colors.white
+                              : FixoColors.onSecondaryContainer,
                         ).copyWith(fontWeight: FontWeight.w600),
                       ),
                     ),
@@ -537,4 +547,3 @@ class _Appliance3DPainter extends CustomPainter {
         oldDelegate.isDark != isDark;
   }
 }
-

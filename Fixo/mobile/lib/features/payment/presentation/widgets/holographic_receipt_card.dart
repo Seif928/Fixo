@@ -44,7 +44,7 @@ class _Holographic3DReceiptCardState extends State<Holographic3DReceiptCard>
       'Test',
     );
     if (!isTest) {
-      _foilController.repeat();
+      _foilController.forward();
     } else {
       _foilController.value = 0.5;
     }

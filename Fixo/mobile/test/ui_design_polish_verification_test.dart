@@ -698,6 +698,17 @@ void main() {
         );
 
         await tester.pumpWidget(widget);
+        if (entry.key.startsWith('02_phone_password') ||
+            entry.key.startsWith('02_email_auth')) {
+          // Asset decoding uses real I/O; settling animations alone can capture
+          // the first Google mark before its image frame is available.
+          await tester.runAsync(
+            () => precacheImage(
+              const AssetImage('assets/brand/google-g.png'),
+              tester.element(find.byType(Scaffold).first),
+            ),
+          );
+        }
         await tester.pumpAndSettle();
 
         expect(tester.takeException(), isNull);
