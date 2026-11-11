@@ -1,5 +1,7 @@
 # FIXO — consolidated approved work and remaining scope
 
+Current work: [Clerk trial and native push correction](CLERK_PUSH_RELEASE_2026-11-11.md). Gated dual-proof identity linking/exchange and provider-bound refresh are implemented; Clerk is still disabled on the live API pending real credentials/client proof. FID sending, native configuration and expired-session push cleanup are corrected. Refer to that checkpoint for final test/build/deployment evidence and remaining device/account prerequisites. Older entries below describe prior releases.
+
 Latest client release: [native-iOS-only Apple entry](APPLE_IOS_ONLY_2026-11-11.md), 559 Flutter tests passed. Apple provisioning/provider activation and actual iOS runtime remain open. Clerk remains an isolated trial, not the active FIXO identity provider.
 
 Latest authentication experiment: [isolated Clerk trial](CLERK_TRIAL_2026-11-11.md). Hosted Google sign-in/sign-out passed and phone sign-up/sign-in were disabled with approval. Clerk is NOT the live FIXO identity provider yet; twelve verifier regressions are prepared, no accounts imported/linked. Latest existing-client push cleanup release: [549 Flutter tests and rollout](PUSH_CLEANUP_2026-11-11.md).

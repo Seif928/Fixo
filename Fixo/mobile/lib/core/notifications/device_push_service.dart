@@ -9,6 +9,7 @@ import '../../firebase_options.dart';
 import '../l10n/app_locale_controller.dart';
 import '../network/dio_client.dart';
 import '../storage/secure_token_storage.dart';
+import 'push_registration.dart';
 
 enum PushOptInResult { enabled, denied, unavailable }
 
@@ -46,12 +47,10 @@ class PushPlatformClient {
   }
 
   Future<String?> token(String? vapidKey) async {
-    final messaging = FirebaseMessaging.instance;
-    final results = await Future.wait<Object?>([
-      messaging.onRegistered.first,
-      messaging.register(vapidKey: vapidKey),
-    ]).timeout(const Duration(seconds: 20));
-    return results.first as String;
+    return PushRegistration(
+      _FirebaseRegistrationGateway(FirebaseMessaging.instance),
+      isApple: !kIsWeb && defaultTargetPlatform == TargetPlatform.iOS,
+    ).register(vapidKey);
   }
 
   Future<void> deleteToken() async {
@@ -69,6 +68,18 @@ class PushPlatformClient {
   Future<String?> initialBooking() async =>
       (await FirebaseMessaging.instance.getInitialMessage())?.data['bookingId']
           as String?;
+}
+
+class _FirebaseRegistrationGateway implements PushRegistrationGateway {
+  const _FirebaseRegistrationGateway(this.messaging);
+  final FirebaseMessaging messaging;
+  @override
+  Stream<String> get registered => messaging.onRegistered;
+  @override
+  Future<String?> appleToken() => messaging.getAPNSToken();
+  @override
+  Future<void> register(String? vapidKey) =>
+      messaging.register(vapidKey: vapidKey);
 }
 
 /// Requests OS permission only after the user explicitly opts in from Profile.
@@ -249,7 +260,19 @@ class DevicePushService {
   }
 
   /// A revoked session cannot call protected unregister endpoints.
-  Future<void> invalidateLocalSession() async {
+  Future<void> invalidateLocalSession() {
+    final stopping = _stopping;
+    if (stopping != null) {
+      return stopping.then<void>((_) {}, onError: (Object _, StackTrace _) {});
+    }
+    final operation = _invalidateLocalSession();
+    _stopping = operation;
+    return operation.whenComplete(() {
+      if (identical(_stopping, operation)) _stopping = null;
+    });
+  }
+
+  Future<void> _invalidateLocalSession() async {
     _generation++;
     await _refresh?.cancel();
     await _foreground?.cancel();

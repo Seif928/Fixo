@@ -1,5 +1,7 @@
 # Clerk trial — not a production authentication migration
 
+Latest implementation: [staged identity/session exchange](CLERK_PUSH_RELEASE_2026-11-11.md). It is now wired into gated trial routes in AuthModule, with private local identity-link persistence and provider-bound refresh. The live feature remains disabled; the earlier standalone-verifier description below is historical. No live account linking or production cutover occurred.
+
 User explicitly chose to test Clerk first while retaining the working FIXO authentication and all existing accounts/bookings. Do not infer approval for bulk user export/import, automatic email-based linking, role assignment or disabling Firebase.
 
 ## Observed existing account configuration

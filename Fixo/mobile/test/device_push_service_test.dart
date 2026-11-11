@@ -185,6 +185,35 @@ void main() {
     },
   );
   test(
+    'a new account waits for expired-session native cleanup before registering',
+    () async {
+      expect(await service.enable(), PushOptInResult.enabled);
+      client.deletionGate = Completer<void>();
+      client.deletionEntered = Completer<void>();
+      final stopping = service.invalidateLocalSession();
+      await client.deletionEntered!.future;
+      await storage.saveTokens(
+        const StoredAuthTokens(
+          accessToken: 'new-access',
+          refreshToken: 'new-refresh',
+          userId: 'new-owner',
+          phone: '',
+          role: 'CUSTOMER',
+        ),
+      );
+      final enabling = service.enable();
+      try {
+        await Future<void>.delayed(const Duration(milliseconds: 30));
+        expect(calls.where((r) => r.method == 'POST').length, 1);
+      } finally {
+        client.deletionGate!.complete();
+        await stopping;
+        await enabling;
+      }
+      expect(calls.last.extra['fixo_session_user'], 'new-owner');
+    },
+  );
+  test(
     'logout during Firebase initialization cannot prompt the next account',
     () async {
       client.initializeGate = Completer<void>();

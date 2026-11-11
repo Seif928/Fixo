@@ -154,6 +154,7 @@ model User {
   addresses       CustomerAddress[]
   bookings        Booking[]         @relation("CustomerBookings")
   refreshTokens   RefreshToken[]
+  clerkIdentityLinks ClerkIdentityLink[]
   supportThreads SupportThread[]
   supportMessages SupportMessage[]
   sentMessages    ChatMessage[]
@@ -165,6 +166,18 @@ model User {
   favoriteProfessionals FavoriteProfessional[]
   complaints            Complaint[]            @relation("CustomerComplaints")
   resolvedComplaints    Complaint[]            @relation("ResolvedComplaints")
+}
+
+model ClerkIdentityLink {
+  id        String   @id @default(uuid())
+  userId    String
+  issuer    String
+  subject   String
+  linkedAt  DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([issuer, subject])
+  @@unique([userId, issuer])
 }
 
 model PushDevice {
