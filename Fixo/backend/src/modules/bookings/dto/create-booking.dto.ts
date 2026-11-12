@@ -11,6 +11,7 @@ import {
   MaxLength,
   Matches,
 } from "class-validator";
+import { IsSafePhotoUrl } from "../../../common/validators/safe-photo-url.validator";
 
 export class CreateBookingDto {
   @ApiProperty({
@@ -84,5 +85,6 @@ export class CreateBookingDto {
   @ArrayMaxSize(5)
   @IsString({ each: true })
   @MaxLength(500, { each: true })
+  @IsSafePhotoUrl({ maxHttpLength: 500, each: true })
   issuePhotoUrls?: string[];
 }

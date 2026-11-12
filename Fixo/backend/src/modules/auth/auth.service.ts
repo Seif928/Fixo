@@ -588,6 +588,29 @@ export class AuthService implements OnModuleInit {
     return payload;
   }
 
+  isDatabaseConnected(): boolean {
+    return this.prisma.isDatabaseConnected();
+  }
+
+  async verifyActiveAccessUser(
+    payload: FixoJwtPayload,
+  ): Promise<FixoJwtPayload> {
+    if (!this.prisma.isDatabaseConnected()) {
+      return payload;
+    }
+    const account = await this.prisma.user.findUnique({
+      where: { id: payload.sub },
+      select: { isDeleted: true, role: true },
+    });
+    if (!account || account.isDeleted) {
+      throw new UnauthorizedException('Account session is no longer active.');
+    }
+    if (account.role !== payload.role) {
+      return { ...payload, role: account.role };
+    }
+    return payload;
+  }
+
   private generateTokenStrings(
     user: AuthenticatedUserProfile,
     firebaseAuthTime?: number,

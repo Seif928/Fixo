@@ -8,6 +8,7 @@ import {
 } from '@nestjs/common';
 import { Transform } from 'class-transformer';
 import { IsString, Matches, MaxLength, MinLength } from 'class-validator';
+import { RateLimit, RateLimitGuard } from '../../common/guards/rate-limit.guard';
 import { CurrentUser } from './decorators/current-user.decorator';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
 import { FixoJwtPayload } from './utils/jwt-token.util';
@@ -33,12 +34,21 @@ export class FirstProfileDto extends PhoneAliasDto {
 export class PhonePasswordController {
   constructor(private readonly service: PhonePasswordService) {}
   @Post('phone-password')
+  @UseGuards(RateLimitGuard)
+  @RateLimit({
+    max: 15,
+    windowMs: 60_000,
+    keyBy: 'phoneAndIp',
+    phoneMax: 12,
+    phoneWindowMs: 15 * 60_000,
+  })
   @HttpCode(200)
   signIn(@Body() dto: PhonePasswordDto) {
     return this.service.signIn(dto);
   }
   @Patch('phone-alias')
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard, RateLimitGuard)
+  @RateLimit({ max: 10, windowMs: 15 * 60_000, keyBy: 'userOrIp' })
   changePhone(
     @CurrentUser() user: FixoJwtPayload,
     @Body() dto: PhonePasswordDto,
@@ -47,7 +57,8 @@ export class PhonePasswordController {
   }
   @Post('first-profile')
   @HttpCode(200)
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard, RateLimitGuard)
+  @RateLimit({ max: 10, windowMs: 60_000, keyBy: 'userOrIp' })
   complete(@CurrentUser() user: FixoJwtPayload, @Body() dto: FirstProfileDto) {
     return this.service.completeProfile(user.sub, dto);
   }

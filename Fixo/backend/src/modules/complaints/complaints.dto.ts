@@ -11,6 +11,7 @@ import {
 } from 'class-validator';
 import { Transform } from 'class-transformer';
 import { ComplaintCategory, ComplaintStatus } from '@prisma/client';
+import { IsSafePhotoUrl } from '../../common/validators/safe-photo-url.validator';
 
 export class CreateComplaintDto {
   @IsString()
@@ -31,6 +32,7 @@ export class CreateComplaintDto {
   @IsString({ each: true })
   @ArrayMaxSize(5)
   @MaxLength(500, { each: true })
+  @IsSafePhotoUrl({ maxHttpLength: 500, each: true })
   photoUrls?: string[];
 }
 

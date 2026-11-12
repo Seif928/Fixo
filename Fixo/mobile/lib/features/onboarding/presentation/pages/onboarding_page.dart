@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../../app/router/app_routes.dart';
 import '../../../auth/presentation/controllers/account_entry_controller.dart';
+import '../../../../core/storage/auth_session_preferences.dart';
 import '../../../../core/l10n/app_locale_controller.dart';
 import '../../../../core/motion/fixo_motion.dart';
 import '../../../../core/theme/fixo_colors.dart';
@@ -96,6 +97,7 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage> {
     await ref
         .read(professionalEntryProvider.notifier)
         .selectProfessional(professional);
+    await ref.read(authSessionPreferencesProvider).setOnboardingCompleted(true);
     if (mounted) {
       context.push(
         '${AppRoutes.phoneAuth}?intent=$intent&account=${professional ? 'pro' : 'customer'}',

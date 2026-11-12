@@ -18,6 +18,7 @@ import {
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { FixoJwtPayload } from '../auth/utils/jwt-token.util';
+import { RateLimit, RateLimitGuard } from '../../common/guards/rate-limit.guard';
 import { BookingsService } from './bookings.service';
 import { BookingQueryDto } from './dto/booking-query.dto';
 import {
@@ -41,6 +42,8 @@ export class BookingsController {
   constructor(private readonly bookingsService: BookingsService) {}
 
   @Post()
+  @UseGuards(RateLimitGuard)
+  @RateLimit({ max: 20, windowMs: 60_000, keyBy: 'userOrIp' })
   @HttpCode(HttpStatus.CREATED)
   @ApiOperation({
     summary:
@@ -174,6 +177,8 @@ export class PrivateUploadsController {
   constructor(private readonly bookingsService: BookingsService) {}
 
   @Post()
+  @UseGuards(RateLimitGuard)
+  @RateLimit({ max: 20, windowMs: 60_000, keyBy: 'userOrIp' })
   @HttpCode(HttpStatus.CREATED)
   @ApiOperation({
     summary:

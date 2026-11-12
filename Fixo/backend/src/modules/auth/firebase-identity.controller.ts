@@ -1,6 +1,7 @@
-import { Body, Controller, HttpCode, Post } from "@nestjs/common";
+import { Body, Controller, HttpCode, Post, UseGuards } from "@nestjs/common";
 import { ApiProperty, ApiTags } from "@nestjs/swagger";
 import { IsString, MaxLength, MinLength } from "class-validator";
+import { RateLimit, RateLimitGuard } from "../../common/guards/rate-limit.guard";
 import { FirebaseIdentityService } from "./firebase-identity.service";
 
 class FirebaseSessionDto {
@@ -17,16 +18,19 @@ class FirebaseSessionDto {
 class AppleIdentitySessionDto extends FirebaseSessionDto {}
 
 @ApiTags("auth")
+@UseGuards(RateLimitGuard)
 @Controller("auth/firebase")
 export class FirebaseIdentityController {
   constructor(private readonly service: FirebaseIdentityService) {}
   @Post("session")
+  @RateLimit({ max: 20, windowMs: 60_000, keyBy: "ip" })
   @HttpCode(200)
   exchange(@Body() dto: FirebaseSessionDto) {
     return this.service.exchange(dto.idToken);
   }
 
   @Post("apple")
+  @RateLimit({ max: 20, windowMs: 60_000, keyBy: "ip" })
   @HttpCode(200)
   exchangeApple(@Body() dto: AppleIdentitySessionDto) {
     return this.service.exchangeApple(dto);

@@ -4,16 +4,18 @@ import { ApiBearerAuth, ApiBody, ApiConsumes, ApiTags } from '@nestjs/swagger';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { FixoJwtPayload } from '../auth/utils/jwt-token.util';
+import { RateLimit, RateLimitGuard } from '../../common/guards/rate-limit.guard';
 import { AvatarService, AvatarUpload } from './avatar.service';
 
 @ApiTags('Profile photo')
 @ApiBearerAuth()
-@UseGuards(JwtAuthGuard)
+@UseGuards(JwtAuthGuard, RateLimitGuard)
 @Controller('users/me/avatar')
 export class AvatarController {
   constructor(private readonly avatars: AvatarService) {}
 
   @Post()
+  @RateLimit({ max: 10, windowMs: 60_000, keyBy: 'userOrIp' })
   @HttpCode(200)
   @ApiConsumes('multipart/form-data')
   @ApiBody({ schema: { type: 'object', properties: { photo: { type: 'string', format: 'binary' } }, required: ['photo'] } })

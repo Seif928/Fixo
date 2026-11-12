@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/storage/secure_token_storage.dart';
+import '../../../../core/storage/auth_session_preferences.dart';
 import '../../../../core/session/session_providers.dart';
 import '../../../../core/notifications/device_push_service.dart';
 import '../../data/auth_repository.dart';
@@ -77,12 +78,20 @@ class AuthController extends Notifier<AuthState> {
       ref.read(activeSessionOwnerProvider.notifier).state = null;
       ref.read(sessionProvider.notifier).state = null;
       state = const AuthState();
+      unawaited(ref.read(authSessionPreferencesProvider).clearSession());
       unawaited(ref.read(devicePushProvider).invalidateLocalSession());
     });
     ref.onDispose(() {
       _disposed = true;
       _countdownTimer?.cancel();
     });
+
+    final authPrefs = ref.read(authSessionPreferencesProvider);
+    final savedSession = authPrefs.getSavedSession();
+    if (savedSession != null && authPrefs.isLoggedIn) {
+      return AuthState(session: savedSession);
+    }
+
     return const AuthState();
   }
 
@@ -263,6 +272,7 @@ class AuthController extends Notifier<AuthState> {
         tokenToRevoke = latest.refreshToken;
         await tokenStorage.replaceTokensIfCurrent(latest, null);
       }
+      await ref.read(authSessionPreferencesProvider).clearSession();
       await email.signOutIfCurrent(userEmail);
     } finally {
       _countdownTimer?.cancel();
@@ -287,9 +297,11 @@ class AuthController extends Notifier<AuthState> {
 
   Future<void> _restoreSession(int epoch) async {
     final storage = ref.read(secureTokenStorageProvider);
+    final authPrefs = ref.read(authSessionPreferencesProvider);
     StoredAuthTokens? restoringTokens;
     try {
-      final tokens = await storage.readTokens();
+      var tokens = await storage.readTokens();
+      tokens ??= authPrefs.getSavedTokens();
       if (tokens == null || tokens.refreshToken.isEmpty) return;
       restoringTokens = tokens;
       final session = await ref
@@ -298,6 +310,7 @@ class AuthController extends Notifier<AuthState> {
       if (_disposed || epoch != _sessionEpoch) return;
       if (session.user.id != tokens.userId) {
         await storage.replaceTokensIfCurrent(tokens, null);
+        await authPrefs.clearSession();
         return;
       }
       final replaced = await storage.replaceTokensIfCurrent(
@@ -305,6 +318,7 @@ class AuthController extends Notifier<AuthState> {
         _storedSession(session),
       );
       if (!replaced || _disposed || epoch != _sessionEpoch) return;
+      await authPrefs.saveSession(session);
       _sessionEpoch++;
       _publishSession(session);
     } on AuthApiException catch (error) {
@@ -312,13 +326,34 @@ class AuthController extends Notifier<AuthState> {
           epoch == _sessionEpoch &&
           [400, 401, 403].contains(error.statusCode)) {
         await storage.replaceTokensIfCurrent(restoringTokens, null);
+        await authPrefs.clearSession();
+        if (state.isAuthenticated) {
+          state = const AuthState();
+          ref.read(sessionProvider.notifier).state = null;
+          ref.read(activeSessionOwnerProvider.notifier).state = null;
+        }
       }
     } on FormatException {
       if (!_disposed && epoch == _sessionEpoch) {
         await storage.replaceTokensIfCurrent(restoringTokens, null);
+        await authPrefs.clearSession();
+        if (state.isAuthenticated) {
+          state = const AuthState();
+          ref.read(sessionProvider.notifier).state = null;
+          ref.read(activeSessionOwnerProvider.notifier).state = null;
+        }
       }
     } catch (_) {
-      // Offline or unavailable secure storage: show sign-in, never a fake session.
+      // Offline or network error: if the user was already logged in via preferences,
+      // preserve their authenticated session so they stay logged in!
+      if (!_disposed && epoch == _sessionEpoch) {
+        if (!state.isAuthenticated && authPrefs.isLoggedIn) {
+          final cached = authPrefs.getSavedSession();
+          if (cached != null) {
+            _publishSession(cached);
+          }
+        }
+      }
     }
   }
 
@@ -330,6 +365,7 @@ class AuthController extends Notifier<AuthState> {
     await ref
         .read(secureTokenStorageProvider)
         .saveTokens(_storedSession(session));
+    await ref.read(authSessionPreferencesProvider).saveSession(session);
     if (_disposed || epoch != _sessionEpoch) {
       throw StateError('The account changed before sign-in completed.');
     }
@@ -387,6 +423,7 @@ class AuthController extends Notifier<AuthState> {
       refreshToken: tokens.refreshToken,
       user: user,
     );
+    await ref.read(authSessionPreferencesProvider).saveSession(updatedSession);
     ref.read(sessionProvider.notifier).state = updatedSession;
     state = state.copyWith(session: updatedSession);
   }

@@ -30,7 +30,7 @@ import {
 import { PrismaService } from '../../prisma/prisma.service';
 import { INTERNAL_FAILED_PIN_EVENT_NOTE } from '../bookings/bookings.service';
 import { validatePrivateUploadPayload } from '../bookings/private-upload.util';
-import { createHash, randomUUID } from 'crypto';
+import { createHash, randomInt, randomUUID, timingSafeEqual } from 'crypto';
 import { PrivateStorageService } from '../media/private-storage.service';
 import { normalizePrivatePhoto } from '../media/normalize-private-photo';
 import { PushService } from '../communications/push.service';
@@ -1458,10 +1458,14 @@ export class ProService {
           );
         }
 
-        if (
-          !dto.arrivalPinCode ||
-          dto.arrivalPinCode.trim() !== booking.arrivalPinCode
-        ) {
+        const submittedPin = Buffer.from(dto.arrivalPinCode?.trim() ?? '');
+        const expectedPin = Buffer.from(booking.arrivalPinCode ?? '');
+        const pinMatches =
+          submittedPin.length > 0 &&
+          submittedPin.length === expectedPin.length &&
+          timingSafeEqual(submittedPin, expectedPin);
+
+        if (!pinMatches) {
           await tx.bookingStatusEvent.create({
             data: {
               bookingId: booking.id,
@@ -1658,7 +1662,7 @@ export class ProService {
 
   private async generateUniqueDossierCode(): Promise<string> {
     for (let i = 0; i < 5; i++) {
-      const num = Math.floor(1000 + Math.random() * 9000);
+      const num = randomInt(1000, 10000);
       const code = `FX-PRO-${num}`;
       const existing = await this.prisma.proProfile.findUnique({
         where: { dossierCode: code },

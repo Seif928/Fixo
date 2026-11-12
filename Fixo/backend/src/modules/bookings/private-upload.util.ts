@@ -1,5 +1,9 @@
-import { BadRequestException, ForbiddenException } from '@nestjs/common';
-import { createHash, createHmac, timingSafeEqual } from 'crypto';
+import {
+  BadRequestException,
+  ForbiddenException,
+  ServiceUnavailableException,
+} from '@nestjs/common';
+import { createHash, createHmac, randomBytes, timingSafeEqual } from 'crypto';
 
 export const MAX_PRIVATE_UPLOAD_BYTES = 2 * 1024 * 1024; // 2 MB
 
@@ -26,12 +30,24 @@ export interface SignedUploadAccessClaims {
   exp: number;
 }
 
+let ephemeralDevUploadKey: string | undefined;
+
 function getUploadSigningSecret(): string {
-  return (
-    process.env.JWT_ACCESS_SECRET ||
-    process.env.JWT_REFRESH_SECRET ||
-    'fixo-private-upload-signing-secret-dev'
-  );
+  const configured =
+    process.env.PRIVATE_UPLOAD_SECRET?.trim() ||
+    process.env.JWT_ACCESS_SECRET?.trim();
+  if (configured) {
+    return createHmac('sha256', configured)
+      .update('fixo:private-upload-signing:v1')
+      .digest('hex');
+  }
+  if (process.env.NODE_ENV === 'production') {
+    throw new ServiceUnavailableException(
+      'Private upload signing key is not configured.',
+    );
+  }
+  ephemeralDevUploadKey ??= randomBytes(32).toString('hex');
+  return ephemeralDevUploadKey;
 }
 
 /**

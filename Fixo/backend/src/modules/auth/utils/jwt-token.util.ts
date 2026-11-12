@@ -70,6 +70,19 @@ export function verifyFixoJwt(token: string, secret: string): FixoJwtPayload {
   }
 
   const [headerSegment, payloadSegment, signatureSegment] = segments;
+
+  let header: { alg?: unknown; typ?: unknown };
+  try {
+    header = JSON.parse(
+      base64UrlDecode(headerSegment).toString('utf8'),
+    ) as { alg?: unknown; typ?: unknown };
+  } catch {
+    throw new UnauthorizedException('Invalid JWT header encoding.');
+  }
+  if (header.alg !== 'HS256' || header.typ !== 'JWT') {
+    throw new UnauthorizedException('Unsupported JWT header.');
+  }
+
   const signingInput = `${headerSegment}.${payloadSegment}`;
   const expectedSig = createHmac('sha256', secret)
     .update(signingInput)
@@ -90,6 +103,17 @@ export function verifyFixoJwt(token: string, secret: string): FixoJwtPayload {
     ) as FixoJwtPayload;
   } catch {
     throw new UnauthorizedException('Invalid JWT payload encoding.');
+  }
+
+  if (
+    typeof parsed.sub !== 'string' ||
+    !parsed.sub ||
+    typeof parsed.jti !== 'string' ||
+    !parsed.jti ||
+    typeof parsed.role !== 'string' ||
+    (parsed.type !== 'access' && parsed.type !== 'refresh')
+  ) {
+    throw new UnauthorizedException('Malformed JWT claims.');
   }
 
   const nowSec = Math.floor(Date.now() / 1000);

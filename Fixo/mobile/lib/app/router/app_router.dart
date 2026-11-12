@@ -111,8 +111,10 @@ GoRouter createAppRouter({
         return authPath;
       }
 
-      // Redirect authenticated users away from the login screen to Customer Home
-      if (authed && !setupRequired && path == AppRoutes.phoneAuth) {
+      // Redirect authenticated users away from the login and onboarding screens to Customer Home
+      if (authed &&
+          !setupRequired &&
+          (path == AppRoutes.phoneAuth || path == AppRoutes.onboarding)) {
         return wantsPro ? AppRoutes.proEntry : AppRoutes.customerHome;
       }
 
