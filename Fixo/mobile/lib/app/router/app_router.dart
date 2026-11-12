@@ -1,7 +1,8 @@
-import '../../features/support/support_page.dart';
+import '../../features/support/support_page.dart' deferred as support_page;
 import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart';
 import '../../core/motion/fixo_motion.dart';
+import '../../core/widgets/deferred_route_view.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
@@ -15,7 +16,7 @@ import '../../features/chat/presentation/chat_page.dart';
 import '../../features/profile/presentation/profile_page.dart';
 import '../../features/favorites/presentation/pages/favorites_page.dart';
 import '../../features/complaints/presentation/pages/my_complaints_page.dart';
-import '../../features/admin/presentation/admin_page.dart';
+import '../../features/admin/presentation/admin_page.dart' deferred as admin_page;
 import '../../features/booking/presentation/pages/create_booking_page.dart';
 import '../../features/booking/presentation/pages/order_tracking_page.dart';
 import '../../features/booking/presentation/pages/orders_page.dart';
@@ -24,14 +25,14 @@ import '../../features/customer_home/domain/marketplace_models.dart';
 import '../../features/customer_home/presentation/pages/customer_home_page.dart';
 import '../../features/onboarding/presentation/pages/onboarding_page.dart';
 import '../../features/payment/presentation/pages/checkout_page.dart';
-import '../../features/pro/presentation/pages/incoming_job_page.dart';
-import '../../features/pro/presentation/pages/pro_account_entry_page.dart';
-import '../../features/pro/presentation/pages/pro_dashboard_page.dart';
-import '../../features/pro/presentation/pages/pro_signup_page.dart';
-import '../../features/pro/presentation/pages/pro_skills_page.dart';
-import '../../features/pro/presentation/pages/pro_verification_docs_page.dart';
-import '../../features/pro/presentation/pages/pro_verification_status_page.dart';
-import '../../features/pro/presentation/pages/pro_schedule_page.dart';
+import '../../features/pro/presentation/pages/incoming_job_page.dart' deferred as incoming_job_page;
+import '../../features/pro/presentation/pages/pro_account_entry_page.dart' deferred as pro_account_entry_page;
+import '../../features/pro/presentation/pages/pro_dashboard_page.dart' deferred as pro_dashboard_page;
+import '../../features/pro/presentation/pages/pro_signup_page.dart' deferred as pro_signup_page;
+import '../../features/pro/presentation/pages/pro_skills_page.dart' deferred as pro_skills_page;
+import '../../features/pro/presentation/pages/pro_verification_docs_page.dart' deferred as pro_verification_docs_page;
+import '../../features/pro/presentation/pages/pro_verification_status_page.dart' deferred as pro_verification_status_page;
+import '../../features/pro/presentation/pages/pro_schedule_page.dart' deferred as pro_schedule_page;
 import 'app_routes.dart';
 
 /// Listenable bridge that notifies `GoRouter` whenever `authControllerProvider`
@@ -122,12 +123,18 @@ GoRouter createAppRouter({
       _motionRoute(
         path: AppRoutes.admin,
         name: 'admin',
-        builder: (_, _) => const AdminPage(),
+        builder: (_, _) => DeferredRouteView(
+          loadLibrary: admin_page.loadLibrary,
+          builder: (_) => admin_page.AdminPage(),
+        ),
       ),
       _motionRoute(
         path: AppRoutes.proEntry,
         name: 'proEntry',
-        builder: (_, _) => const ProAccountEntryPage(),
+        builder: (_, _) => DeferredRouteView(
+          loadLibrary: pro_account_entry_page.loadLibrary,
+          builder: (_) => pro_account_entry_page.ProAccountEntryPage(),
+        ),
       ),
       _motionRoute(
         path: AppRoutes.myOrders,
@@ -145,12 +152,18 @@ GoRouter createAppRouter({
       _motionRoute(
         path: '/support',
         name: 'support',
-        builder: (_, _) => const SupportPage(),
+        builder: (_, _) => DeferredRouteView(
+          loadLibrary: support_page.loadLibrary,
+          builder: (_) => support_page.SupportPage(),
+        ),
       ),
       _motionRoute(
         path: '/admin/support',
         name: 'adminSupport',
-        builder: (_, _) => const SupportPage(admin: true),
+        builder: (_, _) => DeferredRouteView(
+          loadLibrary: support_page.loadLibrary,
+          builder: (_) => support_page.SupportPage(admin: true),
+        ),
       ),
       _motionRoute(
         path: AppRoutes.logout,
@@ -244,39 +257,62 @@ GoRouter createAppRouter({
       _motionRoute(
         path: AppRoutes.proSignUp,
         name: 'proSignUp',
-        builder: (context, state) => const ProSignUpPage(),
+        builder: (context, state) => DeferredRouteView(
+          loadLibrary: pro_signup_page.loadLibrary,
+          builder: (_) => pro_signup_page.ProSignUpPage(),
+        ),
       ),
       _motionRoute(
         path: AppRoutes.proSkills,
         name: 'proSkills',
-        builder: (context, state) => const ProSkillsPage(),
+        builder: (context, state) => DeferredRouteView(
+          loadLibrary: pro_skills_page.loadLibrary,
+          builder: (_) => pro_skills_page.ProSkillsPage(),
+        ),
       ),
       _motionRoute(
         path: AppRoutes.proVerificationDocs,
         name: 'proVerificationDocs',
-        builder: (context, state) => const ProVerificationDocsPage(),
+        builder: (context, state) => DeferredRouteView(
+          loadLibrary: pro_verification_docs_page.loadLibrary,
+          builder: (_) =>
+              pro_verification_docs_page.ProVerificationDocsPage(),
+        ),
       ),
       _motionRoute(
         path: AppRoutes.proVerificationStatus,
         name: 'proVerificationStatus',
-        builder: (context, state) => const ProVerificationStatusPage(),
+        builder: (context, state) => DeferredRouteView(
+          loadLibrary: pro_verification_status_page.loadLibrary,
+          builder: (_) =>
+              pro_verification_status_page.ProVerificationStatusPage(),
+        ),
       ),
       _motionRoute(
         path: AppRoutes.proDashboard,
         name: 'proDashboard',
-        builder: (context, state) => const ProDashboardPage(),
+        builder: (context, state) => DeferredRouteView(
+          loadLibrary: pro_dashboard_page.loadLibrary,
+          builder: (_) => pro_dashboard_page.ProDashboardPage(),
+        ),
       ),
       _motionRoute(
         path: AppRoutes.proSchedule,
         name: 'proSchedule',
-        builder: (context, state) => const ProSchedulePage(),
+        builder: (context, state) => DeferredRouteView(
+          loadLibrary: pro_schedule_page.loadLibrary,
+          builder: (_) => pro_schedule_page.ProSchedulePage(),
+        ),
       ),
       _motionRoute(
         path: AppRoutes.incomingJobRequest,
         name: 'incomingJobRequest',
         builder: (context, state) {
           final jobId = state.pathParameters['jobId'] ?? '';
-          return IncomingJobPage(jobOfferId: jobId);
+          return DeferredRouteView(
+            loadLibrary: incoming_job_page.loadLibrary,
+            builder: (_) => incoming_job_page.IncomingJobPage(jobOfferId: jobId),
+          );
         },
       ),
     ],

@@ -13,6 +13,7 @@ import '../../../core/theme/fixo_colors.dart';
 import '../../../core/theme/fixo_spacing.dart';
 import '../../../core/widgets/fixo_brand_mark.dart';
 import '../../../core/widgets/fixo_cards.dart';
+import '../../../core/widgets/fixo_skeleton.dart';
 import '../../auth/presentation/controllers/auth_controller.dart';
 import '../../chat/presentation/notification_sheet.dart';
 import '../../customer_home/presentation/widgets/customer_home_widgets.dart';
@@ -21,7 +22,7 @@ import '../data/avatar_repository.dart';
 import '../data/account_deletion_repository.dart';
 import 'profile_avatar.dart';
 import 'profile_details_dialog.dart';
-import '../../admin/presentation/admin_page.dart';
+import '../../admin/presentation/admin_profile_entry.dart';
 
 /// Screen 10: live Stitch profile/alerts cards, with persisted real preferences.
 class ProfilePage extends ConsumerStatefulWidget {
@@ -33,6 +34,7 @@ class ProfilePage extends ConsumerStatefulWidget {
 class _ProfilePageState extends ConsumerState<ProfilePage> {
   late Future<UserProfile> _profile;
   bool _saving = false;
+  bool? _optimisticArrivalAlerts;
   bool get _ar => ref.read(appLocaleProvider).languageCode == 'ar';
 
   Future<void> _confirmDeleteAccount() async {
@@ -320,9 +322,9 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
                   );
                 }
                 if (!snapshot.hasData) {
-                  return const Padding(
-                    padding: EdgeInsets.symmetric(vertical: FixoSpacing.xl),
-                    child: Center(child: CircularProgressIndicator()),
+                  return const FixoListSkeleton(
+                    itemCount: 3,
+                    showHeaderBanner: true,
                   );
                 }
                 final user = snapshot.data!;
@@ -729,23 +731,46 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
                                 color: palette.mutedText,
                               ),
                             ),
-                            value: user['arrivalAlertsEnabled'] == true,
+                            value: _optimisticArrivalAlerts ??
+                                (user['arrivalAlertsEnabled'] == true),
                             onChanged: _saving
                                 ? null
-                                : (enabled) => _save(() async {
-                                    await ref
-                                        .read(
-                                          profileControllerProvider.notifier,
-                                        )
-                                        .updateNotificationPreferences(
-                                          arrivalAlertsEnabled: enabled,
-                                        );
-                                    if (mounted) {
-                                      setState(() {
-                                        _profile = _load();
-                                      });
-                                    }
-                                  }),
+                                : (enabled) {
+                                    setState(
+                                      () => _optimisticArrivalAlerts = enabled,
+                                    );
+                                    _save(() async {
+                                      try {
+                                        await ref
+                                            .read(
+                                              profileControllerProvider
+                                                  .notifier,
+                                            )
+                                            .updateNotificationPreferences(
+                                              arrivalAlertsEnabled: enabled,
+                                            );
+                                        if (!mounted) return;
+                                        final refreshed = _load();
+                                        refreshed.whenComplete(() {
+                                          if (mounted) {
+                                            setState(() {
+                                              _optimisticArrivalAlerts = null;
+                                            });
+                                          }
+                                        });
+                                        setState(() {
+                                          _profile = refreshed;
+                                        });
+                                      } catch (_) {
+                                        if (mounted) {
+                                          setState(() {
+                                            _optimisticArrivalAlerts = null;
+                                          });
+                                        }
+                                        rethrow;
+                                      }
+                                    });
+                                  },
                           ),
                           Divider(height: 1, color: palette.subtleBorder),
                           Padding(

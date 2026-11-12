@@ -38,6 +38,14 @@ class ProfileAvatar extends ConsumerWidget {
                     bytes,
                     width: size,
                     height: size,
+                    cacheWidth:
+                        (size * MediaQuery.devicePixelRatioOf(context))
+                            .round()
+                            .clamp(32, 512),
+                    cacheHeight:
+                        (size * MediaQuery.devicePixelRatioOf(context))
+                            .round()
+                            .clamp(32, 512),
                     fit: BoxFit.cover,
                     gaplessPlayback: false,
                     errorBuilder: (_, _, _) => placeholder,

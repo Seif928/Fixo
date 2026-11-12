@@ -6,6 +6,7 @@ import '../../../../core/l10n/app_locale_controller.dart';
 import '../../../../core/theme/fixo_colors.dart';
 import '../../../../core/theme/fixo_spacing.dart';
 import '../../../../core/widgets/fixo_cards.dart';
+import '../../../../core/widgets/fixo_skeleton.dart';
 import '../../data/favorites_models.dart';
 import '../../data/favorites_repository.dart';
 
@@ -40,8 +41,10 @@ class _FavoritesPageState extends ConsumerState<FavoritesPage> {
 
     try {
       final repo = ref.read(favoritesRepositoryProvider);
-      final sPage = await repo.listFavoriteServices();
-      final pPage = await repo.listFavoriteProfessionals();
+      final (sPage, pPage) = await (
+        repo.listFavoriteServices(),
+        repo.listFavoriteProfessionals(),
+      ).wait;
 
       if (mounted) {
         setState(() {
@@ -64,14 +67,18 @@ class _FavoritesPageState extends ConsumerState<FavoritesPage> {
 
   Future<void> _removeService(FavoriteServiceItem item) async {
     if (_mutatingIds.contains(item.id)) return;
-    setState(() => _mutatingIds.add(item.id));
+    final removeIndex = _services.indexWhere((s) => s.id == item.id);
+    if (removeIndex < 0) return;
+    setState(() {
+      _mutatingIds.add(item.id);
+      _services.removeAt(removeIndex);
+    });
 
     try {
       final repo = ref.read(favoritesRepositoryProvider);
       await repo.removeFavoriteService(item.offeringId);
       if (mounted) {
         setState(() {
-          _services.removeWhere((s) => s.id == item.id);
           _mutatingIds.remove(item.id);
         });
         ScaffoldMessenger.of(context).showSnackBar(
@@ -86,7 +93,13 @@ class _FavoritesPageState extends ConsumerState<FavoritesPage> {
       }
     } catch (_) {
       if (mounted) {
-        setState(() => _mutatingIds.remove(item.id));
+        setState(() {
+          _mutatingIds.remove(item.id);
+          final insertAt = removeIndex.clamp(0, _services.length);
+          if (!_services.any((s) => s.id == item.id)) {
+            _services.insert(insertAt, item);
+          }
+        });
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
@@ -102,14 +115,18 @@ class _FavoritesPageState extends ConsumerState<FavoritesPage> {
 
   Future<void> _removeProfessional(FavoriteProfessionalItem item) async {
     if (_mutatingIds.contains(item.id)) return;
-    setState(() => _mutatingIds.add(item.id));
+    final removeIndex = _professionals.indexWhere((p) => p.id == item.id);
+    if (removeIndex < 0) return;
+    setState(() {
+      _mutatingIds.add(item.id);
+      _professionals.removeAt(removeIndex);
+    });
 
     try {
       final repo = ref.read(favoritesRepositoryProvider);
       await repo.removeFavoriteProfessional(item.proProfileId);
       if (mounted) {
         setState(() {
-          _professionals.removeWhere((p) => p.id == item.id);
           _mutatingIds.remove(item.id);
         });
         ScaffoldMessenger.of(context).showSnackBar(
@@ -124,7 +141,13 @@ class _FavoritesPageState extends ConsumerState<FavoritesPage> {
       }
     } catch (_) {
       if (mounted) {
-        setState(() => _mutatingIds.remove(item.id));
+        setState(() {
+          _mutatingIds.remove(item.id);
+          final insertAt = removeIndex.clamp(0, _professionals.length);
+          if (!_professionals.any((p) => p.id == item.id)) {
+            _professionals.insert(insertAt, item);
+          }
+        });
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
@@ -221,7 +244,7 @@ class _FavoritesPageState extends ConsumerState<FavoritesPage> {
     bool ar,
   ) {
     if (_loading) {
-      return const Center(child: CircularProgressIndicator());
+      return const FixoListSkeleton(itemCount: 4);
     }
 
     if (_error != null) {

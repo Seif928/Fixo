@@ -128,11 +128,22 @@ export class BookingsService {
       throw new BadRequestException("Scheduled date cannot be in the past.");
     }
 
-    // 2. Verify CustomerAddress exists and belongs to the authenticated customer
-    const address = await this.prisma.customerAddress.findUnique({
-      where: { id: dto.addressId },
-      include: { zone: true },
-    });
+    // 2-4. Fetch CustomerAddress, ServiceOffering, and optional preferred Pro in parallel
+    const [address, offering, pro] = await Promise.all([
+      this.prisma.customerAddress.findUnique({
+        where: { id: dto.addressId },
+        include: { zone: true },
+      }),
+      this.prisma.serviceOffering.findUnique({
+        where: { id: dto.offeringId },
+        include: { category: true },
+      }),
+      dto.preferredProId
+        ? this.prisma.proProfile.findUnique({
+            where: { id: dto.preferredProId },
+          })
+        : Promise.resolve(null),
+    ]);
 
     if (!address) {
       throw new NotFoundException(
@@ -143,12 +154,6 @@ export class BookingsService {
     if (address.userId !== customerId) {
       throw new ForbiddenException("You do not own this address.");
     }
-
-    // 3. Verify ServiceOffering exists and its category is active
-    const offering = await this.prisma.serviceOffering.findUnique({
-      where: { id: dto.offeringId },
-      include: { category: true },
-    });
 
     if (!offering) {
       throw new NotFoundException(
@@ -168,12 +173,7 @@ export class BookingsService {
       );
     }
 
-    // 4. Optional: Validate preferredProId if provided
     if (dto.preferredProId) {
-      const pro = await this.prisma.proProfile.findUnique({
-        where: { id: dto.preferredProId },
-      });
-
       if (!pro) {
         throw new NotFoundException(
           `Preferred professional with ID "${dto.preferredProId}" was not found.`,

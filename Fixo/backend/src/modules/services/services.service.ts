@@ -102,8 +102,110 @@ export class ServicesService {
   ): Promise<PaginatedResponse<SeedServiceOffering>> {
     const page = query.page ?? 1;
     const limit = query.limit ?? 20;
-    const search = query.search?.trim().toLowerCase();
+    const rawSearch = query.search?.trim();
+    const search = rawSearch?.toLowerCase();
     const categoryFilter = query.categoryId?.trim().toLowerCase();
+    const offset = (page - 1) * limit;
+
+    if (this.prisma.isDatabaseConnected()) {
+      const andClauses: Record<string, unknown>[] = [];
+      if (categoryFilter) {
+        andClauses.push({
+          OR: [
+            { categoryId: { equals: categoryFilter, mode: 'insensitive' } },
+            {
+              category: {
+                slug: { equals: categoryFilter, mode: 'insensitive' },
+              },
+            },
+          ],
+        });
+      }
+      if (rawSearch && !rawSearch.includes(' ')) {
+        andClauses.push({
+          OR: [
+            { titleEn: { contains: rawSearch, mode: 'insensitive' } },
+            { titleAr: { contains: rawSearch, mode: 'insensitive' } },
+            { descriptionEn: { contains: rawSearch, mode: 'insensitive' } },
+            { descriptionAr: { contains: rawSearch, mode: 'insensitive' } },
+            { badgeEn: { contains: rawSearch, mode: 'insensitive' } },
+            { providerTagEn: { contains: rawSearch, mode: 'insensitive' } },
+            {
+              category: {
+                slug: { contains: rawSearch, mode: 'insensitive' },
+              },
+            },
+          ],
+        });
+      }
+
+      const where = {
+        isActive: true,
+        ...(typeof query.featured === 'boolean'
+          ? { isSeasonalPromo: query.featured }
+          : {}),
+        ...(typeof query.bundle === 'boolean'
+          ? { isBundle: query.bundle }
+          : {}),
+        ...(andClauses.length > 0 ? { AND: andClauses } : {}),
+      };
+
+      const needInMemoryPhraseFilter = Boolean(
+        search && rawSearch && rawSearch.includes(' '),
+      );
+
+      if (!needInMemoryPhraseFilter) {
+        const rows = await this.prisma.serviceOffering.findMany({
+          where,
+          include: { category: true },
+          orderBy: { id: 'asc' },
+          skip: offset,
+          take: limit,
+        });
+        const total =
+          offset === 0 && rows.length < limit
+            ? rows.length
+            : await this.prisma.serviceOffering.count({ where });
+
+        return {
+          items: rows.map((row) => this.mapOfferingRow(row)),
+          meta: {
+            page,
+            limit,
+            total,
+            totalPages: Math.max(1, Math.ceil(total / limit)),
+            currency: 'EGP',
+            market: 'EG',
+            storageMode: this.prisma.getStorageMode(),
+            databaseConnected: true,
+          },
+        };
+      }
+
+      const filteredRows = await this.prisma.serviceOffering.findMany({
+        where,
+        include: { category: true },
+        orderBy: { id: 'asc' },
+      });
+      const phraseMatches = filteredRows
+        .map((row) => this.mapOfferingRow(row))
+        .filter((item) => this.matchesServiceSearch(item, search!));
+      const total = phraseMatches.length;
+
+      return {
+        items: phraseMatches.slice(offset, offset + limit),
+        meta: {
+          page,
+          limit,
+          total,
+          totalPages: Math.max(1, Math.ceil(total / limit)),
+          currency: 'EGP',
+          market: 'EG',
+          storageMode: this.prisma.getStorageMode(),
+          databaseConnected: true,
+        },
+      };
+    }
 
     let allOfferings = await this.loadAllOfferings();
 
@@ -128,25 +230,13 @@ export class ServicesService {
     }
 
     if (search) {
-      allOfferings = allOfferings.filter((item) => {
-        const haystack = [
-          item.titleEn,
-          item.titleAr,
-          item.descriptionEn,
-          item.descriptionAr,
-          item.categorySlug,
-          item.badgeEn ?? '',
-          item.providerTagEn ?? '',
-        ]
-          .join(' ')
-          .toLowerCase();
-        return haystack.includes(search);
-      });
+      allOfferings = allOfferings.filter((item) =>
+        this.matchesServiceSearch(item, search),
+      );
     }
 
     const total = allOfferings.length;
     const totalPages = Math.max(1, Math.ceil(total / limit));
-    const offset = (page - 1) * limit;
     const items = allOfferings.slice(offset, offset + limit);
 
     return {
@@ -161,6 +251,67 @@ export class ServicesService {
         storageMode: this.prisma.getStorageMode(),
         databaseConnected: this.prisma.isDatabaseConnected(),
       },
+    };
+  }
+
+  private matchesServiceSearch(
+    item: SeedServiceOffering,
+    searchLower: string,
+  ): boolean {
+    const haystack = [
+      item.titleEn,
+      item.titleAr,
+      item.descriptionEn,
+      item.descriptionAr,
+      item.categorySlug,
+      item.badgeEn ?? '',
+      item.providerTagEn ?? '',
+    ]
+      .join(' ')
+      .toLowerCase();
+    return haystack.includes(searchLower);
+  }
+
+  private mapOfferingRow(row: {
+    id: string;
+    categoryId: string;
+    category?: { slug: string } | null;
+    slug: string;
+    titleEn: string;
+    titleAr: string;
+    descriptionEn: string;
+    descriptionAr: string;
+    badgeEn: string | null;
+    badgeAr: string | null;
+    providerTagEn: string | null;
+    providerTagAr: string | null;
+    baseInspectionEgp: number;
+    serviceFeeEgp: number;
+    flatPriceEgp: number | null;
+    estimatedDurationMins: number;
+    isSeasonalPromo: boolean;
+    isBundle: boolean;
+  }): SeedServiceOffering {
+    return {
+      id: row.id,
+      categoryId: row.categoryId,
+      categorySlug: row.category?.slug ?? '',
+      slug: row.slug,
+      titleEn: row.titleEn,
+      titleAr: row.titleAr,
+      descriptionEn: row.descriptionEn,
+      descriptionAr: row.descriptionAr,
+      badgeEn: row.badgeEn,
+      badgeAr: row.badgeAr,
+      providerTagEn: row.providerTagEn,
+      providerTagAr: row.providerTagAr,
+      baseInspectionEgp: row.baseInspectionEgp,
+      serviceFeeEgp: row.serviceFeeEgp,
+      flatPriceEgp:
+        row.flatPriceEgp ?? row.baseInspectionEgp + row.serviceFeeEgp,
+      estimatedDurationMins: row.estimatedDurationMins,
+      isSeasonalPromo: row.isSeasonalPromo,
+      isBundle: row.isBundle,
     };
   }
 

@@ -215,8 +215,9 @@ class _CustomerHomePageState extends ConsumerState<CustomerHomePage> {
   Widget build(BuildContext context) {
     final homeState = ref.watch(customerHomeControllerProvider);
     final homeNotifier = ref.read(customerHomeControllerProvider.notifier);
-    final locale = ref.watch(appLocaleProvider);
-    final isArabic = locale.languageCode == 'ar';
+    final isArabic = ref.watch(
+      appLocaleProvider.select((locale) => locale.languageCode == 'ar'),
+    );
     final palette = context.fixoPalette;
 
     if (homeState.searchQuery.isEmpty &&
@@ -257,52 +258,12 @@ class _CustomerHomePageState extends ConsumerState<CustomerHomePage> {
               child: RefreshIndicator(
                 color: palette.primaryBrand,
                 onRefresh: homeNotifier.loadFeed,
-                child: SingleChildScrollView(
-                  physics: const AlwaysScrollableScrollPhysics(),
-                  padding: const EdgeInsets.only(bottom: 92),
-                  child: Center(
-                    child: ConstrainedBox(
-                      key: const Key('home-marketplace-layout'),
-                      constraints: BoxConstraints(
-                        maxWidth: MediaQuery.sizeOf(context).width >= 1000
-                            ? 1200
-                            : 600,
-                      ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.stretch,
-                        children: [
-                          // Location Selector Pill & Search Input Bar
-                          _buildLocationAndSearchSection(
-                            context,
-                            homeState: homeState,
-                            homeNotifier: homeNotifier,
-                            isArabic: isArabic,
-                            palette: palette,
-                          ),
-
-                          if (homeState.isLoading)
-                            _buildLoadingState(palette, isArabic)
-                          else if (homeState.errorMessage != null)
-                            _buildErrorState(
-                              homeState.errorMessage!,
-                              homeNotifier,
-                              palette,
-                              isArabic,
-                            )
-                          else if (homeState.isEmptySearchResult)
-                            _buildEmptyState(homeNotifier, palette, isArabic)
-                          else
-                            _buildPopulatedMarketplace(
-                              context,
-                              homeState: homeState,
-                              homeNotifier: homeNotifier,
-                              isArabic: isArabic,
-                              palette: palette,
-                            ),
-                        ],
-                      ),
-                    ),
-                  ),
+                child: _buildScrollableBody(
+                  context,
+                  homeState: homeState,
+                  homeNotifier: homeNotifier,
+                  isArabic: isArabic,
+                  palette: palette,
                 ),
               ),
             ),
@@ -481,28 +442,30 @@ class _CustomerHomePageState extends ConsumerState<CustomerHomePage> {
                   color: palette.deepForest,
                 ),
               ),
-              GestureDetector(
-                key: const Key('btn-home-profile-avatar'),
-                onTap: () async {
-                  await context.push(AppRoutes.customerProfile);
+              Builder(
+                builder: (context) {
+                  final avatar = ref.watch(
+                    authControllerProvider.select(
+                      (s) => (
+                        id: s.session?.user.id ?? '',
+                        hasAvatar: s.session?.user.hasAvatar ?? false,
+                        version: s.session?.user.avatarVersion,
+                      ),
+                    ),
+                  );
+                  return GestureDetector(
+                    key: const Key('btn-home-profile-avatar'),
+                    onTap: () async {
+                      await context.push(AppRoutes.customerProfile);
+                    },
+                    child: ProfileAvatar(
+                      userId: avatar.id,
+                      hasAvatar: avatar.hasAvatar,
+                      version: avatar.version,
+                      size: 32,
+                    ),
+                  );
                 },
-                child: ProfileAvatar(
-                  userId:
-                      ref.watch(authControllerProvider).session?.user.id ?? '',
-                  hasAvatar:
-                      ref
-                          .watch(authControllerProvider)
-                          .session
-                          ?.user
-                          .hasAvatar ??
-                      false,
-                  version: ref
-                      .watch(authControllerProvider)
-                      .session
-                      ?.user
-                      .avatarVersion,
-                  size: 32,
-                ),
               ),
             ],
           ),
@@ -729,12 +692,156 @@ class _CustomerHomePageState extends ConsumerState<CustomerHomePage> {
     );
   }
 
-  Widget _buildPopulatedMarketplace(
+  Widget _buildScrollableBody(
     BuildContext context, {
     required CustomerHomeState homeState,
     required CustomerHomeController homeNotifier,
     required bool isArabic,
     required FixoPaletteExtension palette,
+  }) {
+    final maxWidth = MediaQuery.sizeOf(context).width >= 1000 ? 1200.0 : 600.0;
+    final locationBar = _buildLocationAndSearchSection(
+      context,
+      homeState: homeState,
+      homeNotifier: homeNotifier,
+      isArabic: isArabic,
+      palette: palette,
+    );
+
+    if (homeState.isLoading ||
+        homeState.errorMessage != null ||
+        homeState.isEmptySearchResult ||
+        homeState.feed == null) {
+      return SingleChildScrollView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        padding: const EdgeInsets.only(bottom: 92),
+        child: Center(
+          child: ConstrainedBox(
+            key: const Key('home-marketplace-layout'),
+            constraints: BoxConstraints(maxWidth: maxWidth),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                locationBar,
+                if (homeState.isLoading)
+                  _buildLoadingState(palette, isArabic)
+                else if (homeState.errorMessage != null)
+                  _buildErrorState(
+                    homeState.errorMessage!,
+                    homeNotifier,
+                    palette,
+                    isArabic,
+                  )
+                else if (homeState.isEmptySearchResult)
+                  _buildEmptyState(homeNotifier, palette, isArabic),
+              ],
+            ),
+          ),
+        ),
+      );
+    }
+
+    final feed = homeState.feed!;
+    final selectedCategory = homeState.selectedCategorySlug;
+    final seasonalPromo =
+        (selectedCategory == null ||
+            feed.seasonalPromo?.categorySlug == selectedCategory)
+        ? feed.seasonalPromo
+        : null;
+    final bundleOffer =
+        (selectedCategory == null ||
+            feed.bundleOffer?.categorySlug == selectedCategory)
+        ? feed.bundleOffer
+        : null;
+    final hasSearchOrCategory =
+        homeState.searchQuery.trim().isNotEmpty || selectedCategory != null;
+    final catalogServices = homeState.filteredServices
+        .where((s) => s.id != seasonalPromo?.id && s.id != bundleOffer?.id)
+        .toList();
+    final visibleServices = _showAllServices
+        ? catalogServices
+        : catalogServices.take(hasSearchOrCategory ? 12 : 6).toList();
+    final professionals = homeState.filteredProfessionals;
+    final shouldVirtualize =
+        visibleServices.length > 12 || professionals.length > 6;
+
+    if (!shouldVirtualize) {
+      return SingleChildScrollView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        padding: const EdgeInsets.only(bottom: 92),
+        child: Center(
+          child: ConstrainedBox(
+            key: const Key('home-marketplace-layout'),
+            constraints: BoxConstraints(maxWidth: maxWidth),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                locationBar,
+                ..._buildCompactMarketplaceChildren(
+                  context,
+                  homeState: homeState,
+                  homeNotifier: homeNotifier,
+                  isArabic: isArabic,
+                  palette: palette,
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+    }
+
+    return Center(
+      child: ConstrainedBox(
+        key: const Key('home-marketplace-layout'),
+        constraints: BoxConstraints(maxWidth: maxWidth),
+        child: CustomScrollView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          scrollCacheExtent: const ScrollCacheExtent.pixels(600),
+          slivers: [
+            SliverToBoxAdapter(child: locationBar),
+            ..._buildPopulatedMarketplaceSlivers(
+              context,
+              homeState: homeState,
+              homeNotifier: homeNotifier,
+              isArabic: isArabic,
+              palette: palette,
+            ),
+            const SliverToBoxAdapter(child: SizedBox(height: 92)),
+          ],
+        ),
+      ),
+    );
+  }
+
+  List<Widget> _buildCompactMarketplaceChildren(
+    BuildContext context, {
+    required CustomerHomeState homeState,
+    required CustomerHomeController homeNotifier,
+    required bool isArabic,
+    required FixoPaletteExtension palette,
+  }) {
+    final slivers = _buildPopulatedMarketplaceSlivers(
+      context,
+      homeState: homeState,
+      homeNotifier: homeNotifier,
+      isArabic: isArabic,
+      palette: palette,
+      forceCompactWidgets: true,
+    );
+    return [
+      for (final sliver in slivers)
+        if (sliver is SliverToBoxAdapter && sliver.child != null) sliver.child!,
+    ];
+  }
+
+  List<Widget> _buildPopulatedMarketplaceSlivers(
+    BuildContext context, {
+    required CustomerHomeState homeState,
+    required CustomerHomeController homeNotifier,
+    required bool isArabic,
+    required FixoPaletteExtension palette,
+    bool forceCompactWidgets = false,
   }) {
     final feed = homeState.feed!;
     final isDark = Theme.of(context).brightness == Brightness.dark;
@@ -766,30 +873,31 @@ class _CustomerHomePageState extends ConsumerState<CustomerHomePage> {
     final categoryIconBySlug = <String, String>{
       for (final c in feed.categories) c.slug: c.iconName,
     };
+    final virtualizeServices =
+        !forceCompactWidgets && visibleServices.length > 12;
+    final virtualizePros = !forceCompactWidgets && professionals.length > 6;
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        CinematicHomeHero(isArabic: isArabic, onBrowse: _browseServices),
-        if (seasonalPromo != null)
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 0, 16, 20),
-            child: SeasonalPromoHeroCard(
-              offer: seasonalPromo,
+    final leadingLandingChildren = <Widget>[
+            CinematicHomeHero(isArabic: isArabic, onBrowse: _browseServices),
+            if (seasonalPromo != null)
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 0, 16, 20),
+                child: SeasonalPromoHeroCard(
+                  offer: seasonalPromo,
+                  isArabic: isArabic,
+                  onBookNow: () =>
+                      _navigateToCreateBooking(offering: seasonalPromo),
+                ),
+              ),
+            // 1B. Pinned Liquid Glass Category & Sort Bar
+            _buildLiquidGlassFilterAndSortBar(
+              context,
+              homeState: homeState,
+              homeNotifier: homeNotifier,
+              categories: categories,
               isArabic: isArabic,
-              onBookNow: () =>
-                  _navigateToCreateBooking(offering: seasonalPromo),
+              palette: palette,
             ),
-          ),
-        // 1B. Pinned Liquid Glass Category & Sort Bar
-        _buildLiquidGlassFilterAndSortBar(
-          context,
-          homeState: homeState,
-          homeNotifier: homeNotifier,
-          categories: categories,
-          isArabic: isArabic,
-          palette: palette,
-        ),
 
         // 2. Select Service Category (6 Ready + 2-column grid)
         if (categories.isNotEmpty) ...[
@@ -942,303 +1050,414 @@ class _CustomerHomePageState extends ConsumerState<CustomerHomePage> {
             ),
           ],
         ],
+    ];
 
-        // 2B. Available Marketplace Services (All 146 Services from Admin Catalog)
-        if (catalogServices.isNotEmpty) ...[
-          Padding(
-            padding: const EdgeInsets.fromLTRB(
-              FixoSpacing.md,
-              20,
-              FixoSpacing.md,
-              10,
-            ),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+    Widget buildServiceCard(int index) {
+      final service = visibleServices[index];
+      return RepaintBoundary(
+        child: ServiceOfferCatalogCard(
+          offer: service,
+          isArabic: isArabic,
+          categoryIconName: categoryIconBySlug[service.categorySlug],
+          onTap: () => _navigateToCreateBooking(offering: service),
+        ),
+      );
+    }
+
+    Widget buildProCard(int index) {
+      final pro = professionals[index];
+      return RepaintBoundary(
+        child: RecommendedProCard(
+          professional: pro,
+          isArabic: isArabic,
+          onBookSlot: () => _chooseProfessionalService(pro),
+        ),
+      );
+    }
+
+    Widget buildServicesHeader() => Padding(
+      padding: const EdgeInsets.fromLTRB(
+        FixoSpacing.md,
+        20,
+        FixoSpacing.md,
+        10,
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Flexible(
+            child: Wrap(
+              crossAxisAlignment: WrapCrossAlignment.center,
+              spacing: 6,
+              runSpacing: 4,
               children: [
-                Flexible(
-                  child: Wrap(
-                    crossAxisAlignment: WrapCrossAlignment.center,
-                    spacing: 6,
-                    runSpacing: 4,
-                    children: [
-                      Text(
-                        isArabic ? 'الخدمات المتاحة' : 'Available Services',
-                        style: FixoTypography.headlineSm(
-                          color: palette.inkText,
-                        ).copyWith(fontWeight: FontWeight.w700),
-                      ),
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 6,
-                          vertical: 2,
-                        ),
-                        decoration: BoxDecoration(
-                          color: palette.surfaceHigh,
-                          borderRadius: BorderRadius.circular(4),
-                        ),
-                        child: Text(
-                          isArabic
-                              ? '${catalogServices.length} خدمة'
-                              : '${catalogServices.length} Services',
-                          style: FixoTypography.labelMd(
-                            color: palette.mutedText,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
+                Text(
+                  isArabic ? 'الخدمات المتاحة' : 'Available Services',
+                  style: FixoTypography.headlineSm(
+                    color: palette.inkText,
+                  ).copyWith(fontWeight: FontWeight.w700),
                 ),
-                Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    TextButton(
-                      key: const Key('btn-view-all-services-inline'),
-                      onPressed: () => setState(() {
-                        _showAllServices = !_showAllServices;
-                      }),
-                      child: Text(
-                        _showAllServices
-                            ? (isArabic ? 'عرض أقل' : 'Show Less')
-                            : (isArabic ? 'عرض الكل' : 'View All'),
-                        style: FixoTypography.labelMd(
-                          color: isDark
-                              ? FixoColors.goldBright
-                              : FixoColors.secondary,
-                        ).copyWith(fontWeight: FontWeight.w700),
-                      ),
-                    ),
-                    TextButton(
-                      key: const Key('btn-home-browse-all-services'),
-                      onPressed: _browseServices,
-                      child: Text(
-                        isArabic ? 'تصفح الكل' : 'Browse All',
-                        style: FixoTypography.labelMd(
-                          color: isDark
-                              ? palette.limeAccent
-                              : FixoColors.secondary,
-                        ).copyWith(fontWeight: FontWeight.w700),
-                      ),
-                    ),
-                  ],
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 6,
+                    vertical: 2,
+                  ),
+                  decoration: BoxDecoration(
+                    color: palette.surfaceHigh,
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                  child: Text(
+                    isArabic
+                        ? '${catalogServices.length} خدمة'
+                        : '${catalogServices.length} Services',
+                    style: FixoTypography.labelMd(color: palette.mutedText),
+                  ),
                 ),
               ],
             ),
           ),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: FixoSpacing.md),
-            child: LayoutBuilder(
-              builder: (context, constraints) {
-                final columns = constraints.maxWidth >= 1000
-                    ? 3
-                    : constraints.maxWidth >= 700
-                    ? 2
-                    : 1;
-                final width =
-                    (constraints.maxWidth - 12 * (columns - 1)) / columns;
-                return Wrap(
-                  spacing: 12,
-                  runSpacing: 10,
-                  children: [
-                    for (final service in visibleServices)
-                      SizedBox(
-                        width: width,
-                        child: ServiceOfferCatalogCard(
-                          offer: service,
-                          isArabic: isArabic,
-                          categoryIconName:
-                              categoryIconBySlug[service.categorySlug],
-                          onTap: () =>
-                              _navigateToCreateBooking(offering: service),
-                        ),
-                      ),
-                  ],
-                );
-              },
-            ),
-          ),
-          if (catalogServices.length > visibleServices.length ||
-              _showAllServices) ...[
-            const SizedBox(height: 10),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: FixoSpacing.md),
-              child: Align(
-                alignment: Alignment.center,
-                child: TextButton.icon(
-                  key: const Key('btn-toggle-all-services'),
-                  onPressed: () => setState(() {
-                    _showAllServices = !_showAllServices;
-                  }),
-                  icon: Icon(
-                    _showAllServices
-                        ? Icons.expand_less_rounded
-                        : Icons.expand_more_rounded,
-                    size: 18,
-                    color: FixoColors.secondary,
-                  ),
-                  label: Text(
-                    _showAllServices
-                        ? (isArabic ? 'عرض خدمات أقل' : 'Show Less Services')
-                        : (isArabic
-                              ? 'عرض كل الخدمات (${catalogServices.length})'
-                              : 'Show All Services (${catalogServices.length})'),
-                    style: FixoTypography.labelMd(
-                      color: FixoColors.secondary,
-                    ).copyWith(fontWeight: FontWeight.w700),
-                  ),
-                ),
-              ),
-            ),
-          ],
-        ],
-
-        // 3. Bundle Save Card (Home Safety Inspection — 450 EGP)
-        if (bundleOffer != null)
-          Padding(
-            padding: const EdgeInsets.fromLTRB(
-              FixoSpacing.md,
-              20,
-              FixoSpacing.md,
-              0,
-            ),
-            child: BundleSaveInspectionCard(
-              offer: bundleOffer,
-              isArabic: isArabic,
-              onTap: () => _navigateToCreateBooking(offering: bundleOffer),
-            ),
-          ),
-
-        // 4. Top Rated Cairo Professionals
-        Padding(
-          padding: const EdgeInsets.fromLTRB(
-            FixoSpacing.md,
-            24,
-            FixoSpacing.md,
-            12,
-          ),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            crossAxisAlignment: CrossAxisAlignment.start,
+          Row(
+            mainAxisSize: MainAxisSize.min,
             children: [
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      isArabic ? 'الفنيون المتاحون' : 'Available Professionals',
-                      style: FixoTypography.headlineSm(
-                        color: palette.inkText,
-                      ).copyWith(fontWeight: FontWeight.w700),
-                    ),
-                    if (professionals.isNotEmpty) ...[
-                      const SizedBox(height: 2),
-                      Text(
-                        isArabic
-                            ? 'تصفح الفنيين المتاحين حسب الفئة والمنطقة'
-                            : 'Browse available professionals by category and zone',
-                        style: FixoTypography.bodySm(color: palette.mutedText),
-                      ),
-                    ],
-                  ],
+              TextButton(
+                key: const Key('btn-view-all-services-inline'),
+                onPressed: () => setState(() {
+                  _showAllServices = !_showAllServices;
+                }),
+                child: Text(
+                  _showAllServices
+                      ? (isArabic ? 'عرض أقل' : 'Show Less')
+                      : (isArabic ? 'عرض الكل' : 'View All'),
+                  style: FixoTypography.labelMd(
+                    color: isDark
+                        ? FixoColors.goldBright
+                        : FixoColors.secondary,
+                  ).copyWith(fontWeight: FontWeight.w700),
                 ),
               ),
-              if (professionals.isNotEmpty)
-                TextButton(
-                  onPressed: homeNotifier.clearFilters,
-                  child: Text(
-                    isArabic ? 'استكشاف' : 'Explore',
-                    style: FixoTypography.labelMd(
-                      color: FixoColors.secondary,
-                    ).copyWith(fontWeight: FontWeight.w700),
-                  ),
+              TextButton(
+                key: const Key('btn-home-browse-all-services'),
+                onPressed: _browseServices,
+                child: Text(
+                  isArabic ? 'تصفح الكل' : 'Browse All',
+                  style: FixoTypography.labelMd(
+                    color: isDark ? palette.limeAccent : FixoColors.secondary,
+                  ).copyWith(fontWeight: FontWeight.w700),
                 ),
+              ),
             ],
           ),
-        ),
-        if (professionals.isNotEmpty)
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: FixoSpacing.md),
-            child: LayoutBuilder(
-              builder: (context, constraints) {
-                final columns = constraints.maxWidth >= 850 ? 2 : 1;
-                final width =
-                    (constraints.maxWidth - 12 * (columns - 1)) / columns;
-                return Wrap(
-                  spacing: 12,
-                  runSpacing: 12,
-                  children: [
-                    for (final pro in professionals)
-                      SizedBox(
-                        width: width,
-                        child: RecommendedProCard(
-                          professional: pro,
-                          isArabic: isArabic,
-                          onBookSlot: () => _chooseProfessionalService(pro),
-                        ),
-                      ),
-                  ],
-                );
-              },
-            ),
-          )
-        else
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: FixoSpacing.md),
-            child: FixoSurfaceCard(
-              key: const Key('empty-professionals-card'),
-              child: Padding(
-                padding: const EdgeInsets.all(FixoSpacing.md),
-                child: Row(
-                  children: [
-                    Icon(
-                      Icons.person_search_rounded,
-                      size: 28,
-                      color: palette.mutedText,
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Text(
-                        isArabic
-                            ? 'لا يوجد فنيون متاحون حاليًا.'
-                            : 'No professionals available yet.',
-                        style: FixoTypography.labelMd(
-                          color: palette.inkText,
-                        ).copyWith(fontWeight: FontWeight.w700),
-                      ),
-                    ),
-                  ],
-                ),
+        ],
+      ),
+    );
+
+    Widget buildShowAllServicesToggle() => Column(
+      children: [
+        const SizedBox(height: 10),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: FixoSpacing.md),
+          child: Align(
+            alignment: Alignment.center,
+            child: TextButton.icon(
+              key: const Key('btn-toggle-all-services'),
+              onPressed: () => setState(() {
+                _showAllServices = !_showAllServices;
+              }),
+              icon: Icon(
+                _showAllServices
+                    ? Icons.expand_less_rounded
+                    : Icons.expand_more_rounded,
+                size: 18,
+                color: FixoColors.secondary,
+              ),
+              label: Text(
+                _showAllServices
+                    ? (isArabic ? 'عرض خدمات أقل' : 'Show Less Services')
+                    : (isArabic
+                          ? 'عرض كل الخدمات (${catalogServices.length})'
+                          : 'Show All Services (${catalogServices.length})'),
+                style: FixoTypography.labelMd(
+                  color: FixoColors.secondary,
+                ).copyWith(fontWeight: FontWeight.w700),
               ),
             ),
-          ),
-
-        // 5. Facility Concierge Banner
-        Padding(
-          padding: const EdgeInsets.fromLTRB(
-            FixoSpacing.md,
-            20,
-            FixoSpacing.md,
-            0,
-          ),
-          child: ConciergeQuoteBanner(
-            isArabic: isArabic,
-            onTap: () {
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  behavior: SnackBarBehavior.floating,
-                  backgroundColor: FixoColors.primaryForest,
-                  content: Text(
-                    isArabic
-                        ? 'اختار الخدمة، وضيف عنوانك وميعادك، وبعدها أكد الدفع نقداً بعد التنفيذ.'
-                        : 'Choose a service, add your address and time, then confirm cash after service.',
-                    style: FixoTypography.bodySm(color: Colors.white),
-                  ),
-                ),
-              );
-            },
           ),
         ),
       ],
     );
+
+    Widget buildBundleSection() => Padding(
+      padding: const EdgeInsets.fromLTRB(FixoSpacing.md, 20, FixoSpacing.md, 0),
+      child: BundleSaveInspectionCard(
+        offer: bundleOffer!,
+        isArabic: isArabic,
+        onTap: () => _navigateToCreateBooking(offering: bundleOffer),
+      ),
+    );
+
+    Widget buildProsHeader() => Padding(
+      padding: const EdgeInsets.fromLTRB(
+        FixoSpacing.md,
+        24,
+        FixoSpacing.md,
+        12,
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  isArabic ? 'الفنيون المتاحون' : 'Available Professionals',
+                  style: FixoTypography.headlineSm(
+                    color: palette.inkText,
+                  ).copyWith(fontWeight: FontWeight.w700),
+                ),
+                if (professionals.isNotEmpty) ...[
+                  const SizedBox(height: 2),
+                  Text(
+                    isArabic
+                        ? 'تصفح الفنيين المتاحين حسب الفئة والمنطقة'
+                        : 'Browse available professionals by category and zone',
+                    style: FixoTypography.bodySm(color: palette.mutedText),
+                  ),
+                ],
+              ],
+            ),
+          ),
+          if (professionals.isNotEmpty)
+            TextButton(
+              onPressed: homeNotifier.clearFilters,
+              child: Text(
+                isArabic ? 'استكشاف' : 'Explore',
+                style: FixoTypography.labelMd(
+                  color: FixoColors.secondary,
+                ).copyWith(fontWeight: FontWeight.w700),
+              ),
+            ),
+        ],
+      ),
+    );
+
+    Widget buildEmptyProsCard() => Padding(
+      padding: const EdgeInsets.symmetric(horizontal: FixoSpacing.md),
+      child: FixoSurfaceCard(
+        key: const Key('empty-professionals-card'),
+        child: Padding(
+          padding: const EdgeInsets.all(FixoSpacing.md),
+          child: Row(
+            children: [
+              Icon(
+                Icons.person_search_rounded,
+                size: 28,
+                color: palette.mutedText,
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  isArabic
+                      ? 'لا يوجد فنيون متاحون حاليًا.'
+                      : 'No professionals available yet.',
+                  style: FixoTypography.labelMd(
+                    color: palette.inkText,
+                  ).copyWith(fontWeight: FontWeight.w700),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+
+    Widget buildConciergeBanner() => Padding(
+      padding: const EdgeInsets.fromLTRB(FixoSpacing.md, 20, FixoSpacing.md, 0),
+      child: ConciergeQuoteBanner(
+        isArabic: isArabic,
+        onTap: () {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              behavior: SnackBarBehavior.floating,
+              backgroundColor: FixoColors.primaryForest,
+              content: Text(
+                isArabic
+                    ? 'اختار الخدمة، وضيف عنوانك وميعادك، وبعدها أكد الدفع نقداً بعد التنفيذ.'
+                    : 'Choose a service, add your address and time, then confirm cash after service.',
+                style: FixoTypography.bodySm(color: Colors.white),
+              ),
+            ),
+          );
+        },
+      ),
+    );
+
+    if (!virtualizeServices && !virtualizePros) {
+      return [
+        SliverToBoxAdapter(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              ...leadingLandingChildren,
+              if (catalogServices.isNotEmpty) ...[
+                buildServicesHeader(),
+                Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: FixoSpacing.md,
+                  ),
+                  child: LayoutBuilder(
+                    builder: (context, constraints) {
+                      final columns = constraints.maxWidth >= 1000
+                          ? 3
+                          : constraints.maxWidth >= 700
+                          ? 2
+                          : 1;
+                      final width =
+                          (constraints.maxWidth - 12 * (columns - 1)) / columns;
+                      return Wrap(
+                        spacing: 12,
+                        runSpacing: 10,
+                        children: [
+                          for (int i = 0; i < visibleServices.length; i++)
+                            SizedBox(width: width, child: buildServiceCard(i)),
+                        ],
+                      );
+                    },
+                  ),
+                ),
+                if (catalogServices.length > visibleServices.length ||
+                    _showAllServices)
+                  buildShowAllServicesToggle(),
+              ],
+              if (bundleOffer != null) buildBundleSection(),
+              buildProsHeader(),
+              if (professionals.isNotEmpty)
+                Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: FixoSpacing.md,
+                  ),
+                  child: LayoutBuilder(
+                    builder: (context, constraints) {
+                      final columns = constraints.maxWidth >= 850 ? 2 : 1;
+                      final width =
+                          (constraints.maxWidth - 12 * (columns - 1)) / columns;
+                      return Wrap(
+                        spacing: 12,
+                        runSpacing: 12,
+                        children: [
+                          for (int i = 0; i < professionals.length; i++)
+                            SizedBox(width: width, child: buildProCard(i)),
+                        ],
+                      );
+                    },
+                  ),
+                )
+              else
+                buildEmptyProsCard(),
+              buildConciergeBanner(),
+            ],
+          ),
+        ),
+      ];
+    }
+
+    Widget buildVirtualizedGridSliver({
+      required int itemCount,
+      required double wideBreakpoint,
+      required int wideColumns,
+      required double midBreakpoint,
+      required int midColumns,
+      required double rowSpacing,
+      required Widget Function(int index) itemBuilder,
+    }) {
+      return SliverLayoutBuilder(
+        builder: (context, constraints) {
+          final availableWidth =
+              (constraints.crossAxisExtent - FixoSpacing.md * 2)
+                  .clamp(1.0, double.infinity);
+          final columns = availableWidth >= wideBreakpoint
+              ? wideColumns
+              : availableWidth >= midBreakpoint
+              ? midColumns
+              : 1;
+          final rowCount = (itemCount / columns).ceil();
+          return SliverPadding(
+            padding: const EdgeInsets.symmetric(horizontal: FixoSpacing.md),
+            sliver: SliverList.builder(
+              itemCount: rowCount,
+              itemBuilder: (context, rowIndex) {
+                final startIndex = rowIndex * columns;
+                return Padding(
+                  padding: EdgeInsets.only(
+                    bottom: rowIndex == rowCount - 1 ? 0 : rowSpacing,
+                  ),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      for (int col = 0; col < columns; col++) ...[
+                        if (col > 0) const SizedBox(width: 12),
+                        Expanded(
+                          child: (startIndex + col) < itemCount
+                              ? itemBuilder(startIndex + col)
+                              : const SizedBox.shrink(),
+                        ),
+                      ],
+                    ],
+                  ),
+                );
+              },
+            ),
+          );
+        },
+      );
+    }
+
+    return [
+      SliverToBoxAdapter(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: leadingLandingChildren,
+        ),
+      ),
+
+      // 2B. Available Marketplace Services (Virtualized SliverList)
+      if (catalogServices.isNotEmpty) ...[
+        SliverToBoxAdapter(child: buildServicesHeader()),
+        buildVirtualizedGridSliver(
+          itemCount: visibleServices.length,
+          wideBreakpoint: 1000,
+          wideColumns: 3,
+          midBreakpoint: 700,
+          midColumns: 2,
+          rowSpacing: 10,
+          itemBuilder: buildServiceCard,
+        ),
+        if (catalogServices.length > visibleServices.length || _showAllServices)
+          SliverToBoxAdapter(child: buildShowAllServicesToggle()),
+      ],
+
+      // 3. Bundle Save Card (Home Safety Inspection — 450 EGP)
+      if (bundleOffer != null) SliverToBoxAdapter(child: buildBundleSection()),
+
+      // 4. Top Rated Cairo Professionals (Virtualized SliverList)
+      SliverToBoxAdapter(child: buildProsHeader()),
+      if (professionals.isNotEmpty)
+        buildVirtualizedGridSliver(
+          itemCount: professionals.length,
+          wideBreakpoint: 850,
+          wideColumns: 2,
+          midBreakpoint: 850,
+          midColumns: 2,
+          rowSpacing: 12,
+          itemBuilder: buildProCard,
+        )
+      else
+        SliverToBoxAdapter(child: buildEmptyProsCard()),
+
+      // 5. Facility Concierge Banner
+      SliverToBoxAdapter(child: buildConciergeBanner()),
+    ];
   }
 
   Widget _buildDesktopNavButton({

@@ -75,13 +75,10 @@ class _ChatPageState extends ConsumerState<ChatPage>
     if (_refreshing || _paging || !mounted) return;
     _refreshing = true;
     try {
-      final booking = await ref
-          .read(bookingRepositoryProvider)
-          .getBookingById(widget.bookingId);
-      if (!mounted) return;
-      final page = await ref
-          .read(communicationsRepositoryProvider)
-          .messages(widget.bookingId);
+      final (booking, page) = await (
+        ref.read(bookingRepositoryProvider).getBookingById(widget.bookingId),
+        ref.read(communicationsRepositoryProvider).messages(widget.bookingId),
+      ).wait;
       if (!mounted) return;
       setState(() {
         _booking = booking;

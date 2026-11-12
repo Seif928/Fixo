@@ -12,6 +12,7 @@ import 'admin_panels.dart';
 import 'admin_catalog_panel.dart';
 import 'admin_professionals_panel.dart';
 import 'admin_bookings_panel.dart';
+export 'admin_profile_entry.dart';
 
 enum _Section { overview, professionals, bookings, catalog, members, audit }
 
@@ -272,28 +273,6 @@ class _AdminPageState extends ConsumerState<AdminPage> {
             ),
           ),
         ],
-      ),
-    );
-  }
-}
-
-/// Discoverable only after a real successful membership lookup; backend still
-/// protects every administrative read and write independently.
-class AdminProfileEntry extends ConsumerWidget {
-  const AdminProfileEntry({super.key});
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final access = ref.watch(adminAccessProvider);
-    if (access.isLoading || access.hasError || access.asData == null) {
-      return const SizedBox.shrink();
-    }
-    final ar = ref.watch(appLocaleProvider).languageCode == 'ar';
-    return Card(
-      child: ListTile(
-        leading: const Icon(Icons.admin_panel_settings_outlined),
-        title: Text(ar ? 'لوحة الإدارة' : 'Administration'),
-        trailing: const Icon(Icons.chevron_right),
-        onTap: () => context.push(AppRoutes.admin),
       ),
     );
   }

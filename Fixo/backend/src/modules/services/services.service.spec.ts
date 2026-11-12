@@ -248,6 +248,7 @@ describe('ServicesController & ProfessionalsController (Phase 2 Marketplace API)
       jest.spyOn(prisma.serviceCategory, 'findMany').mockResolvedValue([]);
       jest.spyOn(prisma.coverageZone, 'findMany').mockResolvedValue([]);
       jest.spyOn(prisma.serviceOffering, 'findMany').mockResolvedValue([]);
+      jest.spyOn(prisma.serviceOffering, 'count').mockResolvedValue(0);
       jest.spyOn(prisma.proProfile, 'findMany').mockResolvedValue([]);
 
       getCategoriesSpy = jest.spyOn(memoryStore, 'getCategories');

@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:dio/dio.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../core/widgets/fixo_skeleton.dart';
 import '../data/admin_professional_models.dart';
 import '../data/admin_repository.dart';
 import 'admin_pro_dossier_dialog.dart';
@@ -133,7 +134,7 @@ class _State extends ConsumerState<AdminProfessionalsPanel> {
           future: _future,
           builder: (context, snapshot) {
             if (snapshot.connectionState != ConnectionState.done) {
-              return const Center(child: CircularProgressIndicator());
+              return const FixoListSkeleton(itemCount: 3);
             }
             if (snapshot.hasError) {
               return Column(

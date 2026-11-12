@@ -1,4 +1,4 @@
-import { Controller, Get, Query } from '@nestjs/common';
+import { Controller, Get, Header, Query } from '@nestjs/common';
 import { ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { PublicProfessionalDto } from './dto/public-professional.dto';
 import { QueryProfessionalsDto } from './dto/query-services.dto';
@@ -10,6 +10,10 @@ export class ProfessionalsController {
   constructor(private readonly servicesService: ServicesService) {}
 
   @Get()
+  @Header(
+    'Cache-Control',
+    'public, max-age=30, s-maxage=120, stale-while-revalidate=300',
+  )
   @ApiOperation({
     summary: 'List and search verified Cairo & Giza professionals in EGP',
   })

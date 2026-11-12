@@ -2,12 +2,14 @@ import { ValidationPipe } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
 import { NestExpressApplication } from '@nestjs/platform-express';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
+import compression = require('compression');
 import { AppModule } from './app.module';
 import { AllExceptionsFilter } from './common/filters/all-exceptions.filter';
 
 async function bootstrap() {
   const app = await NestFactory.create<NestExpressApplication>(AppModule);
 
+  app.use(compression());
   app.useBodyParser('json', { limit: '3mb' });
   app.setGlobalPrefix('api/v1');
   // Bearer-token API: no cookies, so credentials stay disabled.

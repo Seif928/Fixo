@@ -5,6 +5,7 @@ import '../../../../core/l10n/app_locale_controller.dart';
 import '../../../../core/theme/fixo_colors.dart';
 import '../../../../core/theme/fixo_spacing.dart';
 import '../../../../core/widgets/fixo_cards.dart';
+import '../../../../core/widgets/fixo_skeleton.dart';
 import '../../data/complaints_models.dart';
 import '../../data/complaints_repository.dart';
 import '../extensions/complaint_ui_extensions.dart';
@@ -96,7 +97,7 @@ class _MyComplaintsPageState extends ConsumerState<MyComplaintsPage> {
     bool ar,
   ) {
     if (_loading) {
-      return const Center(child: CircularProgressIndicator());
+      return const FixoListSkeleton(itemCount: 4);
     }
 
     if (_error != null) {

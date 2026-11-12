@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:dio/dio.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../core/widgets/fixo_skeleton.dart';
 import '../data/admin_booking_models.dart';
 import '../data/admin_repository.dart';
 import 'admin_booking_detail_dialog.dart';
@@ -132,7 +133,7 @@ class _State extends ConsumerState<AdminBookingsPanel> {
           future: _future,
           builder: (context, s) {
             if (s.connectionState != ConnectionState.done) {
-              return const Center(child: CircularProgressIndicator());
+              return const FixoListSkeleton(itemCount: 3);
             }
             if (s.hasError) {
               return Column(

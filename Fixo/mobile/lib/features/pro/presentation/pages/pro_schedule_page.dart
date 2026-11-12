@@ -6,6 +6,7 @@ import '../../../../core/theme/fixo_spacing.dart';
 import '../../../../core/theme/fixo_typography.dart';
 import '../../../../core/widgets/fixo_buttons.dart';
 import '../../../../core/widgets/fixo_cards.dart';
+import '../../../../core/widgets/fixo_skeleton.dart';
 import '../../data/pro_schedule_repository.dart';
 import '../../domain/pro_schedule_models.dart';
 
@@ -191,7 +192,7 @@ class _ProSchedulePageState extends ConsumerState<ProSchedulePage>
         ),
       ),
       body: _isLoading
-          ? const Center(child: CircularProgressIndicator())
+          ? const FixoListSkeleton(itemCount: 4)
           : _errorMessage != null
               ? Center(
                   child: Padding(

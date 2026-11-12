@@ -183,6 +183,7 @@ class CustomerHomeController extends Notifier<CustomerHomeState> {
   int _request = 0;
   int _searchEpoch = 0;
   Timer? _searchDebounce;
+  CancelToken? _feedCancelToken;
   CancelToken? _searchCancelToken;
   String? _userId;
   bool _disposed = false;
@@ -198,6 +199,7 @@ class CustomerHomeController extends Notifier<CustomerHomeState> {
       _request++;
       _searchEpoch++;
       _searchDebounce?.cancel();
+      _feedCancelToken?.cancel('Disposed');
       _searchCancelToken?.cancel('Disposed');
     });
     _request++;
@@ -221,20 +223,28 @@ class CustomerHomeController extends Notifier<CustomerHomeState> {
 
   Future<void> loadFeed() async {
     if (_disposed) return;
+    _feedCancelToken?.cancel('Superseded by new feed load');
+    final cancelToken = CancelToken();
+    _feedCancelToken = cancelToken;
     final request = ++_request;
     state = state.copyWith(isLoading: state.feed == null, clearError: true);
     try {
       final repository = ref.read(marketplaceRepositoryProvider);
-      final feed = await repository.fetchCustomerHomeFeed(
-        zone: state.selectedZoneSlug,
-      );
-      if (_disposed || request != _request) return;
+      final feed = repository is DioMarketplaceRepository
+          ? await repository.fetchCustomerHomeFeed(
+              zone: state.selectedZoneSlug,
+              cancelToken: cancelToken,
+            )
+          : await repository.fetchCustomerHomeFeed(
+              zone: state.selectedZoneSlug,
+            );
+      if (_disposed || request != _request || cancelToken.isCancelled) return;
       state = state.copyWith(isLoading: false, feed: feed, clearError: true);
     } on MarketplaceApiException catch (error) {
-      if (_disposed || request != _request) return;
+      if (_disposed || request != _request || cancelToken.isCancelled) return;
       state = state.copyWith(isLoading: false, errorMessage: error.message);
     } catch (_) {
-      if (_disposed || request != _request) return;
+      if (_disposed || request != _request || cancelToken.isCancelled) return;
       state = state.copyWith(
         isLoading: false,
         errorMessage:

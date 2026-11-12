@@ -52,23 +52,41 @@ class _ProDashboardPageState extends ConsumerState<ProDashboardPage> {
   }
 
   Future<void> _toggleAvailability(bool value) async {
-    setState(() => _togglingOnline = true);
+    final previous = _dashboard;
+    setState(() {
+      _togglingOnline = true;
+      _errorMessage = null;
+      if (previous != null) {
+        _dashboard = ProDashboardModel(
+          isOnline: value,
+          todayEarningsEgp: previous.todayEarningsEgp,
+          weekEarningsEgp: previous.weekEarningsEgp,
+          completedJobsCount: previous.completedJobsCount,
+          ratingAvg: previous.ratingAvg,
+          reviewsCount: previous.reviewsCount,
+          dailyTrajectory: previous.dailyTrajectory,
+          activeOffers: previous.activeOffers,
+          todaySchedule: previous.todaySchedule,
+        );
+      }
+    });
     try {
       final repo = ref.read(proRepositoryProvider);
       final newStatus = await repo.updateAvailability(value);
       if (!mounted) return;
       setState(() {
-        if (_dashboard != null) {
+        final current = _dashboard ?? previous;
+        if (current != null) {
           _dashboard = ProDashboardModel(
             isOnline: newStatus,
-            todayEarningsEgp: _dashboard!.todayEarningsEgp,
-            weekEarningsEgp: _dashboard!.weekEarningsEgp,
-            completedJobsCount: _dashboard!.completedJobsCount,
-            ratingAvg: _dashboard!.ratingAvg,
-            reviewsCount: _dashboard!.reviewsCount,
-            dailyTrajectory: _dashboard!.dailyTrajectory,
-            activeOffers: _dashboard!.activeOffers,
-            todaySchedule: _dashboard!.todaySchedule,
+            todayEarningsEgp: current.todayEarningsEgp,
+            weekEarningsEgp: current.weekEarningsEgp,
+            completedJobsCount: current.completedJobsCount,
+            ratingAvg: current.ratingAvg,
+            reviewsCount: current.reviewsCount,
+            dailyTrajectory: current.dailyTrajectory,
+            activeOffers: current.activeOffers,
+            todaySchedule: current.todaySchedule,
           );
         }
         _togglingOnline = false;
@@ -76,6 +94,7 @@ class _ProDashboardPageState extends ConsumerState<ProDashboardPage> {
     } catch (e) {
       if (!mounted) return;
       setState(() {
+        _dashboard = previous;
         _errorMessage = e.toString();
         _togglingOnline = false;
       });

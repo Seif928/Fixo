@@ -40,6 +40,35 @@ class DioMarketplaceRepository implements MarketplaceRepository {
 
   final Dio _dio;
 
+  static final Expando<_CachedCategoriesEntry> _categoriesCacheByDio =
+      Expando<_CachedCategoriesEntry>('fixoCategoriesCache');
+
+  static const Duration _categoriesCacheTtl = Duration(seconds: 30);
+
+  Future<Response<Map<String, dynamic>>> _getCategoriesDeduped() {
+    final now = DateTime.now();
+    final existing = _categoriesCacheByDio[_dio];
+    if (existing != null && now.isBefore(existing.expiresAt)) {
+      return existing.future;
+    }
+
+    final future = _dio.get<Map<String, dynamic>>('/services/categories');
+    final entry = _CachedCategoriesEntry(
+      future: future,
+      expiresAt: now.add(_categoriesCacheTtl),
+    );
+    _categoriesCacheByDio[_dio] = entry;
+
+    future.catchError((Object error) {
+      if (identical(_categoriesCacheByDio[_dio], entry)) {
+        _categoriesCacheByDio[_dio] = null;
+      }
+      throw error;
+    });
+
+    return future;
+  }
+
   @override
   Future<CustomerHomeFeed> fetchCustomerHomeFeed({
     String? search,
@@ -48,10 +77,7 @@ class DioMarketplaceRepository implements MarketplaceRepository {
     CancelToken? cancelToken,
   }) async {
     try {
-      final categoriesFuture = _dio.get<Map<String, dynamic>>(
-        '/services/categories',
-        cancelToken: cancelToken,
-      );
+      final categoriesFuture = _getCategoriesDeduped();
       final servicesFuture = _dio.get<Map<String, dynamic>>(
         '/services',
         cancelToken: cancelToken,
@@ -200,4 +226,14 @@ final marketplaceRepositoryProvider = Provider<MarketplaceRepository>((ref) {
   final dio = ref.watch(dioClientProvider);
   return DioMarketplaceRepository(dio);
 });
+
+class _CachedCategoriesEntry {
+  const _CachedCategoriesEntry({
+    required this.future,
+    required this.expiresAt,
+  });
+
+  final Future<Response<Map<String, dynamic>>> future;
+  final DateTime expiresAt;
+}
 
