@@ -8,17 +8,23 @@ import 'session_refresh_interceptor.dart';
 ///
 /// Priority:
 /// 1. Compile-time `--dart-define=FIXO_API_BASE_URL=...`
-/// 2. Android emulator host alias (`http://10.0.2.2:3001/api/v1`)
-/// 3. Localhost default (`http://localhost:3001/api/v1`) for iOS simulator, Web, and Desktop.
+/// 2. Opt-in local dev API (`--dart-define=FIXO_USE_LOCAL_API=true`):
+///    `http://10.0.2.2:3001/api/v1` on Android, `http://localhost:3001/api/v1` elsewhere
+/// 3. Hosted FIXO API default (`https://fixo-api.vercel.app/api/v1`) so IDE `flutter run`
+///    and emulator/device launches connect to live Supabase-backed services out of the box.
 String resolveDefaultApiBaseUrl() {
   const envUrl = String.fromEnvironment('FIXO_API_BASE_URL');
   if (envUrl.isNotEmpty) {
     return envUrl;
   }
-  if (!kIsWeb && defaultTargetPlatform == TargetPlatform.android) {
-    return 'http://10.0.2.2:3001/api/v1';
+  const useLocalApi = bool.fromEnvironment('FIXO_USE_LOCAL_API');
+  if (useLocalApi) {
+    if (!kIsWeb && defaultTargetPlatform == TargetPlatform.android) {
+      return 'http://10.0.2.2:3001/api/v1';
+    }
+    return 'http://localhost:3001/api/v1';
   }
-  return 'http://localhost:3001/api/v1';
+  return 'https://fixo-api.vercel.app/api/v1';
 }
 
 /// Central Dio HTTP client configured for the FIXO NestJS backend (`/api/v1`).
