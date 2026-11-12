@@ -1,4 +1,6 @@
 import 'package:fixo_mobile/app/app.dart';
+import 'package:fixo_mobile/app/router/app_router.dart';
+import 'package:fixo_mobile/app/router/app_routes.dart';
 import 'package:fixo_mobile/core/l10n/app_locale_controller.dart';
 import 'package:fixo_mobile/core/theme/fixo_colors.dart';
 import 'package:fixo_mobile/core/theme/fixo_theme.dart';
@@ -108,6 +110,48 @@ void main() {
 
         expect(find.text('Welcome to FIXO'), findsOneWidget);
         expect(find.byKey(const Key('phone-password-secret')), findsOneWidget);
+      },
+    );
+
+    testWidgets(
+      'trust pillar chips open details sheet and navigate to auth on Get Started',
+      (WidgetTester tester) async {
+        await tester.pumpWidget(const ProviderScope(child: FixoApp()));
+        await tester.pumpAndSettle();
+
+        final chipFinder = find.text('EGP Price Breakdown');
+        await tester.ensureVisible(chipFinder);
+        await tester.tap(chipFinder);
+        await tester.pumpAndSettle();
+
+        expect(
+          find.textContaining('Transparent upfront EGP quote'),
+          findsOneWidget,
+        );
+
+        await tester.tap(find.text('Get Started').last);
+        await tester.pumpAndSettle();
+
+        expect(find.text('Welcome to FIXO'), findsOneWidget);
+      },
+    );
+
+    testWidgets(
+      'root "/" path redirects cleanly to /onboarding for path URL strategy',
+      (WidgetTester tester) async {
+        final router = createAppRouter(
+          initialLocation: '/',
+          isAuthenticated: () => false,
+        );
+        await tester.pumpWidget(
+          ProviderScope(child: MaterialApp.router(routerConfig: router)),
+        );
+        await tester.pumpAndSettle();
+
+        expect(
+          router.routeInformationProvider.value.uri.path,
+          AppRoutes.onboarding,
+        );
       },
     );
   });

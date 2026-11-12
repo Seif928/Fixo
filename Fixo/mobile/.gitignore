@@ -48,3 +48,5 @@ app.*.map.json
 
 # Generated golden mismatch diagnostics
 /test/failures/
+# Widget Preview related
+.widget_preview/

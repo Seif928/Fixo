@@ -583,18 +583,18 @@ class _CreateLeaveBottomSheetState
     final startStr = '${_startDate.year}/${_startDate.month}/${_startDate.day}';
     final endStr = '${_endDate.year}/${_endDate.month}/${_endDate.day}';
 
-    return Container(
-      decoration: BoxDecoration(
-        color: palette.cardSurface,
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
-      ),
-      padding: EdgeInsets.only(
-        top: FixoSpacing.lg,
-        left: FixoSpacing.lg,
-        right: FixoSpacing.lg,
-        bottom: MediaQuery.of(context).viewInsets.bottom + FixoSpacing.lg,
-      ),
-      child: SingleChildScrollView(
+    return Material(
+      color: palette.cardSurface,
+      borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+      clipBehavior: Clip.antiAlias,
+      child: Padding(
+        padding: EdgeInsets.only(
+          top: FixoSpacing.lg,
+          left: FixoSpacing.lg,
+          right: FixoSpacing.lg,
+          bottom: MediaQuery.of(context).viewInsets.bottom + FixoSpacing.lg,
+        ),
+        child: SingleChildScrollView(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           mainAxisSize: MainAxisSize.min,
@@ -653,6 +653,7 @@ class _CreateLeaveBottomSheetState
           ],
         ),
       ),
+    ),
     );
   }
 }

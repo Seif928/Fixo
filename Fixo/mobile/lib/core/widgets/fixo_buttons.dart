@@ -33,9 +33,11 @@ class FixoPrimaryButton extends StatelessWidget {
     return FixoPressFeedback(
       enabled: onPressed != null && !isLoading,
       builder: (onHighlightChanged) => Semantics(
+        container: true,
         button: true,
         enabled: onPressed != null && !isLoading,
         label: label,
+        onTap: isLoading ? null : onPressed,
         child: Material(
           color: palette.primaryBrand,
           borderRadius: FixoRadius.borderRadiusSm,
@@ -150,9 +152,11 @@ class FixoAccentButton extends StatelessWidget {
     return FixoPressFeedback(
       enabled: onPressed != null,
       builder: (onHighlightChanged) => Semantics(
+        container: true,
         button: true,
         enabled: onPressed != null,
         label: label,
+        onTap: onPressed,
         child: Material(
           color: palette.limeAccent,
           borderRadius: FixoRadius.borderRadiusSm,
@@ -221,9 +225,11 @@ class FixoSecondaryButton extends StatelessWidget {
     return FixoPressFeedback(
       enabled: onPressed != null,
       builder: (onHighlightChanged) => Semantics(
+        container: true,
         button: true,
         enabled: onPressed != null,
         label: label,
+        onTap: onPressed,
         child: Container(
           decoration: BoxDecoration(
             color: palette.cardSurface,

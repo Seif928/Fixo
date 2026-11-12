@@ -1230,18 +1230,18 @@ class _AddressCreationBottomSheetState
 
     return Directionality(
       textDirection: widget.isArabic ? TextDirection.rtl : TextDirection.ltr,
-      child: Container(
-        decoration: BoxDecoration(
-          color: palette.cardSurface,
-          borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
-        ),
-        padding: EdgeInsets.only(
-          left: FixoSpacing.md,
-          right: FixoSpacing.md,
-          top: FixoSpacing.md,
-          bottom: MediaQuery.of(context).viewInsets.bottom + FixoSpacing.md,
-        ),
-        child: SingleChildScrollView(
+      child: Material(
+        color: palette.cardSurface,
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+        clipBehavior: Clip.antiAlias,
+        child: Padding(
+          padding: EdgeInsets.only(
+            left: FixoSpacing.md,
+            right: FixoSpacing.md,
+            top: FixoSpacing.md,
+            bottom: MediaQuery.of(context).viewInsets.bottom + FixoSpacing.md,
+          ),
+          child: SingleChildScrollView(
           child: Form(
             key: _formKey,
             child: Column(
@@ -1572,6 +1572,7 @@ class _AddressCreationBottomSheetState
           ),
         ),
       ),
+    ),
     );
   }
 }

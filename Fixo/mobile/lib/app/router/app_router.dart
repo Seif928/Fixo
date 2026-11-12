@@ -88,6 +88,10 @@ GoRouter createAppRouter({
       final wantsPro = account == 'pro' || (account != 'customer' && (professionalIntent?.call() == true || path.startsWith('/pro')));
       final authPath =
           '${AppRoutes.phoneAuth}${wantsPro ? '?account=pro' : ''}';
+      if (path == '/' || path.isEmpty) {
+        if (!authed) return AppRoutes.onboarding;
+        return wantsPro ? AppRoutes.proEntry : AppRoutes.customerHome;
+      }
       final setupRequired = authed && requiresProfileSetup?.call() == true;
       if (setupRequired && path != AppRoutes.phoneAuth) {
         return authPath;
@@ -107,6 +111,7 @@ GoRouter createAppRouter({
       return null;
     },
     routes: <RouteBase>[
+      GoRoute(path: '/', redirect: (_, _) => initialLocation),
       _motionRoute(
         path: AppRoutes.admin,
         name: 'admin',

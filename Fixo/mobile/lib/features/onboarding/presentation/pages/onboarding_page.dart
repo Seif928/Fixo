@@ -77,6 +77,104 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage> {
     }
   }
 
+  void _showPillarDetails({
+    required BuildContext context,
+    required bool isArabic,
+    required String title,
+    required String summary,
+    required List<String> points,
+    required IconData icon,
+  }) {
+    final palette = context.fixoPalette;
+    final locale = ref.read(appLocaleProvider);
+    showModalBottomSheet<void>(
+      context: context,
+      showDragHandle: true,
+      backgroundColor: palette.cardSurface,
+      builder: (sheetContext) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(
+            FixoSpacing.lg,
+            FixoSpacing.xs,
+            FixoSpacing.lg,
+            FixoSpacing.lg,
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Row(
+                children: [
+                  Container(
+                    width: 40,
+                    height: 40,
+                    decoration: BoxDecoration(
+                      color: palette.surfaceHigh,
+                      borderRadius: FixoRadius.borderRadiusSm,
+                    ),
+                    child: Icon(icon, color: palette.deepForest),
+                  ),
+                  const SizedBox(width: FixoSpacing.sm),
+                  Expanded(
+                    child: Text(
+                      title,
+                      style: FixoTypography.headlineSm(
+                        color: palette.deepForest,
+                        locale: locale,
+                      ).copyWith(fontWeight: FontWeight.w800),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: FixoSpacing.sm),
+              Text(
+                summary,
+                style: FixoTypography.bodyMd(
+                  color: palette.mutedText,
+                  locale: locale,
+                ),
+              ),
+              const SizedBox(height: FixoSpacing.md),
+              for (final point in points)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 8),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Icon(
+                        Icons.check_circle_rounded,
+                        size: 18,
+                        color: FixoColors.secondary,
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          point,
+                          style: FixoTypography.bodyMd(
+                            color: palette.inkText,
+                            locale: locale,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              const SizedBox(height: FixoSpacing.md),
+              FixoPrimaryButton(
+                label: isArabic ? 'ابدأ الآن' : 'Get Started',
+                showCircularLimeBadge: true,
+                onPressed: () {
+                  Navigator.of(sheetContext).pop();
+                  _navigateToPhoneAuth(intent: 'signup');
+                },
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final palette = context.fixoPalette;
@@ -214,18 +312,76 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage> {
                       FixoTrustPillarChip(
                         icon: Icons.home_repair_service_outlined,
                         label: isArabic ? 'خدمات المنزل' : 'Home Services',
+                        onTap: () => _showPillarDetails(
+                          context: context,
+                          isArabic: isArabic,
+                          icon: Icons.home_repair_service_outlined,
+                          title: isArabic ? 'خدمات المنزل' : 'Home Services',
+                          summary: isArabic
+                              ? '٢١ قسماً وأكثر من ١٤٠ خدمة منزلية في القاهرة والجيزة ومحافظات مصر.'
+                              : '21 trade categories across Cairo, Giza, and Egyptian governorates.',
+                          points: isArabic
+                              ? const [
+                                  'صيانة التكييف، السباكة، الكهرباء، النجارة، النقاشة، والأجهزة.',
+                                  'اختيار الموعد والعنوان بوضوح قبل تأكيد الطلب.',
+                                ]
+                              : const [
+                                  'AC maintenance, plumbing, electrical, carpentry, painting & appliances.',
+                                  'Choose your exact Egyptian address and preferred arrival window.',
+                                ],
+                        ),
                       ),
                       FixoTrustPillarChip(
                         icon: Icons.payments_outlined,
                         label: isArabic
                             ? 'تفاصيل السعر بالجنيه'
                             : 'EGP Price Breakdown',
+                        onTap: () => _showPillarDetails(
+                          context: context,
+                          isArabic: isArabic,
+                          icon: Icons.payments_outlined,
+                          title: isArabic
+                              ? 'تفاصيل السعر بالجنيه'
+                              : 'EGP Price Breakdown',
+                          summary: isArabic
+                              ? 'تسعير مسبق وواضح بالجنيه المصري قبل تأكيد الحجز.'
+                              : 'Transparent upfront EGP quote visible before confirming any booking.',
+                          points: isArabic
+                              ? const [
+                                  'عرض رسوم المعاينة وتكلفة الخدمة الأساسية بوضوح.',
+                                  'إجمالي الطلب بالجنيه المصري بدون مفاجآت.',
+                                ]
+                              : const [
+                                  'Inspection fee and base service fee itemized upfront in EGP.',
+                                  'Review your total booking cost before dispatch.',
+                                ],
+                        ),
                       ),
                       FixoTrustPillarChip(
                         icon: Icons.near_me_outlined,
                         label: isArabic
                             ? 'الدفع بعد الخدمة'
                             : 'Cash After Service',
+                        onTap: () => _showPillarDetails(
+                          context: context,
+                          isArabic: isArabic,
+                          icon: Icons.near_me_outlined,
+                          title: isArabic
+                              ? 'الدفع بعد الخدمة'
+                              : 'Cash After Service',
+                          summary: isArabic
+                              ? 'ادفع نقداً بعد إتمام الخدمة، أو بالبطاقة البنكية أو Apple Pay.'
+                              : 'Pay cash after your service is completed, or pay securely via Card or Apple Pay.',
+                          points: isArabic
+                              ? const [
+                                  'خيار الدفع النقدي عند الانتهاء متاح في القاهرة والجيزة.',
+                                  'دعم بطاقات Visa / Mastercard و Apple Pay في صفحة الدفع.',
+                                ]
+                              : const [
+                                  'Cash After Service is available across Cairo & Giza.',
+                                  'Visa / Mastercard and Apple Pay supported cleanly at checkout.',
+                                ],
+                        ),
                       ),
                     ],
                   ),

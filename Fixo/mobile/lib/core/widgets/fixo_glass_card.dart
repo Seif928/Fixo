@@ -79,7 +79,6 @@ class FixoGlassCard extends StatelessWidget {
         child: BackdropFilter(
           filter: ImageFilter.blur(sigmaX: blurSigma, sigmaY: blurSigma),
           child: Container(
-            padding: padding,
             decoration: BoxDecoration(
               color: baseColor,
               borderRadius: borderRadius,
@@ -98,19 +97,20 @@ class FixoGlassCard extends StatelessWidget {
                       ],
               ),
             ),
-            child: child,
+            child: Material(
+              type: MaterialType.transparency,
+              child: onTap != null
+                  ? InkWell(
+                      onTap: onTap,
+                      borderRadius: borderRadius,
+                      child: Padding(padding: padding, child: child),
+                    )
+                  : Padding(padding: padding, child: child),
+            ),
           ),
         ),
       ),
     );
-
-    if (onTap != null) {
-      cardContent = InkWell(
-        onTap: onTap,
-        borderRadius: borderRadius,
-        child: cardContent,
-      );
-    }
 
     if (enableTilt) {
       return FixoTilt3D(
