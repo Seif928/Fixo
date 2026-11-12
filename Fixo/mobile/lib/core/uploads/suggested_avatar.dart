@@ -60,7 +60,7 @@ class _AvatarPainter extends CustomPainter {
     Color(0xFFF2C8A2),
   ];
   static const shirts = [
-    Color(0xFF173F35),
+    Color(0xFF24262B),
     Color(0xFF425A7A),
     Color(0xFF936952),
     Color(0xFF705D83),

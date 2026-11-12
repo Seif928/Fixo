@@ -30,10 +30,7 @@ void main() {
     final router = GoRouter(
       initialLocation: '/auth/logout',
       routes: [
-        GoRoute(
-          path: '/auth/logout',
-          builder: (_, _) => const LogoutPage(),
-        ),
+        GoRoute(path: '/auth/logout', builder: (_, _) => const LogoutPage()),
         GoRoute(
           path: '/auth/phone',
           builder: (_, _) => const Scaffold(body: Text('Auth Phone Page')),
@@ -71,28 +68,33 @@ void main() {
     await tester.pumpAndSettle();
   }
 
-  testWidgets('renders premium logout page with active user info and actions (AR)', (tester) async {
-    await pumpLogout(tester, arabic: true);
+  testWidgets(
+    'renders premium logout page with active user info and actions (AR)',
+    (tester) async {
+      await pumpLogout(tester, arabic: true);
 
-    expect(find.text('تأكيد تسجيل الخروج'), findsOneWidget);
-    expect(find.text('Ahmed Gamal'), findsOneWidget);
-    expect(find.text('+201012345678'), findsOneWidget);
-    expect(find.text('عميل VIP'), findsOneWidget);
-    expect(find.byKey(const Key('confirm-sign-out-btn')), findsOneWidget);
-    expect(find.byKey(const Key('switch-account-btn')), findsOneWidget);
-    expect(find.byKey(const Key('cancel-logout-btn')), findsOneWidget);
-  });
+      expect(find.text('تأكيد تسجيل الخروج'), findsOneWidget);
+      expect(find.text('Ahmed Gamal'), findsOneWidget);
+      expect(find.text('+201012345678'), findsOneWidget);
+      expect(find.text('عميل'), findsOneWidget);
+      expect(find.byKey(const Key('confirm-sign-out-btn')), findsOneWidget);
+      expect(find.byKey(const Key('switch-account-btn')), findsOneWidget);
+      expect(find.byKey(const Key('cancel-logout-btn')), findsOneWidget);
+    },
+  );
 
   testWidgets('renders premium logout page in EN', (tester) async {
     await pumpLogout(tester, arabic: false);
 
     expect(find.text('Secure Sign Out'), findsOneWidget);
     expect(find.text('Ahmed Gamal'), findsOneWidget);
-    expect(find.text('VIP'), findsOneWidget);
+    expect(find.text('Customer'), findsOneWidget);
     expect(find.text('Confirm Secure Sign Out'), findsOneWidget);
   });
 
-  testWidgets('tapping confirm sign out transitions to success state', (tester) async {
+  testWidgets('tapping confirm sign out transitions to success state', (
+    tester,
+  ) async {
     await pumpLogout(tester, arabic: true);
 
     await tester.tap(find.byKey(const Key('confirm-sign-out-btn')));

@@ -10,14 +10,14 @@ import 'package:flutter_test/flutter_test.dart';
 
 void main() {
   group('FIXO Design System Tokens & Themes', () {
-    test('FixoColors match reconciled Stitch & DESIGN.md hex values', () {
-      expect(FixoColors.deepestForest, const Color(0xFF002920));
-      expect(FixoColors.primaryForest, const Color(0xFF173F35));
-      expect(FixoColors.secondaryForest, const Color(0xFF245B4B));
-      expect(FixoColors.limeAccent, const Color(0xFFD5EE76));
-      expect(FixoColors.limeHighlight, const Color(0xFFD7F078));
-      expect(FixoColors.warmCream, const Color(0xFFF7F5EF));
-      expect(FixoColors.surfaceBotanical, const Color(0xFFF1FCF5));
+    test('FixoColors match approved cinematic DESIGN.md hex values', () {
+      expect(FixoColors.deepestForest, const Color(0xFF17191C));
+      expect(FixoColors.primaryForest, const Color(0xFF24262B));
+      expect(FixoColors.secondaryForest, const Color(0xFF4E4942));
+      expect(FixoColors.limeAccent, const Color(0xFFC6A779));
+      expect(FixoColors.limeHighlight, const Color(0xFFD8BC90));
+      expect(FixoColors.warmCream, const Color(0xFFF6F2EB));
+      expect(FixoColors.surfaceBotanical, const Color(0xFFF6F2EB));
       expect(FixoColors.coral, const Color(0xFFFF795F));
     });
 
@@ -37,6 +37,30 @@ void main() {
   });
 
   group('Screen 01: OnboardingPage UI & Navigation', () {
+    testWidgets('pricing and cash explanations open without authentication', (
+      tester,
+    ) async {
+      await tester.pumpWidget(const ProviderScope(child: FixoApp()));
+      await tester.pumpAndSettle();
+      await tester.ensureVisible(find.text('EGP Price Breakdown'));
+      await tester.tap(find.text('EGP Price Breakdown'));
+      await tester.pumpAndSettle();
+      expect(find.text('How booking pricing works'), findsOneWidget);
+      expect(
+        find.textContaining('Inspection, service and transport'),
+        findsOneWidget,
+      );
+      await tester.tap(find.text('Close'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Cash After Service'));
+      await tester.pumpAndSettle();
+      expect(find.text('Cash on service'), findsOneWidget);
+      expect(
+        find.textContaining('No payment is collected now'),
+        findsOneWidget,
+      );
+      expect(find.byKey(const Key('phone-password-number')), findsNothing);
+    });
     testWidgets(
       'renders brand header, hero card, compliant trust chips, and CTAs',
       (WidgetTester tester) async {
@@ -114,21 +138,26 @@ void main() {
     );
 
     testWidgets(
-      'trust pillar chips open details sheet and navigate to auth on Get Started',
+      'trust pillar chips open details dialogs/sheet and navigate to auth on Get Started',
       (WidgetTester tester) async {
         await tester.pumpWidget(const ProviderScope(child: FixoApp()));
         await tester.pumpAndSettle();
 
-        final chipFinder = find.text('EGP Price Breakdown');
-        await tester.ensureVisible(chipFinder);
-        await tester.tap(chipFinder);
+        final pricingChip = find.text('EGP Price Breakdown');
+        await tester.ensureVisible(pricingChip);
+        await tester.tap(pricingChip);
         await tester.pumpAndSettle();
 
-        expect(
-          find.textContaining('Transparent upfront EGP quote'),
-          findsOneWidget,
-        );
+        expect(find.text('How booking pricing works'), findsOneWidget);
+        await tester.tap(find.text('Close'));
+        await tester.pumpAndSettle();
 
+        final servicesChip = find.text('Home Services');
+        await tester.ensureVisible(servicesChip);
+        await tester.tap(servicesChip);
+        await tester.pumpAndSettle();
+
+        expect(find.textContaining('21 trade categories'), findsOneWidget);
         await tester.tap(find.text('Get Started').last);
         await tester.pumpAndSettle();
 

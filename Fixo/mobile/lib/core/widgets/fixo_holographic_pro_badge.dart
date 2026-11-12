@@ -39,10 +39,11 @@ class _FixoHolographicProBadgeState extends State<FixoHolographicProBadge>
       vsync: this,
       duration: const Duration(seconds: 3),
     );
-    final isTest =
-        WidgetsBinding.instance.runtimeType.toString().contains('Test');
+    final isTest = WidgetsBinding.instance.runtimeType.toString().contains(
+      'Test',
+    );
     if (!isTest) {
-      _shimmerController.repeat();
+      _shimmerController.forward();
     } else {
       _shimmerController.value = 0.5;
     }
@@ -56,7 +57,8 @@ class _FixoHolographicProBadgeState extends State<FixoHolographicProBadge>
 
   @override
   Widget build(BuildContext context) {
-    final label = widget.badgeText ??
+    final label =
+        widget.badgeText ??
         (widget.isArabic ? 'فني معتمد • فيكسو مصر' : 'Verified Artisan • FIXO');
 
     return FixoTilt3D(
@@ -70,79 +72,74 @@ class _FixoHolographicProBadgeState extends State<FixoHolographicProBadge>
           builder: (context, _) {
             final shimmer = _shimmerController.value;
 
-          return Container(
-            padding: EdgeInsets.symmetric(
-              horizontal: widget.isCompact ? 8 : 10,
-              vertical: widget.isCompact ? 3 : 5,
-            ),
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(FixoRadius.pill),
-              // Holographic iridescent foil gradient
-              gradient: LinearGradient(
-                begin: Alignment(-1.0 + shimmer * 2.0, -0.8),
-                end: Alignment(1.0 + shimmer * 2.0, 0.8),
-                colors: const [
-                  Color(0xFF173F35),
-                  Color(0xFF1E5B4B),
-                  Color(0xFF2DD4BF),
-                  Color(0xFFD7F078),
-                  Color(0xFF173F35),
-                ],
-                stops: const [0.0, 0.35, 0.55, 0.75, 1.0],
+            return Container(
+              padding: EdgeInsets.symmetric(
+                horizontal: widget.isCompact ? 8 : 10,
+                vertical: widget.isCompact ? 3 : 5,
               ),
-              border: Border.all(
-                color: FixoColors.limeAccent.withValues(alpha: 0.85),
-                width: 1.2,
-              ),
-              boxShadow: [
-                BoxShadow(
-                  color: const Color(0xFF2DD4BF).withValues(alpha: 0.25),
-                  blurRadius: 10,
-                  offset: const Offset(0, 2),
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(FixoRadius.pill),
+                // Holographic iridescent foil gradient
+                gradient: LinearGradient(
+                  begin: Alignment(-1.0 + shimmer * 2.0, -0.8),
+                  end: Alignment(1.0 + shimmer * 2.0, 0.8),
+                  colors: const [
+                    Color(0xFF24262B),
+                    Color(0xFF1E5B4B),
+                    Color(0xFF2DD4BF),
+                    Color(0xFFD8BC90),
+                    Color(0xFF24262B),
+                  ],
+                  stops: const [0.0, 0.35, 0.55, 0.75, 1.0],
                 ),
-              ],
-            ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                // 3D Medallion Emblem
-                Container(
-                  width: widget.isCompact ? 16 : 18,
-                  height: widget.isCompact ? 16 : 18,
-                  decoration: const BoxDecoration(
-                    shape: BoxShape.circle,
-                    gradient: RadialGradient(
-                      colors: [
-                        Color(0xFFD7F078),
-                        Color(0xFF0F766E),
+                border: Border.all(
+                  color: FixoColors.limeAccent.withValues(alpha: 0.85),
+                  width: 1.2,
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: const Color(0xFF2DD4BF).withValues(alpha: 0.25),
+                    blurRadius: 10,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  // 3D Medallion Emblem
+                  Container(
+                    width: widget.isCompact ? 16 : 18,
+                    height: widget.isCompact ? 16 : 18,
+                    decoration: const BoxDecoration(
+                      shape: BoxShape.circle,
+                      gradient: RadialGradient(
+                        colors: [Color(0xFFD8BC90), Color(0xFF0F766E)],
+                      ),
+                    ),
+                    child: Icon(
+                      Icons.verified_rounded,
+                      size: widget.isCompact ? 12 : 14,
+                      color: FixoColors.deepestForest,
+                    ),
+                  ),
+                  const SizedBox(width: 5),
+                  Text(
+                    label,
+                    style: FixoTypography.labelMd(color: Colors.white).copyWith(
+                      fontWeight: FontWeight.w800,
+                      fontSize: widget.isCompact ? 10.5 : 12,
+                      letterSpacing: 0.2,
+                      shadows: [
+                        Shadow(
+                          color: Colors.black.withValues(alpha: 0.5),
+                          blurRadius: 4,
+                        ),
                       ],
                     ),
                   ),
-                  child: Icon(
-                    Icons.verified_rounded,
-                    size: widget.isCompact ? 12 : 14,
-                    color: FixoColors.deepestForest,
-                  ),
-                ),
-                const SizedBox(width: 5),
-                Text(
-                  label,
-                  style: FixoTypography.labelMd(
-                    color: Colors.white,
-                  ).copyWith(
-                    fontWeight: FontWeight.w800,
-                    fontSize: widget.isCompact ? 10.5 : 12,
-                    letterSpacing: 0.2,
-                    shadows: [
-                      Shadow(
-                        color: Colors.black.withValues(alpha: 0.5),
-                        blurRadius: 4,
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
+                ],
+              ),
             );
           },
         ),
@@ -150,4 +147,3 @@ class _FixoHolographicProBadgeState extends State<FixoHolographicProBadge>
     );
   }
 }
-

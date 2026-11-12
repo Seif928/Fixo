@@ -10,6 +10,8 @@ describe('Communications real HTTP validation and authentication', () => {
   let app: INestApplication;
   let url: string;
   const service = {
+    sendPhoto: jest.fn().mockResolvedValue({ id: 'photo1', hasAttachment: true }),
+    readPhoto: jest.fn().mockResolvedValue(Buffer.from('private-photo')),
     sendMessage: jest.fn().mockResolvedValue({ id: 'm1' }),
     listMessages: jest.fn().mockResolvedValue({ items: [], nextCursor: null }),
     notificationFeed: jest.fn().mockResolvedValue({ items: [], deliveryChannel: 'IN_APP' }),
@@ -33,6 +35,34 @@ describe('Communications real HTTP validation and authentication', () => {
   });
   afterAll(async () => { await app?.close(); });
   beforeEach(() => jest.clearAllMocks());
+
+  it('protects photo upload and download with the same session guard', async () => {
+    expect((await fetch(`${url}/api/v1/bookings/b1/messages/photo`, { method: 'POST' })).status).toBe(401);
+    expect((await fetch(`${url}/api/v1/bookings/b1/messages/m1/photo`)).status).toBe(401);
+    expect(service.sendPhoto).not.toHaveBeenCalled();
+    expect(service.readPhoto).not.toHaveBeenCalled();
+  });
+  it('bounds multipart photos and rejects extra ownership fields', async () => {
+    for (const oversized of [true, false]) {
+      const data = new FormData();
+      data.append('photo', new Blob([Buffer.alloc(oversized ? 2 * 1024 * 1024 + 1 : 10)], { type: 'image/png' }), 'photo.png');
+      if (!oversized) data.append('senderUserId', 'victim');
+      const response = await fetch(`${url}/api/v1/bookings/b1/messages/photo`, { method: 'POST', headers: { authorization: 'Bearer TEST-ONLY' }, body: data });
+      expect(response.status).toBe(oversized ? 413 : 400);
+    }
+    expect(service.sendPhoto).not.toHaveBeenCalled();
+  });
+  it('derives photo sender from the session and serves bytes without caching', async () => {
+    const data = new FormData();
+    data.append('photo', new Blob(['photo'], { type: 'image/png' }), 'photo.png');
+    expect((await fetch(`${url}/api/v1/bookings/b1/messages/photo`, { method: 'POST', headers: { authorization: 'Bearer TEST-ONLY' }, body: data })).status).toBe(201);
+    expect(service.sendPhoto).toHaveBeenCalledWith('authenticated-user', 'b1', expect.objectContaining({ mimetype: 'image/png' }));
+    const response = await fetch(`${url}/api/v1/bookings/b1/messages/m1/photo`, { headers: { authorization: 'Bearer TEST-ONLY' } });
+    expect(response.status).toBe(200);
+    expect(response.headers.get('cache-control')).toBe('private, no-store');
+    expect(response.headers.get('content-type')).toBe('image/webp');
+    expect(await response.text()).toBe('private-photo');
+  });
 
   it('protects push configuration and registration behind authentication', async () => {
     expect((await fetch(`${url}/api/v1/users/me/push-status`)).status).toBe(401);

@@ -5,11 +5,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:fixo_mobile/core/storage/secure_token_storage.dart';
 import 'package:fixo_mobile/core/theme/fixo_theme.dart';
-import 'package:fixo_mobile/core/widgets/fixo_brand_mark.dart';
 import 'package:fixo_mobile/features/auth/data/email_access_service.dart';
 import 'package:fixo_mobile/features/auth/domain/auth_models.dart';
 import 'package:fixo_mobile/features/auth/presentation/controllers/auth_controller.dart';
 import 'package:fixo_mobile/features/auth/presentation/pages/email_auth_page.dart';
+import 'package:fixo_mobile/features/auth/presentation/widgets/google_sign_in_button.dart';
 
 class UnverifiedEmailService extends EmailAccessService {
   UnverifiedEmailService() : super(Dio());
@@ -102,7 +102,17 @@ void main() {
           ),
         ),
       );
-      expect(find.byType(FixoGoogleMark), findsOneWidget);
+      expect(find.byType(GoogleSignInButton), findsOneWidget);
+      final gImage = tester.widget<Image>(
+        find.descendant(
+          of: find.byType(GoogleSignInButton),
+          matching: find.byType(Image),
+        ),
+      );
+      expect(
+        (gImage.image as AssetImage).assetName,
+        'assets/brand/google-g.png',
+      );
       await tester.tap(find.text('Create account'));
       await tester.pumpAndSettle();
 

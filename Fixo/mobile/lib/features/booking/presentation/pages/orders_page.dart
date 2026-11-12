@@ -183,13 +183,17 @@ class _OrdersPageState extends ConsumerState<OrdersPage> {
                   child: SegmentedButton<String>(
                     showSelectedIcon: false,
                     style: ButtonStyle(
-                      backgroundColor: WidgetStateProperty.resolveWith((states) {
+                      backgroundColor: WidgetStateProperty.resolveWith((
+                        states,
+                      ) {
                         if (states.contains(WidgetState.selected)) {
                           return palette.primaryBrand;
                         }
                         return palette.surfaceContainer;
                       }),
-                      foregroundColor: WidgetStateProperty.resolveWith((states) {
+                      foregroundColor: WidgetStateProperty.resolveWith((
+                        states,
+                      ) {
                         if (states.contains(WidgetState.selected)) {
                           return Colors.white;
                         }
@@ -274,11 +278,12 @@ class _OrdersPageState extends ConsumerState<OrdersPage> {
                                           ar
                                               ? 'تعذّر تحميل القائمة.'
                                               : 'Could not load the list.',
-                                          style: FixoTypography.bodyMd(
-                                            color: palette.inkText,
-                                          ).copyWith(
-                                            fontWeight: FontWeight.w600,
-                                          ),
+                                          style:
+                                              FixoTypography.bodyMd(
+                                                color: palette.inkText,
+                                              ).copyWith(
+                                                fontWeight: FontWeight.w600,
+                                              ),
                                           textAlign: TextAlign.center,
                                         ),
                                         const SizedBox(height: FixoSpacing.xs),
@@ -342,11 +347,12 @@ class _OrdersPageState extends ConsumerState<OrdersPage> {
                                                       ? 'لا توجد طلبات في هذه القائمة.'
                                                       : 'No bookings in this list.'),
                                             textAlign: TextAlign.center,
-                                            style: FixoTypography.labelLg(
-                                              color: palette.inkText,
-                                            ).copyWith(
-                                              fontWeight: FontWeight.w700,
-                                            ),
+                                            style:
+                                                FixoTypography.labelLg(
+                                                  color: palette.inkText,
+                                                ).copyWith(
+                                                  fontWeight: FontWeight.w700,
+                                                ),
                                           ),
                                           if (widget.showChats) ...[
                                             const SizedBox(
@@ -587,7 +593,7 @@ class _OrdersPageState extends ConsumerState<OrdersPage> {
                             const SizedBox(width: 5),
                             Flexible(
                               child: Text(
-                                DateFormat.yMMMd(ar ? 'ar' : 'en').format(date),
+                                '${DateFormat.yMMMd(ar ? 'ar' : 'en').format(date)}${booking.scheduledTime == null ? '' : ' • ${booking.scheduledTime}'}',
                                 style: FixoTypography.bodySm(
                                   color: palette.mutedText,
                                 ),
@@ -695,9 +701,7 @@ class _OrdersPageState extends ConsumerState<OrdersPage> {
                               ),
                             ),
                             icon: const Icon(Icons.star_rate_rounded, size: 16),
-                            label: Text(
-                              ar ? 'تقييم الخدمة' : 'Rate & Review',
-                            ),
+                            label: Text(ar ? 'تقييم الخدمة' : 'Rate & Review'),
                           ),
                           OutlinedButton.icon(
                             style: OutlinedButton.styleFrom(
@@ -760,7 +764,10 @@ class _OrdersPageState extends ConsumerState<OrdersPage> {
                               orderCode: booking.orderCode,
                               serviceTitle: text,
                             ),
-                            icon: const Icon(Icons.report_problem_outlined, size: 16),
+                            icon: const Icon(
+                              Icons.report_problem_outlined,
+                              size: 16,
+                            ),
                             label: Text(ar ? 'تقديم بلاغ' : 'Report issue'),
                           ),
                       ],
@@ -798,4 +805,3 @@ class _OrdersPageState extends ConsumerState<OrdersPage> {
     );
   }
 }
-

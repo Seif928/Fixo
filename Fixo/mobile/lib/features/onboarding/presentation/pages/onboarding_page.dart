@@ -33,6 +33,32 @@ class OnboardingPage extends ConsumerStatefulWidget {
 class _OnboardingPageState extends ConsumerState<OnboardingPage> {
   int _activeStepIndex = 0;
 
+  void _showBookingInfo({required bool pricing, required bool isArabic}) {
+    final title = pricing
+        ? (isArabic ? 'تفاصيل سعر الحجز' : 'How booking pricing works')
+        : (isArabic ? 'الدفع نقداً بعد الخدمة' : 'Cash on service');
+    final message = pricing
+        ? (isArabic
+              ? 'تظهر رسوم المعاينة والخدمة والانتقال والإجمالي بالجنيه المصري للخدمة المختارة قبل تأكيد الحجز. رسوم الانتقال تكون مجانية فقط عندما تكون قيمتها صفراً. اختار الخدمة والعنوان والموعد لعرض السعر الفعلي؛ هذه الشاشة لا تعرض عرض سعر.'
+              : 'Inspection, service and transport fees and the total are shown in EGP for your selected service before you confirm the booking. Transport is free only when its fee is zero. Choose your service, address and time to see actual pricing; this screen is not a quote.')
+        : (isArabic
+              ? 'لا يتم تحصيل أي مبلغ الآن عند اختيار الدفع النقدي. راجع إجمالي حجزك قبل التأكيد وادفع نقداً بعد إتمام الخدمة. إنشاء الحجز لا يعني أنه تم الدفع.'
+              : 'No payment is collected now when you choose cash on service. Review your booking total before confirming and pay cash after the service is completed. Creating a booking does not mark it as paid.');
+    showDialog<void>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: Text(title),
+        content: SingleChildScrollView(child: Text(message)),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(),
+            child: Text(isArabic ? 'إغلاق' : 'Close'),
+          ),
+        ],
+      ),
+    );
+  }
+
   static const List<_OnboardingStepData> _stepsEn = [
     _OnboardingStepData(
       stepTitle: 'Step 1 of 3: Connect Your Account',
@@ -333,55 +359,21 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage> {
                       ),
                       FixoTrustPillarChip(
                         icon: Icons.payments_outlined,
+                        onTap: () =>
+                            _showBookingInfo(pricing: true, isArabic: isArabic),
                         label: isArabic
                             ? 'تفاصيل السعر بالجنيه'
                             : 'EGP Price Breakdown',
-                        onTap: () => _showPillarDetails(
-                          context: context,
-                          isArabic: isArabic,
-                          icon: Icons.payments_outlined,
-                          title: isArabic
-                              ? 'تفاصيل السعر بالجنيه'
-                              : 'EGP Price Breakdown',
-                          summary: isArabic
-                              ? 'تسعير مسبق وواضح بالجنيه المصري قبل تأكيد الحجز.'
-                              : 'Transparent upfront EGP quote visible before confirming any booking.',
-                          points: isArabic
-                              ? const [
-                                  'عرض رسوم المعاينة وتكلفة الخدمة الأساسية بوضوح.',
-                                  'إجمالي الطلب بالجنيه المصري بدون مفاجآت.',
-                                ]
-                              : const [
-                                  'Inspection fee and base service fee itemized upfront in EGP.',
-                                  'Review your total booking cost before dispatch.',
-                                ],
-                        ),
                       ),
                       FixoTrustPillarChip(
                         icon: Icons.near_me_outlined,
+                        onTap: () => _showBookingInfo(
+                          pricing: false,
+                          isArabic: isArabic,
+                        ),
                         label: isArabic
                             ? 'الدفع بعد الخدمة'
                             : 'Cash After Service',
-                        onTap: () => _showPillarDetails(
-                          context: context,
-                          isArabic: isArabic,
-                          icon: Icons.near_me_outlined,
-                          title: isArabic
-                              ? 'الدفع بعد الخدمة'
-                              : 'Cash After Service',
-                          summary: isArabic
-                              ? 'ادفع نقداً بعد إتمام الخدمة، أو بالبطاقة البنكية أو Apple Pay.'
-                              : 'Pay cash after your service is completed, or pay securely via Card or Apple Pay.',
-                          points: isArabic
-                              ? const [
-                                  'خيار الدفع النقدي عند الانتهاء متاح في القاهرة والجيزة.',
-                                  'دعم بطاقات Visa / Mastercard و Apple Pay في صفحة الدفع.',
-                                ]
-                              : const [
-                                  'Cash After Service is available across Cairo & Giza.',
-                                  'Visa / Mastercard and Apple Pay supported cleanly at checkout.',
-                                ],
-                        ),
                       ),
                     ],
                   ),

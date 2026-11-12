@@ -1,6 +1,7 @@
 import 'dart:ui';
 import 'package:material_ui/material_ui.dart';
 import '../theme/fixo_spacing.dart';
+import '../motion/fixo_motion.dart';
 
 /// Apple-style Liquid Glass Layer (VisionOS & iOS 18 fluid frosted glass).
 ///
@@ -42,7 +43,10 @@ class LiquidGlassLayer extends StatefulWidget {
 }
 
 class _LiquidGlassLayerState extends State<LiquidGlassLayer> {
-  Offset _pointerNorm = const Offset(-0.35, -0.65); // Default top-left light source
+  Offset _pointerNorm = const Offset(
+    -0.35,
+    -0.65,
+  ); // Default top-left light source
 
   void _onPointerMove(Offset localPos) {
     if (!widget.enableInteractiveCaustics) return;
@@ -69,8 +73,12 @@ class _LiquidGlassLayerState extends State<LiquidGlassLayer> {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final isTest =
-        WidgetsBinding.instance.runtimeType.toString().contains('Test');
+    final interactive =
+        widget.enableInteractiveCaustics &&
+        FixoMotion.expensiveEffects(context);
+    final isTest = WidgetsBinding.instance.runtimeType.toString().contains(
+      'Test',
+    );
 
     // Apple VisionOS Reflective Glass substrate tint:
     // Light: crystalline milky frosted white with 74% opacity.
@@ -83,10 +91,14 @@ class _LiquidGlassLayerState extends State<LiquidGlassLayer> {
         : const Color(0xFFFCFBFA).withValues(alpha: opacity);
 
     final rimTopColor = isDark
-        ? Colors.white.withValues(alpha: (0.42 * widget.specularIntensity + 0.16).clamp(0.0, 1.0))
-        : Colors.white.withValues(alpha: (0.82 * widget.specularIntensity + 0.22).clamp(0.0, 1.0));
+        ? Colors.white.withValues(
+            alpha: (0.42 * widget.specularIntensity + 0.16).clamp(0.0, 1.0),
+          )
+        : Colors.white.withValues(
+            alpha: (0.82 * widget.specularIntensity + 0.22).clamp(0.0, 1.0),
+          );
     final rimBottomColor = isDark
-        ? const Color(0xFFD7F078).withValues(alpha: 0.10)
+        ? const Color(0xFFD8BC90).withValues(alpha: 0.10)
         : Colors.black.withValues(alpha: 0.07);
 
     final Widget paintedBody = CustomPaint(
@@ -108,12 +120,19 @@ class _LiquidGlassLayerState extends State<LiquidGlassLayer> {
             end: Alignment(_pointerNorm.dx, _pointerNorm.dy),
             colors: isDark
                 ? [
-                    Colors.white.withValues(alpha: (0.14 * widget.specularIntensity).clamp(0.0, 1.0)),
+                    Colors.white.withValues(
+                      alpha: (0.14 * widget.specularIntensity).clamp(0.0, 1.0),
+                    ),
                     Colors.white.withValues(alpha: 0.03),
                     const Color(0xFF080D0B).withValues(alpha: 0.55),
                   ]
                 : [
-                    Colors.white.withValues(alpha: (0.78 * widget.specularIntensity + 0.15).clamp(0.0, 1.0)),
+                    Colors.white.withValues(
+                      alpha: (0.78 * widget.specularIntensity + 0.15).clamp(
+                        0.0,
+                        1.0,
+                      ),
+                    ),
                     Colors.white.withValues(alpha: 0.38),
                     const Color(0xFFEBE8DF).withValues(alpha: 0.22),
                   ],
@@ -122,9 +141,9 @@ class _LiquidGlassLayerState extends State<LiquidGlassLayer> {
         ),
         child: Stack(
           children: [
-            widget.child,
+            RepaintBoundary(child: widget.child),
             // Liquid Caustic Specular Glare Overlay
-            if (widget.enableInteractiveCaustics && !isTest)
+            if (interactive && !isTest)
               Positioned.fill(
                 child: IgnorePointer(
                   child: ClipRRect(
@@ -136,7 +155,10 @@ class _LiquidGlassLayerState extends State<LiquidGlassLayer> {
                           radius: 1.3,
                           colors: [
                             Colors.white.withValues(
-                              alpha: ((isDark ? 0.18 : 0.28) * widget.specularIntensity).clamp(0.0, 1.0),
+                              alpha:
+                                  ((isDark ? 0.18 : 0.28) *
+                                          widget.specularIntensity)
+                                      .clamp(0.0, 1.0),
                             ),
                             Colors.white.withValues(alpha: 0.0),
                           ],
@@ -161,7 +183,7 @@ class _LiquidGlassLayerState extends State<LiquidGlassLayer> {
           BoxShadow(
             color: isDark
                 ? Colors.black.withValues(alpha: 0.65)
-                : const Color(0xFF173F35).withValues(alpha: 0.08),
+                : const Color(0xFF24262B).withValues(alpha: 0.08),
             blurRadius: 30,
             offset: const Offset(0, 12),
             spreadRadius: -4,
@@ -170,7 +192,7 @@ class _LiquidGlassLayerState extends State<LiquidGlassLayer> {
           BoxShadow(
             color: isDark
                 ? Colors.black.withValues(alpha: 0.45)
-                : const Color(0xFF173F35).withValues(alpha: 0.04),
+                : const Color(0xFF24262B).withValues(alpha: 0.04),
             blurRadius: 10,
             offset: const Offset(0, 3),
           ),
@@ -180,6 +202,7 @@ class _LiquidGlassLayerState extends State<LiquidGlassLayer> {
         borderRadius: widget.borderRadius,
         child: widget.enableBlur
             ? BackdropFilter(
+                enabled: FixoMotion.expensiveEffects(context),
                 filter: ImageFilter.blur(
                   sigmaX: isTest ? 0.1 : widget.blurSigma,
                   sigmaY: isTest ? 0.1 : widget.blurSigma,
@@ -190,7 +213,7 @@ class _LiquidGlassLayerState extends State<LiquidGlassLayer> {
       ),
     );
 
-    if (!widget.enableInteractiveCaustics || isTest) {
+    if (!interactive || isTest) {
       return glassContainer;
     }
 

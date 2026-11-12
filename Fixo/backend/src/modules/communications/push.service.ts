@@ -29,7 +29,9 @@ export class PushSender {
     const results = await Promise.all(tokens.map(async token => {
       const response = await fetch(`https://fcm.googleapis.com/v1/projects/${credentials.project_id}/messages:send`, {
         method: 'POST', headers: { Authorization: `Bearer ${access.access_token}`, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ message: { token, ...payload } }), signal: AbortSignal.timeout(8000),
+        // FIDs are canonical 22-character identifiers; older registration tokens stay supported.
+        // Firebase's own VALID_FID_PATTERN is /^[cdef][\w-]{21}$/.
+        body: JSON.stringify({ message: { ...(/^[cdef][\w-]{21}$/.test(token) ? { fid: token } : { token }), ...payload } }), signal: AbortSignal.timeout(8000),
       });
       if (response.ok) return { accepted: true, invalid: null };
       const error = await response.json() as { error?: { details?: { errorCode?: string }[] } };

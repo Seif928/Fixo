@@ -63,9 +63,8 @@ class CheckoutController extends StateNotifier<CheckoutState> {
       // Check if this booking is already checked out (idempotent reopening)
       final isAlreadyCheckedOut =
           booking.status == 'PENDING_DISPATCH' &&
-          booking.payment != null &&
-          (booking.payment?.status == 'PENDING' ||
-              booking.payment?.status == 'PAID');
+          booking.payment?.method == 'CASH_ON_SERVICE' &&
+          booking.payment?.status == 'PENDING';
 
       state = state.copyWith(
         isLoading: false,
@@ -90,10 +89,13 @@ class CheckoutController extends StateNotifier<CheckoutState> {
     }
   }
 
-  /// Selects an active payment method (`CASH_ON_SERVICE`, `SMART_WALLET_SANDBOX` for Apple Pay,
-  /// or `CARD_MEEZA_SANDBOX` for Visa / Mastercard Credit Card).
+  /// Only verified cash-on-service checkout is available.
   void selectPaymentMethod(String method) {
-    if (state.isSubmitting || state.checkoutSuccess) return;
+    if (state.isSubmitting ||
+        state.checkoutSuccess ||
+        method != 'CASH_ON_SERVICE') {
+      return;
+    }
     state = state.copyWith(selectedPaymentMethod: method, errorMessage: null);
   }
 
@@ -106,6 +108,7 @@ class CheckoutController extends StateNotifier<CheckoutState> {
     }
 
     final methodToSubmit = overrideMethod ?? state.selectedPaymentMethod;
+    if (methodToSubmit != 'CASH_ON_SERVICE') return false;
     state = state.copyWith(
       isSubmitting: true,
       selectedPaymentMethod: methodToSubmit,
@@ -122,9 +125,8 @@ class CheckoutController extends StateNotifier<CheckoutState> {
       // Status must be PENDING_DISPATCH and payment record must exist.
       final isConfirmed =
           updatedBooking.status == 'PENDING_DISPATCH' &&
-          updatedBooking.payment != null &&
-          (updatedBooking.payment?.status == 'PENDING' ||
-              updatedBooking.payment?.status == 'PAID');
+          updatedBooking.payment?.method == 'CASH_ON_SERVICE' &&
+          updatedBooking.payment?.status == 'PENDING';
 
       if (isConfirmed) {
         state = state.copyWith(

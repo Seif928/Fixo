@@ -1,3 +1,4 @@
+import { cairoBookingTime } from "./cairo-booking-time";
 import {
   BadRequestException,
   ConflictException,
@@ -5,7 +6,7 @@ import {
   Injectable,
   NotFoundException,
   Optional,
-} from '@nestjs/common';
+} from "@nestjs/common";
 import {
   BookingStatus,
   JobOfferStatus,
@@ -13,10 +14,10 @@ import {
   PaymentStatus,
   Prisma,
   ProVerificationStatus,
-} from '@prisma/client';
-import { PrismaService } from '../../prisma/prisma.service';
-import { PushService } from '../communications/push.service';
-import { BookingQueryDto } from './dto/booking-query.dto';
+} from "@prisma/client";
+import { PrismaService } from "../../prisma/prisma.service";
+import { PushService } from "../communications/push.service";
+import { BookingQueryDto } from "./dto/booking-query.dto";
 import {
   BookingDetailResponse,
   BookingListResponse,
@@ -25,19 +26,19 @@ import {
   BookingReviewSummary,
   BookingTrackingMilestone,
   BookingTrackingResponse,
-} from './dto/booking-response.dto';
-import { CancelBookingDto } from './dto/cancel-booking.dto';
-import { CheckoutBookingDto } from './dto/checkout-booking.dto';
-import { CreateBookingDto } from './dto/create-booking.dto';
-import { CreateReviewDto } from './dto/create-review.dto';
-import { professionalCoverageWhere } from '../services/coverage-policy';
-import { ensureDispatchOffer } from '../pro/dispatch-offers';
-import { PrivateUploadDto } from './dto/private-upload.dto';
+} from "./dto/booking-response.dto";
+import { CancelBookingDto } from "./dto/cancel-booking.dto";
+import { CheckoutBookingDto } from "./dto/checkout-booking.dto";
+import { CreateBookingDto } from "./dto/create-booking.dto";
+import { CreateReviewDto } from "./dto/create-review.dto";
+import { professionalCoverageWhere } from "../services/coverage-policy";
+import { ensureDispatchOffer } from "../pro/dispatch-offers";
+import { PrivateUploadDto } from "./dto/private-upload.dto";
 import {
   signPrivateUploadAccessToken,
   validatePrivateUploadPayload,
   verifyPrivateUploadAccessToken,
-} from './private-upload.util';
+} from "./private-upload.util";
 
 const ACTIVE_BOOKING_STATUSES: BookingStatus[] = [
   BookingStatus.DRAFT,
@@ -56,7 +57,7 @@ const CANCELLABLE_BOOKING_STATUSES: BookingStatus[] = [
   BookingStatus.CONFIRMED,
 ];
 
-export const INTERNAL_FAILED_PIN_EVENT_NOTE = 'ARRIVAL_PIN_FAILED_ATTEMPT';
+export const INTERNAL_FAILED_PIN_EVENT_NOTE = "ARRIVAL_PIN_FAILED_ATTEMPT";
 
 @Injectable()
 export class BookingsService {
@@ -96,7 +97,7 @@ export class BookingsService {
     payment: true,
     review: true,
     statusEvents: {
-      orderBy: { createdAt: 'asc' as const },
+      orderBy: { createdAt: "asc" as const },
     },
   };
 
@@ -111,15 +112,20 @@ export class BookingsService {
     dto: CreateBookingDto,
   ): Promise<BookingDetailResponse> {
     // 1. Validate scheduledDate format and ensure it is not in the past
-    const parsedDate = new Date(dto.scheduledDate);
+    const parsedDate = dto.scheduledTime
+      ? cairoBookingTime(dto.scheduledDate, dto.scheduledTime)
+      : new Date(dto.scheduledDate);
+    if (dto.scheduledTime && parsedDate.getTime() <= Date.now()) {
+      throw new BadRequestException("Appointment time must be in the future.");
+    }
     if (Number.isNaN(parsedDate.getTime())) {
-      throw new BadRequestException('Invalid scheduledDate format.');
+      throw new BadRequestException("Invalid scheduledDate format.");
     }
 
     const todayStart = new Date();
     todayStart.setUTCHours(0, 0, 0, 0);
     if (parsedDate < todayStart) {
-      throw new BadRequestException('Scheduled date cannot be in the past.');
+      throw new BadRequestException("Scheduled date cannot be in the past.");
     }
 
     // 2. Verify CustomerAddress exists and belongs to the authenticated customer
@@ -135,7 +141,7 @@ export class BookingsService {
     }
 
     if (address.userId !== customerId) {
-      throw new ForbiddenException('You do not own this address.');
+      throw new ForbiddenException("You do not own this address.");
     }
 
     // 3. Verify ServiceOffering exists and its category is active
@@ -152,13 +158,13 @@ export class BookingsService {
 
     if (offering.isActive === false) {
       throw new BadRequestException(
-        'Selected service offering is not currently active.',
+        "Selected service offering is not currently active.",
       );
     }
 
     if (!offering.category.isActive) {
       throw new BadRequestException(
-        'Selected service offering category is not currently active.',
+        "Selected service offering category is not currently active.",
       );
     }
 
@@ -176,7 +182,7 @@ export class BookingsService {
 
       if (pro.verificationStatus !== ProVerificationStatus.APPROVED) {
         throw new BadRequestException(
-          'Preferred professional is not verified and available for bookings.',
+          "Preferred professional is not verified and available for bookings.",
         );
       }
     }
@@ -206,6 +212,7 @@ export class BookingsService {
           addressId: address.id,
           status: BookingStatus.DRAFT,
           scheduledDate: parsedDate,
+          scheduledTime: dto.scheduledTime ?? null,
           timeWindow: dto.timeWindow,
           issueDescription: dto.issueDescription?.trim() || null,
           issuePhotoUrls: dto.issuePhotoUrls ?? [],
@@ -221,7 +228,7 @@ export class BookingsService {
               fromStatus: null,
               toStatus: BookingStatus.DRAFT,
               actorUserId: customerId,
-              note: 'Customer created booking draft',
+              note: "Customer created booking draft",
             },
           },
         },
@@ -251,11 +258,11 @@ export class BookingsService {
 
     if (query.status) {
       where.status = query.status;
-    } else if (query.tab === 'active') {
+    } else if (query.tab === "active") {
       where.status = { in: ACTIVE_BOOKING_STATUSES };
-    } else if (query.tab === 'completed') {
+    } else if (query.tab === "completed") {
       where.status = BookingStatus.COMPLETED;
-    } else if (query.tab === 'cancelled') {
+    } else if (query.tab === "cancelled") {
       where.status = BookingStatus.CANCELLED;
     }
 
@@ -263,7 +270,7 @@ export class BookingsService {
       this.prisma.booking.findMany({
         where,
         include: this.bookingInclude,
-        orderBy: { createdAt: 'desc' },
+        orderBy: { createdAt: "desc" },
         take: limit,
         skip: offset,
       }),
@@ -271,9 +278,7 @@ export class BookingsService {
     ]);
 
     return {
-      bookings: bookings.map((b) =>
-        this.mapBookingDetail(b, customerId),
-      ),
+      bookings: bookings.map((b) => this.mapBookingDetail(b, customerId)),
       total,
       limit,
       offset,
@@ -302,7 +307,7 @@ export class BookingsService {
 
     const isAssignedPro = booking.proProfile?.user?.id === userId;
     if (booking.customerId !== userId && !isAssignedPro) {
-      throw new ForbiddenException('You do not have access to this booking.');
+      throw new ForbiddenException("You do not have access to this booking.");
     }
 
     return this.mapBookingDetail(booking, userId);
@@ -325,15 +330,10 @@ export class BookingsService {
     bookingId: string,
     dto: CheckoutBookingDto,
   ): Promise<BookingDetailResponse> {
-    // 1. Enforce supported checkout methods: Cash on Service, Apple Pay (SMART_WALLET_SANDBOX), and Visa/Mastercard (CARD_MEEZA_SANDBOX)
-    const supportedMethods: PaymentMethodType[] = [
-      PaymentMethodType.CASH_ON_SERVICE,
-      PaymentMethodType.CARD_MEEZA_SANDBOX,
-      PaymentMethodType.SMART_WALLET_SANDBOX,
-    ];
-    if (!supportedMethods.includes(dto.paymentMethod)) {
+    // No electronic method is authorized until a real provider verifies payment.
+    if (dto.paymentMethod !== PaymentMethodType.CASH_ON_SERVICE) {
       throw new BadRequestException(
-        `Payment method "${dto.paymentMethod}" is not supported yet. Supported methods: CASH_ON_SERVICE, CARD_MEEZA_SANDBOX, SMART_WALLET_SANDBOX.`,
+        "Payment method not supported yet. Only CASH_ON_SERVICE is enabled.",
       );
     }
 
@@ -350,14 +350,14 @@ export class BookingsService {
     }
 
     if (initialBooking.customerId !== userId) {
-      throw new ForbiddenException('You do not have access to this booking.');
+      throw new ForbiddenException("You do not have access to this booking.");
     }
 
     // Fast-path idempotent check if already checked out
     if (
       initialBooking.status === BookingStatus.PENDING_DISPATCH &&
       initialBooking.payment &&
-      supportedMethods.includes(initialBooking.payment.method)
+      initialBooking.payment.method === PaymentMethodType.CASH_ON_SERVICE
     ) {
       return this.mapBookingDetail(initialBooking, userId);
     }
@@ -367,10 +367,6 @@ export class BookingsService {
         `Booking cannot be checked out from current status "${initialBooking.status}". Only bookings in DRAFT status can be checked out.`,
       );
     }
-
-    const isInstantDigital =
-      dto.paymentMethod === PaymentMethodType.CARD_MEEZA_SANDBOX ||
-      dto.paymentMethod === PaymentMethodType.SMART_WALLET_SANDBOX;
 
     // 3. Execute atomic transaction with row lock for concurrent retry safety
     await this.prisma.$transaction(async (tx) => {
@@ -399,7 +395,7 @@ export class BookingsService {
       if (
         lockedBooking.status === BookingStatus.PENDING_DISPATCH &&
         lockedBooking.payment &&
-        supportedMethods.includes(lockedBooking.payment.method)
+        lockedBooking.payment.method === PaymentMethodType.CASH_ON_SERVICE
       ) {
         return;
       }
@@ -422,16 +418,12 @@ export class BookingsService {
       await tx.paymentRecord.create({
         data: {
           bookingId: lockedBooking.id,
-          method: dto.paymentMethod,
-          status: isInstantDigital ? PaymentStatus.PAID : PaymentStatus.PENDING,
+          method: PaymentMethodType.CASH_ON_SERVICE,
+          status: PaymentStatus.PENDING,
           amountEgp: lockedBooking.totalEgp,
           tipEgp: 0,
-          externalReference: isInstantDigital
-              ? dto.paymentMethod === PaymentMethodType.SMART_WALLET_SANDBOX
-                ? 'APPLE-PAY-VERIFIED'
-                : 'VISA-MC-3DS-VERIFIED'
-              : null,
-          paidAt: isInstantDigital ? new Date() : null,
+          externalReference: null,
+          paidAt: null,
         },
       });
 
@@ -442,11 +434,7 @@ export class BookingsService {
           fromStatus: BookingStatus.DRAFT,
           toStatus: BookingStatus.PENDING_DISPATCH,
           actorUserId: userId,
-          note: isInstantDigital
-              ? dto.paymentMethod === PaymentMethodType.SMART_WALLET_SANDBOX
-                ? 'Customer confirmed Apple Pay checkout'
-                : 'Customer confirmed Visa/Mastercard checkout'
-              : 'Customer confirmed Cash on Service checkout',
+          note: "Customer confirmed Cash on Service checkout",
         },
       });
     });
@@ -482,7 +470,7 @@ export class BookingsService {
 
     const isAssignedPro = booking.proProfile?.user?.id === userId;
     if (booking.customerId !== userId && !isAssignedPro) {
-      throw new ForbiddenException('You do not have access to this booking.');
+      throw new ForbiddenException("You do not have access to this booking.");
     }
 
     const mappedBooking = this.mapBookingDetail(booking, userId);
@@ -505,9 +493,9 @@ export class BookingsService {
       canChat,
       canReview,
       trackingAccuracyNoteEn:
-        'Map displays your saved service address. Status milestones update as your assigned professional confirms each step.',
+        "Map displays your saved service address. Status milestones update as your assigned professional confirms each step.",
       trackingAccuracyNoteAr:
-        'تعرض الخريطة عنوان الخدمة المحفوظ. تتحدث مراحل الطلب فور تأكيد الفني المختص لكل خطوة.',
+        "تعرض الخريطة عنوان الخدمة المحفوظ. تتحدث مراحل الطلب فور تأكيد الفني المختص لكل خطوة.",
     };
   }
 
@@ -532,7 +520,7 @@ export class BookingsService {
 
     if (existing.customerId !== userId) {
       throw new ForbiddenException(
-        'You do not have access to cancel this booking.',
+        "You do not have access to cancel this booking.",
       );
     }
 
@@ -547,7 +535,7 @@ export class BookingsService {
     }
 
     const reason =
-      dto.reason?.trim() || 'Cancelled by customer prior to service start';
+      dto.reason?.trim() || "Cancelled by customer prior to service start";
 
     await this.prisma.$transaction(async (tx) => {
       if (this.prisma.isDatabaseConnected()) {
@@ -649,7 +637,7 @@ export class BookingsService {
     const isAssignedPro = booking.proProfile?.user?.id === userId;
     if (booking.customerId !== userId && !isAssignedPro) {
       throw new ForbiddenException(
-        'You do not have access to this booking receipt.',
+        "You do not have access to this booking receipt.",
       );
     }
 
@@ -657,13 +645,13 @@ export class BookingsService {
 
     const lineItems: BookingReceiptLineItem[] = [
       {
-        key: 'BASE_INSPECTION',
-        labelEn: 'Base Inspection & Assessment',
-        labelAr: 'فحص ومعاينة أساسية',
+        key: "BASE_INSPECTION",
+        labelEn: "Base Inspection & Assessment",
+        labelAr: "فحص ومعاينة أساسية",
         amountEgp: booking.baseInspectionEgp,
       },
       {
-        key: 'SERVICE_FEE',
+        key: "SERVICE_FEE",
         labelEn: booking.offering.titleEn,
         labelAr: booking.offering.titleAr,
         amountEgp:
@@ -675,18 +663,18 @@ export class BookingsService {
 
     if (booking.transportFeeEgp > 0) {
       lineItems.push({
-        key: 'TRANSPORT_FEE',
-        labelEn: 'Transport & Dispatch Fee',
-        labelAr: 'رسوم الانتقال',
+        key: "TRANSPORT_FEE",
+        labelEn: "Transport & Dispatch Fee",
+        labelAr: "رسوم الانتقال",
         amountEgp: booking.transportFeeEgp,
       });
     }
 
     if (tipEgp > 0) {
       lineItems.push({
-        key: 'ARTISAN_TIP',
-        labelEn: 'Artisan Appreciation Tip (100% to Pro)',
-        labelAr: 'إكرامية الفني (١٠٠٪ للفني)',
+        key: "ARTISAN_TIP",
+        labelEn: "Artisan Appreciation Tip (100% to Pro)",
+        labelAr: "إكرامية الفني (١٠٠٪ للفني)",
         amountEgp: tipEgp,
       });
     }
@@ -703,17 +691,24 @@ export class BookingsService {
         issuedAtDate instanceof Date
           ? issuedAtDate.toISOString()
           : String(issuedAtDate),
-      scheduledDate:
-        booking.scheduledDate instanceof Date
+      scheduledDate: booking.scheduledTime
+        ? new Intl.DateTimeFormat("sv-SE", {
+            timeZone: "Africa/Cairo",
+            year: "numeric",
+            month: "2-digit",
+            day: "2-digit",
+          }).format(new Date(booking.scheduledDate))
+        : booking.scheduledDate instanceof Date
           ? booking.scheduledDate.toISOString()
           : String(booking.scheduledDate),
+      scheduledTime: booking.scheduledTime ?? null,
       timeWindow: booking.timeWindow,
       completedAt: booking.completedAt
         ? booking.completedAt instanceof Date
           ? booking.completedAt.toISOString()
           : String(booking.completedAt)
         : null,
-      customerName: booking.customer?.fullName || 'FIXO Customer',
+      customerName: booking.customer?.fullName || "FIXO Customer",
       serviceTitleEn: booking.offering.titleEn,
       serviceTitleAr: booking.offering.titleAr,
       categoryNameEn: booking.offering.category.nameEn,
@@ -727,7 +722,7 @@ export class BookingsService {
       grandTotalEgp: booking.totalEgp + tipEgp,
       platformFeeEgp: booking.platformFeeEgp,
       netArtisanEgp: booking.netArtisanEgp + tipEgp,
-      currency: 'EGP',
+      currency: "EGP",
       paymentMethod:
         booking.payment?.method ?? PaymentMethodType.CASH_ON_SERVICE,
       paymentStatus: booking.payment?.status ?? PaymentStatus.PENDING,
@@ -763,7 +758,7 @@ export class BookingsService {
     const isAssignedPro = booking.proProfile?.userId === userId;
     if (booking.customerId !== userId && !isAssignedPro) {
       throw new ForbiddenException(
-        'You do not have access to this booking review.',
+        "You do not have access to this booking review.",
       );
     }
 
@@ -802,7 +797,7 @@ export class BookingsService {
 
     if (initialBooking.customerId !== customerId) {
       throw new ForbiddenException(
-        'Only the customer who placed this booking can submit a review.',
+        "Only the customer who placed this booking can submit a review.",
       );
     }
 
@@ -814,13 +809,13 @@ export class BookingsService {
 
     if (!initialBooking.proProfileId) {
       throw new BadRequestException(
-        'Cannot submit a review for a booking without an assigned professional.',
+        "Cannot submit a review for a booking without an assigned professional.",
       );
     }
 
     if (initialBooking.review) {
       throw new ConflictException(
-        'A review has already been submitted for this booking.',
+        "A review has already been submitted for this booking.",
       );
     }
 
@@ -842,7 +837,7 @@ export class BookingsService {
       });
       if (!lockedBooking || lockedBooking.customerId !== customerId) {
         throw new ForbiddenException(
-          'Only the booking customer can submit this review.',
+          "Only the booking customer can submit this review.",
         );
       }
       if (
@@ -850,7 +845,7 @@ export class BookingsService {
         !lockedBooking.proProfileId
       ) {
         throw new BadRequestException(
-          'A completed booking with an assigned professional is required.',
+          "A completed booking with an assigned professional is required.",
         );
       }
       const proProfileId = lockedBooking.proProfileId;
@@ -864,7 +859,7 @@ export class BookingsService {
 
       if (existingReview) {
         throw new ConflictException(
-          'A review has already been submitted for this booking.',
+          "A review has already been submitted for this booking.",
         );
       }
 
@@ -948,7 +943,7 @@ export class BookingsService {
         booking.customerId === userId || booking.proProfile?.userId === userId;
       if (!isParticipant) {
         throw new ForbiddenException(
-          'You are not authorized to upload media for this booking.',
+          "You are not authorized to upload media for this booking.",
         );
       }
     }
@@ -987,7 +982,7 @@ export class BookingsService {
     const claims = verifyPrivateUploadAccessToken(token);
     if (claims.ownerUserId !== userId) {
       throw new ForbiddenException(
-        'You do not have permission to access this private upload.',
+        "You do not have permission to access this private upload.",
       );
     }
     return claims;
@@ -1032,7 +1027,7 @@ export class BookingsService {
           ...eligibility,
           ...(preferred ? { id: { not: preferred.id } } : {}),
         },
-        orderBy: { id: 'asc' },
+        orderBy: { id: "asc" },
         take: preferred ? 4 : 5,
       });
       if (preferred) eligiblePros.unshift(preferred);
@@ -1086,46 +1081,46 @@ export class BookingsService {
 
     const resolveState = (
       stepIndex: number,
-    ): 'COMPLETED' | 'CURRENT' | 'UPCOMING' | 'CANCELLED' => {
+    ): "COMPLETED" | "CURRENT" | "UPCOMING" | "CANCELLED" => {
       if (isCancelled) {
-        return stepIndex === 0 ? 'CANCELLED' : 'UPCOMING';
+        return stepIndex === 0 ? "CANCELLED" : "UPCOMING";
       }
       if (booking.status === BookingStatus.COMPLETED) {
-        return 'COMPLETED';
+        return "COMPLETED";
       }
       if (stepIndex < currentRank) {
-        return 'COMPLETED';
+        return "COMPLETED";
       }
       if (stepIndex === currentRank) {
-        return 'CURRENT';
+        return "CURRENT";
       }
-      return 'UPCOMING';
+      return "UPCOMING";
     };
 
-    const proNameEn = booking.proProfile?.user?.fullName || 'Verified FIXO Pro';
-    const proNameAr = booking.proProfile?.user?.fullName || 'فني فيكسو المعتمد';
+    const proNameEn = booking.proProfile?.user?.fullName || "Verified FIXO Pro";
+    const proNameAr = booking.proProfile?.user?.fullName || "فني فيكسو المعتمد";
 
     return [
       {
-        key: 'ORDER_PLACED',
-        titleEn: 'Order Confirmed',
-        titleAr: 'تم تأكيد الطلب',
+        key: "ORDER_PLACED",
+        titleEn: "Order Confirmed",
+        titleAr: "تم تأكيد الطلب",
         subtitleEn:
           booking.status === BookingStatus.DRAFT
-            ? 'Draft created — awaiting checkout confirmation'
-            : 'Service request registered for dispatch',
+            ? "Draft created — awaiting checkout confirmation"
+            : "Service request registered for dispatch",
         subtitleAr:
           booking.status === BookingStatus.DRAFT
-            ? 'تم إنشاء المسودة — بانتظار تأكيد الدفع'
-            : 'تم تسجيل طلب الخدمة وجارٍ التوجيه للفنيين',
+            ? "تم إنشاء المسودة — بانتظار تأكيد الدفع"
+            : "تم تسجيل طلب الخدمة وجارٍ التوجيه للفنيين",
         state:
           booking.status === BookingStatus.CONFIRMED ||
           currentRank > 0 ||
           booking.status === BookingStatus.COMPLETED
-            ? 'COMPLETED'
+            ? "COMPLETED"
             : isCancelled
-              ? 'CANCELLED'
-              : 'CURRENT',
+              ? "CANCELLED"
+              : "CURRENT",
         timestamp:
           findTimestamp(
             BookingStatus.PENDING_DISPATCH,
@@ -1134,74 +1129,74 @@ export class BookingsService {
           ) ?? booking.createdAt,
       },
       {
-        key: 'PRO_ASSIGNED',
+        key: "PRO_ASSIGNED",
         titleEn: booking.proProfile
           ? `Pro Assigned (${proNameEn})`
-          : 'Awaiting Pro Assignment',
+          : "Awaiting Pro Assignment",
         titleAr: booking.proProfile
           ? `تم تعيين الفني (${proNameAr})`
-          : 'بانتظار قبول أحد الفنيين',
+          : "بانتظار قبول أحد الفنيين",
         subtitleEn: booking.proProfile
           ? `Dossier ${booking.proProfile.dossierCode} confirmed your booking`
-          : 'Matching with available verified professionals in your zone',
+          : "Matching with available verified professionals in your zone",
         subtitleAr: booking.proProfile
           ? `الفني (${booking.proProfile.dossierCode}) قام بتأكيد استلام طلبك`
-          : 'جارٍ مطابقة الطلب مع الفنيين المعتمدين المتاحين في منطقتك',
+          : "جارٍ مطابقة الطلب مع الفنيين المعتمدين المتاحين في منطقتك",
         state: resolveState(1),
         timestamp: findTimestamp(BookingStatus.CONFIRMED),
       },
       {
-        key: 'PRO_EN_ROUTE',
-        titleEn: 'Pro En Route',
-        titleAr: 'الفني في الطريق إليك',
+        key: "PRO_EN_ROUTE",
+        titleEn: "Pro En Route",
+        titleAr: "الفني في الطريق إليك",
         subtitleEn:
           currentRank >= 2
-            ? 'Professional has departed toward your saved address'
-            : 'Starts once the professional departs for your location',
+            ? "Professional has departed toward your saved address"
+            : "Starts once the professional departs for your location",
         subtitleAr:
           currentRank >= 2
-            ? 'انطلق الفني باتجاه عنوانك المحفوظ'
-            : 'تبدأ عند تحرك الفني نحو موقعك',
+            ? "انطلق الفني باتجاه عنوانك المحفوظ"
+            : "تبدأ عند تحرك الفني نحو موقعك",
         state: resolveState(2),
         timestamp: findTimestamp(BookingStatus.PRO_EN_ROUTE),
       },
       {
-        key: 'ARRIVED_AT_LOCATION',
-        titleEn: 'Arrived at Location',
-        titleAr: 'وصل الفني إلى الموقع',
+        key: "ARRIVED_AT_LOCATION",
+        titleEn: "Arrived at Location",
+        titleAr: "وصل الفني إلى الموقع",
         subtitleEn:
           currentRank >= 3
-            ? 'Professional arrived — share your 4-digit Arrival Code to start'
-            : 'Share your 4-digit Arrival Code when the professional arrives',
+            ? "Professional arrived — share your 4-digit Arrival Code to start"
+            : "Share your 4-digit Arrival Code when the professional arrives",
         subtitleAr:
           currentRank >= 3
-            ? 'وصل الفني — شارك كود الوصول المكون من ٤ أرقام لبدء العمل'
-            : 'شارك كود الوصول المكون من ٤ أرقام عند وصول الفني',
+            ? "وصل الفني — شارك كود الوصول المكون من ٤ أرقام لبدء العمل"
+            : "شارك كود الوصول المكون من ٤ أرقام عند وصول الفني",
         state: resolveState(3),
         timestamp: findTimestamp(BookingStatus.ARRIVED),
       },
       {
-        key: 'IN_PROGRESS_AND_COMPLETION',
+        key: "IN_PROGRESS_AND_COMPLETION",
         titleEn:
           booking.status === BookingStatus.COMPLETED
-            ? 'Service Completed'
-            : 'In Progress & Completion',
+            ? "Service Completed"
+            : "In Progress & Completion",
         titleAr:
           booking.status === BookingStatus.COMPLETED
-            ? 'اكتملت الخدمة بنجاح'
-            : 'تنفيذ الخدمة والإتمام',
+            ? "اكتملت الخدمة بنجاح"
+            : "تنفيذ الخدمة والإتمام",
         subtitleEn:
           booking.status === BookingStatus.COMPLETED
-            ? 'Service finished — you can now rate your experience and view receipt'
+            ? "Service finished — you can now rate your experience and view receipt"
             : currentRank === 4
-              ? 'Arrival PIN verified — service work is currently in progress'
-              : 'Final inspection and cash settlement upon completion',
+              ? "Arrival PIN verified — service work is currently in progress"
+              : "Final inspection and cash settlement upon completion",
         subtitleAr:
           booking.status === BookingStatus.COMPLETED
-            ? 'تم إنهاء الخدمة — يمكنك الآن تقييم التجربة وعرض الإيصال'
+            ? "تم إنهاء الخدمة — يمكنك الآن تقييم التجربة وعرض الإيصال"
             : currentRank === 4
-              ? 'تم التحقق من كود الوصول — يجري تنفيذ الخدمة حالياً'
-              : 'المعاينة النهائية وتحصيل المبلغ نقداً بعد إتمام الخدمة',
+              ? "تم التحقق من كود الوصول — يجري تنفيذ الخدمة حالياً"
+              : "المعاينة النهائية وتحصيل المبلغ نقداً بعد إتمام الخدمة",
         state: resolveState(4),
         timestamp:
           findTimestamp(BookingStatus.COMPLETED, BookingStatus.IN_PROGRESS) ??
@@ -1271,10 +1266,17 @@ export class BookingsService {
       addressId: booking.addressId,
       status: booking.status,
       cancellationReason: booking.cancellationReason ?? null,
-      scheduledDate:
-        booking.scheduledDate instanceof Date
+      scheduledDate: booking.scheduledTime
+        ? new Intl.DateTimeFormat("sv-SE", {
+            timeZone: "Africa/Cairo",
+            year: "numeric",
+            month: "2-digit",
+            day: "2-digit",
+          }).format(new Date(booking.scheduledDate))
+        : booking.scheduledDate instanceof Date
           ? booking.scheduledDate.toISOString()
           : String(booking.scheduledDate),
+      scheduledTime: booking.scheduledTime ?? null,
       timeWindow: booking.timeWindow,
       issueDescription: booking.issueDescription ?? null,
       issuePhotoUrls: booking.issuePhotoUrls ?? [],
@@ -1285,9 +1287,9 @@ export class BookingsService {
         totalEgp: booking.totalEgp,
         platformFeeEgp: booking.platformFeeEgp,
         netArtisanEgp: booking.netArtisanEgp,
-        currency: 'EGP',
+        currency: "EGP",
       },
-      arrivalPinCode: canSeeArrivalPin ? booking.arrivalPinCode : '****',
+      arrivalPinCode: canSeeArrivalPin ? booking.arrivalPinCode : "****",
       offering: {
         id: booking.offering.id,
         slug: booking.offering.slug,

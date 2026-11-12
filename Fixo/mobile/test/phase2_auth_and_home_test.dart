@@ -572,7 +572,7 @@ void main() {
 
         // Brand header & Location selector
         expect(find.text('FIXO'), findsOneWidget);
-        expect(find.text('Choose your area'), findsNWidgets(2));
+        expect(find.text('Choose your area'), findsOneWidget);
         expect(find.text('Sheikh Zayed, Dist. 9'), findsNothing);
 
         // Featured Seasonal Promo (350 EGP)
@@ -607,7 +607,7 @@ void main() {
         expect(find.byKey(const Key('customer-bottom-nav')), findsOneWidget);
         expect(find.text('Home'), findsOneWidget);
         expect(find.text('Orders'), findsOneWidget);
-        expect(find.text('Chat'), findsOneWidget);
+        expect(find.text('Messages'), findsOneWidget);
         expect(find.text('Profile'), findsOneWidget);
       },
     );

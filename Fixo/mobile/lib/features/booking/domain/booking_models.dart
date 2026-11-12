@@ -322,6 +322,7 @@ class BookingDetailModel {
     this.cancellationReason,
     required this.scheduledDate,
     required this.timeWindow,
+    this.scheduledTime,
     this.issueDescription,
     this.issuePhotoUrls = const [],
     required this.pricing,
@@ -346,6 +347,7 @@ class BookingDetailModel {
   final String? cancellationReason;
   final String scheduledDate;
   final String timeWindow;
+  final String? scheduledTime;
   final String? issueDescription;
   final List<String> issuePhotoUrls;
   final BookingPricingModel pricing;
@@ -374,6 +376,7 @@ class BookingDetailModel {
       status: json['status'] as String? ?? 'DRAFT',
       cancellationReason: json['cancellationReason'] as String?,
       scheduledDate: json['scheduledDate'] as String? ?? '',
+      scheduledTime: json['scheduledTime'] as String?,
       timeWindow: json['timeWindow'] as String? ?? 'AFTERNOON_13_16',
       issueDescription: json['issueDescription'] as String?,
       issuePhotoUrls:
@@ -520,6 +523,7 @@ class BookingReceiptModel {
     required this.issuedAt,
     required this.scheduledDate,
     required this.timeWindow,
+    this.scheduledTime,
     this.completedAt,
     required this.customerName,
     required this.serviceTitleEn,
@@ -547,6 +551,7 @@ class BookingReceiptModel {
   final String issuedAt;
   final String scheduledDate;
   final String timeWindow;
+  final String? scheduledTime;
   final String? completedAt;
   final String customerName;
   final String serviceTitleEn;
@@ -575,6 +580,7 @@ class BookingReceiptModel {
       status: json['status'] as String? ?? '',
       issuedAt: json['issuedAt'] as String? ?? '',
       scheduledDate: json['scheduledDate'] as String? ?? '',
+      scheduledTime: json['scheduledTime'] as String?,
       timeWindow: json['timeWindow'] as String? ?? '',
       completedAt: json['completedAt'] as String?,
       customerName: json['customerName'] as String? ?? '',
@@ -587,9 +593,8 @@ class BookingReceiptModel {
       addressSummary: json['addressSummary'] as String? ?? '',
       lineItems: items
           .map(
-            (e) => BookingReceiptLineItemModel.fromJson(
-              e as Map<String, dynamic>,
-            ),
+            (e) =>
+                BookingReceiptLineItemModel.fromJson(e as Map<String, dynamic>),
           )
           .toList(),
       subtotalEgp: (json['subtotalEgp'] as num?)?.toInt() ?? 0,
@@ -653,6 +658,7 @@ class CreateBookingRequest {
     this.preferredProId,
     required this.scheduledDate,
     required this.timeWindow,
+    this.scheduledTime,
     this.issueDescription,
     this.issuePhotoUrls = const [],
   });
@@ -662,6 +668,7 @@ class CreateBookingRequest {
   final String? preferredProId;
   final String scheduledDate;
   final String timeWindow;
+  final String? scheduledTime;
   final String? issueDescription;
   final List<String> issuePhotoUrls;
 
@@ -671,6 +678,7 @@ class CreateBookingRequest {
       'addressId': addressId,
       'scheduledDate': scheduledDate,
       'timeWindow': timeWindow,
+      if (scheduledTime != null) 'scheduledTime': scheduledTime,
     };
     if (preferredProId != null && preferredProId!.isNotEmpty) {
       map['preferredProId'] = preferredProId;

@@ -56,6 +56,7 @@ model AdminAuditLog {
   actor       User?    @relation(fields: [actorUserId], references: [id], onDelete: SetNull)
 
   @@index([createdAt, id])
+  @@index([actorUserId])
 }
 
 enum ProVerificationStatus {
@@ -153,6 +154,9 @@ model User {
   addresses       CustomerAddress[]
   bookings        Booking[]         @relation("CustomerBookings")
   refreshTokens   RefreshToken[]
+  clerkIdentityLinks ClerkIdentityLink[]
+  supportThreads SupportThread[]
+  supportMessages SupportMessage[]
   sentMessages    ChatMessage[]
   reviews         Review[]
   pushDevices           PushDevice[]
@@ -162,6 +166,18 @@ model User {
   favoriteProfessionals FavoriteProfessional[]
   complaints            Complaint[]            @relation("CustomerComplaints")
   resolvedComplaints    Complaint[]            @relation("ResolvedComplaints")
+}
+
+model ClerkIdentityLink {
+  id        String   @id @default(uuid())
+  userId    String
+  issuer    String
+  subject   String
+  linkedAt  DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([issuer, subject])
+  @@unique([userId, issuer])
 }
 
 model PushDevice {
@@ -198,6 +214,7 @@ model RefreshToken {
   createdAt DateTime  @default(now())
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  @@index([userId])
 }
 
 model CoverageZone {
@@ -229,6 +246,8 @@ model CustomerAddress {
   user     User         @relation(fields: [userId], references: [id], onDelete: Cascade)
   zone     CoverageZone @relation(fields: [zoneId], references: [id])
   bookings Booking[]
+  @@index([userId])
+  @@index([zoneId])
 }
 
 model ServiceCategory {
@@ -257,6 +276,7 @@ model ServiceSubSkill {
 
   category ServiceCategory @relation(fields: [categoryId], references: [id], onDelete: Cascade)
   pros     ProProfile[]    @relation("ProSubSkills")
+  @@index([categoryId])
 }
 
 model ServiceOffering {
@@ -283,6 +303,7 @@ model ServiceOffering {
   bookings   Booking[]
   adminDraft AdminCatalogDraft?
   favorites  FavoriteService[]
+  @@index([categoryId])
 }
 
 // Incomplete prices stay private and cannot enter customer booking payloads.
@@ -354,6 +375,8 @@ model ProProfile {
   favoritedBy     FavoriteProfessional[]
   weeklySchedules ProWeeklySchedule[]
   leaves          ProLeave[]
+  @@index([primaryCategoryId])
+  @@index([primaryZoneId])
 }
 
 model ProVerificationDocument {
@@ -368,6 +391,7 @@ model ProVerificationDocument {
   uploadedAt      DateTime       @default(now())
 
   proProfile ProProfile @relation(fields: [proProfileId], references: [id], onDelete: Cascade)
+  @@index([proProfileId])
 }
 
 model Booking {
@@ -378,6 +402,7 @@ model Booking {
   offeringId         String
   addressId          String
   status             BookingStatus @default(DRAFT)
+  scheduledTime      String?
   scheduledDate      DateTime
   timeWindow         TimeWindow
   issueDescription   String?
@@ -489,6 +514,8 @@ model Review {
   booking    Booking    @relation(fields: [bookingId], references: [id], onDelete: Cascade)
   customer   User       @relation(fields: [customerId], references: [id])
   proProfile ProProfile @relation(fields: [proProfileId], references: [id])
+  @@index([customerId])
+  @@index([proProfileId])
 }
 
 model FavoriteService {
@@ -502,6 +529,7 @@ model FavoriteService {
 
   @@unique([userId, offeringId])
   @@index([userId, createdAt])
+  @@index([offeringId])
 }
 
 model FavoriteProfessional {
@@ -515,6 +543,7 @@ model FavoriteProfessional {
 
   @@unique([userId, proProfileId])
   @@index([userId, createdAt])
+  @@index([proProfileId])
 }
 
 
@@ -555,6 +584,7 @@ model Complaint {
   @@index([customerId, createdAt])
   @@index([bookingId])
   @@index([status])
+  @@index([resolvedById])
 }
 
 
@@ -613,4 +643,28 @@ model ProLeave {
 
   @@index([proProfileId, startDate, endDate])
   @@index([proProfileId, status])
+}
+
+model SupportThread {
+  id String @id @default(uuid())
+  userId String
+  subject String
+  closed Boolean @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  user User @relation(fields: [userId], references: [id])
+  messages SupportMessage[]
+  @@index([userId, updatedAt])
+}
+model SupportMessage {
+  id String @id @default(uuid())
+  threadId String
+  senderUserId String
+  body String
+  fromAdmin Boolean @default(false)
+  createdAt DateTime @default(now())
+  thread SupportThread @relation(fields: [threadId], references: [id], onDelete: Cascade)
+  sender User @relation(fields: [senderUserId], references: [id])
+  @@index([threadId, createdAt])
+  @@index([senderUserId])
 }

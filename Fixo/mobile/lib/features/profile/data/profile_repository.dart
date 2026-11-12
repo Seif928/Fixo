@@ -1,46 +1,8 @@
+export '../domain/profile_repository.dart';
+import '../domain/profile_repository.dart';
 import 'package:dio/dio.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../../../core/network/dio_client.dart';
 import '../../auth/domain/auth_models.dart';
 import '../domain/profile_models.dart';
-
-class ProfileApiException implements Exception {
-  const ProfileApiException(
-    this.message, {
-    this.statusCode,
-    this.code,
-  });
-
-  final String message;
-  final int? statusCode;
-  final String? code;
-
-  bool get isUnauthorized => statusCode == 401;
-  bool get isConflict => statusCode == 409;
-  bool get isNotFound => statusCode == 404;
-
-  @override
-  String toString() => message;
-}
-
-abstract class ProfileRepository {
-  Future<UserProfile> getProfile();
-
-  Future<UserProfile> updateProfile({
-    String? fullName,
-    String? phone,
-    String? password,
-  });
-
-  Future<AuthSession> updatePhoneAlias({
-    required String phone,
-    required String password,
-  });
-
-  Future<void> updateNotificationPreferences({
-    required bool arrivalAlertsEnabled,
-  });
-}
 
 class DioProfileRepository implements ProfileRepository {
   const DioProfileRepository(this._dio);
@@ -96,10 +58,7 @@ class DioProfileRepository implements ProfileRepository {
     try {
       final response = await _dio.patch<Map<String, dynamic>>(
         '/auth/phone-alias',
-        data: <String, dynamic>{
-          'phone': phone,
-          'password': password,
-        },
+        data: <String, dynamic>{'phone': phone, 'password': password},
       );
       final data = response.data;
       if (data == null) {
@@ -122,15 +81,10 @@ class DioProfileRepository implements ProfileRepository {
     try {
       await _dio.patch<Map<String, dynamic>>(
         '/users/me/notification-preferences',
-        data: <String, dynamic>{
-          'arrivalAlertsEnabled': arrivalAlertsEnabled,
-        },
+        data: <String, dynamic>{'arrivalAlertsEnabled': arrivalAlertsEnabled},
       );
     } on DioException catch (e) {
-      throw _mapError(
-        e,
-        fallback: 'Could not save notification preferences.',
-      );
+      throw _mapError(e, fallback: 'Could not save notification preferences.');
     }
   }
 
@@ -154,8 +108,3 @@ class DioProfileRepository implements ProfileRepository {
     return ProfileApiException(fallback, statusCode: statusCode);
   }
 }
-
-final profileRepositoryProvider = Provider<ProfileRepository>((ref) {
-  final dio = ref.watch(dioClientProvider);
-  return DioProfileRepository(dio);
-});

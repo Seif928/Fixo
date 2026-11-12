@@ -1,3 +1,4 @@
+import { SupportModule } from './modules/support/support.module';
 import { Module } from '@nestjs/common';
 import { AuthModule } from './modules/auth/auth.module';
 import { BookingsModule } from './modules/bookings/bookings.module';
@@ -18,6 +19,7 @@ import { ProScheduleModule } from './modules/pro-schedule/pro-schedule.module';
 @Module({
   imports: [
     PrismaModule,
+    SupportModule,
     MediaModule,
     LocationModule,
     HealthModule,

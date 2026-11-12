@@ -467,7 +467,7 @@ class _ZamalekMoodPainter extends CustomPainter {
         width: 28,
         height: 36,
       ),
-      Paint()..color = const Color(0xFF173F35),
+      Paint()..color = const Color(0xFF24262B),
     );
 
     // Minimalist phone device frame on the right (matching Screen 02 mood photo)
@@ -475,12 +475,12 @@ class _ZamalekMoodPainter extends CustomPainter {
       Rect.fromLTWH(size.width * 0.62, 14, 72, size.height - 10),
       const Radius.circular(10),
     );
-    canvas.drawRRect(phoneRect, Paint()..color = const Color(0xFF141E1A));
+    canvas.drawRRect(phoneRect, Paint()..color = const Color(0xFF24262B));
     final screenRect = RRect.fromRectAndRadius(
       Rect.fromLTWH(size.width * 0.62 + 3, 17, 66, size.height - 16),
       const Radius.circular(8),
     );
-    canvas.drawRRect(screenRect, Paint()..color = const Color(0xFFF1FCF5));
+    canvas.drawRRect(screenRect, Paint()..color = const Color(0xFFF6F2EB));
 
     // Tiny UI bars inside the miniature phone screen
     canvas.drawRRect(
@@ -488,14 +488,14 @@ class _ZamalekMoodPainter extends CustomPainter {
         Rect.fromLTWH(size.width * 0.62 + 10, 32, 52, 8),
         const Radius.circular(3),
       ),
-      Paint()..color = const Color(0xFF173F35),
+      Paint()..color = const Color(0xFF24262B),
     );
     canvas.drawRRect(
       RRect.fromRectAndRadius(
         Rect.fromLTWH(size.width * 0.62 + 10, 46, 52, 10),
         const Radius.circular(3),
       ),
-      Paint()..color = const Color(0xFFD5EE76),
+      Paint()..color = const Color(0xFFC6A779),
     );
   }
 

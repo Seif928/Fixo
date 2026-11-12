@@ -1,3 +1,4 @@
+import { cairoBookingDate } from '../bookings/cairo-booking-time';
 import {
   BadRequestException,
   ConflictException,
@@ -1791,7 +1792,8 @@ export class ProService {
             id: bk.id,
             orderCode: bk.orderCode,
             status: bk.status,
-            scheduledDate:
+            scheduledTime: bk.scheduledTime ?? null,
+            scheduledDate: bk.scheduledTime ? cairoBookingDate(bk.scheduledDate) :
               bk.scheduledDate instanceof Date
                 ? bk.scheduledDate.toISOString()
                 : String(bk.scheduledDate),
@@ -1857,7 +1859,8 @@ export class ProService {
       customerId: booking.customerId,
       proProfileId: booking.proProfileId,
       status: booking.status,
-      scheduledDate:
+      scheduledTime: booking.scheduledTime ?? null,
+      scheduledDate: booking.scheduledTime ? cairoBookingDate(booking.scheduledDate) :
         booking.scheduledDate instanceof Date
           ? booking.scheduledDate.toISOString()
           : String(booking.scheduledDate),

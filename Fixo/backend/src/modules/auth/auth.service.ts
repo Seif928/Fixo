@@ -34,6 +34,7 @@ import {
 } from './sms/sms.provider';
 import { normalizeEgyptPhone } from './utils/egypt-phone.util';
 import { FirebaseSessionPolicy } from './firebase-session-policy.service';
+import { ClerkSessionBinding, ClerkSessionPolicy } from './clerk-session-policy.service';
 import {
   FixoJwtPayload,
   hashOtpHmacSha256,
@@ -94,6 +95,7 @@ export class AuthService implements OnModuleInit {
     private readonly memoryStore: InMemoryStoreService,
     @Inject(SMS_PROVIDER) private readonly smsProvider: SmsProvider,
     private readonly providerSessions: FirebaseSessionPolicy = new FirebaseSessionPolicy(),
+    private readonly clerkSessions: ClerkSessionPolicy = new ClerkSessionPolicy(),
   ) {}
 
   onModuleInit(): void {
@@ -406,7 +408,9 @@ export class AuthService implements OnModuleInit {
 
     const oldTokenHash = hashTokenSha256(dto.refreshToken);
 
-    if (this.prisma.isDatabaseConnected()) {
+    if (payload.clerkSession) {
+      await this.assertClerkSession(user.id, payload.clerkSession);
+    } else if (this.prisma.isDatabaseConnected()) {
       const identity = await this.prisma.user.findUnique({
         where: { id: user.id },
         select: { firebaseUid: true },
@@ -431,6 +435,7 @@ export class AuthService implements OnModuleInit {
     const { accessToken, refreshToken } = this.generateTokenStrings(
       user,
       payload.firebaseAuthTime,
+      payload.clerkSession,
     );
     const newTokenHash = hashTokenSha256(refreshToken);
     const refreshExpiresAt = new Date(
@@ -586,6 +591,7 @@ export class AuthService implements OnModuleInit {
   private generateTokenStrings(
     user: AuthenticatedUserProfile,
     firebaseAuthTime?: number,
+    clerkSession?: ClerkSessionBinding,
   ): {
     accessToken: string;
     refreshToken: string;
@@ -597,6 +603,7 @@ export class AuthService implements OnModuleInit {
         role: user.role,
         type: 'access',
         ...(firebaseAuthTime ? { firebaseAuthTime } : {}),
+        ...(clerkSession ? { clerkSession } : {}),
       },
       this.accessSecret,
       AuthService.ACCESS_TOKEN_TTL_SECONDS,
@@ -609,6 +616,7 @@ export class AuthService implements OnModuleInit {
         role: user.role,
         type: 'refresh',
         ...(firebaseAuthTime ? { firebaseAuthTime } : {}),
+        ...(clerkSession ? { clerkSession } : {}),
       },
       this.refreshSecret,
       AuthService.REFRESH_TOKEN_TTL_SECONDS,
@@ -620,10 +628,12 @@ export class AuthService implements OnModuleInit {
   private async issueTokenBundle(
     user: AuthenticatedUserProfile,
     firebaseAuthTime?: number,
+    clerkSession?: ClerkSessionBinding,
   ): Promise<AuthTokensResponse> {
     const { accessToken, refreshToken } = this.generateTokenStrings(
       user,
       firebaseAuthTime,
+      clerkSession,
     );
     const refreshTokenHash = hashTokenSha256(refreshToken);
     const refreshExpiresAt = new Date(
@@ -652,6 +662,24 @@ export class AuthService implements OnModuleInit {
     const user = await this.findUserById(userId);
     if (!user) throw new UnauthorizedException('Account not found.');
     return this.issueTokenBundle(user, firebaseAuthTime);
+  }
+
+  private async assertClerkSession(userId: string, binding: ClerkSessionBinding): Promise<void> {
+    // Validate configuration/shape before using provider-supplied claims in any query.
+    await this.clerkSessions.assertValid(binding);
+    if (!this.prisma.isDatabaseConnected()) throw new UnauthorizedException('Clerk session persistence is unavailable.');
+    const linked = await this.prisma.clerkIdentityLink.findUnique({
+      where: { issuer_subject: { issuer: binding.issuer, subject: binding.subject } },
+    });
+    if (!linked || linked.userId !== userId) throw new UnauthorizedException('Clerk identity is no longer linked.');
+  }
+
+  async issueClerkUserSession(userId: string, binding: ClerkSessionBinding): Promise<AuthTokensResponse> {
+    await this.assertClerkSession(userId, binding);
+    const user = await this.findUserById(userId);
+    if (!user) throw new UnauthorizedException('Account not found.');
+    // No Firebase authentication time: Clerk proof alone cannot satisfy admin reauthentication.
+    return this.issueTokenBundle(user, undefined, binding);
   }
 
   private async getLatestChallengeForPhone(

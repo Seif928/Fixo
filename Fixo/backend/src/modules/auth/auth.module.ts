@@ -14,6 +14,9 @@ import {
 } from './phone-password.service';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
 import { RolesGuard } from './guards/roles.guard';
+import { ClerkSessionPolicy } from './clerk-session-policy.service';
+import { ClerkIdentityService } from './clerk-identity.service';
+import { ClerkIdentityController, ClerkTrialRateGuard } from './clerk-identity.controller';
 import {
   DevSmsProvider,
   ProductionTelecomSmsProvider,
@@ -25,9 +28,13 @@ import {
     AuthController,
     FirebaseIdentityController,
     PhonePasswordController,
+    ClerkIdentityController,
   ],
   providers: [
     AuthService,
+    { provide: ClerkSessionPolicy, useFactory: () => new ClerkSessionPolicy() },
+    ClerkIdentityService,
+    ClerkTrialRateGuard,
     FirebaseSessionPolicy,
     FirebaseIdentityService,
     FirebaseTokenVerifier,

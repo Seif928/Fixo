@@ -6,7 +6,7 @@ import '../../../app/router/customer_tab_navigation.dart';
 
 import '../../../core/l10n/app_locale_controller.dart';
 import '../domain/profile_models.dart';
-import '../data/profile_repository.dart';
+import 'package:fixo_mobile/app/providers/profile_providers.dart';
 import 'controllers/profile_controller.dart';
 import '../../../core/notifications/device_push_service.dart';
 import '../../../core/theme/fixo_colors.dart';
@@ -677,7 +677,9 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
                               width: 36,
                               height: 36,
                               decoration: BoxDecoration(
-                                color: palette.primaryBrand.withValues(alpha: 0.15),
+                                color: palette.primaryBrand.withValues(
+                                  alpha: 0.15,
+                                ),
                                 shape: BoxShape.circle,
                               ),
                               alignment: Alignment.center,
@@ -732,7 +734,9 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
                                 ? null
                                 : (enabled) => _save(() async {
                                     await ref
-                                        .read(profileControllerProvider.notifier)
+                                        .read(
+                                          profileControllerProvider.notifier,
+                                        )
                                         .updateNotificationPreferences(
                                           arrivalAlertsEnabled: enabled,
                                         );
@@ -944,6 +948,11 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
             ),
             const SizedBox(height: FixoSpacing.md),
 
+            ListTile(
+              leading: const Icon(Icons.support_agent),
+              title: Text(ar ? 'خدمة العملاء' : 'Customer support'),
+              onTap: () => context.push('/support'),
+            ),
             // 6. Sign Out & Editorial Brand Metadata
             FixoSurfaceCard(
               padding: const EdgeInsets.symmetric(
@@ -978,7 +987,9 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
                 onPressed: _saving ? null : _confirmDeleteAccount,
                 icon: const Icon(Icons.delete_forever_outlined, size: 20),
                 label: Text(
-                  ar ? 'حذف الحساب والبيانات الشخصية' : 'Delete account & privacy data',
+                  ar
+                      ? 'حذف الحساب والبيانات الشخصية'
+                      : 'Delete account & privacy data',
                   style: const TextStyle(fontSize: 13),
                 ),
               ),

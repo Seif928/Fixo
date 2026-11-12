@@ -1,5 +1,19 @@
 # FIXO — consolidated approved work and remaining scope
 
+Latest client repair: [Web responsiveness and Google sign-in](WEB_PERFORMANCE_GOOGLE_2026-11-11.md). Finite decorative effects, cheaper Web surfaces, prepared Google popups, official Google artwork and first-frame session gating. 577 Flutter tests passed with 2 existing opt-in skips; analyze and Web/Android debug builds passed. See the repair checkpoint for rollout evidence and remaining validation limits.
+
+Current work: [Clerk trial and native push correction](CLERK_PUSH_RELEASE_2026-11-11.md). Gated dual-proof identity linking/exchange and provider-bound refresh are implemented; Clerk is still disabled on the live API pending real credentials/client proof. FID sending, native configuration and expired-session push cleanup are corrected. Refer to that checkpoint for final test/build/deployment evidence and remaining device/account prerequisites. Older entries below describe prior releases.
+
+Latest client release: [native-iOS-only Apple entry](APPLE_IOS_ONLY_2026-11-11.md), 559 Flutter tests passed. Apple provisioning/provider activation and actual iOS runtime remain open. Clerk remains an isolated trial, not the active FIXO identity provider.
+
+Latest authentication experiment: [isolated Clerk trial](CLERK_TRIAL_2026-11-11.md). Hosted Google sign-in/sign-out passed and phone sign-up/sign-in were disabled with approval. Clerk is NOT the live FIXO identity provider yet; twelve verifier regressions are prepared, no accounts imported/linked. Latest existing-client push cleanup release: [549 Flutter tests and rollout](PUSH_CLEANUP_2026-11-11.md).
+
+2026-11-11 latest user decision: stop the Dart backend migration; keep and improve the working NestJS/TypeScript API. Flutter/Dart remains the client/Web/admin stack. The 93 pending Dart ports are no longer required work. backend_dart is a retained, inactive experiment; do not deploy it or resume conversion without a new user request. Prior migration details remain historical in DART_ARCHITECTURE_2026-11-11.md.
+
+Read-only live verification after this decision: existing API health ok, databaseConnected true, readiness HTTP 200. This confirms service/database readiness, not every product journey. Prioritize the existing remaining feature/device verification and bug fixes, keeping the free-only constraint.
+
+Latest checkpoint: [2026-11-10 remaining work](REMAINING_2026-11-10.md) and [released chat media/push correction](CHAT_MEDIA_DELIVERY_2026-11-10.md). The November 3 counts and pending list below are historical and must not be treated as the current release status.
+
 Updated: 2026-11-03, Africa/Cairo. This is the current scope index, not a claim that the whole product is finished. Older progress notes are chronological evidence and may contain superseded pending/deployment statements.
 
 ## Standing user instructions

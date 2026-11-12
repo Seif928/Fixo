@@ -5,10 +5,10 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:fixo_mobile/core/storage/secure_token_storage.dart';
 import 'package:fixo_mobile/core/theme/fixo_theme.dart';
-import 'package:fixo_mobile/core/widgets/fixo_brand_mark.dart';
 import 'package:fixo_mobile/features/auth/data/email_access_service.dart';
 import 'package:fixo_mobile/features/auth/domain/auth_models.dart';
 import 'package:fixo_mobile/features/auth/presentation/pages/phone_password_page.dart';
+import 'package:fixo_mobile/features/auth/presentation/widgets/google_sign_in_button.dart';
 import 'package:fixo_mobile/core/l10n/app_locale_controller.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:fixo_mobile/core/uploads/device_media_picker.dart';
@@ -163,6 +163,59 @@ void main() {
       ),
     );
     await tester.pumpAndSettle();
+  }
+
+  for (final platform in [
+    TargetPlatform.android,
+    TargetPlatform.iOS,
+    TargetPlatform.macOS,
+  ]) {
+    testWidgets('Apple entry is native iOS only on $platform', (tester) async {
+      await pump(tester);
+      expect(
+        find.byKey(const Key('first-use-apple')),
+        platform == TargetPlatform.iOS ? findsOneWidget : findsNothing,
+      );
+      expect(find.byKey(const Key('first-use-google')), findsOneWidget);
+    }, variant: TargetPlatformVariant({platform}));
+  }
+  for (final arabic in [false, true]) {
+    testWidgets(
+      'desktop login uses factual service copy (${arabic ? "ar" : "en"})',
+      (tester) async {
+        tester.view.physicalSize = const Size(1280, 900);
+        tester.view.devicePixelRatio = 1;
+        addTearDown(tester.view.resetPhysicalSize);
+        addTearDown(tester.view.resetDevicePixelRatio);
+        await pump(tester, arabic: arabic);
+        expect(
+          find.text(arabic ? 'موعد تختاره أنت' : 'A time that works for you'),
+          findsOneWidget,
+        );
+        expect(
+          find.text(
+            arabic
+                ? 'راجع السعر قبل التأكيد'
+                : 'Review pricing before confirmation',
+          ),
+          findsOneWidget,
+        );
+        for (final claim in [
+          'Certified',
+          'Criminal-Record',
+          '30-Min',
+          'Golden Warranty',
+          'money back',
+          'معتمدة',
+          'موثقون جنائياً',
+          'وصول فوري',
+          'ضمان ذهبي',
+          'استرداد كامل',
+        ]) {
+          expect(find.textContaining(claim), findsNothing);
+        }
+      },
+    );
   }
 
   testWidgets(
@@ -392,7 +445,14 @@ void main() {
     tester,
   ) async {
     await pump(tester);
-    expect(find.byType(FixoGoogleMark), findsOneWidget);
+    expect(find.byType(GoogleSignInButton), findsOneWidget);
+    final gImage = tester.widget<Image>(
+      find.descendant(
+        of: find.byType(GoogleSignInButton),
+        matching: find.byType(Image),
+      ),
+    );
+    expect((gImage.image as AssetImage).assetName, 'assets/brand/google-g.png');
     expect(find.byKey(const Key('first-use-email')), findsOneWidget);
   });
 }

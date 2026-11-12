@@ -1,3 +1,4 @@
+import '../../../../core/auth/platform_auth_capabilities.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -14,6 +15,7 @@ import '../../domain/auth_models.dart';
 import '../controllers/account_entry_controller.dart';
 import '../controllers/auth_controller.dart';
 import '../controllers/auth_error_formatter.dart';
+import '../widgets/google_sign_in_button.dart';
 
 /// Email variant of approved Screen 02, retaining the native FIXO auth layout.
 class EmailAuthPage extends ConsumerStatefulWidget {
@@ -58,9 +60,6 @@ class _EmailAuthPageState extends ConsumerState<EmailAuthPage> {
     super.dispose();
   }
 
-  String _message(Object error) =>
-      formatAuthErrorMessage(error, isArabic: _ar);
-
   Future<void> _run(Future<void> Function() action) async {
     if (_busy) return;
     setState(() {
@@ -71,7 +70,12 @@ class _EmailAuthPageState extends ConsumerState<EmailAuthPage> {
     try {
       await action();
     } catch (error) {
-      if (mounted) setState(() => _error = _message(error));
+      if (isCancelledAuthError(error)) {
+        return;
+      }
+      if (mounted) {
+        setState(() => _error = formatAuthErrorMessage(error, isArabic: _ar));
+      }
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -301,19 +305,19 @@ class _EmailAuthPageState extends ConsumerState<EmailAuthPage> {
                               onPressed: _busy
                                   ? null
                                   : () => _run(() async {
-                                        final session = await ref
-                                            .read(emailAccessProvider)
-                                            .checkVerification();
-                                        if (session == null && mounted) {
-                                          setState(
-                                            () => _error = ar
-                                                ? 'البريد لم يتأكد بعد.'
-                                                : 'Email is not verified yet.',
-                                          );
-                                          return;
-                                        }
-                                        await _accept(session);
-                                      }),
+                                      final session = await ref
+                                          .read(emailAccessProvider)
+                                          .checkVerification();
+                                      if (session == null && mounted) {
+                                        setState(
+                                          () => _error = ar
+                                              ? 'البريد لم يتأكد بعد.'
+                                              : 'Email is not verified yet.',
+                                        );
+                                        return;
+                                      }
+                                      await _accept(session);
+                                    }),
                               child: Text(
                                 ar ? 'تم تأكيد بريدي' : 'I verified my email',
                               ),
@@ -323,17 +327,17 @@ class _EmailAuthPageState extends ConsumerState<EmailAuthPage> {
                               onPressed: _busy
                                   ? null
                                   : () => _run(() async {
-                                        await ref
-                                            .read(emailAccessProvider)
-                                            .resendVerification();
-                                        if (mounted) {
-                                          setState(
-                                            () => _notice = ar
-                                                ? 'تم إرسال طلب التأكيد.'
-                                                : 'Verification email requested.',
-                                          );
-                                        }
-                                      }),
+                                      await ref
+                                          .read(emailAccessProvider)
+                                          .resendVerification();
+                                      if (mounted) {
+                                        setState(
+                                          () => _notice = ar
+                                              ? 'تم إرسال طلب التأكيد.'
+                                              : 'Verification email requested.',
+                                        );
+                                      }
+                                    }),
                               child: Text(
                                 ar
                                     ? 'إعادة إرسال التأكيد'
@@ -351,108 +355,31 @@ class _EmailAuthPageState extends ConsumerState<EmailAuthPage> {
                               ),
                             ),
                           ] else ...[
-                            Container(
-                              padding: const EdgeInsets.all(4),
-                              decoration: BoxDecoration(
-                                color: palette.surfaceHigh,
-                                borderRadius: FixoRadius.borderRadiusMd,
-                              ),
-                              child: Row(
-                                children: [
-                                  Expanded(
-                                    child: GestureDetector(
-                                      onTap: _busy
-                                          ? null
-                                          : () => setState(() {
-                                              _create = false;
-                                              _error = null;
-                                            }),
-                                      child: Container(
-                                        padding: const EdgeInsets.symmetric(
-                                          vertical: 10,
-                                        ),
-                                        decoration: BoxDecoration(
-                                          color: !_create
-                                              ? palette.cardSurface
-                                              : Colors.transparent,
-                                          borderRadius:
-                                              FixoRadius.borderRadiusSm,
-                                        ),
-                                        alignment: Alignment.center,
-                                        child: Text(
-                                          ar ? 'تسجيل الدخول' : 'Sign in',
-                                          style: FixoTypography.labelMd(
-                                            color: !_create
-                                                ? palette.deepForest
-                                                : palette.mutedText,
-                                            locale: locale,
-                                          ).copyWith(fontWeight: FontWeight.w700),
-                                        ),
-                                      ),
-                                    ),
-                                  ),
-                                  Expanded(
-                                    child: GestureDetector(
-                                      onTap: _busy
-                                          ? null
-                                          : () => setState(() {
-                                              _create = true;
-                                              _error = null;
-                                            }),
-                                      child: Container(
-                                        padding: const EdgeInsets.symmetric(
-                                          vertical: 10,
-                                        ),
-                                        decoration: BoxDecoration(
-                                          color: _create
-                                              ? palette.cardSurface
-                                              : Colors.transparent,
-                                          borderRadius:
-                                              FixoRadius.borderRadiusSm,
-                                        ),
-                                        alignment: Alignment.center,
-                                        child: Text(
-                                          ar
-                                              ? 'حساب جديد'
-                                              : 'Create account',
-                                          style: FixoTypography.labelMd(
-                                            color: _create
-                                                ? palette.deepForest
-                                                : palette.mutedText,
-                                            locale: locale,
-                                          ).copyWith(fontWeight: FontWeight.w700),
-                                        ),
-                                      ),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                            const SizedBox(height: FixoSpacing.md),
-                            OutlinedButton.icon(
-                              key: const Key('email-use-google'),
+                            GoogleSignInButton(
+                              buttonKey: const Key('email-use-google'),
+                              isArabic: ar,
                               onPressed: _busy
                                   ? null
                                   : () => _run(() async {
-                                        await _accept(
-                                          await ref
-                                              .read(emailAccessProvider)
-                                              .signInWithGoogle(),
-                                        );
-                                      }),
-                              icon: const FixoGoogleMark(size: 20),
+                                      await _accept(
+                                        await ref
+                                            .read(emailAccessProvider)
+                                            .signInWithGoogle(),
+                                      );
+                                    }),
                               label: Text(
                                 ar
                                     ? 'المتابعة بحساب Google'
                                     : 'Continue with Google',
                               ),
                             ),
-                            const SizedBox(height: FixoSpacing.sm),
-                            OutlinedButton.icon(
-                              key: const Key('email-use-apple'),
-                              onPressed: _busy
-                                  ? null
-                                  : () => _run(() async {
+                            if (appleSignInAvailable) ...[
+                              const SizedBox(height: FixoSpacing.sm),
+                              OutlinedButton.icon(
+                                key: const Key('email-use-apple'),
+                                onPressed: _busy
+                                    ? null
+                                    : () => _run(() async {
                                         final session = await ref
                                             .read(emailAccessProvider)
                                             .promptAndSignInWithApple(
@@ -462,12 +389,36 @@ class _EmailAuthPageState extends ConsumerState<EmailAuthPage> {
                                         if (session == null) return;
                                         await _accept(session);
                                       }),
-                              icon: const Icon(Icons.apple_rounded, size: 22),
-                              label: Text(
-                                ar
-                                    ? 'المتابعة بحساب Apple'
-                                    : 'Continue with Apple',
+                                icon: const Icon(Icons.apple_rounded, size: 22),
+                                label: Text(
+                                  ar
+                                      ? 'المتابعة بحساب Apple'
+                                      : 'Continue with Apple',
+                                ),
                               ),
+                            ],
+                            const SizedBox(height: FixoSpacing.md),
+                            SegmentedButton<bool>(
+                              segments: [
+                                ButtonSegment<bool>(
+                                  value: false,
+                                  label: Text(ar ? 'تسجيل الدخول' : 'Sign in'),
+                                ),
+                                ButtonSegment<bool>(
+                                  value: true,
+                                  label: Text(
+                                    ar ? 'إنشاء حساب' : 'Create account',
+                                  ),
+                                ),
+                              ],
+                              selected: {_create},
+                              onSelectionChanged: _busy
+                                  ? null
+                                  : (selection) => setState(() {
+                                      _create = selection.first;
+                                      _error = null;
+                                      _notice = null;
+                                    }),
                             ),
                             const SizedBox(height: FixoSpacing.md),
                             TextFormField(
@@ -478,8 +429,7 @@ class _EmailAuthPageState extends ConsumerState<EmailAuthPage> {
                               autofillHints: const [AutofillHints.email],
                               textDirection: TextDirection.ltr,
                               decoration: InputDecoration(
-                                labelText:
-                                    ar ? 'البريد الإلكتروني' : 'Email',
+                                labelText: ar ? 'البريد الإلكتروني' : 'Email',
                                 prefixIcon: Icon(
                                   Icons.mail_outline_rounded,
                                   size: 20,
@@ -488,13 +438,13 @@ class _EmailAuthPageState extends ConsumerState<EmailAuthPage> {
                               ),
                               validator: (value) =>
                                   value == null ||
-                                          !RegExp(
-                                            r'^[^\s@]+@[^\s@]+\.[^\s@]+$',
-                                          ).hasMatch(value.trim())
-                                      ? (ar
-                                          ? 'أدخل بريدًا صحيحًا.'
-                                          : 'Enter a valid email.')
-                                      : null,
+                                      !RegExp(
+                                        r'^[^\s@]+@[^\s@]+\.[^\s@]+$',
+                                      ).hasMatch(value.trim())
+                                  ? (ar
+                                        ? 'أدخل بريدًا صحيحًا.'
+                                        : 'Enter a valid email.')
+                                  : null,
                             ),
                             const SizedBox(height: 16),
                             TextFormField(
@@ -534,12 +484,12 @@ class _EmailAuthPageState extends ConsumerState<EmailAuthPage> {
                               ),
                               validator: (value) =>
                                   value == null ||
-                                          value.isEmpty ||
-                                          (_create && value.length < 12)
-                                      ? (ar
-                                          ? 'أدخل كلمة المرور؛ للحساب الجديد 12 حرفًا على الأقل.'
-                                          : 'Enter your password; new accounts require at least 12 characters.')
-                                      : null,
+                                      value.isEmpty ||
+                                      (_create && value.length < 12)
+                                  ? (ar
+                                        ? 'أدخل كلمة المرور؛ للحساب الجديد 12 حرفًا على الأقل.'
+                                        : 'Enter your password; new accounts require at least 12 characters.')
+                                  : null,
                             ),
                             const SizedBox(height: 20),
                             FilledButton(
@@ -565,10 +515,8 @@ class _EmailAuthPageState extends ConsumerState<EmailAuthPage> {
                                 _busy
                                     ? (ar ? 'جارٍ التنفيذ…' : 'Please wait…')
                                     : _create
-                                        ? (ar
-                                            ? 'إنشاء الحساب'
-                                            : 'Create account')
-                                        : (ar ? 'تسجيل الدخول' : 'Sign in'),
+                                    ? (ar ? 'إنشاء الحساب' : 'Create account')
+                                    : (ar ? 'تسجيل الدخول' : 'Sign in'),
                               ),
                             ),
                             const SizedBox(height: 8),
@@ -576,42 +524,42 @@ class _EmailAuthPageState extends ConsumerState<EmailAuthPage> {
                               onPressed: _busy
                                   ? null
                                   : () => setState(() {
-                                        _create = !_create;
-                                        _error = null;
-                                      }),
+                                      _create = !_create;
+                                      _error = null;
+                                    }),
                               child: Text(
                                 _create
                                     ? (ar
-                                        ? 'لدي حساب بالفعل'
-                                        : 'I already have an account')
+                                          ? 'لدي حساب بالفعل'
+                                          : 'I already have an account')
                                     : (ar
-                                        ? 'إنشاء حساب جديد'
-                                        : 'Create an account'),
+                                          ? 'إنشاء حساب جديد'
+                                          : 'Create an account'),
                               ),
                             ),
                             TextButton(
                               onPressed: _busy
                                   ? null
                                   : () => _run(() async {
-                                        if (_email.text.trim().isEmpty) {
-                                          setState(
-                                            () => _error = ar
-                                                ? 'أدخل البريد أولًا.'
-                                                : 'Enter your email first.',
-                                          );
-                                          return;
-                                        }
-                                        await ref
-                                            .read(emailAccessProvider)
-                                            .resetPassword(_email.text);
-                                        if (mounted) {
-                                          setState(
-                                            () => _notice = ar
-                                                ? 'راجع بريدك لاستعادة كلمة المرور.'
-                                                : 'Check your email for password recovery.',
-                                          );
-                                        }
-                                      }),
+                                      if (_email.text.trim().isEmpty) {
+                                        setState(
+                                          () => _error = ar
+                                              ? 'أدخل البريد أولًا.'
+                                              : 'Enter your email first.',
+                                        );
+                                        return;
+                                      }
+                                      await ref
+                                          .read(emailAccessProvider)
+                                          .resetPassword(_email.text);
+                                      if (mounted) {
+                                        setState(
+                                          () => _notice = ar
+                                              ? 'راجع بريدك لاستعادة كلمة المرور.'
+                                              : 'Check your email for password recovery.',
+                                        );
+                                      }
+                                    }),
                               child: Text(
                                 ar ? 'نسيت كلمة المرور؟' : 'Forgot password?',
                               ),
@@ -649,7 +597,9 @@ class _EmailAuthPageState extends ConsumerState<EmailAuthPage> {
                               const SizedBox(width: 4),
                               Flexible(
                                 child: Text(
-                                  ar ? 'بريد إلكتروني مؤكد' : 'Verified Email Auth',
+                                  ar
+                                      ? 'بريد إلكتروني مؤكد'
+                                      : 'Verified Email Auth',
                                   style: FixoTypography.bodySm(
                                     color: palette.mutedText,
                                     locale: locale,
@@ -675,7 +625,9 @@ class _EmailAuthPageState extends ConsumerState<EmailAuthPage> {
                               const SizedBox(width: 4),
                               Flexible(
                                 child: Text(
-                                  ar ? 'دعم القاهرة والجيزة' : 'Cairo & Giza Support',
+                                  ar
+                                      ? 'دعم القاهرة والجيزة'
+                                      : 'Cairo & Giza Support',
                                   style: FixoTypography.bodySm(
                                     color: palette.mutedText,
                                     locale: locale,

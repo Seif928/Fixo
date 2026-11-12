@@ -13,6 +13,7 @@ class CreateBookingState {
     this.selectedAddress,
     required this.selectedDate,
     this.selectedTimeWindow = 'AFTERNOON_13_16',
+    this.scheduledTime = '14:00',
     this.issueDescription = '',
     this.issuePhotoUrls = const [],
     this.isSubmitting = false,
@@ -29,6 +30,7 @@ class CreateBookingState {
   final CustomerAddressModel? selectedAddress;
   final DateTime selectedDate;
   final String selectedTimeWindow;
+  final String scheduledTime;
   final String issueDescription;
   final List<String> issuePhotoUrls;
   final bool isSubmitting;
@@ -47,6 +49,7 @@ class CreateBookingState {
     CustomerAddressModel? selectedAddress,
     DateTime? selectedDate,
     String? selectedTimeWindow,
+    String? scheduledTime,
     String? issueDescription,
     List<String>? issuePhotoUrls,
     bool? isSubmitting,
@@ -68,6 +71,7 @@ class CreateBookingState {
           : (selectedAddress ?? this.selectedAddress),
       selectedDate: selectedDate ?? this.selectedDate,
       selectedTimeWindow: selectedTimeWindow ?? this.selectedTimeWindow,
+      scheduledTime: scheduledTime ?? this.scheduledTime,
       issueDescription: issueDescription ?? this.issueDescription,
       issuePhotoUrls: issuePhotoUrls ?? this.issuePhotoUrls,
       isSubmitting: isSubmitting ?? this.isSubmitting,
@@ -220,6 +224,10 @@ class CreateBookingController extends StateNotifier<CreateBookingState> {
     state = state.copyWith(selectedDate: date, clearError: true);
   }
 
+  void selectExactTime(String value) {
+    state = state.copyWith(scheduledTime: value, clearError: true);
+  }
+
   void selectTimeWindow(String window) {
     state = state.copyWith(selectedTimeWindow: window, clearError: true);
   }
@@ -263,6 +271,7 @@ class CreateBookingController extends StateNotifier<CreateBookingState> {
       addressId: state.selectedAddress!.id,
       preferredProId: preferredPro?.id,
       scheduledDate: scheduledDateStr,
+      scheduledTime: state.scheduledTime,
       timeWindow: state.selectedTimeWindow,
       issueDescription: state.issueDescription.isNotEmpty
           ? state.issueDescription

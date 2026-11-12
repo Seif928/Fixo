@@ -3,6 +3,14 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/services.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 
+/// Returns `true` when the user dismissed a browser sign-in popup deliberately.
+bool isCancelledAuthError(Object error) =>
+    error is FirebaseAuthException &&
+    const [
+      'popup-closed-by-user',
+      'cancelled-popup-request',
+    ].contains(error.code);
+
 /// Maps Firebase Auth, Google Sign-In, and FIXO API errors into clear bilingual
 /// user-facing messages while preserving existing test contract wording.
 String formatAuthErrorMessage(
@@ -31,6 +39,14 @@ String formatAuthErrorMessage(
 
   if (error is FirebaseAuthException) {
     switch (error.code) {
+      case 'popup-blocked':
+        return isArabic
+            ? 'اسمح بنافذة جوجل المنبثقة من إعدادات المتصفح، ثم حاول مجددًا.'
+            : 'Allow the Google popup in your browser, then try again.';
+      case 'auth-not-ready':
+        return isArabic
+            ? 'جارٍ الاتصال بجوجل. حاول بعد لحظة.'
+            : 'Google is still connecting. Try again in a moment.';
       case 'invalid-email':
         return isArabic
             ? 'صيغة البريد الإلكتروني غير صحيحة.'

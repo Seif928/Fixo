@@ -287,12 +287,14 @@ class _IncomingJobPageState extends ConsumerState<IncomingJobPage>
     final palette = context.fixoPalette;
     final offer = _offer;
     final scheduledDate = DateTime.tryParse(offer?.scheduledDate ?? '');
-    final window = switch (offer?.timeWindow) {
-      'MORNING_09_12' => ar ? 'صباحًا ٩–١٢' : 'Morning 09:00–12:00',
-      'AFTERNOON_13_16' => ar ? 'ظهرًا ١٣–١٦' : 'Afternoon 13:00–16:00',
-      'EVENING_17_20' => ar ? 'مساءً ١٧–٢٠' : 'Evening 17:00–20:00',
-      _ => ar ? 'الفترة غير متاحة' : 'Time window unavailable',
-    };
+    final window =
+        offer?.scheduledTime ??
+        switch (offer?.timeWindow) {
+          'MORNING_09_12' => ar ? 'صباحًا ٩–١٢' : 'Morning 09:00–12:00',
+          'AFTERNOON_13_16' => ar ? 'ظهرًا ١٣–١٦' : 'Afternoon 13:00–16:00',
+          'EVENING_17_20' => ar ? 'مساءً ١٧–٢٠' : 'Evening 17:00–20:00',
+          _ => ar ? 'الفترة غير متاحة' : 'Time window unavailable',
+        };
     final inactiveLabel = switch (offer?.status) {
       'ACCEPTED' => ar ? 'تم قبول هذا العرض' : 'Offer already accepted',
       'DECLINED' => ar ? 'تم الاعتذار عن هذا العرض' : 'Offer already declined',

@@ -29,6 +29,7 @@ class CustomerHomeState {
     this.selectedCategorySlug,
     this.searchQuery = '',
     this.sortMode = 'default',
+    this.searchResults,
     this.activeBottomTab = 0,
   });
 
@@ -41,6 +42,7 @@ class CustomerHomeState {
   final String? selectedCategorySlug;
   final String searchQuery;
   final String sortMode;
+  final List<ServiceOfferModel>? searchResults;
   final int activeBottomTab;
 
   CoverageZoneModel? get activeZone {
@@ -68,7 +70,8 @@ class CustomerHomeState {
   }
 
   List<ProfessionalCardModel> get filteredProfessionals {
-    var pros = (feed?.professionals ?? const <ProfessionalCardModel>[]).toList();
+    var pros = (feed?.professionals ?? const <ProfessionalCardModel>[])
+        .toList();
     if (selectedCategorySlug != null && selectedCategorySlug!.isNotEmpty) {
       pros = pros
           .where((p) => p.primaryCategorySlug == selectedCategorySlug)
@@ -98,7 +101,9 @@ class CustomerHomeState {
   }
 
   List<ServiceOfferModel> get filteredServices {
-    var services = (feed?.services ?? const <ServiceOfferModel>[]).toList();
+    var services =
+        (searchResults ?? feed?.services ?? const <ServiceOfferModel>[])
+            .toList();
     if (selectedCategorySlug != null && selectedCategorySlug!.isNotEmpty) {
       services = services
           .where((s) => s.categorySlug == selectedCategorySlug)
@@ -151,6 +156,8 @@ class CustomerHomeState {
     bool clearCategory = false,
     String? searchQuery,
     String? sortMode,
+    List<ServiceOfferModel>? searchResults,
+    bool clearSearchResults = false,
     int? activeBottomTab,
   }) {
     return CustomerHomeState(
@@ -164,13 +171,15 @@ class CustomerHomeState {
           : (selectedCategorySlug ?? this.selectedCategorySlug),
       searchQuery: searchQuery ?? this.searchQuery,
       sortMode: sortMode ?? this.sortMode,
+      searchResults: clearSearchResults
+          ? null
+          : (searchResults ?? this.searchResults),
       activeBottomTab: activeBottomTab ?? this.activeBottomTab,
     );
   }
 }
 
 class CustomerHomeController extends Notifier<CustomerHomeState> {
-  static const String _feedCacheKey = 'fixo.home_feed_cache.v1';
   int _request = 0;
   int _searchEpoch = 0;
   Timer? _searchDebounce;
@@ -194,31 +203,16 @@ class CustomerHomeController extends Notifier<CustomerHomeState> {
     _request++;
     final prefs = ref.read(appPreferencesProvider);
     SelectedServiceArea? saved;
-    final raw = _userId == null
-        ? null
-        : prefs?.getString('fixo.area.$_userId');
+    final raw = _userId == null ? null : prefs?.getString('fixo.area.$_userId');
     try {
       if (raw != null) saved = SelectedServiceArea.fromJson(jsonDecode(raw));
     } catch (_) {
       /* Ignore invalid/old preferences. */
     }
-    CustomerHomeFeed? cachedFeed;
-    final rawCache = prefs?.getString(_feedCacheKey);
-    if (rawCache != null && rawCache.isNotEmpty) {
-      try {
-        cachedFeed = CustomerHomeFeed.fromJson(
-          Map<String, dynamic>.from(jsonDecode(rawCache) as Map),
-        );
-      } catch (_) {
-        cachedFeed = null;
-      }
-    }
+    // Retire the unscoped cache: it mixed area-dependent professional results.
+    if (prefs != null) unawaited(prefs.remove('fixo.home_feed_cache.v1'));
     Future<void>.microtask(loadFeed);
-    return CustomerHomeState(
-      isLoading: cachedFeed == null,
-      feed: cachedFeed,
-      selectedArea: saved,
-    );
+    return CustomerHomeState(isLoading: true, selectedArea: saved);
   }
 
   void selectSortMode(String mode) {
@@ -228,10 +222,7 @@ class CustomerHomeController extends Notifier<CustomerHomeState> {
   Future<void> loadFeed() async {
     if (_disposed) return;
     final request = ++_request;
-    state = state.copyWith(
-      isLoading: state.feed == null,
-      clearError: true,
-    );
+    state = state.copyWith(isLoading: state.feed == null, clearError: true);
     try {
       final repository = ref.read(marketplaceRepositoryProvider);
       final feed = await repository.fetchCustomerHomeFeed(
@@ -239,14 +230,6 @@ class CustomerHomeController extends Notifier<CustomerHomeState> {
       );
       if (_disposed || request != _request) return;
       state = state.copyWith(isLoading: false, feed: feed, clearError: true);
-      try {
-        final prefs = ref.read(appPreferencesProvider);
-        if (prefs != null) {
-          unawaited(prefs.setString(_feedCacheKey, jsonEncode(feed.toJson())));
-        }
-      } catch (_) {
-        /* Ignore cache persistence failures */
-      }
     } on MarketplaceApiException catch (error) {
       if (_disposed || request != _request) return;
       state = state.copyWith(isLoading: false, errorMessage: error.message);
@@ -277,11 +260,15 @@ class CustomerHomeController extends Notifier<CustomerHomeState> {
     final epoch = ++_searchEpoch;
 
     if (value.trim().isEmpty) {
-      state = state.copyWith(searchQuery: '', isSearching: false);
+      state = state.copyWith(
+        searchQuery: '',
+        isSearching: false,
+        clearSearchResults: true,
+      );
       return;
     }
 
-    state = state.copyWith(isSearching: true);
+    state = state.copyWith(isSearching: true, clearSearchResults: true);
     _searchDebounce = Timer(const Duration(milliseconds: 300), () {
       if (_disposed || epoch != _searchEpoch) return;
       state = state.copyWith(searchQuery: value, isSearching: true);
@@ -314,30 +301,10 @@ class CustomerHomeController extends Notifier<CustomerHomeState> {
               categoryId: state.selectedCategorySlug,
             );
       if (_disposed || epoch != _searchEpoch || cancelToken.isCancelled) return;
-      final currentFeed = state.feed;
-      if (currentFeed != null && paginated.items.isNotEmpty) {
-        final existingIds = currentFeed.services.map((s) => s.id).toSet();
-        final newServices = paginated.items
-            .where((s) => !existingIds.contains(s.id))
-            .toList();
-        if (newServices.isNotEmpty) {
-          state = state.copyWith(
-            isSearching: false,
-            feed: CustomerHomeFeed(
-              zones: currentFeed.zones,
-              categories: currentFeed.categories,
-              services: [...currentFeed.services, ...newServices],
-              professionals: currentFeed.professionals,
-              storageMode: currentFeed.storageMode,
-              databaseConnected: currentFeed.databaseConnected,
-            ),
-          );
-          return;
-        }
-      }
-      if (!_disposed && epoch == _searchEpoch) {
-        state = state.copyWith(isSearching: false);
-      }
+      state = state.copyWith(
+        isSearching: false,
+        searchResults: paginated.items,
+      );
     } catch (_) {
       if (!_disposed && epoch == _searchEpoch) {
         state = state.copyWith(isSearching: false);
@@ -346,6 +313,10 @@ class CustomerHomeController extends Notifier<CustomerHomeState> {
   }
 
   void selectCategory(String? categorySlug) {
+    _searchDebounce?.cancel();
+    _searchCancelToken?.cancel('Category changed');
+    _searchEpoch++;
+    state = state.copyWith(isSearching: false, clearSearchResults: true);
     if (state.selectedCategorySlug == categorySlug) {
       state = state.copyWith(clearCategory: true);
     } else {
@@ -355,7 +326,13 @@ class CustomerHomeController extends Notifier<CustomerHomeState> {
 
   Future<void> selectArea(SelectedServiceArea area) async {
     final userId = _userId;
-    state = state.copyWith(selectedArea: area);
+    _searchDebounce?.cancel();
+    _searchCancelToken?.cancel('Area changed');
+    _searchEpoch++;
+    state = CustomerHomeState(
+      selectedArea: area,
+      selectedCategorySlug: state.selectedCategorySlug,
+    );
     final preferences = ref.read(appPreferencesProvider);
     final fetch = loadFeed();
     if (userId != null && preferences != null) {
@@ -373,6 +350,7 @@ class CustomerHomeController extends Notifier<CustomerHomeState> {
     _searchEpoch++;
     state = state.copyWith(
       searchQuery: '',
+      clearSearchResults: true,
       clearCategory: true,
       isSearching: false,
     );

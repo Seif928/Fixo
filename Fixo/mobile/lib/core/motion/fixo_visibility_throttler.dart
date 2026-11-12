@@ -2,7 +2,7 @@ import 'package:material_ui/material_ui.dart';
 import 'fixo_motion.dart';
 
 /// Lightweight lifecycle, route, and scroll-viewport visibility throttler for
-/// continuous `AnimationController` loops in FIXO.
+/// decorative `AnimationController` effects in FIXO.
 ///
 /// Pauses the ticker when:
 /// 1. App lifecycle is not resumed (`paused`, `inactive`, `hidden`).
@@ -16,12 +16,13 @@ class FixoVisibilityThrottler extends StatefulWidget {
     required this.controller,
     required this.child,
     this.repeatReverse = false,
+    this.repeat = false,
     this.viewportBuffer = 50.0,
     this.enableInTests = false,
     this.onVisibilityChanged,
   });
 
-  /// The continuous AnimationController to throttle.
+  /// The AnimationController to throttle.
   final AnimationController controller;
 
   /// The child widget (typically AnimatedBuilder or CustomPaint).
@@ -29,6 +30,9 @@ class FixoVisibilityThrottler extends StatefulWidget {
 
   /// Whether controller.repeat should be invoked with reverse: true.
   final bool repeatReverse;
+
+  /// Decorative effects play once by default, without repainting an idle page.
+  final bool repeat;
 
   /// Pre-roll buffer in logical pixels to anticipate scrolling into view.
   final double viewportBuffer;
@@ -140,8 +144,9 @@ class FixoVisibilityThrottlerState extends State<FixoVisibilityThrottler>
       return false;
     }
 
-    final isTest =
-        WidgetsBinding.instance.runtimeType.toString().contains('Test');
+    final isTest = WidgetsBinding.instance.runtimeType.toString().contains(
+      'Test',
+    );
     if (isTest && !widget.enableInTests) {
       return false;
     }
@@ -202,8 +207,12 @@ class FixoVisibilityThrottlerState extends State<FixoVisibilityThrottler>
 
     try {
       if (shouldAnimate) {
-        if (!widget.controller.isAnimating) {
-          if (widget.repeatReverse) {
+        if (!widget.controller.isAnimating &&
+            (widget.repeat ||
+                widget.controller.status != AnimationStatus.completed)) {
+          if (!widget.repeat) {
+            widget.controller.forward();
+          } else if (widget.repeatReverse) {
             widget.controller.repeat(reverse: true);
           } else {
             widget.controller.repeat();
@@ -222,4 +231,3 @@ class FixoVisibilityThrottlerState extends State<FixoVisibilityThrottler>
   @override
   Widget build(BuildContext context) => widget.child;
 }
-

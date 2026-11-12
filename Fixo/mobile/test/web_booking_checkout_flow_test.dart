@@ -3,12 +3,14 @@
 // 1. Offline Responsive & Localization Widget Tests:
 //    Run during normal `flutter test` without any backend or network calls.
 //
-// 2. Opt-In Live Chrome Web Full UI E2E Test:
+// 2. Opt-In local API-backed Flutter widget integration test:
+//    Not browser/device E2E. Uses real HTTP/controllers with in-memory test token storage.
 //    Skipped during normal `flutter test`. Requires the isolated test backend
-//    on port 3002 (`fixo_test`). Run in Chrome with:
+//    on loopback port 3002 (`fixo_test`). Run in the Flutter test VM with:
 //
-//    flutter test -d chrome test/web_booking_checkout_flow_test.dart --dart-define=FIXO_LIVE_WEB_E2E=true --dart-define=FIXO_API_BASE_URL=http://localhost:3002/api/v1
+//    flutter test test/web_booking_checkout_flow_test.dart --dart-define=FIXO_LIVE_WEB_E2E=true --dart-define=FIXO_API_BASE_URL=http://localhost:3002/api/v1
 import 'dart:io';
+import 'dart:async';
 
 import 'package:cupertino_ui/cupertino_ui.dart';
 import 'package:material_ui/material_ui.dart';
@@ -20,6 +22,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:fixo_mobile/app/app.dart';
 import 'package:fixo_mobile/app/router/app_router.dart';
 import 'package:fixo_mobile/core/theme/fixo_theme.dart';
+import 'package:fixo_mobile/core/network/dio_client.dart';
+import 'package:fixo_mobile/core/storage/secure_token_storage.dart';
 import 'package:fixo_mobile/features/auth/presentation/controllers/auth_controller.dart';
 import 'package:fixo_mobile/features/booking/data/booking_repository.dart';
 import 'package:fixo_mobile/features/booking/domain/booking_models.dart';
@@ -28,9 +32,9 @@ import 'package:fixo_mobile/features/customer_home/presentation/controllers/cust
 import 'package:fixo_mobile/features/payment/presentation/controllers/checkout_controller.dart';
 import 'package:fixo_mobile/features/payment/presentation/widgets/checkout_widgets.dart';
 
-const bool _runLiveWebE2e =
-    bool.fromEnvironment('FIXO_LIVE_WEB_E2E') ||
-    bool.fromEnvironment('FIXO_LIVE_API');
+const bool _runLiveWebE2e = bool.fromEnvironment('FIXO_LIVE_WEB_E2E');
+
+class _LiveBookingHttpOverrides extends HttpOverrides {}
 
 Future<void> _pumpFrames(
   WidgetTester tester, [
@@ -45,22 +49,43 @@ Future<void> _pumpFrames(
 Future<void> _runAsyncAndWait(
   WidgetTester tester, {
   Future<void> Function()? action,
+  bool actionNeedsPumping = false,
   required bool Function() until,
   required String description,
   int maxPolls = 120,
   Duration pollInterval = const Duration(milliseconds: 100),
 }) async {
-  await tester.runAsync(() async {
-    if (action != null) {
-      await action();
+  if (action != null && !actionNeedsPumping) {
+    await action();
+  }
+  final completed = await tester.runAsync<bool>(() async {
+    var actionDone = action == null || !actionNeedsPumping;
+    Object? actionError;
+    if (action != null && actionNeedsPumping) {
+      // Pump the widget zone while real HTTP/storage callbacks complete.
+      // Awaiting action before pumping can deadlock the fake-async token queue.
+      unawaited(
+        action().then(
+          (_) {
+            actionDone = true;
+          },
+          onError: (Object error) {
+            actionError = error;
+            actionDone = true;
+          },
+        ),
+      );
     }
     for (int i = 0; i < maxPolls; i++) {
-      await tester.pump();
-      if (until()) return;
+      await tester.pump(pollInterval);
+      if (actionError != null) throw actionError!;
+      if (actionDone && until()) return true;
       await Future<void>.delayed(pollInterval);
     }
     throw StateError('Timed out waiting for condition: $description');
   });
+  if (completed != true) throw StateError('Live action failed: $description');
+  debugPrint('LOCAL_BOOKING_CHECK: $description');
   await _pumpFrames(tester);
 }
 
@@ -358,21 +383,43 @@ void main() {
   );
 
   group(
-    'Live Chrome Web Full UI E2E Journey (Opt-In, Port 3002, No Overrides)',
+    'Local API-backed booking UI integration (VM, test token storage)',
     () {
+      HttpOverrides? previousHttpOverrides;
       setUp(() {
-        HttpOverrides.global = null;
+        final target = Uri.parse(resolveDefaultApiBaseUrl());
+        if (target.scheme != 'http' ||
+            !['localhost', '127.0.0.1'].contains(target.host) ||
+            target.port != 3002 ||
+            target.path != '/api/v1') {
+          throw StateError(
+            'Write-capable booking verification requires loopback API port 3002.',
+          );
+        }
+        previousHttpOverrides = HttpOverrides.current;
+        HttpOverrides.global = _LiveBookingHttpOverrides();
+      });
+      tearDown(() {
+        HttpOverrides.global = previousHttpOverrides;
       });
 
       testWidgets(
-        'Normal FixoApp UI Journey: Onboarding -> Dev OTP Sign-In -> Service Selection -> Address Bottom Sheet -> Draft Booking -> Screen 05 Cash Checkout -> Reopen & Idempotent Retry',
+        'Local booking UI: verified test session -> service -> address -> calendar -> exact time -> cash checkout -> idempotent reopen',
         (WidgetTester tester) async {
-          HttpOverrides.global = null;
           tester.view.physicalSize = const Size(1280, 900);
           tester.view.devicePixelRatio = 1.0;
 
-          // Zero overrides: production FixoApp, GoRouter, controllers, and repositories
-          final container = ProviderContainer();
+          // Only OS token storage is substituted in the widget VM. Auth and booking APIs,
+          // controllers, models, and route authorization are real.
+          late MemoryTokenStorage localStorage;
+          await tester.runAsync(() async {
+            localStorage = MemoryTokenStorage();
+          });
+          final container = ProviderContainer(
+            overrides: [
+              secureTokenStorageProvider.overrideWithValue(localStorage),
+            ],
+          );
           addTearDown(() {
             tester.view.resetPhysicalSize();
             tester.view.resetDevicePixelRatio();
@@ -387,89 +434,53 @@ void main() {
           );
           await _pumpFrames(tester);
 
-          // -------------------------------------------------------------------
-          // STEP 1: Onboarding Screen -> Navigate to Sign-In
-          // -------------------------------------------------------------------
-          expect(find.text('Your home, in better hands.'), findsOneWidget);
-          final signInBtn = find.byKey(const Key('btn-sign-in'));
-          await tester.ensureVisible(signInBtn);
-          await _pumpFrames(tester);
-          await tester.tap(signInBtn);
-          await _pumpFrames(tester);
-
-          // -------------------------------------------------------------------
-          // STEP 2: Phone Auth Screen -> Request Development OTP
-          // -------------------------------------------------------------------
-          expect(find.byKey(const Key('section-phone-input')), findsOneWidget);
-
+          // Establish a synthetic session through the local test API. This is
+          // explicitly an auth fixture, not validation of the Google/password UI.
           final uniqueDigits =
               (DateTime.now().millisecondsSinceEpoch % 100000000)
                   .toString()
                   .padLeft(8, '0');
-          final phoneInput = find.byKey(const Key('input-egypt-phone'));
-          await tester.ensureVisible(phoneInput);
-          await tester.enterText(phoneInput, '010$uniqueDigits');
-          await tester.pump();
-
-          final continuePhoneBtn = find.byKey(const Key('btn-continue-phone'));
-          await tester.ensureVisible(continuePhoneBtn);
-          await tester.pump();
-
-          await _runAsyncAndWait(
-            tester,
-            action: () async {
-              await tester.tap(continuePhoneBtn);
-            },
-            until: () {
-              final s = container.read(authControllerProvider);
-              if (s.errorMessage != null) {
-                throw StateError('OTP request failed: ${s.errorMessage}');
-              }
-              return s.step == PhoneAuthStep.otpCode;
-            },
-            description: 'AuthController transitions to PhoneAuthStep.otpCode',
-          );
-
-          // -------------------------------------------------------------------
-          // STEP 3: OTP Screen -> Enter 6-Digit Dev OTP (482910) via UI Keypad
-          // -------------------------------------------------------------------
-          expect(find.byKey(const Key('section-otp-code')), findsOneWidget);
-          for (final digit in const ['4', '8', '2', '9', '1', '0']) {
-            final digitKey = find.byKey(Key('keypad-digit-$digit'));
-            await tester.ensureVisible(digitKey);
-            await tester.tap(digitKey);
-            await tester.pump();
-          }
-
-          final verifyOtpBtn = find.byKey(const Key('btn-verify-otp'));
-          await tester.ensureVisible(verifyOtpBtn);
-          await tester.pump();
-
-          await _runAsyncAndWait(
-            tester,
-            action: () async {
-              await tester.tap(verifyOtpBtn);
-            },
-            until: () {
-              final s = container.read(authControllerProvider);
-              if (s.errorMessage != null) {
-                throw StateError('OTP verify failed: ${s.errorMessage}');
-              }
-              return s.isAuthenticated;
-            },
-            description: 'AuthController completes OTP verification',
-          );
+          final fixtureReady = await tester.runAsync<bool>(() async {
+            final auth = container.read(authControllerProvider.notifier);
+            auth.updatePhoneInput('010$uniqueDigits');
+            expect(
+              await auth.requestOtp(),
+              isTrue,
+              reason: container.read(authControllerProvider).errorMessage,
+            );
+            auth.setOtpCode('482910');
+            expect(
+              await auth.verifyOtp(),
+              isTrue,
+              reason: container.read(authControllerProvider).errorMessage,
+            );
+            return true;
+          });
+          if (fixtureReady != true) throw StateError('Local authentication fixture failed.');
+          container.read(appRouterProvider).go('/customer/home');
+          debugPrint('LOCAL_BOOKING_CHECK: local API session verified');
+          await _pumpFrames(tester);
 
           // -------------------------------------------------------------------
           // STEP 4: Customer Home -> Wait for Catalog Feed & Select Offering
           // -------------------------------------------------------------------
           await _runAsyncAndWait(
             tester,
+            action: () => container
+                .read(customerHomeControllerProvider.notifier)
+                .loadFeed(),
+            actionNeedsPumping: true,
             until: () {
               final homeState = container.read(customerHomeControllerProvider);
+              if (homeState.errorMessage != null) {
+                throw StateError(
+                  'Live catalog failed: ${homeState.errorMessage}',
+                );
+              }
               return !homeState.isLoading && homeState.feed != null;
             },
-            description: 'CustomerHomeController loads live feed from port 3002',
+            description:
+                'CustomerHomeController loads live feed from port 3002',
           );
 
           expect(find.text('FIXO'), findsWidgets);
@@ -520,6 +531,21 @@ void main() {
           expect(find.text('Add New Address'), findsWidgets);
           expect(find.byKey(const Key('address-label-input')), findsOneWidget);
 
+          await tester.ensureVisible(
+            find.byKey(const Key('address-zone-dropdown')),
+          );
+          await tester.tap(find.byKey(const Key('address-zone-dropdown')));
+          await _runAsyncAndWait(
+            tester,
+            until: () =>
+                find.byKey(const Key('place-EG01')).evaluate().isNotEmpty,
+            description: 'Egypt governorates loaded in the area picker',
+          );
+          await tester.tap(find.byKey(const Key('place-EG01')));
+          await _pumpFrames(tester);
+          await tester.tap(find.byKey(const Key('confirm-service-area')));
+          await _pumpFrames(tester);
+
           await tester.enterText(
             find.byKey(const Key('address-label-input')),
             'Zayed Web Residence',
@@ -549,6 +575,15 @@ void main() {
             },
             until: () {
               final s = container.read(createBookingControllerProvider);
+              final bannerText = find.descendant(
+                of: find.byKey(const Key('address-error-banner')),
+                matching: find.byType(Text),
+              );
+              if (bannerText.evaluate().isNotEmpty) {
+                throw StateError(
+                  'Address form rejected: ${tester.widget<Text>(bannerText.first).data}',
+                );
+              }
               if (s.addressCreationError != null) {
                 throw StateError(
                   'Address creation failed: ${s.addressCreationError}',
@@ -564,11 +599,38 @@ void main() {
           // -------------------------------------------------------------------
           // STEP 7: Select Schedule Window, Enter Issue Notes & Submit Draft
           // -------------------------------------------------------------------
-          final afternoonWindow = find.text('Afternoon Window');
-          await tester.ensureVisible(afternoonWindow);
+          final calendar = find.byKey(const Key('booking-open-calendar'));
+          await tester.ensureVisible(calendar);
+          await tester.tap(calendar);
           await _pumpFrames(tester);
-          await tester.tap(afternoonWindow);
-          await tester.pump();
+          await tester.tap(find.byIcon(Icons.edit_outlined));
+          await _pumpFrames(tester);
+          final selectedDate = DateTime.now().add(const Duration(days: 14));
+          await tester.enterText(
+            find.descendant(
+              of: find.byType(DatePickerDialog),
+              matching: find.byType(TextFormField),
+            ),
+            '${selectedDate.month}/${selectedDate.day}/${selectedDate.year}',
+          );
+          await tester.tap(find.text('OK'));
+          await _pumpFrames(tester);
+          await tester.ensureVisible(
+            find.byKey(const Key('booking-exact-time')),
+          );
+          await tester.tap(find.byKey(const Key('booking-exact-time')));
+          await _pumpFrames(tester);
+          await tester.tap(find.byTooltip('Switch to text input mode'));
+          await _pumpFrames(tester);
+          final timeFields = find.descendant(
+            of: find.byType(TimePickerDialog),
+            matching: find.byType(TextField),
+          );
+          await tester.enterText(timeFields.at(0), '21');
+          await tester.enterText(timeFields.at(1), '45');
+          await tester.tap(find.text('OK'));
+          await _pumpFrames(tester);
+          expect(find.text('Time: 21:45'), findsOneWidget);
 
           final issueInput = find.byKey(
             const Key('booking-issue-description-input'),
@@ -576,7 +638,7 @@ void main() {
           await tester.ensureVisible(issueInput);
           await tester.enterText(
             issueInput,
-            'Web Chrome full UI booking-to-checkout verification.',
+            'Local API-backed booking UI verification.',
           );
           await tester.pump();
 
@@ -774,6 +836,11 @@ void main() {
           expect(verifiedBooking.id, equals(createdBookingId));
           expect(verifiedBooking.orderCode, equals(expectedOrderCode));
           expect(verifiedBooking.status, equals('PENDING_DISPATCH'));
+          expect(verifiedBooking.scheduledTime, '21:45');
+          expect(
+            verifiedBooking.scheduledDate,
+            '${selectedDate.year}-${selectedDate.month.toString().padLeft(2, '0')}-${selectedDate.day.toString().padLeft(2, '0')}',
+          );
           expect(verifiedBooking.payment, isNotNull);
           expect(verifiedBooking.payment?.method, equals('CASH_ON_SERVICE'));
           expect(verifiedBooking.payment?.status, equals('PENDING'));

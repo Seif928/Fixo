@@ -3,6 +3,7 @@ import 'package:material_ui/material_ui.dart';
 import '../theme/fixo_colors.dart';
 import '../theme/fixo_spacing.dart';
 import 'fixo_tilt_3d.dart';
+import '../motion/fixo_motion.dart';
 export 'fixo_liquid_glass_layer.dart';
 
 /// Premium floating glassmorphism card for FIXO.
@@ -77,6 +78,7 @@ class FixoGlassCard extends StatelessWidget {
       child: ClipRRect(
         borderRadius: borderRadius,
         child: BackdropFilter(
+          enabled: FixoMotion.expensiveEffects(context),
           filter: ImageFilter.blur(sigmaX: blurSigma, sigmaY: blurSigma),
           child: Container(
             decoration: BoxDecoration(
@@ -97,15 +99,17 @@ class FixoGlassCard extends StatelessWidget {
                       ],
               ),
             ),
-            child: Material(
-              type: MaterialType.transparency,
-              child: onTap != null
-                  ? InkWell(
-                      onTap: onTap,
-                      borderRadius: borderRadius,
-                      child: Padding(padding: padding, child: child),
-                    )
-                  : Padding(padding: padding, child: child),
+            child: RepaintBoundary(
+              child: Material(
+                type: MaterialType.transparency,
+                child: onTap != null
+                    ? InkWell(
+                        onTap: onTap,
+                        borderRadius: borderRadius,
+                        child: Padding(padding: padding, child: child),
+                      )
+                    : Padding(padding: padding, child: child),
+              ),
             ),
           ),
         ),
@@ -123,4 +127,3 @@ class FixoGlassCard extends StatelessWidget {
     return cardContent;
   }
 }
-

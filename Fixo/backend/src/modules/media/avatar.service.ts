@@ -33,7 +33,7 @@ export class AvatarService {
           await tx.$queryRaw`SELECT id FROM "User" WHERE id = ${userId} FOR UPDATE`;
         }
         const user = await tx.user.findUnique({ where: { id: userId } });
-        if (!user) throw new NotFoundException('Account was not found.');
+        if (!user || user.isDeleted) throw new NotFoundException('Account was not found.');
         await tx.user.update({
           where: { id: userId },
           data: { avatarUrl: key },
@@ -54,7 +54,7 @@ export class AvatarService {
 
   async read(userId: string): Promise<Buffer> {
     const user = await this.prisma.user.findUnique({ where: { id: userId } });
-    if (!user?.avatarUrl?.startsWith(`avatars/${userId}/`)) {
+    if (user?.isDeleted || !user?.avatarUrl?.startsWith(`avatars/${userId}/`)) {
       throw new NotFoundException('No profile photo has been added.');
     }
     return this.storage.get(user.avatarUrl);

@@ -415,6 +415,7 @@ class JobOfferModel {
     required this.zoneNameAr,
     required this.scheduledDate,
     required this.timeWindow,
+    this.scheduledTime,
     required this.grossEgp,
     required this.platformFeeEgp,
     required this.netArtisanEgp,
@@ -437,6 +438,7 @@ class JobOfferModel {
   final String zoneNameAr;
   final String scheduledDate;
   final String timeWindow;
+  final String? scheduledTime;
   final int grossEgp;
   final int platformFeeEgp;
   final int netArtisanEgp;
@@ -488,6 +490,9 @@ class JobOfferModel {
       scheduledDate:
           json['scheduledDate'] as String? ??
           (booking['scheduledDate'] as String? ?? ''),
+      scheduledTime:
+          json['scheduledTime'] as String? ??
+          booking['scheduledTime'] as String?,
       timeWindow:
           json['timeWindow'] as String? ??
           (booking['timeWindow'] as String? ?? ''),
@@ -517,6 +522,7 @@ class ProScheduledJobModel {
     required this.zoneNameEn,
     required this.zoneNameAr,
     required this.timeWindow,
+    this.scheduledTime,
     required this.scheduledDate,
     required this.totalEgp,
     required this.netArtisanEgp,
@@ -535,6 +541,7 @@ class ProScheduledJobModel {
   final String zoneNameEn;
   final String zoneNameAr;
   final String timeWindow;
+  final String? scheduledTime;
   final String scheduledDate;
   final int totalEgp;
   final int netArtisanEgp;
@@ -575,6 +582,7 @@ class ProScheduledJobModel {
           json['zoneNameEn'] as String? ?? zone['nameEn'] as String? ?? '',
       zoneNameAr:
           json['zoneNameAr'] as String? ?? zone['nameAr'] as String? ?? '',
+      scheduledTime: json['scheduledTime'] as String?,
       timeWindow: json['timeWindow'] as String? ?? '',
       scheduledDate: json['scheduledDate'] as String? ?? '',
       totalEgp: _requiredEgp(pricing['totalEgp'] ?? json['totalEgp']),

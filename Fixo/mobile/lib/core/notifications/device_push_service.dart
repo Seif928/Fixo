@@ -9,6 +9,7 @@ import '../../firebase_options.dart';
 import '../l10n/app_locale_controller.dart';
 import '../network/dio_client.dart';
 import '../storage/secure_token_storage.dart';
+import 'push_registration.dart';
 
 enum PushOptInResult { enabled, denied, unavailable }
 
@@ -46,12 +47,10 @@ class PushPlatformClient {
   }
 
   Future<String?> token(String? vapidKey) async {
-    final messaging = FirebaseMessaging.instance;
-    final results = await Future.wait<Object?>([
-      messaging.onRegistered.first,
-      messaging.register(vapidKey: vapidKey),
-    ]).timeout(const Duration(seconds: 20));
-    return results.first as String;
+    return PushRegistration(
+      _FirebaseRegistrationGateway(FirebaseMessaging.instance),
+      isApple: !kIsWeb && defaultTargetPlatform == TargetPlatform.iOS,
+    ).register(vapidKey);
   }
 
   Future<void> deleteToken() async {
@@ -69,6 +68,18 @@ class PushPlatformClient {
   Future<String?> initialBooking() async =>
       (await FirebaseMessaging.instance.getInitialMessage())?.data['bookingId']
           as String?;
+}
+
+class _FirebaseRegistrationGateway implements PushRegistrationGateway {
+  const _FirebaseRegistrationGateway(this.messaging);
+  final FirebaseMessaging messaging;
+  @override
+  Stream<String> get registered => messaging.onRegistered;
+  @override
+  Future<String?> appleToken() => messaging.getAPNSToken();
+  @override
+  Future<void> register(String? vapidKey) =>
+      messaging.register(vapidKey: vapidKey);
 }
 
 /// Requests OS permission only after the user explicitly opts in from Profile.
@@ -91,16 +102,28 @@ class DevicePushService {
   StreamSubscription<void>? _foreground;
   StreamSubscription<String>? _opened;
   bool _busy = false;
+  Future<void>? _stopping;
   int _generation = 0;
 
   Future<PushOptInResult> enable({bool requestPermission = true}) async {
+    final stopping = _stopping;
+    if (stopping != null) {
+      try {
+        await stopping;
+      } catch (_) {
+        /* Cleanup was attempted before this account starts. */
+      }
+    }
     if (_busy || !client.supported) return PushOptInResult.unavailable;
     _busy = true;
     final generation = _generation;
     try {
       final owner = (await storage.readTokens())?.userId;
       if (owner == null || owner.isEmpty) return PushOptInResult.unavailable;
-      final response = await dio.get<Map<String, dynamic>>('/users/me/push-status', options: Options(extra: {'fixo_session_user': owner}));
+      final response = await dio.get<Map<String, dynamic>>(
+        '/users/me/push-status',
+        options: Options(extra: {'fixo_session_user': owner}),
+      );
       final status = response.data ?? {};
       final vapid = status['webVapidKey'] as String?;
       if (status['configured'] != true ||
@@ -108,9 +131,18 @@ class DevicePushService {
           (client.platform == 'IOS' && status['iosConfigured'] != true)) {
         return PushOptInResult.unavailable;
       }
+      if (!await _isCurrent(owner, generation)) {
+        return PushOptInResult.unavailable;
+      }
       await client.initialize();
+      if (!await _isCurrent(owner, generation)) {
+        return PushOptInResult.unavailable;
+      }
       if (!await client.permission(request: requestPermission)) {
         return PushOptInResult.denied;
+      }
+      if (!await _isCurrent(owner, generation)) {
+        return PushOptInResult.unavailable;
       }
       final token = await client.token(vapid);
       if (token == null || token.isEmpty) return PushOptInResult.unavailable;
@@ -153,12 +185,24 @@ class DevicePushService {
         (await storage.readTokens())?.userId != owner) {
       return false;
     }
-    final result = await dio.post<Map<String, dynamic>>('/users/me/push-devices', data: {'token': token, 'platform': client.platform}, options: Options(extra: {'fixo_session_user': owner}));
+    final result = await dio.post<Map<String, dynamic>>(
+      '/users/me/push-devices',
+      data: {'token': token, 'platform': client.platform},
+      options: Options(extra: {'fixo_session_user': owner}),
+    );
     final id = result.data?['id'];
     if (id is! String || id.isEmpty) return false;
-    if (generation != _generation || (await storage.readTokens())?.userId != owner) { return false; }
+    if (generation != _generation ||
+        (await storage.readTokens())?.userId != owner) {
+      return false;
+    }
     await preferences?.setString('fixo.push.device.$owner', id);
     return true;
+  }
+
+  Future<bool> _isCurrent(String owner, int generation) async {
+    final session = await storage.readTokens();
+    return generation == _generation && session?.userId == owner;
   }
 
   Future<void> resume() async {
@@ -169,7 +213,17 @@ class DevicePushService {
     }
   }
 
-  Future<void> disable() async {
+  Future<void> disable() {
+    final stopping = _stopping;
+    if (stopping != null) return stopping;
+    final operation = _disable();
+    _stopping = operation;
+    return operation.whenComplete(() {
+      if (identical(_stopping, operation)) _stopping = null;
+    });
+  }
+
+  Future<void> _disable() async {
     _generation++;
     await _refresh?.cancel();
     await _foreground?.cancel();
@@ -177,20 +231,48 @@ class DevicePushService {
     _refresh = null;
     final owner = (await storage.readTokens())?.userId;
     final id = preferences?.getString('fixo.push.device.$owner');
-    await client.deleteToken();
-    if (owner != null) {
-      await preferences?.remove('fixo.push.device.$owner');
+    Object? failure;
+    StackTrace? trace;
+    try {
+      await client.deleteToken();
+    } catch (error, stack) {
+      failure = error;
+      trace = stack;
     }
-    if (id != null) {
-      await dio.delete(
-        '/users/me/push-devices/${Uri.encodeComponent(id)}',
-        options: Options(extra: {'fixo_session_user': owner}),
-      );
+    try {
+      if (owner != null) await preferences?.remove('fixo.push.device.$owner');
+    } catch (error, stack) {
+      failure ??= error;
+      trace ??= stack;
     }
+    try {
+      if (id != null) {
+        await dio.delete(
+          '/users/me/push-devices/${Uri.encodeComponent(id)}',
+          options: Options(extra: {'fixo_session_user': owner}),
+        );
+      }
+    } catch (error, stack) {
+      failure ??= error;
+      trace ??= stack;
+    }
+    if (failure != null) Error.throwWithStackTrace(failure, trace!);
   }
 
   /// A revoked session cannot call protected unregister endpoints.
-  Future<void> invalidateLocalSession() async {
+  Future<void> invalidateLocalSession() {
+    final stopping = _stopping;
+    if (stopping != null) {
+      return stopping.then<void>((_) {}, onError: (Object _, StackTrace _) {});
+    }
+    final operation = _invalidateLocalSession();
+    _stopping = operation;
+    return operation.whenComplete(() {
+      if (identical(_stopping, operation)) _stopping = null;
+    });
+  }
+
+  Future<void> _invalidateLocalSession() async {
     _generation++;
     await _refresh?.cancel();
     await _foreground?.cancel();

@@ -1,4 +1,5 @@
 import 'package:flutter/foundation.dart';
+import '../../../../core/auth/platform_auth_capabilities.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -9,7 +10,6 @@ import '../../../../core/l10n/app_locale_controller.dart';
 import '../../../../core/theme/fixo_colors.dart';
 import '../../../../core/theme/fixo_spacing.dart';
 import '../../../../core/theme/fixo_typography.dart';
-import '../../../../core/widgets/fixo_brand_mark.dart';
 import '../../../../core/widgets/fixo_buttons.dart';
 import '../../../../core/widgets/fixo_cards.dart';
 import '../../../../core/widgets/fixo_inputs.dart';
@@ -144,37 +144,45 @@ class _PhoneAuthPageState extends ConsumerState<PhoneAuthPage> {
                     key: const Key('auth-use-email-google'),
                     onPressed: () =>
                         context.go('${AppRoutes.phoneAuth}?method=email'),
-                    icon: const FixoGoogleMark(size: 18),
+                    icon: Image.asset(
+                      'assets/brand/google-g.png',
+                      width: 18,
+                      height: 18,
+                      filterQuality: FilterQuality.high,
+                      excludeFromSemantics: true,
+                    ),
                     label: Text(
                       isArabic
                           ? 'الدخول بالبريد أو Google'
                           : 'Continue with email or Google',
                     ),
                   ),
-                  const SizedBox(height: FixoSpacing.sm),
-                  OutlinedButton.icon(
-                    key: const Key('auth-use-apple'),
-                    onPressed: () async {
-                      final session = await ref
-                          .read(emailAccessProvider)
-                          .promptAndSignInWithApple(
-                            context,
-                            isArabic: isArabic,
-                          );
-                      if (session != null && context.mounted) {
-                        await authNotifier.acceptVerifiedSession(session);
-                        if (context.mounted) {
-                          context.go(AppRoutes.customerHome);
+                  if (appleSignInAvailable) ...[
+                    const SizedBox(height: FixoSpacing.sm),
+                    OutlinedButton.icon(
+                      key: const Key('auth-use-apple'),
+                      onPressed: () async {
+                        final session = await ref
+                            .read(emailAccessProvider)
+                            .promptAndSignInWithApple(
+                              context,
+                              isArabic: isArabic,
+                            );
+                        if (session != null && context.mounted) {
+                          await authNotifier.acceptVerifiedSession(session);
+                          if (context.mounted) {
+                            context.go(AppRoutes.customerHome);
+                          }
                         }
-                      }
-                    },
-                    icon: const Icon(Icons.apple_rounded, size: 22),
-                    label: Text(
-                      isArabic
-                          ? 'المتابعة بحساب Apple أو Google'
-                          : 'Continue with Apple or Google',
+                      },
+                      icon: const Icon(Icons.apple_rounded, size: 22),
+                      label: Text(
+                        isArabic
+                            ? 'المتابعة بحساب Apple'
+                            : 'Continue with Apple',
+                      ),
                     ),
-                  ),
+                  ],
                   const SizedBox(height: 18),
 
                   // Editorial Brand Header
@@ -371,7 +379,9 @@ class _PhoneAuthPageState extends ConsumerState<PhoneAuthPage> {
                         const SizedBox(width: 4),
                         Flexible(
                           child: Text(
-                            isArabic ? 'بدون كلمة مرور' : 'No password required',
+                            isArabic
+                                ? 'بدون كلمة مرور'
+                                : 'No password required',
                             style: FixoTypography.bodySm(
                               color: FixoColors.secondary,
                             ).copyWith(fontWeight: FontWeight.w600),
@@ -424,7 +434,9 @@ class _PhoneAuthPageState extends ConsumerState<PhoneAuthPage> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      isArabic ? 'تغطية القاهرة والجيزة' : 'Cairo & Giza Coverage',
+                      isArabic
+                          ? 'تغطية القاهرة والجيزة'
+                          : 'Cairo & Giza Coverage',
                       style: FixoTypography.labelMd(
                         color: palette.inkText,
                       ).copyWith(fontWeight: FontWeight.w700),

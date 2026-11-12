@@ -5,8 +5,7 @@ import '../theme/fixo_typography.dart';
 
 /// Ultra-luxury animated shimmer skeleton building block for FIXO.
 ///
-/// Automatically pauses infinite animation loops in widget test environments
-/// so `WidgetTester.pumpAndSettle()` completes deterministically.
+/// Sweeps once, then rests without continuously repainting the loading screen.
 class FixoSkeletonBox extends StatefulWidget {
   const FixoSkeletonBox({
     super.key,
@@ -39,7 +38,7 @@ class _FixoSkeletonBoxState extends State<FixoSkeletonBox>
       _controller = AnimationController(
         vsync: this,
         duration: const Duration(milliseconds: 1500),
-      )..repeat();
+      )..forward();
     }
   }
 
@@ -174,10 +173,7 @@ class FixoSkeletonCard extends StatelessWidget {
 
 /// Full-page shimmer skeleton for the Customer Home Marketplace.
 class FixoMarketplaceSkeleton extends StatelessWidget {
-  const FixoMarketplaceSkeleton({
-    super.key,
-    this.isArabic = false,
-  });
+  const FixoMarketplaceSkeleton({super.key, this.isArabic = false});
 
   final bool isArabic;
 
@@ -313,4 +309,3 @@ class FixoListSkeleton extends StatelessWidget {
     );
   }
 }
-

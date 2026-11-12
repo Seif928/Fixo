@@ -88,13 +88,15 @@ class _LogoutPageState extends ConsumerState<LogoutPage>
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final authState = ref.watch(authControllerProvider);
     final user = authState.session?.user;
-    final isPro = user?.role == 'PROFESSIONAL';
+    final isPro = user?.role == 'PRO';
 
     final effectiveUser = user;
     final isActuallyAuthed = authState.isAuthenticated && !_signedOutSuccess;
 
     return Scaffold(
-      backgroundColor: isDark ? const Color(0xFF070B09) : const Color(0xFFF7FAF8),
+      backgroundColor: isDark
+          ? const Color(0xFF17191C)
+          : const Color(0xFFF6F2EB),
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
@@ -147,7 +149,9 @@ class _LogoutPageState extends ConsumerState<LogoutPage>
                 shape: BoxShape.circle,
                 gradient: RadialGradient(
                   colors: [
-                    FixoColors.secondaryForest.withValues(alpha: isDark ? 0.18 : 0.08),
+                    FixoColors.secondaryForest.withValues(
+                      alpha: isDark ? 0.18 : 0.08,
+                    ),
                     Colors.transparent,
                   ],
                 ),
@@ -165,7 +169,9 @@ class _LogoutPageState extends ConsumerState<LogoutPage>
                 shape: BoxShape.circle,
                 gradient: RadialGradient(
                   colors: [
-                    const Color(0xFFD4AF37).withValues(alpha: isDark ? 0.12 : 0.06),
+                    const Color(
+                      0xFFC6A779,
+                    ).withValues(alpha: isDark ? 0.12 : 0.06),
                     Colors.transparent,
                   ],
                 ),
@@ -185,7 +191,12 @@ class _LogoutPageState extends ConsumerState<LogoutPage>
                   child: ScaleTransition(
                     scale: _scaleAnimation,
                     child: _signedOutSuccess
-                        ? _buildSignedOutSuccessView(context, ar, isDark, palette)
+                        ? _buildSignedOutSuccessView(
+                            context,
+                            ar,
+                            isDark,
+                            palette,
+                          )
                         : _buildConfirmSignOutView(
                             context,
                             ar,
@@ -226,9 +237,9 @@ class _LogoutPageState extends ConsumerState<LogoutPage>
             height: 76,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
-              color: isDark ? const Color(0xFF131D17) : Colors.white,
+              color: isDark ? const Color(0xFF292C31) : Colors.white,
               border: Border.all(
-                color: const Color(0xFFD4AF37).withValues(alpha: 0.45),
+                color: const Color(0xFFC6A779).withValues(alpha: 0.45),
                 width: 1.5,
               ),
               boxShadow: [
@@ -242,7 +253,7 @@ class _LogoutPageState extends ConsumerState<LogoutPage>
             child: const Icon(
               Icons.lock_person_outlined,
               size: 36,
-              color: Color(0xFFD4AF37),
+              color: Color(0xFFC6A779),
             ),
           ),
         ),
@@ -261,7 +272,7 @@ class _LogoutPageState extends ConsumerState<LogoutPage>
         Text(
           ar
               ? 'هل ترغب في تسجيل الخروج من جلستك الحالية؟ ستبقى جميع طلباتك وعناوينك وتفضيلاتك محفوظة بأمان.'
-              : 'Are you sure you want to sign out? Your bookings, saved addresses, and preferences will remain securely encrypted.',
+              : 'Sign out? Your bookings and saved addresses will stay in your account.',
           textAlign: TextAlign.center,
           style: textTheme.bodyMedium?.copyWith(
             color: palette.mutedText,
@@ -275,7 +286,7 @@ class _LogoutPageState extends ConsumerState<LogoutPage>
           Container(
             padding: const EdgeInsets.all(18),
             decoration: BoxDecoration(
-              color: isDark ? const Color(0xFF101814) : Colors.white,
+              color: isDark ? const Color(0xFF22252A) : Colors.white,
               borderRadius: BorderRadius.circular(20),
               border: Border.all(
                 color: isDark
@@ -309,9 +320,12 @@ class _LogoutPageState extends ConsumerState<LogoutPage>
                         children: [
                           Flexible(
                             child: Text(
-                              (user.fullName != null && user.fullName!.isNotEmpty)
+                              (user.fullName != null &&
+                                      user.fullName!.isNotEmpty)
                                   ? user.fullName!
-                                  : (ar ? 'عميل فيكسو المميز' : 'Valued Customer'),
+                                  : (ar
+                                        ? 'عميل فيكسو المميز'
+                                        : 'Valued Customer'),
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
                               style: textTheme.titleMedium?.copyWith(
@@ -327,17 +341,19 @@ class _LogoutPageState extends ConsumerState<LogoutPage>
                               vertical: 2,
                             ),
                             decoration: BoxDecoration(
-                              color: const Color(0xFFD4AF37).withValues(alpha: 0.15),
+                              color: const Color(
+                                0xFFC6A779,
+                              ).withValues(alpha: 0.15),
                               borderRadius: BorderRadius.circular(6),
                             ),
                             child: Text(
                               isPro
                                   ? (ar ? 'فني معتمد' : 'Pro')
-                                  : (ar ? 'عميل VIP' : 'VIP'),
+                                  : (ar ? 'عميل' : 'Customer'),
                               style: const TextStyle(
                                 fontSize: 10,
                                 fontWeight: FontWeight.w800,
-                                color: Color(0xFFD4AF37),
+                                color: Color(0xFFC6A779),
                               ),
                             ),
                           ),
@@ -366,7 +382,7 @@ class _LogoutPageState extends ConsumerState<LogoutPage>
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
           decoration: BoxDecoration(
-            color: isDark ? const Color(0xFF0C130F) : const Color(0xFFEFF5F1),
+            color: isDark ? const Color(0xFF1D1F23) : const Color(0xFFF0EBE3),
             borderRadius: BorderRadius.circular(12),
           ),
           child: Row(
@@ -381,8 +397,8 @@ class _LogoutPageState extends ConsumerState<LogoutPage>
               Flexible(
                 child: Text(
                   ar
-                      ? 'تشفير كامل للبيانات وفق معايير الحماية المصرفية 256-bit'
-                      : 'End-to-end 256-bit encrypted session security',
+                      ? 'يمكنك الدخول مجدداً لمتابعة طلباتك'
+                      : 'Sign in again to continue your bookings',
                   style: textTheme.labelSmall?.copyWith(
                     color: palette.mutedText,
                     fontWeight: FontWeight.w600,
@@ -494,10 +510,7 @@ class _LogoutPageState extends ConsumerState<LogoutPage>
             decoration: BoxDecoration(
               shape: BoxShape.circle,
               color: FixoColors.secondaryForest.withValues(alpha: 0.15),
-              border: Border.all(
-                color: FixoColors.secondaryForest,
-                width: 2,
-              ),
+              border: Border.all(color: FixoColors.secondaryForest, width: 2),
             ),
             child: const Icon(
               Icons.check_circle_outline_rounded,

@@ -1,6 +1,7 @@
 import { UnauthorizedException } from '@nestjs/common';
 import { UserRole } from '@prisma/client';
 import { createHash, createHmac, randomUUID, timingSafeEqual } from 'crypto';
+import type { ClerkSessionBinding } from '../clerk-session-policy.service';
 
 export interface FixoJwtPayload {
   sub: string;
@@ -11,6 +12,7 @@ export interface FixoJwtPayload {
   iat: number;
   exp: number;
   firebaseAuthTime?: number;
+  clerkSession?: ClerkSessionBinding;
 }
 
 function base64UrlEncode(input: Buffer | string): string {

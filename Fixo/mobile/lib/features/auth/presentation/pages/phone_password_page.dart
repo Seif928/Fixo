@@ -1,4 +1,5 @@
 import 'dart:convert';
+import '../../../../core/auth/platform_auth_capabilities.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -15,13 +16,14 @@ import '../controllers/auth_controller.dart';
 import '../controllers/auth_error_formatter.dart';
 import '../controllers/account_entry_controller.dart';
 import '../../../../core/uploads/private_media_picker_sheet.dart';
+import '../widgets/google_sign_in_button.dart';
 import '../../../profile/data/avatar_repository.dart';
 
 /// Screen 02: Ultra-Premium Luxury Login & Account Setup.
 ///
 /// Features Apple VisionOS-inspired liquid glassmorphism, responsive split-screen
 /// for desktop web, tactile haptics, social single-sign-on (Apple ID & Google),
-/// and military-grade 256-bit credential verification.
+/// and provider-backed identity verification.
 class PhonePasswordPage extends ConsumerStatefulWidget {
   const PhonePasswordPage({super.key, this.professional});
   final bool? professional;
@@ -76,14 +78,13 @@ class _PhonePasswordPageState extends ConsumerState<PhonePasswordPage> {
     try {
       await action();
     } catch (error) {
-      if (!mounted) return;
-      setState(
-        () => _error = formatAuthErrorMessage(
-          error,
-          isArabic: _ar,
-          forPhonePassword: true,
-        ),
+      if (!mounted || isCancelledAuthError(error)) return;
+      final message = formatAuthErrorMessage(
+        error,
+        isArabic: _ar,
+        forPhonePassword: true,
       );
+      setState(() => _error = message);
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -196,7 +197,9 @@ class _PhonePasswordPageState extends ConsumerState<PhonePasswordPage> {
     final colors = Theme.of(context).colorScheme;
 
     return Scaffold(
-      backgroundColor: isDark ? const Color(0xFF070B09) : const Color(0xFFF7FAF8),
+      backgroundColor: isDark
+          ? const Color(0xFF17191C)
+          : const Color(0xFFF6F2EB),
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
@@ -250,7 +253,9 @@ class _PhonePasswordPageState extends ConsumerState<PhonePasswordPage> {
                 shape: BoxShape.circle,
                 gradient: RadialGradient(
                   colors: [
-                    FixoColors.secondaryForest.withValues(alpha: isDark ? 0.22 : 0.09),
+                    FixoColors.secondaryForest.withValues(
+                      alpha: isDark ? 0.22 : 0.09,
+                    ),
                     Colors.transparent,
                   ],
                 ),
@@ -268,7 +273,9 @@ class _PhonePasswordPageState extends ConsumerState<PhonePasswordPage> {
                 shape: BoxShape.circle,
                 gradient: RadialGradient(
                   colors: [
-                    const Color(0xFFD4AF37).withValues(alpha: isDark ? 0.14 : 0.07),
+                    const Color(
+                      0xFFC6A779,
+                    ).withValues(alpha: isDark ? 0.14 : 0.07),
                     Colors.transparent,
                   ],
                 ),
@@ -301,7 +308,9 @@ class _PhonePasswordPageState extends ConsumerState<PhonePasswordPage> {
                               flex: 6,
                               child: Center(
                                 child: ConstrainedBox(
-                                  constraints: const BoxConstraints(maxWidth: 480),
+                                  constraints: const BoxConstraints(
+                                    maxWidth: 480,
+                                  ),
                                   child: SingleChildScrollView(
                                     child: _buildFormCard(
                                       context: context,
@@ -356,7 +365,11 @@ class _PhonePasswordPageState extends ConsumerState<PhonePasswordPage> {
     );
   }
 
-  Widget _buildDesktopShowcase(bool ar, bool isDark, FixoPaletteExtension palette) {
+  Widget _buildDesktopShowcase(
+    bool ar,
+    bool isDark,
+    FixoPaletteExtension palette,
+  ) {
     return Column(
       mainAxisAlignment: MainAxisAlignment.center,
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -365,26 +378,28 @@ class _PhonePasswordPageState extends ConsumerState<PhonePasswordPage> {
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
           decoration: BoxDecoration(
-            color: const Color(0xFFD4AF37).withValues(alpha: 0.15),
+            color: const Color(0xFFC6A779).withValues(alpha: 0.15),
             borderRadius: BorderRadius.circular(20),
             border: Border.all(
-              color: const Color(0xFFD4AF37).withValues(alpha: 0.4),
+              color: const Color(0xFFC6A779).withValues(alpha: 0.4),
               width: 1,
             ),
           ),
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const Icon(Icons.star_rounded, size: 16, color: Color(0xFFD4AF37)),
+              const Icon(
+                Icons.star_rounded,
+                size: 16,
+                color: Color(0xFFC6A779),
+              ),
               const SizedBox(width: 6),
               Text(
-                ar
-                    ? 'المنصة الأولى المعتمدة لخدمات المنازل الفاخرة'
-                    : 'Egypt’s Premier Certified Home Services Platform',
+                ar ? 'خدمات منزلك مع FIXO' : 'Home services with FIXO',
                 style: const TextStyle(
                   fontSize: 12,
                   fontWeight: FontWeight.w800,
-                  color: Color(0xFFD4AF37),
+                  color: Color(0xFFC6A779),
                 ),
               ),
             ],
@@ -392,9 +407,7 @@ class _PhonePasswordPageState extends ConsumerState<PhonePasswordPage> {
         ),
         const SizedBox(height: 20),
         Text(
-          ar
-              ? 'مرحباً بك في عالم\nالعناية الفندقية بمنزلك'
-              : 'Welcome to the Royal\nStandard of Home Living',
+          ar ? 'خدمات منزلك،\nبكل سهولة' : 'Home services,\nmade simple',
           style: TextStyle(
             fontSize: 38,
             fontWeight: FontWeight.w900,
@@ -406,37 +419,41 @@ class _PhonePasswordPageState extends ConsumerState<PhonePasswordPage> {
         const SizedBox(height: 16),
         Text(
           ar
-              ? 'تجربة استثنائية تجمع بين الحرفية المصرية العريقة وأعلى معايير الدقة والأمان. فنيون مدربون على أعلى مستوى وضمان ذهبي كامل.'
-              : 'An unparalleled experience marrying Nilotic heritage with Swiss precision. Vetted professionals, transparent pricing, and 30-day golden warranty.',
-          style: TextStyle(
-            fontSize: 16,
-            height: 1.6,
-            color: palette.mutedText,
-          ),
+              ? 'اختار الخدمة والعنوان والموعد المناسب لك، وراجع تفاصيل السعر قبل تأكيد حجزك.'
+              : 'Choose your service, address and preferred time, then review the pricing details before confirming your booking.',
+          style: TextStyle(fontSize: 16, height: 1.6, color: palette.mutedText),
         ),
         const SizedBox(height: 32),
 
         // 3 Pillars
         _buildPillarRow(
-          icon: Icons.verified_user_rounded,
-          title: ar ? 'فنيون معتمدون وموثقون جنائياً' : 'Criminal-Record Vetted Professionals',
-          subtitle: ar ? 'فحص شامل واختبارات فنية معتمدة' : 'Comprehensive skills & background check',
+          icon: Icons.home_repair_service_outlined,
+          title: ar ? 'خدمات تناسب منزلك' : 'Services for your home',
+          subtitle: ar
+              ? 'تصفح الخدمات المتاحة وتفاصيلها'
+              : 'Explore available services and their details',
           isDark: isDark,
           palette: palette,
         ),
         const SizedBox(height: 16),
         _buildPillarRow(
-          icon: Icons.speed_rounded,
-          title: ar ? 'وصول فوري خلال 30 دقيقة' : 'Instant 30-Min Arrival',
-          subtitle: ar ? 'تتبع فوري ومباشر للفني حتى باب بيتك' : 'Live real-time tracking to your doorstep',
+          icon: Icons.calendar_month_outlined,
+          title: ar ? 'موعد تختاره أنت' : 'A time that works for you',
+          subtitle: ar
+              ? 'حدد اليوم والساعة عند طلب الخدمة'
+              : 'Select your preferred day and time when booking',
           isDark: isDark,
           palette: palette,
         ),
         const SizedBox(height: 16),
         _buildPillarRow(
-          icon: Icons.shield_moon_rounded,
-          title: ar ? 'ضمان فيكسو الذهبي لمدة 30 يوماً' : '30-Day FIXO Golden Warranty',
-          subtitle: ar ? 'إعادة الخدمة مجاناً أو استرداد كامل للمبلغ' : 'Complimentary rework or full money back',
+          icon: Icons.receipt_long_outlined,
+          title: ar
+              ? 'راجع السعر قبل التأكيد'
+              : 'Review pricing before confirmation',
+          subtitle: ar
+              ? 'تفاصيل الرسوم والإجمالي بالجنيه المصري'
+              : 'See the fee breakdown and total in EGP',
           isDark: isDark,
           palette: palette,
         ),
@@ -457,7 +474,7 @@ class _PhonePasswordPageState extends ConsumerState<PhonePasswordPage> {
           width: 44,
           height: 44,
           decoration: BoxDecoration(
-            color: isDark ? const Color(0xFF131D18) : Colors.white,
+            color: isDark ? const Color(0xFF292C31) : Colors.white,
             borderRadius: BorderRadius.circular(12),
             border: Border.all(
               color: FixoColors.secondaryForest.withValues(alpha: 0.3),
@@ -480,10 +497,7 @@ class _PhonePasswordPageState extends ConsumerState<PhonePasswordPage> {
               ),
               Text(
                 subtitle,
-                style: TextStyle(
-                  fontSize: 12,
-                  color: palette.mutedText,
-                ),
+                style: TextStyle(fontSize: 12, color: palette.mutedText),
               ),
             ],
           ),
@@ -517,7 +531,7 @@ class _PhonePasswordPageState extends ConsumerState<PhonePasswordPage> {
                 gradient: const LinearGradient(
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
-                  colors: [FixoColors.primaryForest, Color(0xFF00754A)],
+                  colors: [FixoColors.primaryForest, Color(0xFF4E4942)],
                 ),
                 borderRadius: FixoRadius.borderRadiusMd,
                 boxShadow: [
@@ -552,62 +566,15 @@ class _PhonePasswordPageState extends ConsumerState<PhonePasswordPage> {
           Text(
             setup
                 ? (ar
-                      ? 'احفظ اسمك ورقمك واختر كلمة مرور FIXO. الرقم سيكون اسم الدخول، بدون رسائل SMS.'
-                      : 'Save your name and phone and choose a FIXO password. Your phone is your sign-in name, without SMS.')
+                      ? 'أضف اسمك ورقمك واختر كلمة مرور لحسابك.'
+                      : 'Add your name, phone number and a password.')
                 : (ar
                       ? 'ادخل برقمك وكلمة مرورك. أول مرة؟ اربط حساب جوجل أدناه.'
-                      : 'Sign in with your phone and password. First time? Connect Google below.'),
+                      : 'Sign in, or create your account with Google.'),
             style: FixoTypography.bodyMd(
               color: palette.mutedText,
               locale: locale,
             ).copyWith(height: 1.45),
-          ),
-          const SizedBox(height: 16),
-
-          // Segmented Step / Mode Indicator Pill (Screen 02 exact Key & Text consistency)
-          Align(
-            alignment: AlignmentDirectional.centerStart,
-            child: Container(
-              key: const Key('tab-phone-input'),
-              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-              decoration: BoxDecoration(
-                color: isDark ? const Color(0xFF131D18) : palette.surfaceHigh,
-                borderRadius: FixoRadius.borderRadiusPill,
-                border: Border.all(
-                  color: isDark
-                      ? Colors.white.withValues(alpha: 0.08)
-                      : Colors.black.withValues(alpha: 0.05),
-                ),
-              ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(
-                    setup
-                        ? Icons.verified_user_outlined
-                        : Icons.phone_android_rounded,
-                    size: 16,
-                    color: FixoColors.secondaryForest,
-                  ),
-                  const SizedBox(width: 8),
-                  Flexible(
-                    child: Text(
-                      setup
-                          ? (ar
-                                ? 'تأكيد بيانات الحساب'
-                                : 'Account Profile Setup')
-                          : (ar
-                                ? 'الدخول برقم الموبايل وكلمة المرور'
-                                : 'Phone & Password Access'),
-                      style: FixoTypography.labelMd(
-                        color: palette.deepForest,
-                        locale: locale,
-                      ).copyWith(fontWeight: FontWeight.w700),
-                    ),
-                  ),
-                ],
-              ),
-            ),
           ),
           const SizedBox(height: 16),
 
@@ -618,9 +585,7 @@ class _PhonePasswordPageState extends ConsumerState<PhonePasswordPage> {
               decoration: BoxDecoration(
                 color: colors.errorContainer,
                 borderRadius: FixoRadius.borderRadiusMd,
-                border: Border.all(
-                  color: colors.error.withValues(alpha: 0.35),
-                ),
+                border: Border.all(color: colors.error.withValues(alpha: 0.35)),
               ),
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -650,7 +615,7 @@ class _PhonePasswordPageState extends ConsumerState<PhonePasswordPage> {
           Container(
             padding: const EdgeInsets.all(FixoSpacing.lg),
             decoration: BoxDecoration(
-              color: isDark ? const Color(0xFF101713) : Colors.white,
+              color: isDark ? const Color(0xFF22252A) : Colors.white,
               borderRadius: BorderRadius.circular(24),
               border: Border.all(
                 color: isDark
@@ -680,10 +645,8 @@ class _PhonePasswordPageState extends ConsumerState<PhonePasswordPage> {
                               width: 76,
                               height: 76,
                               fit: BoxFit.cover,
-                              errorBuilder: (_, _, _) => const Icon(
-                                Icons.person_outline,
-                                size: 64,
-                              ),
+                              errorBuilder: (_, _, _) =>
+                                  const Icon(Icons.person_outline, size: 64),
                             ),
                           ),
                         OutlinedButton.icon(
@@ -748,11 +711,18 @@ class _PhonePasswordPageState extends ConsumerState<PhonePasswordPage> {
                         ? 'رقم الموبايل المصري'
                         : 'Egyptian Mobile Number',
                     prefixIcon: Padding(
-                      padding: const EdgeInsetsDirectional.only(start: 12, end: 8),
+                      padding: const EdgeInsetsDirectional.only(
+                        start: 12,
+                        end: 8,
+                      ),
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          const Text('🇪🇬', style: TextStyle(fontSize: 18)),
+                          Icon(
+                            Icons.phone_android_outlined,
+                            size: 18,
+                            color: palette.mutedText,
+                          ),
                           const SizedBox(width: 6),
                           Text(
                             '+20',
@@ -772,10 +742,8 @@ class _PhonePasswordPageState extends ConsumerState<PhonePasswordPage> {
                       ),
                     ),
                   ),
-                  validator: (v) => EgyptPhoneValidator.validate(
-                    v ?? '',
-                    isArabic: ar,
-                  ),
+                  validator: (v) =>
+                      EgyptPhoneValidator.validate(v ?? '', isArabic: ar),
                 ),
                 const SizedBox(height: 16),
 
@@ -839,9 +807,7 @@ class _PhonePasswordPageState extends ConsumerState<PhonePasswordPage> {
                     obscureText: true,
                     style: FixoTypography.bodyMd(color: palette.inkText),
                     decoration: InputDecoration(
-                      labelText: ar
-                          ? 'تأكيد كلمة المرور'
-                          : 'Confirm password',
+                      labelText: ar ? 'تأكيد كلمة المرور' : 'Confirm password',
                       prefixIcon: Icon(
                         Icons.check_circle_outline_rounded,
                         size: 20,
@@ -931,8 +897,9 @@ class _PhonePasswordPageState extends ConsumerState<PhonePasswordPage> {
                               height: 18,
                               child: CircularProgressIndicator(
                                 strokeWidth: 2,
-                                valueColor:
-                                    AlwaysStoppedAnimation<Color>(Colors.white),
+                                valueColor: AlwaysStoppedAnimation<Color>(
+                                  Colors.white,
+                                ),
                               ),
                             ),
                             const SizedBox(width: 10),
@@ -994,8 +961,9 @@ class _PhonePasswordPageState extends ConsumerState<PhonePasswordPage> {
                   ),
 
                   // Google Button (Apple-quality Frosted White)
-                  OutlinedButton.icon(
-                    key: const Key('first-use-google'),
+                  GoogleSignInButton(
+                    buttonKey: const Key('first-use-google'),
+                    isArabic: ar,
                     style: OutlinedButton.styleFrom(
                       padding: const EdgeInsets.symmetric(vertical: 15),
                       shape: RoundedRectangleBorder(
@@ -1020,7 +988,6 @@ class _PhonePasswordPageState extends ConsumerState<PhonePasswordPage> {
                             }
                             await _accept(value);
                           }),
-                    icon: const FixoGoogleMark(size: 20),
                     label: Text(
                       ar
                           ? 'أول مرة؟ تابع بحساب Google'
@@ -1029,8 +996,6 @@ class _PhonePasswordPageState extends ConsumerState<PhonePasswordPage> {
                     ),
                   ),
                   const SizedBox(height: FixoSpacing.sm),
-
-                  // Email & Password Entry / Registration Button
                   OutlinedButton.icon(
                     key: const Key('first-use-email'),
                     style: OutlinedButton.styleFrom(
@@ -1038,69 +1003,59 @@ class _PhonePasswordPageState extends ConsumerState<PhonePasswordPage> {
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(16),
                       ),
-                      side: BorderSide(
-                        color: isDark
-                            ? Colors.white.withValues(alpha: 0.18)
-                            : Colors.black.withValues(alpha: 0.14),
-                      ),
                     ),
                     onPressed: _busy
                         ? null
-                        : () {
-                            HapticFeedback.selectionClick();
-                            context.push(
-                              '${AppRoutes.phoneAuth}?method=email${professional ? '&account=pro' : ''}',
-                            );
-                          },
-                    icon: Icon(
-                      Icons.mail_outline_rounded,
-                      size: 20,
-                      color: palette.deepForest,
-                    ),
+                        : () => context.push(
+                            '${AppRoutes.phoneAuth}?method=email${_professional ? '&account=pro' : ''}',
+                          ),
+                    icon: const Icon(Icons.mail_outline_rounded, size: 20),
                     label: Text(
                       ar
                           ? 'الدخول أو التسجيل بالبريد الإلكتروني'
-                          : 'Continue with Email & Password',
+                          : 'Continue with email & password',
                       style: const TextStyle(fontWeight: FontWeight.w600),
                     ),
                   ),
-                  const SizedBox(height: FixoSpacing.sm),
-
-                  // Apple Button (Authentic Jet-Black Apple VisionOS)
-                  OutlinedButton.icon(
-                    key: const Key('first-use-apple'),
-                    style: OutlinedButton.styleFrom(
-                      backgroundColor: isDark ? Colors.black : const Color(0xFF161616),
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(vertical: 15),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(16),
+                  if (appleSignInAvailable) ...[
+                    const SizedBox(height: FixoSpacing.sm),
+                    OutlinedButton.icon(
+                      key: const Key('first-use-apple'),
+                      style: OutlinedButton.styleFrom(
+                        backgroundColor: isDark
+                            ? Colors.black
+                            : const Color(0xFF161616),
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(vertical: 15),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(16),
+                        ),
+                        side: BorderSide(
+                          color: Colors.white.withValues(alpha: 0.15),
+                        ),
                       ),
-                      side: BorderSide(
-                        color: Colors.white.withValues(alpha: 0.15),
+                      onPressed: _busy
+                          ? null
+                          : () => _run(() async {
+                              final value = await ref
+                                  .read(emailAccessProvider)
+                                  .promptAndSignInWithApple(
+                                    context,
+                                    isArabic: ar,
+                                  );
+                              if (value == null) return;
+                              await _accept(value);
+                            }),
+                      icon: const Icon(Icons.apple_rounded, size: 22),
+                      label: Text(
+                        ar ? 'المتابعة بحساب Apple' : 'Continue with Apple',
+                        style: const TextStyle(
+                          fontWeight: FontWeight.w700,
+                          letterSpacing: 0.2,
+                        ),
                       ),
                     ),
-                    onPressed: _busy
-                        ? null
-                        : () => _run(() async {
-                            final value = await ref
-                                .read(emailAccessProvider)
-                                .promptAndSignInWithApple(
-                                  context,
-                                  isArabic: ar,
-                                );
-                            if (value == null) return;
-                            await _accept(value);
-                          }),
-                    icon: const Icon(Icons.apple_rounded, size: 22),
-                    label: Text(
-                      ar ? 'المتابعة بحساب Apple' : 'Continue with Apple',
-                      style: const TextStyle(
-                        fontWeight: FontWeight.w700,
-                        letterSpacing: 0.2,
-                      ),
-                    ),
-                  ),
+                  ],
                 ] else ...[
                   const SizedBox(height: 8),
                   TextButton(
@@ -1120,74 +1075,6 @@ class _PhonePasswordPageState extends ConsumerState<PhonePasswordPage> {
             ),
           ),
           const SizedBox(height: 18),
-
-          // 3. Trust Strip (Stitch Screen 02 Consistency)
-          Container(
-            padding: const EdgeInsets.symmetric(
-              horizontal: 14,
-              vertical: 12,
-            ),
-            decoration: BoxDecoration(
-              color: isDark ? const Color(0xFF0F1512) : palette.surfaceLow,
-              borderRadius: FixoRadius.borderRadiusMd,
-            ),
-            child: Wrap(
-              alignment: WrapAlignment.center,
-              crossAxisAlignment: WrapCrossAlignment.center,
-              spacing: 8,
-              runSpacing: 4,
-              children: [
-                Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    const Icon(
-                      Icons.verified_user_outlined,
-                      size: 16,
-                      color: FixoColors.secondary,
-                    ),
-                    const SizedBox(width: 4),
-                    Flexible(
-                      child: Text(
-                        ar
-                            ? 'حساب جوجل بدون رسائل SMS'
-                            : 'Google Account • No SMS Fees',
-                        style: FixoTypography.bodySm(
-                          color: palette.mutedText,
-                          locale: locale,
-                        ).copyWith(fontWeight: FontWeight.w600),
-                      ),
-                    ),
-                  ],
-                ),
-                Text(
-                  '•',
-                  style: FixoTypography.bodySm(color: FixoColors.outline),
-                ),
-                Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    const Icon(
-                      Icons.location_on_outlined,
-                      size: 16,
-                      color: FixoColors.secondary,
-                    ),
-                    const SizedBox(width: 4),
-                    Flexible(
-                      child: Text(
-                        ar
-                            ? 'اختار محافظتك في مصر'
-                            : 'Choose your governorate in Egypt',
-                        style: FixoTypography.bodySm(
-                          color: palette.mutedText,
-                          locale: locale,
-                        ).copyWith(fontWeight: FontWeight.w600),
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ),
         ],
       ),
     );
