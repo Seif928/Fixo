@@ -1,7 +1,7 @@
 import 'package:fixo_mobile/core/motion/fixo_motion.dart';
 import 'package:fixo_mobile/core/theme/fixo_theme.dart';
 import 'package:fixo_mobile/core/widgets/fixo_buttons.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {

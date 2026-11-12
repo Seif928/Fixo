@@ -6,7 +6,7 @@ import 'package:fixo_mobile/app/app.dart';
 import 'package:fixo_mobile/app/router/app_router.dart';
 import 'package:fixo_mobile/core/storage/secure_token_storage.dart';
 import 'package:fixo_mobile/features/customer_home/presentation/controllers/customer_home_controller.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:flutter_driver/driver_extension.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 

@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'fixo_colors.dart';
 
 /// 8pt baseline spacing, border-radius, and ambient botanical shadow tokens.

@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import '../theme/fixo_colors.dart';
 import '../theme/fixo_spacing.dart';
 import '../theme/fixo_typography.dart';

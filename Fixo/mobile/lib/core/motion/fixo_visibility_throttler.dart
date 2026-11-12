@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'fixo_motion.dart';
 
 /// Lightweight lifecycle, route, and scroll-viewport visibility throttler for

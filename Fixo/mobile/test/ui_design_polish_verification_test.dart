@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'dart:typed_data';
 
+import 'package:cupertino_ui/cupertino_ui.dart';
 import 'package:dio/dio.dart';
 import 'package:fixo_mobile/core/l10n/app_locale_controller.dart';
 import 'package:fixo_mobile/core/network/dio_client.dart';
@@ -24,8 +25,9 @@ import 'package:fixo_mobile/features/customer_home/presentation/pages/customer_h
 import 'package:fixo_mobile/features/onboarding/presentation/pages/onboarding_page.dart';
 import 'package:fixo_mobile/features/payment/presentation/pages/checkout_page.dart';
 import 'package:fixo_mobile/features/profile/presentation/profile_page.dart';
-import 'package:flutter/material.dart';
-import 'package:flutter_localizations/flutter_localizations.dart';
+import 'package:material_ui/material_ui.dart';
+import 'package:flutter_localizations/flutter_localizations.dart'
+    show GlobalWidgetsLocalizations;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';

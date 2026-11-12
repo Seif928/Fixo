@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 
 /// Short, finite motion shared across FIXO. Never delays a user's action.
 abstract final class FixoMotion {

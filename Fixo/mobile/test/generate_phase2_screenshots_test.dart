@@ -6,7 +6,7 @@ import 'package:fixo_mobile/features/auth/presentation/controllers/auth_controll
 import 'package:fixo_mobile/features/auth/presentation/pages/phone_auth_page.dart';
 import 'package:fixo_mobile/features/customer_home/data/marketplace_repository.dart';
 import 'package:fixo_mobile/features/customer_home/presentation/pages/customer_home_page.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';

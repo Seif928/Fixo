@@ -2,7 +2,7 @@ import 'package:dio/dio.dart';
 import 'package:fixo_mobile/core/theme/fixo_theme.dart';
 import 'package:fixo_mobile/features/pro/data/pro_repository.dart';
 import 'package:fixo_mobile/features/pro/presentation/pages/pro_account_entry_page.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';

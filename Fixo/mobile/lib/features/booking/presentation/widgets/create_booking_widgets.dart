@@ -2,7 +2,7 @@ import '../../../../core/location/egypt_places.dart';
 import '../../../../core/location/service_area_picker.dart';
 import '../../../../core/location/free_map_picker.dart';
 import '../../../../core/location/address_maps_actions.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import '../../../../core/theme/fixo_colors.dart';
 import '../../../../core/theme/fixo_spacing.dart';
 import '../../../../core/theme/fixo_typography.dart';

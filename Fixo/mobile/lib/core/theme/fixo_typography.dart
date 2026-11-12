@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'fixo_colors.dart';
 
 /// Typography scale for FIXO: Manrope for English (LTR) and Cairo for Arabic (RTL).

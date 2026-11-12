@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import '../motion/fixo_visibility_throttler.dart';
 import '../theme/fixo_colors.dart';
 import '../theme/fixo_spacing.dart';

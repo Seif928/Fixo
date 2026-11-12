@@ -4,7 +4,7 @@ import 'package:fixo_mobile/app/router/app_routes.dart';
 import 'package:fixo_mobile/core/l10n/app_locale_controller.dart';
 import 'package:fixo_mobile/core/theme/fixo_colors.dart';
 import 'package:fixo_mobile/core/theme/fixo_theme.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 

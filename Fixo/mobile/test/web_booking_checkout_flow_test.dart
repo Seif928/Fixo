@@ -10,8 +10,10 @@
 //    flutter test -d chrome test/web_booking_checkout_flow_test.dart --dart-define=FIXO_LIVE_WEB_E2E=true --dart-define=FIXO_API_BASE_URL=http://localhost:3002/api/v1
 import 'dart:io';
 
-import 'package:flutter/material.dart';
-import 'package:flutter_localizations/flutter_localizations.dart';
+import 'package:cupertino_ui/cupertino_ui.dart';
+import 'package:material_ui/material_ui.dart';
+import 'package:flutter_localizations/flutter_localizations.dart'
+    show GlobalWidgetsLocalizations;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 

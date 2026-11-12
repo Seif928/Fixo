@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import '../../domain/booking_models.dart';
 
 /// Presentation-layer extension mapping pure domain [TimeWindowSlot] to Flutter UI [IconData].
