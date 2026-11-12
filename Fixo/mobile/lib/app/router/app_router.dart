@@ -167,20 +167,19 @@ GoRouter createAppRouter({
         path: AppRoutes.phoneAuth,
         name: 'phoneAuth',
         builder: (context, state) {
-          if (state.uri.queryParameters['method'] == 'email' && !kReleaseMode) {
-            return const EmailAuthPage();
+          final isPro = switch (state.uri.queryParameters['account']) {
+            'pro' => true,
+            'customer' => false,
+            _ => null,
+          };
+          if (state.uri.queryParameters['method'] == 'email') {
+            return EmailAuthPage(professional: isPro);
           }
           if (!kReleaseMode &&
               state.uri.queryParameters['method'] == 'dev-otp') {
             return const PhoneAuthPage();
           }
-          return PhonePasswordPage(
-            professional: switch (state.uri.queryParameters['account']) {
-              'pro' => true,
-              'customer' => false,
-              _ => null,
-            },
-          );
+          return PhonePasswordPage(professional: isPro);
         },
       ),
       _motionRoute(

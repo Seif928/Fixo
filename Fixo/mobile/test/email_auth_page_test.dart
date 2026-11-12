@@ -1,9 +1,11 @@
 import 'package:dio/dio.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:fixo_mobile/core/storage/secure_token_storage.dart';
 import 'package:fixo_mobile/core/theme/fixo_theme.dart';
+import 'package:fixo_mobile/core/widgets/fixo_brand_mark.dart';
 import 'package:fixo_mobile/features/auth/data/email_access_service.dart';
 import 'package:fixo_mobile/features/auth/domain/auth_models.dart';
 import 'package:fixo_mobile/features/auth/presentation/controllers/auth_controller.dart';
@@ -12,6 +14,8 @@ import 'package:fixo_mobile/features/auth/presentation/pages/email_auth_page.dar
 class UnverifiedEmailService extends EmailAccessService {
   UnverifiedEmailService() : super(Dio());
   int calls = 0;
+  bool lastCreate = false;
+  Object? nextError;
   @override
   Future<AuthSession?> signIn(
     String email,
@@ -19,6 +23,8 @@ class UnverifiedEmailService extends EmailAccessService {
     bool create = false,
   }) async {
     calls++;
+    lastCreate = create;
+    if (nextError != null) throw nextError!;
     return null;
   }
 
@@ -72,6 +78,55 @@ void main() {
       await tester.pumpAndSettle();
       expect(find.text('Email is not verified yet.'), findsOneWidget);
       expect(container.read(authControllerProvider).isAuthenticated, false);
+    },
+  );
+
+  testWidgets(
+    'renders real Google mark, supports Create Account mode, and surfaces Firebase/API error details',
+    (tester) async {
+      final service = UnverifiedEmailService();
+      final storage = MemoryTokenStorage();
+      final container = ProviderContainer(
+        overrides: [
+          emailAccessProvider.overrideWithValue(service),
+          secureTokenStorageProvider.overrideWithValue(storage),
+        ],
+      );
+      addTearDown(container.dispose);
+      await tester.pumpWidget(
+        UncontrolledProviderScope(
+          container: container,
+          child: MaterialApp(
+            theme: FixoTheme.light(),
+            home: const EmailAuthPage(),
+          ),
+        ),
+      );
+      expect(find.byType(FixoGoogleMark), findsOneWidget);
+      await tester.tap(find.text('Create account'));
+      await tester.pumpAndSettle();
+
+      service.nextError = FirebaseAuthException(code: 'network-request-failed');
+      await tester.enterText(
+        find.byKey(const Key('email-sign-in-address')),
+        'newuser@example.com',
+      );
+      await tester.enterText(
+        find.byKey(const Key('email-sign-in-password')),
+        'long-password-123',
+      );
+      final submit = find.byKey(const Key('email-sign-in-submit'));
+      await tester.ensureVisible(submit);
+      await tester.tap(submit);
+      await tester.pumpAndSettle();
+
+      expect(service.lastCreate, isTrue);
+      expect(
+        find.text(
+          'Could not reach Firebase authentication servers. Check internet and DNS.',
+        ),
+        findsOneWidget,
+      );
     },
   );
 }

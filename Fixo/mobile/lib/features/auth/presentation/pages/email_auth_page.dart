@@ -1,5 +1,3 @@
-import 'package:dio/dio.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -13,11 +11,16 @@ import '../../../../core/widgets/fixo_brand_mark.dart';
 import '../../../../core/widgets/fixo_cards.dart';
 import '../../data/email_access_service.dart';
 import '../../domain/auth_models.dart';
+import '../controllers/account_entry_controller.dart';
 import '../controllers/auth_controller.dart';
+import '../controllers/auth_error_formatter.dart';
 
 /// Email variant of approved Screen 02, retaining the native FIXO auth layout.
 class EmailAuthPage extends ConsumerStatefulWidget {
-  const EmailAuthPage({super.key});
+  const EmailAuthPage({super.key, this.professional});
+
+  final bool? professional;
+
   @override
   ConsumerState<EmailAuthPage> createState() => _EmailAuthPageState();
 }
@@ -29,6 +32,25 @@ class _EmailAuthPageState extends ConsumerState<EmailAuthPage> {
   bool _create = false, _busy = false, _verify = false, _hidden = true;
   String? _error, _notice;
   bool get _ar => ref.read(appLocaleProvider).languageCode == 'ar';
+  bool get _professional =>
+      widget.professional ?? ref.read(professionalEntryProvider);
+  String get _destination =>
+      _professional ? AppRoutes.proEntry : AppRoutes.customerHome;
+
+  @override
+  void initState() {
+    super.initState();
+    if (widget.professional != null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          ref
+              .read(professionalEntryProvider.notifier)
+              .selectProfessional(widget.professional!);
+        }
+      });
+    }
+  }
+
   @override
   void dispose() {
     _email.dispose();
@@ -36,38 +58,8 @@ class _EmailAuthPageState extends ConsumerState<EmailAuthPage> {
     super.dispose();
   }
 
-  String _message(Object error) {
-    if (error is FirebaseAuthException) {
-      switch (error.code) {
-        case 'email-already-in-use':
-          return _ar
-              ? 'البريد مستخدم بالفعل. سجّل الدخول أو استعد كلمة المرور.'
-              : 'Email already registered. Sign in or reset your password.';
-        case 'invalid-credential':
-        case 'wrong-password':
-        case 'user-not-found':
-          return _ar ? 'بيانات الدخول غير صحيحة.' : 'Invalid sign-in details.';
-        case 'too-many-requests':
-          return _ar
-              ? 'محاولات كثيرة. انتظر ثم حاول مجددًا.'
-              : 'Too many attempts. Wait before retrying.';
-        case 'weak-password':
-          return _ar ? 'اختر كلمة مرور أقوى.' : 'Choose a stronger password.';
-        case 'operation-not-allowed':
-          return _ar
-              ? 'طريقة الدخول غير مفعلة حاليًا.'
-              : 'This sign-in method is not enabled.';
-      }
-    }
-    if (error is DioException && error.response?.statusCode == 409) {
-      return _ar
-          ? 'البريد مرتبط بحساب سابق؛ يلزم تسجيل الدخول بالطريقة الأصلية لربطه.'
-          : 'This email belongs to an existing account. Sign in using the original method to link it.';
-    }
-    return _ar
-        ? 'تعذر إكمال الطلب. تحقق من الاتصال وحاول مرة أخرى.'
-        : 'Could not complete the request. Check your connection and retry.';
-  }
+  String _message(Object error) =>
+      formatAuthErrorMessage(error, isArabic: _ar);
 
   Future<void> _run(Future<void> Function() action) async {
     if (_busy) return;
@@ -94,7 +86,12 @@ class _EmailAuthPageState extends ConsumerState<EmailAuthPage> {
     await ref
         .read(authControllerProvider.notifier)
         .acceptVerifiedSession(session);
-    if (mounted) context.go('/customer/home');
+    if (!mounted) return;
+    context.go(
+      session.user.requiresProfileSetup
+          ? '${AppRoutes.phoneAuth}${_professional ? '?account=pro' : ''}'
+          : _destination,
+    );
   }
 
   @override
@@ -354,6 +351,84 @@ class _EmailAuthPageState extends ConsumerState<EmailAuthPage> {
                               ),
                             ),
                           ] else ...[
+                            Container(
+                              padding: const EdgeInsets.all(4),
+                              decoration: BoxDecoration(
+                                color: palette.surfaceHigh,
+                                borderRadius: FixoRadius.borderRadiusMd,
+                              ),
+                              child: Row(
+                                children: [
+                                  Expanded(
+                                    child: GestureDetector(
+                                      onTap: _busy
+                                          ? null
+                                          : () => setState(() {
+                                              _create = false;
+                                              _error = null;
+                                            }),
+                                      child: Container(
+                                        padding: const EdgeInsets.symmetric(
+                                          vertical: 10,
+                                        ),
+                                        decoration: BoxDecoration(
+                                          color: !_create
+                                              ? palette.cardSurface
+                                              : Colors.transparent,
+                                          borderRadius:
+                                              FixoRadius.borderRadiusSm,
+                                        ),
+                                        alignment: Alignment.center,
+                                        child: Text(
+                                          ar ? 'تسجيل الدخول' : 'Sign in',
+                                          style: FixoTypography.labelMd(
+                                            color: !_create
+                                                ? palette.deepForest
+                                                : palette.mutedText,
+                                            locale: locale,
+                                          ).copyWith(fontWeight: FontWeight.w700),
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                  Expanded(
+                                    child: GestureDetector(
+                                      onTap: _busy
+                                          ? null
+                                          : () => setState(() {
+                                              _create = true;
+                                              _error = null;
+                                            }),
+                                      child: Container(
+                                        padding: const EdgeInsets.symmetric(
+                                          vertical: 10,
+                                        ),
+                                        decoration: BoxDecoration(
+                                          color: _create
+                                              ? palette.cardSurface
+                                              : Colors.transparent,
+                                          borderRadius:
+                                              FixoRadius.borderRadiusSm,
+                                        ),
+                                        alignment: Alignment.center,
+                                        child: Text(
+                                          ar
+                                              ? 'حساب جديد'
+                                              : 'Create account',
+                                          style: FixoTypography.labelMd(
+                                            color: _create
+                                                ? palette.deepForest
+                                                : palette.mutedText,
+                                            locale: locale,
+                                          ).copyWith(fontWeight: FontWeight.w700),
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            const SizedBox(height: FixoSpacing.md),
                             OutlinedButton.icon(
                               key: const Key('email-use-google'),
                               onPressed: _busy
@@ -365,7 +440,7 @@ class _EmailAuthPageState extends ConsumerState<EmailAuthPage> {
                                               .signInWithGoogle(),
                                         );
                                       }),
-                              icon: const Icon(Icons.g_mobiledata_rounded, size: 24),
+                              icon: const FixoGoogleMark(size: 20),
                               label: Text(
                                 ar
                                     ? 'المتابعة بحساب Google'
@@ -434,6 +509,11 @@ class _EmailAuthPageState extends ConsumerState<EmailAuthPage> {
                               ],
                               decoration: InputDecoration(
                                 labelText: ar ? 'كلمة المرور' : 'Password',
+                                helperText: _create
+                                    ? (ar
+                                          ? '12 حرفًا على الأقل'
+                                          : 'Minimum 12 characters')
+                                    : null,
                                 prefixIcon: Icon(
                                   Icons.lock_outline_rounded,
                                   size: 20,

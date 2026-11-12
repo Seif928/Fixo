@@ -5,6 +5,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:fixo_mobile/core/storage/secure_token_storage.dart';
 import 'package:fixo_mobile/core/theme/fixo_theme.dart';
+import 'package:fixo_mobile/core/widgets/fixo_brand_mark.dart';
 import 'package:fixo_mobile/features/auth/data/email_access_service.dart';
 import 'package:fixo_mobile/features/auth/domain/auth_models.dart';
 import 'package:fixo_mobile/features/auth/presentation/pages/phone_password_page.dart';
@@ -386,4 +387,12 @@ void main() {
       );
     },
   );
+
+  testWidgets('renders real Google emblem and Email & Password entry button', (
+    tester,
+  ) async {
+    await pump(tester);
+    expect(find.byType(FixoGoogleMark), findsOneWidget);
+    expect(find.byKey(const Key('first-use-email')), findsOneWidget);
+  });
 }

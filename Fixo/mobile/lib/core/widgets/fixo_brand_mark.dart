@@ -287,3 +287,136 @@ class _FixoLuxuryCrestPainter extends CustomPainter {
   bool shouldRepaint(covariant _FixoLuxuryCrestPainter oldDelegate) =>
       oldDelegate.progress != progress;
 }
+
+/// Official multi-color Google "G" vector emblem (`#4285F4`, `#34A853`, `#FBBC05`, `#EA4335`).
+///
+/// Renders instantaneously across all platforms (Android, iOS, Web Wasm) with
+/// crisp Retina resolution and zero network dependency.
+class FixoGoogleMark extends StatelessWidget {
+  const FixoGoogleMark({super.key, this.size = 20});
+
+  final double size;
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox.square(
+      dimension: size,
+      child: CustomPaint(painter: _FixoGoogleMarkPainter()),
+    );
+  }
+}
+
+class _FixoGoogleMarkPainter extends CustomPainter {
+  @override
+  void paint(Canvas canvas, Size size) {
+    final s = size.width / 24.0;
+
+    final blue = Path()
+      ..moveTo(22.56 * s, 12.25 * s)
+      ..relativeCubicTo(0, -0.78 * s, -0.07 * s, -1.53 * s, -0.20 * s, -2.25 * s)
+      ..lineTo(12 * s, 10.0 * s)
+      ..lineTo(12 * s, 14.26 * s)
+      ..lineTo(17.92 * s, 14.26 * s)
+      ..relativeCubicTo(
+        -0.26 * s,
+        1.37 * s,
+        -1.04 * s,
+        2.53 * s,
+        -2.21 * s,
+        3.31 * s,
+      )
+      ..relativeLineTo(0, 2.77 * s)
+      ..relativeLineTo(3.57 * s, 0)
+      ..relativeCubicTo(
+        2.08 * s,
+        -1.92 * s,
+        3.28 * s,
+        -4.74 * s,
+        3.28 * s,
+        -8.09 * s,
+      )
+      ..close();
+
+    final green = Path()
+      ..moveTo(12 * s, 23 * s)
+      ..relativeCubicTo(
+        2.97 * s,
+        0,
+        5.46 * s,
+        -0.98 * s,
+        7.28 * s,
+        -2.66 * s,
+      )
+      ..relativeLineTo(-3.57 * s, -2.77 * s)
+      ..relativeCubicTo(
+        -0.98 * s,
+        0.66 * s,
+        -2.23 * s,
+        1.06 * s,
+        -3.71 * s,
+        1.06 * s,
+      )
+      ..relativeCubicTo(
+        -2.86 * s,
+        0,
+        -5.29 * s,
+        -1.93 * s,
+        -6.16 * s,
+        -4.53 * s,
+      )
+      ..lineTo(2.18 * s, 14.10 * s)
+      ..relativeLineTo(0, 2.84 * s)
+      ..cubicTo(3.99 * s, 20.53 * s, 7.70 * s, 23 * s, 12 * s, 23 * s)
+      ..close();
+
+    final yellow = Path()
+      ..moveTo(5.84 * s, 14.09 * s)
+      ..relativeCubicTo(
+        -0.22 * s,
+        -0.66 * s,
+        -0.35 * s,
+        -1.36 * s,
+        -0.35 * s,
+        -2.09 * s,
+      )
+      ..cubicTo(5.49 * s, 11.27 * s, 5.62 * s, 10.57 * s, 5.84 * s, 9.91 * s)
+      ..lineTo(5.84 * s, 7.07 * s)
+      ..lineTo(2.18 * s, 7.07 * s)
+      ..cubicTo(1.43 * s, 8.55 * s, 1.0 * s, 10.22 * s, 1.0 * s, 12.0 * s)
+      ..cubicTo(1.0 * s, 13.78 * s, 1.43 * s, 15.45 * s, 2.18 * s, 16.93 * s)
+      ..lineTo(5.84 * s, 14.09 * s)
+      ..close();
+
+    final red = Path()
+      ..moveTo(12 * s, 5.38 * s)
+      ..relativeCubicTo(
+        1.62 * s,
+        0,
+        3.06 * s,
+        0.56 * s,
+        4.21 * s,
+        1.64 * s,
+      )
+      ..relativeLineTo(3.15 * s, -3.15 * s)
+      ..cubicTo(17.45 * s, 2.09 * s, 14.97 * s, 1.0 * s, 12 * s, 1.0 * s)
+      ..cubicTo(7.70 * s, 1.0 * s, 3.99 * s, 3.47 * s, 2.18 * s, 7.07 * s)
+      ..relativeLineTo(3.66 * s, 2.84 * s)
+      ..relativeCubicTo(
+        0.87 * s,
+        -2.60 * s,
+        3.30 * s,
+        -4.53 * s,
+        6.16 * s,
+        -4.53 * s,
+      )
+      ..close();
+
+    canvas.drawPath(blue, Paint()..color = const Color(0xFF4285F4));
+    canvas.drawPath(green, Paint()..color = const Color(0xFF34A853));
+    canvas.drawPath(yellow, Paint()..color = const Color(0xFFFBBC05));
+    canvas.drawPath(red, Paint()..color = const Color(0xFFEA4335));
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
+}

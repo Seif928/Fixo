@@ -32,18 +32,52 @@ class EmailAccessService {
     bool create = false,
   }) async {
     final auth = await _auth();
-    final credential = create
-        ? await auth.createUserWithEmailAndPassword(
-            email: email.trim(),
-            password: password,
-          )
-        : await auth.signInWithEmailAndPassword(
-            email: email.trim(),
+    final trimmedEmail = email.trim();
+    UserCredential credential;
+    if (create) {
+      try {
+        credential = await auth.createUserWithEmailAndPassword(
+          email: trimmedEmail,
+          password: password,
+        );
+      } on FirebaseAuthException catch (e) {
+        if (e.code != 'email-already-in-use') rethrow;
+        // If this account was previously created with the same password but
+        // never verified, recover cleanly by signing in and re-sending verification.
+        try {
+          credential = await auth.signInWithEmailAndPassword(
+            email: trimmedEmail,
             password: password,
           );
+        } on FirebaseAuthException {
+          throw e;
+        }
+        final existingUser = credential.user!;
+        if (existingUser.emailVerified) {
+          return _exchange(existingUser);
+        }
+        try {
+          await existingUser.sendEmailVerification();
+        } on FirebaseAuthException catch (sendErr) {
+          if (sendErr.code != 'too-many-requests') rethrow;
+        }
+        return null;
+      }
+    } else {
+      credential = await auth.signInWithEmailAndPassword(
+        email: trimmedEmail,
+        password: password,
+      );
+    }
     final user = credential.user!;
     if (!user.emailVerified) {
-      if (create) await user.sendEmailVerification();
+      if (create) {
+        try {
+          await user.sendEmailVerification();
+        } on FirebaseAuthException catch (e) {
+          if (e.code != 'too-many-requests') rethrow;
+        }
+      }
       return null;
     }
     return _exchange(user);
@@ -213,7 +247,18 @@ class EmailAccessService {
     if (user.providerData.any(
       (provider) => provider.providerId == 'password',
     )) {
-      await user.updatePassword(password);
+      try {
+        await user.updatePassword(password);
+      } on FirebaseAuthException catch (e) {
+        if (e.code == 'requires-recent-login') {
+          await user.reauthenticateWithCredential(
+            EmailAuthProvider.credential(email: user.email!, password: password),
+          );
+          await user.updatePassword(password);
+        } else {
+          rethrow;
+        }
+      }
     } else {
       await user.linkWithCredential(
         EmailAuthProvider.credential(email: user.email!, password: password),

@@ -9,6 +9,7 @@ import '../../../../core/l10n/app_locale_controller.dart';
 import '../../../../core/theme/fixo_colors.dart';
 import '../../../../core/theme/fixo_spacing.dart';
 import '../../../../core/theme/fixo_typography.dart';
+import '../../../../core/widgets/fixo_brand_mark.dart';
 import '../../../../core/widgets/fixo_buttons.dart';
 import '../../../../core/widgets/fixo_cards.dart';
 import '../../../../core/widgets/fixo_inputs.dart';
@@ -143,7 +144,7 @@ class _PhoneAuthPageState extends ConsumerState<PhoneAuthPage> {
                     key: const Key('auth-use-email-google'),
                     onPressed: () =>
                         context.go('${AppRoutes.phoneAuth}?method=email'),
-                    icon: const Icon(Icons.alternate_email),
+                    icon: const FixoGoogleMark(size: 18),
                     label: Text(
                       isArabic
                           ? 'الدخول بالبريد أو Google'

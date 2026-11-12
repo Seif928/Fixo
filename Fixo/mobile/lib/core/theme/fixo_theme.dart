@@ -1,4 +1,5 @@
 import 'package:material_ui/material_ui.dart';
+import 'package:flutter/services.dart';
 import 'fixo_colors.dart';
 import 'fixo_spacing.dart';
 import 'fixo_typography.dart';
@@ -53,6 +54,7 @@ abstract final class FixoTheme {
       appBarTheme: AppBarTheme(
         backgroundColor: FixoColors.surfaceBotanical.withValues(alpha: 0.9),
         foregroundColor: FixoColors.primaryForest,
+        systemOverlayStyle: SystemUiOverlayStyle.dark,
         elevation: 0,
         scrolledUnderElevation: 1,
         centerTitle: false,
@@ -250,6 +252,7 @@ abstract final class FixoTheme {
       appBarTheme: AppBarTheme(
         backgroundColor: FixoColors.darkBackground.withValues(alpha: 0.92),
         foregroundColor: FixoColors.darkOnSurface,
+        systemOverlayStyle: SystemUiOverlayStyle.light,
         elevation: 0,
         scrolledUnderElevation: 1,
         centerTitle: false,

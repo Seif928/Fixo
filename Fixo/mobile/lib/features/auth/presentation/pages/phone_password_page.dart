@@ -1,5 +1,4 @@
 import 'dart:convert';
-import 'package:dio/dio.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -13,6 +12,7 @@ import '../../../../core/widgets/fixo_brand_mark.dart';
 import '../../data/email_access_service.dart';
 import '../../domain/auth_models.dart';
 import '../controllers/auth_controller.dart';
+import '../controllers/auth_error_formatter.dart';
 import '../controllers/account_entry_controller.dart';
 import '../../../../core/uploads/private_media_picker_sheet.dart';
 import '../../../profile/data/avatar_repository.dart';
@@ -77,29 +77,13 @@ class _PhonePasswordPageState extends ConsumerState<PhonePasswordPage> {
       await action();
     } catch (error) {
       if (!mounted) return;
-      String message;
-      if (error is DioException && error.response?.statusCode == 401) {
-        message = error.requestOptions.path == '/auth/phone-password'
-            ? (_ar
-                  ? 'رقم الموبايل أو كلمة المرور غير صحيحة. راجعهم أو استخدم «نسيت كلمة المرور؟».'
-                  : 'Incorrect phone number or password. Check both or use "Forgot password?".')
-            : (_ar
-                  ? 'تعذّر التحقق من تسجيل الدخول. تابع بحساب جوجل وحاول مرة أخرى.'
-                  : 'Your sign-in could not be verified. Continue with Google and try again.');
-      } else if (error is DioException && error.response?.statusCode == 409) {
-        message = error.requestOptions.path == '/auth/firebase/session'
-            ? (_ar
-                  ? 'البريد ده مرتبط بطريقة دخول تانية. استخدم حسابك الأصلي للمتابعة.'
-                  : 'This Google email already uses another sign-in method. Use the original account to continue.')
-            : (_ar
-                  ? 'تعذّر استخدام هذا الرقم لهذا الحساب. جرّب رقمك الآخر أو حسابك الأصلي.'
-                  : 'This phone cannot be used for this account. Use your other number or original account.');
-      } else {
-        message = _ar
-            ? 'تعذّر إكمال الطلب. تحقق من الاتصال وحاول مرة أخرى.'
-            : 'Could not complete the request. Check your connection and retry.';
-      }
-      setState(() => _error = message);
+      setState(
+        () => _error = formatAuthErrorMessage(
+          error,
+          isArabic: _ar,
+          forPhonePassword: true,
+        ),
+      );
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -1036,11 +1020,47 @@ class _PhonePasswordPageState extends ConsumerState<PhonePasswordPage> {
                             }
                             await _accept(value);
                           }),
-                    icon: const Icon(Icons.g_mobiledata_rounded, size: 26),
+                    icon: const FixoGoogleMark(size: 20),
                     label: Text(
                       ar
                           ? 'أول مرة؟ تابع بحساب Google'
                           : 'First time? Continue with Google',
+                      style: const TextStyle(fontWeight: FontWeight.w600),
+                    ),
+                  ),
+                  const SizedBox(height: FixoSpacing.sm),
+
+                  // Email & Password Entry / Registration Button
+                  OutlinedButton.icon(
+                    key: const Key('first-use-email'),
+                    style: OutlinedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(vertical: 15),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                      side: BorderSide(
+                        color: isDark
+                            ? Colors.white.withValues(alpha: 0.18)
+                            : Colors.black.withValues(alpha: 0.14),
+                      ),
+                    ),
+                    onPressed: _busy
+                        ? null
+                        : () {
+                            HapticFeedback.selectionClick();
+                            context.push(
+                              '${AppRoutes.phoneAuth}?method=email${professional ? '&account=pro' : ''}',
+                            );
+                          },
+                    icon: Icon(
+                      Icons.mail_outline_rounded,
+                      size: 20,
+                      color: palette.deepForest,
+                    ),
+                    label: Text(
+                      ar
+                          ? 'الدخول أو التسجيل بالبريد الإلكتروني'
+                          : 'Continue with Email & Password',
                       style: const TextStyle(fontWeight: FontWeight.w600),
                     ),
                   ),
