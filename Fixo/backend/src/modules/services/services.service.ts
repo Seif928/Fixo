@@ -1,11 +1,14 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
-import { ProVerificationStatus } from '@prisma/client';
+import { Prisma, ProVerificationStatus } from '@prisma/client';
 import {
   SeedCoverageZone,
   SeedServiceCategory,
   SeedServiceOffering,
 } from '../../prisma/egypt-demo-seed.data';
-import { coversServiceArea } from './coverage-policy';
+import {
+  coversServiceArea,
+  professionalCoverageWhere,
+} from './coverage-policy';
 import { InMemoryStoreService } from '../../prisma/in-memory-store.service';
 import {
   PrismaService,
@@ -121,22 +124,25 @@ export class ServicesService {
           ],
         });
       }
-      if (rawSearch && !rawSearch.includes(' ')) {
-        andClauses.push({
-          OR: [
-            { titleEn: { contains: rawSearch, mode: 'insensitive' } },
-            { titleAr: { contains: rawSearch, mode: 'insensitive' } },
-            { descriptionEn: { contains: rawSearch, mode: 'insensitive' } },
-            { descriptionAr: { contains: rawSearch, mode: 'insensitive' } },
-            { badgeEn: { contains: rawSearch, mode: 'insensitive' } },
-            { providerTagEn: { contains: rawSearch, mode: 'insensitive' } },
-            {
-              category: {
-                slug: { contains: rawSearch, mode: 'insensitive' },
+      if (rawSearch) {
+        const tokens = rawSearch.split(/\s+/).filter(Boolean);
+        for (const token of tokens) {
+          andClauses.push({
+            OR: [
+              { titleEn: { contains: token, mode: 'insensitive' } },
+              { titleAr: { contains: token, mode: 'insensitive' } },
+              { descriptionEn: { contains: token, mode: 'insensitive' } },
+              { descriptionAr: { contains: token, mode: 'insensitive' } },
+              { badgeEn: { contains: token, mode: 'insensitive' } },
+              { providerTagEn: { contains: token, mode: 'insensitive' } },
+              {
+                category: {
+                  slug: { contains: token, mode: 'insensitive' },
+                },
               },
-            },
-          ],
-        });
+            ],
+          });
+        }
       }
 
       const where = {
@@ -324,10 +330,27 @@ export class ServicesService {
       databaseConnected: boolean;
     };
   }> {
-    const allOfferings = await this.loadAllOfferings();
-    const match = allOfferings.find(
-      (item) => item.id === idOrSlug || item.slug === idOrSlug,
-    );
+    let match: SeedServiceOffering | undefined;
+
+    if (this.prisma.isDatabaseConnected()) {
+      const rows = await this.prisma.serviceOffering.findMany({
+        where: {
+          isActive: true,
+          OR: [{ id: idOrSlug }, { slug: idOrSlug }],
+        },
+        include: { category: true },
+        take: 1,
+      });
+      const matchedRow = rows.find(
+        (row) => row.id === idOrSlug || row.slug === idOrSlug,
+      );
+      match = matchedRow ? this.mapOfferingRow(matchedRow) : undefined;
+    } else {
+      const allOfferings = await this.loadAllOfferings();
+      match = allOfferings.find(
+        (item) => item.id === idOrSlug || item.slug === idOrSlug,
+      );
+    }
 
     if (!match) {
       throw new NotFoundException(`Service '${idOrSlug}' was not found.`);
@@ -349,54 +372,183 @@ export class ServicesService {
   ): Promise<PaginatedResponse<PublicProfessionalDto>> {
     const page = query.page ?? 1;
     const limit = query.limit ?? 20;
-    const search = query.search?.trim().toLowerCase();
+    const rawSearch = query.search?.trim();
+    const search = rawSearch?.toLowerCase();
     const categoryFilter = query.categoryId?.trim().toLowerCase();
     const zoneFilter = query.zone?.trim().toLowerCase();
+    const offset = (page - 1) * limit;
 
-    let allPros = await this.loadAllProfessionals();
-
-    if (categoryFilter) {
-      allPros = allPros.filter(
-        (pro) =>
-          pro.primaryCategorySlug.toLowerCase() === categoryFilter ||
-          pro.primaryCategoryId?.toLowerCase() === categoryFilter,
-      );
-    }
-
-    if (zoneFilter) {
-      const selected = this.prisma.isDatabaseConnected()
+    if (this.prisma.isDatabaseConnected()) {
+      const selectedZone = zoneFilter
         ? await this.prisma.coverageZone.findUnique({
             where: { slug: zoneFilter },
           })
-        : this.memoryStore.getZones().find((z) => z.slug === zoneFilter);
-      allPros = selected
-        ? allPros.filter((pro) =>
-            (pro.coverage ?? []).some((z) => coversServiceArea(z, selected)),
-          )
-        : [];
+        : null;
+
+      if (zoneFilter && !selectedZone) {
+        return {
+          items: [],
+          meta: {
+            page,
+            limit,
+            total: 0,
+            totalPages: 1,
+            currency: 'EGP',
+            market: 'EG',
+            storageMode: this.prisma.getStorageMode(),
+            databaseConnected: this.prisma.isDatabaseConnected(),
+          },
+        };
+      }
+
+      const andClauses: Prisma.ProProfileWhereInput[] = [];
+      if (categoryFilter) {
+        andClauses.push({
+          OR: [
+            {
+              primaryCategoryId: { equals: categoryFilter, mode: 'insensitive' },
+            },
+            {
+              primaryCategory: {
+                slug: { equals: categoryFilter, mode: 'insensitive' },
+              },
+            },
+          ],
+        });
+      }
+      if (selectedZone) {
+        andClauses.push(professionalCoverageWhere(selectedZone));
+      }
+      if (rawSearch) {
+        const tokens = rawSearch.split(/\s+/).filter(Boolean);
+        for (const token of tokens) {
+          andClauses.push({
+            OR: [
+              { user: { fullName: { contains: token, mode: 'insensitive' } } },
+              { specialtyEn: { contains: token, mode: 'insensitive' } },
+              { specialtyAr: { contains: token, mode: 'insensitive' } },
+              { zonesLabelEn: { contains: token, mode: 'insensitive' } },
+              { zonesLabelAr: { contains: token, mode: 'insensitive' } },
+              { badgeEn: { contains: token, mode: 'insensitive' } },
+              {
+                primaryCategory: {
+                  slug: { contains: token, mode: 'insensitive' },
+                },
+              },
+            ],
+          });
+        }
+      }
+
+      const where: Prisma.ProProfileWhereInput = {
+        verificationStatus: ProVerificationStatus.APPROVED,
+        ...(andClauses.length > 0 ? { AND: andClauses } : {}),
+      };
+      const proInclude = {
+        user: { select: { fullName: true } },
+        primaryCategory: true,
+        primaryZone: true,
+        coverageZones: true,
+      } satisfies Prisma.ProProfileInclude;
+      const needInMemoryPhraseFilter = Boolean(
+        search && rawSearch && rawSearch.includes(' '),
+      );
+
+      if (!needInMemoryPhraseFilter) {
+        const rows = await this.prisma.proProfile.findMany({
+          where,
+          include: proInclude,
+          orderBy: [{ updatedAt: 'desc' }, { id: 'desc' }],
+          skip: offset,
+          take: limit,
+        });
+        const mapped = rows.map((row) => this.mapProfessionalRow(row));
+        const filtered = this.filterProfessionals(mapped, {
+          categoryFilter,
+          selectedZone,
+          search,
+        });
+        const mockIgnoredWhere = filtered.length < mapped.length;
+        const pageRows = mockIgnoredWhere
+          ? filtered.slice(offset, offset + limit)
+          : filtered;
+        const items = pageRows.map(
+          ({ coverage, ...publicFields }) => publicFields,
+        );
+        const total = mockIgnoredWhere
+          ? filtered.length
+          : offset === 0 && rows.length < limit
+            ? rows.length
+            : typeof (this.prisma.proProfile as { count?: unknown }).count ===
+                'function'
+              ? await this.prisma.proProfile.count({ where })
+              : rows.length;
+        const totalPages = Math.max(1, Math.ceil(total / limit));
+
+        return {
+          items,
+          meta: {
+            page,
+            limit,
+            total,
+            totalPages,
+            currency: 'EGP',
+            market: 'EG',
+            storageMode: this.prisma.getStorageMode(),
+            databaseConnected: this.prisma.isDatabaseConnected(),
+          },
+        };
+      }
+
+      const candidateRows = await this.prisma.proProfile.findMany({
+        where,
+        include: proInclude,
+        orderBy: [{ updatedAt: 'desc' }, { id: 'desc' }],
+      });
+      const mappedCandidates = candidateRows.map((row) =>
+        this.mapProfessionalRow(row),
+      );
+      const filtered = this.filterProfessionals(mappedCandidates, {
+        categoryFilter,
+        selectedZone,
+        search,
+      });
+      const total = filtered.length;
+      const totalPages = Math.max(1, Math.ceil(total / limit));
+      const items = filtered
+        .slice(offset, offset + limit)
+        .map(({ coverage, ...publicFields }) => publicFields);
+
+      return {
+        items,
+        meta: {
+          page,
+          limit,
+          total,
+          totalPages,
+          currency: 'EGP',
+          market: 'EG',
+          storageMode: this.prisma.getStorageMode(),
+          databaseConnected: this.prisma.isDatabaseConnected(),
+        },
+      };
     }
 
-    if (search) {
-      allPros = allPros.filter((pro) => {
-        const haystack = [
-          pro.fullNameEn,
-          pro.fullNameAr,
-          pro.specialtyEn,
-          pro.specialtyAr,
-          pro.zonesLabelEn,
-          pro.zonesLabelAr,
-          pro.badgeEn ?? '',
-          pro.primaryCategorySlug,
-        ]
-          .join(' ')
-          .toLowerCase();
-        return haystack.includes(search);
-      });
-    }
+    let allPros = await this.loadAllProfessionals();
+    const selected = zoneFilter
+      ? (this.memoryStore.getZones().find((z) => z.slug === zoneFilter) ?? null)
+      : undefined;
+    allPros =
+      zoneFilter && !selected
+        ? []
+        : this.filterProfessionals(allPros, {
+            categoryFilter,
+            selectedZone: selected ?? null,
+            search,
+          });
 
     const total = allPros.length;
     const totalPages = Math.max(1, Math.ceil(total / limit));
-    const offset = (page - 1) * limit;
     const items = allPros
       .slice(offset, offset + limit)
       .map(({ coverage, ...publicFields }) => publicFields);
@@ -416,6 +568,101 @@ export class ServicesService {
     };
   }
 
+  private filterProfessionals(
+    pros: DiscoveryProfessional[],
+    filters: {
+      categoryFilter?: string;
+      selectedZone?: Parameters<typeof coversServiceArea>[1] | null;
+      search?: string;
+    },
+  ): DiscoveryProfessional[] {
+    let result = pros;
+    if (filters.categoryFilter) {
+      result = result.filter(
+        (pro) =>
+          pro.primaryCategorySlug.toLowerCase() === filters.categoryFilter ||
+          pro.primaryCategoryId?.toLowerCase() === filters.categoryFilter,
+      );
+    }
+    if (filters.selectedZone) {
+      const target = filters.selectedZone;
+      result = result.filter((pro) =>
+        (pro.coverage ?? []).some((z) => coversServiceArea(z, target)),
+      );
+    }
+    if (filters.search) {
+      const needle = filters.search;
+      result = result.filter((pro) => {
+        const haystack = [
+          pro.fullNameEn,
+          pro.fullNameAr,
+          pro.specialtyEn,
+          pro.specialtyAr,
+          pro.zonesLabelEn,
+          pro.zonesLabelAr,
+          pro.badgeEn ?? '',
+          pro.primaryCategorySlug,
+        ]
+          .join(' ')
+          .toLowerCase();
+        return haystack.includes(needle);
+      });
+    }
+    return result;
+  }
+
+  private mapProfessionalRow(row: {
+    id: string;
+    user: { fullName: string | null };
+    primaryCategoryId: string | null;
+    primaryCategory: { id: string; slug: string; nameEn: string } | null;
+    primaryZone: SeedCoverageZone | null;
+    coverageZones: SeedCoverageZone[] | null;
+    specialtyEn: string | null;
+    specialtyAr: string | null;
+    zonesLabelEn: string | null;
+    zonesLabelAr: string | null;
+    ratingAvg: number;
+    reviewsCount: number;
+    completedJobsCount: number;
+    acceptanceRatePct: number;
+    estimatedPriceEgp: number;
+    badgeEn: string | null;
+    badgeAr: string | null;
+    isOnline: boolean;
+  }): DiscoveryProfessional {
+    return {
+      id: row.id,
+      fullNameEn: row.user.fullName ?? 'FIXO technician',
+      fullNameAr: row.user.fullName ?? 'فني معتمد',
+      specialtyEn: row.specialtyEn ?? row.primaryCategory?.nameEn ?? '',
+      specialtyAr: row.specialtyAr ?? 'فني معتمد',
+      primaryCategorySlug: row.primaryCategory?.slug ?? '',
+      primaryCategoryId:
+        row.primaryCategoryId ?? row.primaryCategory?.id ?? '',
+      primaryZoneSlug: row.primaryZone?.slug ?? '',
+      coverage: [
+        ...(row.coverageZones ?? []),
+        ...(row.primaryZone ? [row.primaryZone] : []),
+      ],
+      zonesLabelEn: row.zonesLabelEn ?? row.primaryZone?.nameEn ?? '',
+      zonesLabelAr: row.zonesLabelAr ?? row.primaryZone?.nameAr ?? '',
+      ratingAvg: row.reviewsCount > 0 ? row.ratingAvg : 0,
+      reviewsCount: row.reviewsCount,
+      completedJobsCount: row.completedJobsCount,
+      acceptanceRatePct: row.acceptanceRatePct,
+      estimatedPriceEgp: row.estimatedPriceEgp,
+      badgeEn: row.badgeEn,
+      badgeAr: row.badgeAr,
+      badgeVariant: row.badgeEn
+        ? row.badgeEn.toLowerCase().includes('fast')
+          ? 'fast_responder'
+          : 'verified_master'
+        : null,
+      isOnline: row.isOnline,
+    };
+  }
+
   private async loadAllOfferings(): Promise<SeedServiceOffering[]> {
     if (this.prisma.isDatabaseConnected()) {
       // Database-connected mode: Offerings come EXCLUSIVELY from PostgreSQL.
@@ -424,27 +671,7 @@ export class ServicesService {
         where: { isActive: true },
         include: { category: true },
       });
-      return rows.map((row) => ({
-        id: row.id,
-        categoryId: row.categoryId,
-        categorySlug: row.category?.slug ?? '',
-        slug: row.slug,
-        titleEn: row.titleEn,
-        titleAr: row.titleAr,
-        descriptionEn: row.descriptionEn,
-        descriptionAr: row.descriptionAr,
-        badgeEn: row.badgeEn,
-        badgeAr: row.badgeAr,
-        providerTagEn: row.providerTagEn,
-        providerTagAr: row.providerTagAr,
-        baseInspectionEgp: row.baseInspectionEgp,
-        serviceFeeEgp: row.serviceFeeEgp,
-        flatPriceEgp:
-          row.flatPriceEgp ?? row.baseInspectionEgp + row.serviceFeeEgp,
-        estimatedDurationMins: row.estimatedDurationMins,
-        isSeasonalPromo: row.isSeasonalPromo,
-        isBundle: row.isBundle,
-      }));
+      return rows.map((row) => this.mapOfferingRow(row));
     }
 
     if (
@@ -468,43 +695,14 @@ export class ServicesService {
           verificationStatus: ProVerificationStatus.APPROVED,
         },
         include: {
-          user: true,
+          user: { select: { fullName: true } },
           primaryCategory: true,
           primaryZone: true,
           coverageZones: true,
         },
       });
 
-      return rows.map((row) => ({
-        id: row.id,
-        fullNameEn: row.user.fullName ?? 'FIXO technician',
-        fullNameAr: row.user.fullName ?? 'فني معتمد',
-        specialtyEn: row.specialtyEn ?? row.primaryCategory?.nameEn ?? '',
-        specialtyAr: row.specialtyAr ?? 'فني معتمد',
-        primaryCategorySlug: row.primaryCategory?.slug ?? '',
-        primaryCategoryId:
-          row.primaryCategoryId ?? row.primaryCategory?.id ?? '',
-        primaryZoneSlug: row.primaryZone?.slug ?? '',
-        coverage: [
-          ...(row.coverageZones ?? []),
-          ...(row.primaryZone ? [row.primaryZone] : []),
-        ],
-        zonesLabelEn: row.zonesLabelEn ?? row.primaryZone?.nameEn ?? '',
-        zonesLabelAr: row.zonesLabelAr ?? row.primaryZone?.nameAr ?? '',
-        ratingAvg: row.reviewsCount > 0 ? row.ratingAvg : 0,
-        reviewsCount: row.reviewsCount,
-        completedJobsCount: row.completedJobsCount,
-        acceptanceRatePct: row.acceptanceRatePct,
-        estimatedPriceEgp: row.estimatedPriceEgp,
-        badgeEn: row.badgeEn,
-        badgeAr: row.badgeAr,
-        badgeVariant: row.badgeEn
-          ? row.badgeEn.toLowerCase().includes('fast')
-            ? 'fast_responder'
-            : 'verified_master'
-          : null,
-        isOnline: row.isOnline,
-      }));
+      return rows.map((row) => this.mapProfessionalRow(row));
     }
 
     // In-memory fallback: strictly prohibited from synthetic demo leaking in production or when demo seed is false

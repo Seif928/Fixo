@@ -202,7 +202,7 @@ model OtpChallenge {
   consumedAt DateTime?
   createdAt  DateTime  @default(now())
 
-  @@index([phone])
+  @@index([phone, createdAt(sort: Desc)])
 }
 
 model RefreshToken {
@@ -228,6 +228,8 @@ model CoverageZone {
   addresses   CustomerAddress[]
   primaryPros ProProfile[]      @relation("PrimaryZonePros")
   coveredPros ProProfile[]      @relation("ProCoverageZones")
+
+  @@index([isActive, nameEn])
 }
 
 model CustomerAddress {
@@ -265,6 +267,8 @@ model ServiceCategory {
   subSkills   ServiceSubSkill[]
   offerings   ServiceOffering[]
   primaryPros ProProfile[]
+
+  @@index([isActive, sortOrder])
 }
 
 model ServiceSubSkill {
@@ -304,6 +308,7 @@ model ServiceOffering {
   adminDraft AdminCatalogDraft?
   favorites  FavoriteService[]
   @@index([categoryId])
+  @@index([isActive, categoryId])
 }
 
 // Incomplete prices stay private and cannot enter customer booking payloads.
@@ -377,6 +382,10 @@ model ProProfile {
   leaves          ProLeave[]
   @@index([primaryCategoryId])
   @@index([primaryZoneId])
+  @@index([verificationStatus])
+  @@index([verificationStatus, isOnline, primaryCategoryId])
+  @@index([verificationStatus, updatedAt(sort: Desc), id(sort: Desc)])
+  @@index([updatedAt(sort: Desc), id(sort: Desc)])
 }
 
 model ProVerificationDocument {
@@ -392,6 +401,7 @@ model ProVerificationDocument {
 
   proProfile ProProfile @relation(fields: [proProfileId], references: [id], onDelete: Cascade)
   @@index([proProfileId])
+  @@index([proProfileId, docType])
 }
 
 model Booking {
@@ -431,10 +441,13 @@ model Booking {
   complaints   Complaint[]
 
   @@index([customerId, status, createdAt])
-  @@index([proProfileId, status])
+  @@index([customerId, createdAt(sort: Desc)])
+  @@index([proProfileId, status, scheduledDate])
   @@index([offeringId])
   @@index([addressId])
   @@index([status, scheduledDate])
+  @@index([status, updatedAt(sort: Desc), id(sort: Desc)])
+  @@index([updatedAt(sort: Desc), id(sort: Desc)])
 }
 
 model BookingStatusEvent {
@@ -449,6 +462,8 @@ model BookingStatusEvent {
   booking Booking @relation(fields: [bookingId], references: [id], onDelete: Cascade)
 
   @@index([bookingId, createdAt])
+  @@index([bookingId, createdAt(sort: Desc), id(sort: Desc)])
+  @@index([createdAt(sort: Desc), id(sort: Desc)])
 }
 
 model JobOffer {
@@ -496,6 +511,7 @@ model ChatMessage {
   sender  User    @relation(fields: [senderUserId], references: [id])
 
   @@index([bookingId, createdAt])
+  @@index([bookingId, createdAt(sort: Desc), id(sort: Desc)])
   @@index([senderUserId])
 }
 
@@ -582,8 +598,10 @@ model Complaint {
   resolvedBy User?   @relation("ResolvedComplaints", fields: [resolvedById], references: [id], onDelete: SetNull)
 
   @@index([customerId, createdAt])
-  @@index([bookingId])
-  @@index([status])
+  @@index([customerId, status, createdAt(sort: Desc)])
+  @@index([bookingId, status])
+  @@index([status, createdAt(sort: Desc)])
+  @@index([createdAt(sort: Desc)])
   @@index([resolvedById])
 }
 
@@ -642,7 +660,7 @@ model ProLeave {
   proProfile ProProfile @relation(fields: [proProfileId], references: [id], onDelete: Cascade)
 
   @@index([proProfileId, startDate, endDate])
-  @@index([proProfileId, status])
+  @@index([proProfileId, status, startDate(sort: Desc)])
 }
 
 model SupportThread {
@@ -655,6 +673,7 @@ model SupportThread {
   user User @relation(fields: [userId], references: [id])
   messages SupportMessage[]
   @@index([userId, updatedAt])
+  @@index([updatedAt(sort: Desc)])
 }
 model SupportMessage {
   id String @id @default(uuid())
@@ -665,6 +684,6 @@ model SupportMessage {
   createdAt DateTime @default(now())
   thread SupportThread @relation(fields: [threadId], references: [id], onDelete: Cascade)
   sender User @relation(fields: [senderUserId], references: [id])
-  @@index([threadId, createdAt])
+  @@index([threadId, createdAt(sort: Desc), id(sort: Desc)])
   @@index([senderUserId])
 }

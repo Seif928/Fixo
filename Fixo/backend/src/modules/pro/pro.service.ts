@@ -992,7 +992,6 @@ export class ProService {
             proProfileId: profile.id,
             status: JobOfferStatus.PENDING,
             expiresAt: { gt: now },
-            proProfile: { verificationStatus: ProVerificationStatus.APPROVED },
           },
           include: {
             booking: {
@@ -1499,7 +1498,7 @@ export class ProService {
         COMPLETED: 'Service completed and cash settlement confirmed',
       };
 
-      await tx.booking.update({
+      const updatedBooking = await tx.booking.update({
         where: { id: booking.id },
         data: {
           status: dto.toStatus as BookingStatus,
@@ -1515,13 +1514,14 @@ export class ProService {
         },
       });
 
+      let updatedPayment = updatedBooking.payment;
       if (dto.toStatus === BookingStatus.COMPLETED) {
         if (
           booking.payment &&
           booking.payment.method === PaymentMethodType.CASH_ON_SERVICE &&
           booking.payment.status !== PaymentStatus.PAID
         ) {
-          await tx.paymentRecord.update({
+          updatedPayment = await tx.paymentRecord.update({
             where: { id: booking.payment.id },
             data: {
               status: PaymentStatus.PAID,
@@ -1548,15 +1548,10 @@ export class ProService {
         },
       });
 
-      const updated = await tx.booking.findUniqueOrThrow({
-        where: { id: booking.id },
-        include: {
-          offering: { include: { category: true } },
-          address: { include: { zone: true } },
-          customer: { select: { id: true, fullName: true, phone: true } },
-          payment: true,
-        },
-      });
+      const updated =
+        updatedPayment !== updatedBooking.payment
+          ? { ...updatedBooking, payment: updatedPayment }
+          : updatedBooking;
       return { updated, changed: true, pinError: null };
     });
 

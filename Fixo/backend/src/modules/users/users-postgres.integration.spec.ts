@@ -157,7 +157,7 @@ describe('Users & Customer Addresses PostgreSQL Real Database Integration Suite 
       authService['accessSecret'],
       900,
     ).token;
-  });
+  }, 30000);
 
   afterAll(async () => {
     if (prisma && prisma.isDatabaseConnected()) {
@@ -171,7 +171,7 @@ describe('Users & Customer Addresses PostgreSQL Real Database Integration Suite 
     if (app) {
       await app.close();
     }
-  });
+  }, 30000);
 
   describe('Database Safety & Configuration', () => {
     it('strictly verifies connected runtime database is fixo_test', async () => {

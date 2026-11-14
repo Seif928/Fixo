@@ -315,7 +315,7 @@ describe('Complaints System (Guarded PostgreSQL)', () => {
           bookingId: completedBookingA.id,
           category: ComplaintCategory.SERVICE_QUALITY,
           description: 'The pipe started leaking again two hours after technician left.',
-          photoUrls: ['https://storage.local/complaints/leak1.jpg'],
+          photoUrls: ['https://cdn.fixo.app/complaints/leak1.jpg'],
         }),
       });
 
@@ -326,8 +326,26 @@ describe('Complaints System (Guarded PostgreSQL)', () => {
       expect(data.category).toBe(ComplaintCategory.SERVICE_QUALITY);
       expect(data.customerId).toBe(customerA.id);
       expect(data.bookingId).toBe(completedBookingA.id);
-      expect(data.photoUrls).toEqual(['https://storage.local/complaints/leak1.jpg']);
+      expect(data.photoUrls).toEqual(['https://cdn.fixo.app/complaints/leak1.jpg']);
       createdComplaintId = data.id;
+    });
+
+    it('rejects complaint photo URLs pointing to blocked .local/internal hosts', async () => {
+      const res = await fetch(`${url}/api/v1/complaints`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${tokenA}`,
+        },
+        body: JSON.stringify({
+          bookingId: completedBookingA.id,
+          category: ComplaintCategory.SERVICE_QUALITY,
+          description: 'Attempted internal .local photo URL should be rejected.',
+          photoUrls: ['https://storage.local/complaints/leak1.jpg'],
+        }),
+      });
+
+      expect(res.status).toBe(400);
     });
 
     it('denies customer from filing complaint on another user booking', async () => {

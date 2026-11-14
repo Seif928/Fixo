@@ -110,7 +110,7 @@ export class FavoritesService {
         include: {
           proProfile: {
             include: {
-              user: true,
+              user: { select: { fullName: true } },
               primaryCategory: true,
               primaryZone: true,
             },

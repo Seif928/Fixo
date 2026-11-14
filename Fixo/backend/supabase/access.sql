@@ -1,75 +1,69 @@
-ALTER TABLE public."User" ENABLE ROW LEVEL SECURITY;
-REVOKE ALL ON public."User" FROM anon, authenticated;
-ALTER TABLE public."OtpChallenge" ENABLE ROW LEVEL SECURITY;
-REVOKE ALL ON public."OtpChallenge" FROM anon, authenticated;
-ALTER TABLE public."RefreshToken" ENABLE ROW LEVEL SECURITY;
-REVOKE ALL ON public."RefreshToken" FROM anon, authenticated;
-ALTER TABLE public."CoverageZone" ENABLE ROW LEVEL SECURITY;
-REVOKE ALL ON public."CoverageZone" FROM anon, authenticated;
-ALTER TABLE public."CustomerAddress" ENABLE ROW LEVEL SECURITY;
-REVOKE ALL ON public."CustomerAddress" FROM anon, authenticated;
-ALTER TABLE public."ServiceCategory" ENABLE ROW LEVEL SECURITY;
-REVOKE ALL ON public."ServiceCategory" FROM anon, authenticated;
-ALTER TABLE public."ServiceSubSkill" ENABLE ROW LEVEL SECURITY;
-REVOKE ALL ON public."ServiceSubSkill" FROM anon, authenticated;
-ALTER TABLE public."ServiceOffering" ENABLE ROW LEVEL SECURITY;
-REVOKE ALL ON public."ServiceOffering" FROM anon, authenticated;
-ALTER TABLE public."ProProfile" ENABLE ROW LEVEL SECURITY;
-REVOKE ALL ON public."ProProfile" FROM anon, authenticated;
-ALTER TABLE public."ProVerificationDocument" ENABLE ROW LEVEL SECURITY;
-REVOKE ALL ON public."ProVerificationDocument" FROM anon, authenticated;
-ALTER TABLE public."Booking" ENABLE ROW LEVEL SECURITY;
-REVOKE ALL ON public."Booking" FROM anon, authenticated;
-ALTER TABLE public."BookingStatusEvent" ENABLE ROW LEVEL SECURITY;
-REVOKE ALL ON public."BookingStatusEvent" FROM anon, authenticated;
-ALTER TABLE public."JobOffer" ENABLE ROW LEVEL SECURITY;
-REVOKE ALL ON public."JobOffer" FROM anon, authenticated;
-ALTER TABLE public."PaymentRecord" ENABLE ROW LEVEL SECURITY;
-REVOKE ALL ON public."PaymentRecord" FROM anon, authenticated;
-ALTER TABLE public."ChatMessage" ENABLE ROW LEVEL SECURITY;
-REVOKE ALL ON public."ChatMessage" FROM anon, authenticated;
-ALTER TABLE public."Review" ENABLE ROW LEVEL SECURITY;
-REVOKE ALL ON public."Review" FROM anon, authenticated;
-ALTER TABLE public."_ProCoverageZones" ENABLE ROW LEVEL SECURITY;
-REVOKE ALL ON public."_ProCoverageZones" FROM anon, authenticated;
-ALTER TABLE public."_ProSubSkills" ENABLE ROW LEVEL SECURITY;
-REVOKE ALL ON public."_ProSubSkills" FROM anon, authenticated;
-CREATE ROLE fixo_backend NOLOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE NOINHERIT NOBYPASSRLS;
+-- Idempotent Supabase Row-Level Security (RLS) & least-privilege grants for all
+-- tables managed by Prisma in public schema. Denies PostgREST anon/authenticated access
+-- and grants full table access exclusively to the backend service role (fixo_backend).
+
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'fixo_backend') THEN
+    CREATE ROLE fixo_backend NOLOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE NOINHERIT NOBYPASSRLS;
+  END IF;
+END $$;
+
 GRANT CONNECT ON DATABASE postgres TO fixo_backend;
 GRANT USAGE ON SCHEMA public TO fixo_backend;
-GRANT SELECT, INSERT, UPDATE, DELETE ON public."User" TO fixo_backend;
-CREATE POLICY fixo_backend_access ON public."User" FOR ALL TO fixo_backend USING (true) WITH CHECK (true);
-GRANT SELECT, INSERT, UPDATE, DELETE ON public."OtpChallenge" TO fixo_backend;
-CREATE POLICY fixo_backend_access ON public."OtpChallenge" FOR ALL TO fixo_backend USING (true) WITH CHECK (true);
-GRANT SELECT, INSERT, UPDATE, DELETE ON public."RefreshToken" TO fixo_backend;
-CREATE POLICY fixo_backend_access ON public."RefreshToken" FOR ALL TO fixo_backend USING (true) WITH CHECK (true);
-GRANT SELECT, INSERT, UPDATE, DELETE ON public."CoverageZone" TO fixo_backend;
-CREATE POLICY fixo_backend_access ON public."CoverageZone" FOR ALL TO fixo_backend USING (true) WITH CHECK (true);
-GRANT SELECT, INSERT, UPDATE, DELETE ON public."CustomerAddress" TO fixo_backend;
-CREATE POLICY fixo_backend_access ON public."CustomerAddress" FOR ALL TO fixo_backend USING (true) WITH CHECK (true);
-GRANT SELECT, INSERT, UPDATE, DELETE ON public."ServiceCategory" TO fixo_backend;
-CREATE POLICY fixo_backend_access ON public."ServiceCategory" FOR ALL TO fixo_backend USING (true) WITH CHECK (true);
-GRANT SELECT, INSERT, UPDATE, DELETE ON public."ServiceSubSkill" TO fixo_backend;
-CREATE POLICY fixo_backend_access ON public."ServiceSubSkill" FOR ALL TO fixo_backend USING (true) WITH CHECK (true);
-GRANT SELECT, INSERT, UPDATE, DELETE ON public."ServiceOffering" TO fixo_backend;
-CREATE POLICY fixo_backend_access ON public."ServiceOffering" FOR ALL TO fixo_backend USING (true) WITH CHECK (true);
-GRANT SELECT, INSERT, UPDATE, DELETE ON public."ProProfile" TO fixo_backend;
-CREATE POLICY fixo_backend_access ON public."ProProfile" FOR ALL TO fixo_backend USING (true) WITH CHECK (true);
-GRANT SELECT, INSERT, UPDATE, DELETE ON public."ProVerificationDocument" TO fixo_backend;
-CREATE POLICY fixo_backend_access ON public."ProVerificationDocument" FOR ALL TO fixo_backend USING (true) WITH CHECK (true);
-GRANT SELECT, INSERT, UPDATE, DELETE ON public."Booking" TO fixo_backend;
-CREATE POLICY fixo_backend_access ON public."Booking" FOR ALL TO fixo_backend USING (true) WITH CHECK (true);
-GRANT SELECT, INSERT, UPDATE, DELETE ON public."BookingStatusEvent" TO fixo_backend;
-CREATE POLICY fixo_backend_access ON public."BookingStatusEvent" FOR ALL TO fixo_backend USING (true) WITH CHECK (true);
-GRANT SELECT, INSERT, UPDATE, DELETE ON public."JobOffer" TO fixo_backend;
-CREATE POLICY fixo_backend_access ON public."JobOffer" FOR ALL TO fixo_backend USING (true) WITH CHECK (true);
-GRANT SELECT, INSERT, UPDATE, DELETE ON public."PaymentRecord" TO fixo_backend;
-CREATE POLICY fixo_backend_access ON public."PaymentRecord" FOR ALL TO fixo_backend USING (true) WITH CHECK (true);
-GRANT SELECT, INSERT, UPDATE, DELETE ON public."ChatMessage" TO fixo_backend;
-CREATE POLICY fixo_backend_access ON public."ChatMessage" FOR ALL TO fixo_backend USING (true) WITH CHECK (true);
-GRANT SELECT, INSERT, UPDATE, DELETE ON public."Review" TO fixo_backend;
-CREATE POLICY fixo_backend_access ON public."Review" FOR ALL TO fixo_backend USING (true) WITH CHECK (true);
-GRANT SELECT, INSERT, UPDATE, DELETE ON public."_ProCoverageZones" TO fixo_backend;
-CREATE POLICY fixo_backend_access ON public."_ProCoverageZones" FOR ALL TO fixo_backend USING (true) WITH CHECK (true);
-GRANT SELECT, INSERT, UPDATE, DELETE ON public."_ProSubSkills" TO fixo_backend;
-CREATE POLICY fixo_backend_access ON public."_ProSubSkills" FOR ALL TO fixo_backend USING (true) WITH CHECK (true);
+
+DO $$
+DECLARE
+  tbl text;
+  tables text[] := ARRAY[
+    'User',
+    'ClerkIdentityLink',
+    'PushDevice',
+    'OtpChallenge',
+    'RefreshToken',
+    'GeoLookupCache',
+    'GeoRequestGate',
+    'AdminMembership',
+    'AdminAuditLog',
+    'CoverageZone',
+    'CustomerAddress',
+    'ServiceCategory',
+    'ServiceSubSkill',
+    'ServiceOffering',
+    'AdminCatalogDraft',
+    'ProProfile',
+    'ProVerificationDocument',
+    'Booking',
+    'BookingStatusEvent',
+    'JobOffer',
+    'PaymentRecord',
+    'ChatMessage',
+    'Review',
+    'FavoriteService',
+    'FavoriteProfessional',
+    'Complaint',
+    'ProWeeklySchedule',
+    'ProLeave',
+    'SupportThread',
+    'SupportMessage',
+    '_ProCoverageZones',
+    '_ProSubSkills'
+  ];
+BEGIN
+  FOREACH tbl IN ARRAY tables LOOP
+    EXECUTE format('ALTER TABLE public.%I ENABLE ROW LEVEL SECURITY', tbl);
+    EXECUTE format('REVOKE ALL ON public.%I FROM PUBLIC', tbl);
+    IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'anon') THEN
+      EXECUTE format('REVOKE ALL ON public.%I FROM anon', tbl);
+    END IF;
+    IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'authenticated') THEN
+      EXECUTE format('REVOKE ALL ON public.%I FROM authenticated', tbl);
+    END IF;
+    EXECUTE format('GRANT SELECT, INSERT, UPDATE, DELETE ON public.%I TO fixo_backend', tbl);
+    EXECUTE format('DROP POLICY IF EXISTS fixo_backend_access ON public.%I', tbl);
+    EXECUTE format(
+      'CREATE POLICY fixo_backend_access ON public.%I FOR ALL TO fixo_backend USING (true) WITH CHECK (true)',
+      tbl
+    );
+  END LOOP;
+END $$;

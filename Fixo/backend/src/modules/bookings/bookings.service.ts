@@ -142,6 +142,7 @@ export class BookingsService {
       dto.preferredProId
         ? this.prisma.proProfile.findUnique({
             where: { id: dto.preferredProId },
+            select: { id: true, verificationStatus: true },
           })
         : Promise.resolve(null),
     ]);
@@ -1037,15 +1038,23 @@ export class BookingsService {
         return;
       }
 
+      const notifyUserIds: string[] = [];
       for (const pro of eligiblePros) {
         const result = await ensureDispatchOffer(
           this.prisma,
           booking.id,
           pro.id,
         );
-        if (result?.created && this.pushService) {
-          await this.pushService.notify(result.userId, booking.id);
+        if (result?.created && result.userId) {
+          notifyUserIds.push(result.userId);
         }
+      }
+      if (notifyUserIds.length > 0 && this.pushService) {
+        await Promise.allSettled(
+          notifyUserIds.map((userId) =>
+            this.pushService!.notify(userId, booking.id),
+          ),
+        );
       }
     } catch {
       // Non-blocking: Pro dashboard also synchronizes pending offers on poll
