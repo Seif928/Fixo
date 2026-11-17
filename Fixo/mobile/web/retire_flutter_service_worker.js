@@ -1,0 +1,10 @@
+'use strict';
+// Migration for browsers that still have a legacy Flutter shell registered.
+// This script never handles fetch/push and only unregisters its own worker.
+self.addEventListener('install', event => event.waitUntil(self.skipWaiting()));
+self.addEventListener('activate', event => event.waitUntil((async () => {
+  await Promise.all(['flutter-app-cache', 'flutter-temp-cache', 'flutter-app-manifest']
+    .map(name => caches.delete(name)));
+  await self.clients.claim();
+  await self.registration.unregister();
+})()));

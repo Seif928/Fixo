@@ -1,0 +1,9 @@
+.vscode/
+.DS_Store
+Thumbs.db
+.firebase/
+.testsprite/
+__pycache__/
+*.pyc
+*.log
+.agents/

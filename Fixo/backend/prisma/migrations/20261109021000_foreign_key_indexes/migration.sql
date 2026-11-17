@@ -1,0 +1,17 @@
+SET lock_timeout = '5s';
+SET statement_timeout = '30s';
+CREATE INDEX IF NOT EXISTS "AdminAuditLog_actorUserId_idx" ON "AdminAuditLog"("actorUserId");
+CREATE INDEX IF NOT EXISTS "Complaint_resolvedById_idx" ON "Complaint"("resolvedById");
+CREATE INDEX IF NOT EXISTS "CustomerAddress_userId_idx" ON "CustomerAddress"("userId");
+CREATE INDEX IF NOT EXISTS "CustomerAddress_zoneId_idx" ON "CustomerAddress"("zoneId");
+CREATE INDEX IF NOT EXISTS "FavoriteProfessional_proProfileId_idx" ON "FavoriteProfessional"("proProfileId");
+CREATE INDEX IF NOT EXISTS "FavoriteService_offeringId_idx" ON "FavoriteService"("offeringId");
+CREATE INDEX IF NOT EXISTS "ProProfile_primaryCategoryId_idx" ON "ProProfile"("primaryCategoryId");
+CREATE INDEX IF NOT EXISTS "ProProfile_primaryZoneId_idx" ON "ProProfile"("primaryZoneId");
+CREATE INDEX IF NOT EXISTS "ProVerificationDocument_proProfileId_idx" ON "ProVerificationDocument"("proProfileId");
+CREATE INDEX IF NOT EXISTS "RefreshToken_userId_idx" ON "RefreshToken"("userId");
+CREATE INDEX IF NOT EXISTS "Review_customerId_idx" ON "Review"("customerId");
+CREATE INDEX IF NOT EXISTS "Review_proProfileId_idx" ON "Review"("proProfileId");
+CREATE INDEX IF NOT EXISTS "ServiceOffering_categoryId_idx" ON "ServiceOffering"("categoryId");
+CREATE INDEX IF NOT EXISTS "ServiceSubSkill_categoryId_idx" ON "ServiceSubSkill"("categoryId");
+CREATE INDEX IF NOT EXISTS "SupportMessage_senderUserId_idx" ON "SupportMessage"("senderUserId");

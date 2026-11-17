@@ -1,0 +1,670 @@
+// FIXO — Normalized PostgreSQL Schema (Prisma)
+// Matches docs/DATABASE_SCHEMA.md
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model GeoLookupCache {
+  key       String   @id
+  result    Json
+  expiresAt DateTime
+
+  @@index([expiresAt])
+}
+
+model GeoRequestGate {
+  key           String   @id
+  nextAllowedAt DateTime
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserRole {
+  CUSTOMER
+  PRO
+  ADMIN
+}
+
+enum AdminAccessRole {
+  OWNER
+  ADMIN
+}
+
+model AdminMembership {
+  slot      Int             @id
+  email     String          @unique
+  userId    String?         @unique
+  role      AdminAccessRole
+  isActive  Boolean         @default(true)
+  expiresAt DateTime?
+  createdAt DateTime        @default(now())
+  updatedAt DateTime        @updatedAt
+  user      User?           @relation(fields: [userId], references: [id], onDelete: Restrict)
+}
+
+model AdminAuditLog {
+  id          String   @id @default(uuid())
+  actorUserId String?
+  action      String
+  entityId    String
+  details     Json
+  createdAt   DateTime @default(now())
+  actor       User?    @relation(fields: [actorUserId], references: [id], onDelete: SetNull)
+
+  @@index([createdAt, id])
+  @@index([actorUserId])
+}
+
+enum ProVerificationStatus {
+  DRAFT
+  PENDING_REVIEW
+  ACTION_REQUIRED
+  APPROVED
+  SUSPENDED
+}
+
+enum TransportMode {
+  MOTORCYCLE
+  WORK_VAN
+  METRO_BUS
+}
+
+enum ExperienceTier {
+  JUNIOR_1_2Y
+  SKILLED_3_5Y
+  SENIOR_6_8Y
+  MASTER_8_PLUS_Y
+}
+
+enum DocumentType {
+  NATIONAL_ID_FRONT
+  NATIONAL_ID_BACK
+  CRIMINAL_RECORD_CERT
+  SYNDICATE_LICENSE
+}
+
+enum DocumentStatus {
+  PENDING
+  VERIFIED
+  REJECTED
+}
+
+enum BookingStatus {
+  DRAFT
+  PENDING_DISPATCH
+  OFFERED_TO_PRO
+  CONFIRMED
+  PRO_EN_ROUTE
+  ARRIVED
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+}
+
+enum TimeWindow {
+  MORNING_09_12
+  AFTERNOON_13_16
+  EVENING_17_20
+}
+
+enum PaymentMethodType {
+  CASH_ON_SERVICE
+  INSTAPAY_SANDBOX
+  SMART_WALLET_SANDBOX
+  CARD_MEEZA_SANDBOX
+  FAWRY_SANDBOX
+}
+
+enum PaymentStatus {
+  PENDING
+  AUTHORIZED
+  PAID
+  REFUNDED
+  FAILED
+}
+
+enum JobOfferStatus {
+  PENDING
+  ACCEPTED
+  DECLINED
+  EXPIRED
+}
+
+model User {
+  id                   String   @id @default(uuid())
+  phone                String?  @unique
+  firebaseUid          String?  @unique
+  fullName             String?
+  email                String?  @unique
+  avatarUrl            String?
+  role                 UserRole @default(CUSTOMER)
+  preferredLocale      String   @default("en")
+  arrivalAlertsEnabled Boolean  @default(true)
+  rewardPoints         Int      @default(0)
+  isDeleted            Boolean  @default(false)
+  deletedAt            DateTime?
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+
+  proProfile      ProProfile?
+  addresses       CustomerAddress[]
+  bookings        Booking[]         @relation("CustomerBookings")
+  refreshTokens   RefreshToken[]
+  clerkIdentityLinks ClerkIdentityLink[]
+  supportThreads SupportThread[]
+  supportMessages SupportMessage[]
+  sentMessages    ChatMessage[]
+  reviews         Review[]
+  pushDevices           PushDevice[]
+  adminMembership       AdminMembership?
+  adminAuditLogs        AdminAuditLog[]
+  favoriteServices      FavoriteService[]
+  favoriteProfessionals FavoriteProfessional[]
+  complaints            Complaint[]            @relation("CustomerComplaints")
+  resolvedComplaints    Complaint[]            @relation("ResolvedComplaints")
+}
+
+model ClerkIdentityLink {
+  id        String   @id @default(uuid())
+  userId    String
+  issuer    String
+  subject   String
+  linkedAt  DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([issuer, subject])
+  @@unique([userId, issuer])
+}
+
+model PushDevice {
+  id        String   @id @default(uuid())
+  userId    String
+  tokenHash String   @unique
+  token     String
+  platform  String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model OtpChallenge {
+  id         String    @id @default(uuid())
+  phone      String
+  codeHash   String
+  expiresAt  DateTime
+  attempts   Int       @default(0)
+  consumedAt DateTime?
+  createdAt  DateTime  @default(now())
+
+  @@index([phone])
+}
+
+model RefreshToken {
+  id        String    @id @default(uuid())
+  userId    String
+  tokenHash String    @unique
+  expiresAt DateTime
+  revokedAt DateTime?
+  createdAt DateTime  @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  @@index([userId])
+}
+
+model CoverageZone {
+  id          String  @id @default(uuid())
+  slug        String  @unique
+  nameEn      String
+  nameAr      String
+  governorate String
+  isActive    Boolean @default(true)
+
+  addresses   CustomerAddress[]
+  primaryPros ProProfile[]      @relation("PrimaryZonePros")
+  coveredPros ProProfile[]      @relation("ProCoverageZones")
+}
+
+model CustomerAddress {
+  id           String   @id @default(uuid())
+  userId       String
+  zoneId       String
+  label        String
+  buildingLine String
+  districtLine String
+  gateNotes    String?
+  latitude     Float?
+  longitude    Float?
+  isDefault    Boolean  @default(false)
+  createdAt    DateTime @default(now())
+
+  user     User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  zone     CoverageZone @relation(fields: [zoneId], references: [id])
+  bookings Booking[]
+  @@index([userId])
+  @@index([zoneId])
+}
+
+model ServiceCategory {
+  id               String  @id @default(uuid())
+  slug             String  @unique
+  nameEn           String
+  nameAr           String
+  subtitleEn       String
+  subtitleAr       String
+  iconName         String
+  startingPriceEgp Int
+  sortOrder        Int     @default(0)
+  isActive         Boolean @default(true)
+
+  subSkills   ServiceSubSkill[]
+  offerings   ServiceOffering[]
+  primaryPros ProProfile[]
+}
+
+model ServiceSubSkill {
+  id         String @id @default(uuid())
+  categoryId String
+  slug       String @unique
+  nameEn     String
+  nameAr     String
+
+  category ServiceCategory @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  pros     ProProfile[]    @relation("ProSubSkills")
+  @@index([categoryId])
+}
+
+model ServiceOffering {
+  id                    String  @id @default(uuid())
+  categoryId            String
+  slug                  String  @unique
+  titleEn               String
+  titleAr               String
+  descriptionEn         String
+  descriptionAr         String
+  badgeEn               String?
+  badgeAr               String?
+  providerTagEn         String?
+  providerTagAr         String?
+  baseInspectionEgp     Int
+  serviceFeeEgp         Int
+  flatPriceEgp          Int?
+  estimatedDurationMins Int     @default(60)
+  isSeasonalPromo       Boolean @default(false)
+  isBundle              Boolean @default(false)
+  isActive              Boolean @default(true)
+
+  category   ServiceCategory    @relation(fields: [categoryId], references: [id])
+  bookings   Booking[]
+  adminDraft AdminCatalogDraft?
+  favorites  FavoriteService[]
+  @@index([categoryId])
+}
+
+// Incomplete prices stay private and cannot enter customer booking payloads.
+model AdminCatalogDraft {
+  id                    String           @id @default(uuid())
+  slug                  String           @unique
+  categorySlug          String
+  categoryNameEn        String
+  categoryNameAr        String
+  categoryIcon          String
+  titleEn               String
+  titleAr               String
+  descriptionEn         String
+  descriptionAr         String
+  baseInspectionEgp     Int?
+  serviceFeeEgp         Int?
+  estimatedDurationMins Int?
+  version               Int              @default(1)
+  publishedVersion      Int?
+  offeringId            String?          @unique
+  isActive              Boolean          @default(true)
+  createdAt             DateTime         @default(now())
+  updatedAt             DateTime         @updatedAt
+  offering              ServiceOffering? @relation(fields: [offeringId], references: [id], onDelete: Restrict)
+
+  @@index([categorySlug, slug])
+}
+
+model ProProfile {
+  id                         String                @id @default(uuid())
+  userId                     String                @unique
+  dossierCode                String                @unique
+  nationalIdSynthetic        String
+  legalName                  String?
+  primaryCategoryId          String?
+  primaryZoneId              String?
+  specialtyEn                String?
+  specialtyAr                String?
+  zonesLabelEn               String?
+  zonesLabelAr               String?
+  badgeEn                    String?
+  badgeAr                    String?
+  estimatedPriceEgp          Int                   @default(250)
+  reviewsCount               Int                   @default(0)
+  transportMode              TransportMode?
+  experienceTier             ExperienceTier        @default(MASTER_8_PLUS_Y)
+  acceptsStandardRateCard    Boolean               @default(true)
+  toolkitCommitmentConfirmed Boolean               @default(false)
+  verificationStatus         ProVerificationStatus @default(DRAFT)
+  reviewerNote               String?
+  isOnline                   Boolean               @default(false)
+  vehicleDescription         String?
+  vehiclePlateAr             String?
+  ratingAvg                  Float                 @default(0)
+  completedJobsCount         Int                   @default(0)
+  acceptanceRatePct          Int                   @default(100)
+  createdAt                  DateTime              @default(now())
+  updatedAt                  DateTime              @updatedAt
+
+  user            User                      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  primaryCategory ServiceCategory?          @relation(fields: [primaryCategoryId], references: [id])
+  primaryZone     CoverageZone?             @relation("PrimaryZonePros", fields: [primaryZoneId], references: [id])
+  coverageZones   CoverageZone[]            @relation("ProCoverageZones")
+  subSkills       ServiceSubSkill[]         @relation("ProSubSkills")
+  documents       ProVerificationDocument[]
+  bookings        Booking[]
+  jobOffers       JobOffer[]
+  reviews         Review[]
+  favoritedBy     FavoriteProfessional[]
+  weeklySchedules ProWeeklySchedule[]
+  leaves          ProLeave[]
+  @@index([primaryCategoryId])
+  @@index([primaryZoneId])
+}
+
+model ProVerificationDocument {
+  id              String         @id @default(uuid())
+  proProfileId    String
+  docType         DocumentType
+  fileName        String
+  fileSizeBytes   Int
+  storageKey      String
+  status          DocumentStatus @default(PENDING)
+  reviewerComment String?
+  uploadedAt      DateTime       @default(now())
+
+  proProfile ProProfile @relation(fields: [proProfileId], references: [id], onDelete: Cascade)
+  @@index([proProfileId])
+}
+
+model Booking {
+  id                 String        @id @default(uuid())
+  orderCode          String        @unique
+  customerId         String
+  proProfileId       String?
+  offeringId         String
+  addressId          String
+  status             BookingStatus @default(DRAFT)
+  scheduledTime      String?
+  scheduledDate      DateTime
+  timeWindow         TimeWindow
+  issueDescription   String?
+  issuePhotoUrls     String[]
+  baseInspectionEgp  Int
+  serviceFeeEgp      Int
+  transportFeeEgp    Int           @default(0)
+  totalEgp           Int
+  platformFeeEgp     Int
+  netArtisanEgp      Int
+  arrivalPinCode     String
+  cancellationReason String?
+  createdAt          DateTime      @default(now())
+  updatedAt          DateTime      @updatedAt
+  completedAt        DateTime?
+
+  customer     User                 @relation("CustomerBookings", fields: [customerId], references: [id])
+  proProfile   ProProfile?          @relation(fields: [proProfileId], references: [id])
+  offering     ServiceOffering      @relation(fields: [offeringId], references: [id])
+  address      CustomerAddress      @relation(fields: [addressId], references: [id])
+  statusEvents BookingStatusEvent[]
+  jobOffers    JobOffer[]
+  payment      PaymentRecord?
+  messages     ChatMessage[]
+  review       Review?
+  complaints   Complaint[]
+
+  @@index([customerId, status, createdAt])
+  @@index([proProfileId, status])
+  @@index([offeringId])
+  @@index([addressId])
+  @@index([status, scheduledDate])
+}
+
+model BookingStatusEvent {
+  id          String         @id @default(uuid())
+  bookingId   String
+  fromStatus  BookingStatus?
+  toStatus    BookingStatus
+  actorUserId String?
+  note        String?
+  createdAt   DateTime       @default(now())
+
+  booking Booking @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+
+  @@index([bookingId, createdAt])
+}
+
+model JobOffer {
+  id            String         @id @default(uuid())
+  bookingId     String
+  proProfileId  String
+  status        JobOfferStatus @default(PENDING)
+  expiresAt     DateTime
+  declineReason String?
+  respondedAt   DateTime?
+  createdAt     DateTime       @default(now())
+
+  booking    Booking    @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  proProfile ProProfile @relation(fields: [proProfileId], references: [id], onDelete: Cascade)
+
+  @@index([proProfileId, status, expiresAt])
+  @@index([bookingId, proProfileId, createdAt])
+}
+
+model PaymentRecord {
+  id                String            @id @default(uuid())
+  bookingId         String            @unique
+  method            PaymentMethodType @default(CASH_ON_SERVICE)
+  status            PaymentStatus     @default(PENDING)
+  amountEgp         Int
+  tipEgp            Int               @default(0)
+  externalReference String?
+  paidAt            DateTime?
+  createdAt         DateTime          @default(now())
+
+  booking Booking @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+}
+
+model ChatMessage {
+  id                String    @id @default(uuid())
+  bookingId         String
+  senderUserId      String
+  body              String
+  attachmentUrl     String?
+  attachmentCaption String?
+  readAt            DateTime?
+  createdAt         DateTime  @default(now())
+
+  booking Booking @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  sender  User    @relation(fields: [senderUserId], references: [id])
+
+  @@index([bookingId, createdAt])
+  @@index([senderUserId])
+}
+
+model Review {
+  id           String   @id @default(uuid())
+  bookingId    String   @unique
+  customerId   String
+  proProfileId String
+  rating       Int
+  tags         String[]
+  comment      String?
+  photoUrls    String[]
+  tipAmountEgp Int      @default(0)
+  createdAt    DateTime @default(now())
+
+  booking    Booking    @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  customer   User       @relation(fields: [customerId], references: [id])
+  proProfile ProProfile @relation(fields: [proProfileId], references: [id])
+  @@index([customerId])
+  @@index([proProfileId])
+}
+
+model FavoriteService {
+  id         String          @id @default(uuid())
+  userId     String
+  offeringId String
+  createdAt  DateTime        @default(now())
+
+  user     User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  offering ServiceOffering @relation(fields: [offeringId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, offeringId])
+  @@index([userId, createdAt])
+  @@index([offeringId])
+}
+
+model FavoriteProfessional {
+  id           String     @id @default(uuid())
+  userId       String
+  proProfileId String
+  createdAt    DateTime   @default(now())
+
+  user       User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  proProfile ProProfile @relation(fields: [proProfileId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, proProfileId])
+  @@index([userId, createdAt])
+  @@index([proProfileId])
+}
+
+
+enum ComplaintCategory {
+  SERVICE_QUALITY
+  BEHAVIOR
+  DELAY
+  OVERCHARGING
+  PROPERTY_DAMAGE
+  OTHER
+}
+
+enum ComplaintStatus {
+  OPEN
+  IN_REVIEW
+  RESOLVED
+  REJECTED
+}
+
+model Complaint {
+  id           String            @id @default(uuid())
+  bookingId    String
+  customerId   String
+  category     ComplaintCategory
+  description  String
+  photoUrls    String[]
+  status       ComplaintStatus   @default(OPEN)
+  adminNotes   String?
+  resolvedAt   DateTime?
+  resolvedById String?
+  createdAt    DateTime          @default(now())
+  updatedAt    DateTime          @updatedAt
+
+  booking    Booking @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  customer   User    @relation("CustomerComplaints", fields: [customerId], references: [id], onDelete: Cascade)
+  resolvedBy User?   @relation("ResolvedComplaints", fields: [resolvedById], references: [id], onDelete: SetNull)
+
+  @@index([customerId, createdAt])
+  @@index([bookingId])
+  @@index([status])
+  @@index([resolvedById])
+}
+
+
+enum DayOfWeek {
+  SUNDAY
+  MONDAY
+  TUESDAY
+  WEDNESDAY
+  THURSDAY
+  FRIDAY
+  SATURDAY
+}
+
+enum LeaveReason {
+  VACATION
+  SICK
+  EMERGENCY
+  PERSONAL
+}
+
+enum LeaveStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  CANCELLED
+}
+
+model ProWeeklySchedule {
+  id           String    @id @default(uuid())
+  proProfileId String
+  dayOfWeek    DayOfWeek
+  startMinute  Int       @default(540)
+  endMinute    Int       @default(1080)
+  isActive     Boolean   @default(true)
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  proProfile ProProfile @relation(fields: [proProfileId], references: [id], onDelete: Cascade)
+
+  @@unique([proProfileId, dayOfWeek])
+  @@index([proProfileId])
+}
+
+model ProLeave {
+  id           String      @id @default(uuid())
+  proProfileId String
+  startDate    DateTime
+  endDate      DateTime
+  reason       LeaveReason @default(PERSONAL)
+  notes        String?
+  status       LeaveStatus @default(APPROVED)
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
+
+  proProfile ProProfile @relation(fields: [proProfileId], references: [id], onDelete: Cascade)
+
+  @@index([proProfileId, startDate, endDate])
+  @@index([proProfileId, status])
+}
+
+model SupportThread {
+  id String @id @default(uuid())
+  userId String
+  subject String
+  closed Boolean @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  user User @relation(fields: [userId], references: [id])
+  messages SupportMessage[]
+  @@index([userId, updatedAt])
+}
+model SupportMessage {
+  id String @id @default(uuid())
+  threadId String
+  senderUserId String
+  body String
+  fromAdmin Boolean @default(false)
+  createdAt DateTime @default(now())
+  thread SupportThread @relation(fields: [threadId], references: [id], onDelete: Cascade)
+  sender User @relation(fields: [senderUserId], references: [id])
+  @@index([threadId, createdAt])
+  @@index([senderUserId])
+}

@@ -1,0 +1,8 @@
+.env*
+.vercel/
+node_modules
+coverage
+dist
+**/*.spec.ts
+**/*.integration.spec.ts
+**/*.log
