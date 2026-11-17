@@ -645,7 +645,7 @@ describe('Tier 1: Feature Coverage (Backend API & Domain Architecture)', () => {
       const booking = await bookingsService.createBooking(customer.id, {
         offeringId: offerings[0].id,
         addressId: 'addr-seed-default',
-        scheduledDate: '2026-11-15',
+        scheduledDate: new Date(Date.now() + 7 * 86400000).toISOString().slice(0, 10),
         timeWindow: TimeWindow.MORNING_09_12,
         issueDescription: 'Testing booking creation',
       });
@@ -663,7 +663,7 @@ describe('Tier 1: Feature Coverage (Backend API & Domain Architecture)', () => {
       const booking = await bookingsService.createBooking(customer.id, {
         offeringId: offerings[0].id,
         addressId: 'addr-seed-default',
-        scheduledDate: '2026-11-15',
+        scheduledDate: new Date(Date.now() + 7 * 86400000).toISOString().slice(0, 10),
         timeWindow: TimeWindow.MORNING_09_12,
       });
 
@@ -685,7 +685,7 @@ describe('Tier 1: Feature Coverage (Backend API & Domain Architecture)', () => {
       const booking = await bookingsService.createBooking(customer.id, {
         offeringId: offerings[0].id,
         addressId: 'addr-seed-default',
-        scheduledDate: '2026-11-15',
+        scheduledDate: new Date(Date.now() + 7 * 86400000).toISOString().slice(0, 10),
         timeWindow: TimeWindow.MORNING_09_12,
       });
 
@@ -702,7 +702,7 @@ describe('Tier 1: Feature Coverage (Backend API & Domain Architecture)', () => {
       const booking = await bookingsService.createBooking(customer.id, {
         offeringId: offerings[0].id,
         addressId: 'addr-seed-default',
-        scheduledDate: '2026-11-15',
+        scheduledDate: new Date(Date.now() + 7 * 86400000).toISOString().slice(0, 10),
         timeWindow: TimeWindow.MORNING_09_12,
       });
 
@@ -722,7 +722,7 @@ describe('Tier 1: Feature Coverage (Backend API & Domain Architecture)', () => {
       const booking = await bookingsService.createBooking(customer.id, {
         offeringId: offerings[0].id,
         addressId: 'addr-seed-default',
-        scheduledDate: '2026-11-15',
+        scheduledDate: new Date(Date.now() + 7 * 86400000).toISOString().slice(0, 10),
         timeWindow: TimeWindow.MORNING_09_12,
       });
 

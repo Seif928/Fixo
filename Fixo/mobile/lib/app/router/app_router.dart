@@ -121,6 +121,11 @@ GoRouter createAppRouter({
       return null;
     },
     routes: <RouteBase>[
+      GoRoute(path: '/login', redirect: (_, _) => AppRoutes.phoneAuth),
+      GoRoute(path: '/register', redirect: (_, _) => AppRoutes.phoneAuth),
+      GoRoute(path: '/dashboard', redirect: (_, _) => AppRoutes.customerHome),
+      GoRoute(path: '/bookings', redirect: (_, _) => AppRoutes.myOrders),
+      GoRoute(path: '/profile', redirect: (_, _) => AppRoutes.customerProfile),
       GoRoute(path: '/', redirect: (_, _) => initialLocation),
       _motionRoute(
         path: AppRoutes.admin,

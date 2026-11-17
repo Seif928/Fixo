@@ -6,9 +6,9 @@
 
 ## Repository Structure
 
-- `mobile/` — Native Flutter application (Customer + Professional flows in a single binary using Riverpod, GoRouter, Dio, and `FixoTheme`).
+- `mobile/` — Shared Flutter application for Android, iOS, Web and administration (Customer + Professional flows using Riverpod, GoRouter, Dio, and `FixoTheme`).
 - `backend/` — Modular NestJS TypeScript REST API backed by PostgreSQL and Prisma ORM (`backend/prisma/schema.prisma`).
-- `admin/` — Reserved placeholder for a future back-office web portal.
+- Administration is part of `mobile/lib/features/admin/`; the separate Next.js client was retired after the owner's 17 November decision. See `docs/UNIFIED_FLUTTER_RELEASE_2026-11-17.md` for delivery and remaining login validation.
 - `docs/` — Architecture, live Stitch design reference, route map, implementation plan, API contracts, database schema, and design audit documentation:
   - `docs/LIVE_STITCH_DESIGN.md` — Verified live Google Stitch MCP reference (Official Project ID, all 16 screen IDs, design tokens, component inventory, and asset policy).
   - `docs/SCREEN_MAP.md` — Fixed 16-screen scope and GoRouter route mapping.

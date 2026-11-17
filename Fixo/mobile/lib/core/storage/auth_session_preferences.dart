@@ -15,6 +15,7 @@ abstract final class AuthPreferenceKeys {
   static const String userRole = 'fixo.auth.user_role';
   static const String userPhone = 'fixo.auth.user_phone';
   static const String onboardingCompleted = 'fixo.onboarding.completed';
+  static const String profile = 'fixo.auth.profile';
 }
 
 /// Manages [SharedPreferences] persistence for authentication state and cached session.
@@ -61,6 +62,19 @@ class AuthSessionPreferences {
     return null;
   }
 
+  /// Display data only. This never establishes authentication on its own.
+  AuthUser? getSavedUser() {
+    final raw = _prefs?.getString(AuthPreferenceKeys.profile);
+    if (raw != null) {
+      try {
+        return AuthUser.fromJson(jsonDecode(raw) as Map<String, dynamic>);
+      } catch (_) {
+        return null;
+      }
+    }
+    return getSavedSession()?.user; // One-time legacy migration.
+  }
+
   /// Returns the cached [StoredAuthTokens] from [SharedPreferences], or null.
   StoredAuthTokens? getSavedTokens() {
     final prefs = _prefs;
@@ -83,18 +97,14 @@ class AuthSessionPreferences {
     final prefs = _prefs;
     if (prefs == null) return;
 
-    final tokens = StoredAuthTokens(
-      accessToken: session.accessToken,
-      refreshToken: session.refreshToken,
-      userId: session.user.id,
-      phone: session.user.phone,
-      role: session.user.role,
-    );
-
     await Future.wait([
       prefs.setBool(AuthPreferenceKeys.isLoggedIn, true),
-      prefs.setString(AuthPreferenceKeys.session, jsonEncode(session.toJson())),
-      prefs.setString(AuthPreferenceKeys.tokens, jsonEncode(tokens.toJson())),
+      prefs.setString(
+        AuthPreferenceKeys.profile,
+        jsonEncode(session.user.toJson()),
+      ),
+      prefs.remove(AuthPreferenceKeys.session),
+      prefs.remove(AuthPreferenceKeys.tokens),
       prefs.setString(AuthPreferenceKeys.userId, session.user.id),
       prefs.setString(AuthPreferenceKeys.userRole, session.user.role),
       prefs.setString(AuthPreferenceKeys.userPhone, session.user.phone),
@@ -144,6 +154,7 @@ class AuthSessionPreferences {
     await Future.wait([
       prefs.setBool(AuthPreferenceKeys.isLoggedIn, false),
       prefs.remove(AuthPreferenceKeys.session),
+      prefs.remove(AuthPreferenceKeys.profile),
       prefs.remove(AuthPreferenceKeys.tokens),
       prefs.remove(AuthPreferenceKeys.userId),
       prefs.remove(AuthPreferenceKeys.userRole),
@@ -157,4 +168,3 @@ final authSessionPreferencesProvider = Provider<AuthSessionPreferences>((ref) {
   final prefs = ref.watch(appPreferencesProvider);
   return AuthSessionPreferences(prefs);
 });
-

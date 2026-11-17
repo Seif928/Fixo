@@ -308,7 +308,7 @@ void main() {
     expect(find.text('Loaded Chunk'), findsOneWidget);
   });
 
-  test('Static hosting configs cache immutable assets while keeping entrypoints uncached',
+  test('Static hosting configs revalidate mutable assets and keep entrypoints uncached',
       () {
     final vercel = jsonDecode(
       File('vercel.static.json').readAsStringSync(),
@@ -328,8 +328,8 @@ void main() {
     expect(vercelBySource['/main.dart.js'], contains('no-cache'));
     expect(vercelBySource['/main.dart.mjs'], contains('no-cache'));
     expect(vercelBySource['/main.dart.wasm'], contains('no-cache'));
-    expect(vercelBySource['/assets/:path*'], contains('immutable'));
-    expect(vercelBySource['/canvaskit/:path*'], contains('immutable'));
+    expect(vercelBySource['/assets/:path*'], contains('must-revalidate'));
+    expect(vercelBySource['/canvaskit/:path*'], contains('must-revalidate'));
 
     final firebase = jsonDecode(
       File('firebase.json').readAsStringSync(),
@@ -347,8 +347,7 @@ void main() {
 
     expect(firebaseBySource['/index.html'], contains('no-cache'));
     expect(firebaseBySource['/main.dart.wasm'], contains('no-cache'));
-    expect(firebaseBySource['/assets/**'], contains('immutable'));
-    expect(firebaseBySource['/canvaskit/**'], contains('immutable'));
+    expect(firebaseBySource['/assets/**'], contains('must-revalidate'));
+    expect(firebaseBySource['/canvaskit/**'], contains('must-revalidate'));
   });
 }
-
