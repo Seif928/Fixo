@@ -7,3 +7,5 @@ __pycache__/
 *.pyc
 *.log
 .agents/
+# Retired Next.js client: keep local caches/configuration out of source control.
+/Fixo/web/
