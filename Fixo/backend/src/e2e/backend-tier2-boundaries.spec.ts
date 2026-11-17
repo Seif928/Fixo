@@ -79,7 +79,9 @@ describe('Tier 2: Boundary & Corner Cases (Backend API & Invariant Enforcement)'
   const mockBookings: any[] = [];
   let prismaMock: any;
 
+  const previousOwnerEmail = process.env.FIXO_OWNER_EMAIL;
   beforeAll(async () => {
+    process.env.FIXO_OWNER_EMAIL = 'owner-fixture@example.test';
     prismaMock = {
       isDatabaseConnected: jest.fn().mockReturnValue(false),
       getStorageMode: jest.fn().mockReturnValue('IN_MEMORY_FALLBACK'),
@@ -98,9 +100,12 @@ describe('Tier 2: Boundary & Corner Cases (Backend API & Invariant Enforcement)'
       booking: {
         findMany: jest.fn().mockImplementation(async () => mockBookings),
         count: jest.fn().mockImplementation(async () => mockBookings.length),
-        findUnique: jest.fn().mockImplementation(async ({ where }) =>
-          mockBookings.find((b) => b.id === where.id) || null,
-        ),
+        findUnique: jest
+          .fn()
+          .mockImplementation(
+            async ({ where }) =>
+              mockBookings.find((b) => b.id === where.id) || null,
+          ),
         create: jest.fn().mockImplementation(async ({ data }) => {
           const item = {
             id: `booking-${mockBookings.length + 1}`,
@@ -202,6 +207,7 @@ describe('Tier 2: Boundary & Corner Cases (Backend API & Invariant Enforcement)'
           id: 'mem-01',
           userId: 'admin-01',
           role: 'OWNER',
+          email: 'owner-fixture@example.test',
           isActive: true,
         }),
       },
@@ -267,9 +273,12 @@ describe('Tier 2: Boundary & Corner Cases (Backend API & Invariant Enforcement)'
     proService = moduleRef.get(ProService);
 
     authService.configureSecurity({
-      accessSecret: 'fc6d177aaf07dbda39de2f010ab7f954026f1a34e6f30bbeed9ed531dc09341c',
-      refreshSecret: 'dc804b09046d9998a37fd864f4fa830f0f74bc9b35a46710013ce371baa6fbea',
-      otpHmacSecret: '694ccf28dbdf0583c830c87b751ad463bb6096d171bff9425419c324c1d76964',
+      accessSecret:
+        'fc6d177aaf07dbda39de2f010ab7f954026f1a34e6f30bbeed9ed531dc09341c',
+      refreshSecret:
+        'dc804b09046d9998a37fd864f4fa830f0f74bc9b35a46710013ce371baa6fbea',
+      otpHmacSecret:
+        '694ccf28dbdf0583c830c87b751ad463bb6096d171bff9425419c324c1d76964',
       smsProviderType: 'DEV_SANDBOX_SMS',
       isProduction: false,
       allowDevSms: true,
@@ -288,6 +297,8 @@ describe('Tier 2: Boundary & Corner Cases (Backend API & Invariant Enforcement)'
   });
 
   afterAll(async () => {
+    if (previousOwnerEmail === undefined) delete process.env.FIXO_OWNER_EMAIL;
+    else process.env.FIXO_OWNER_EMAIL = previousOwnerEmail;
     await app.close();
   });
 
@@ -297,7 +308,9 @@ describe('Tier 2: Boundary & Corner Cases (Backend API & Invariant Enforcement)'
   describe('Feature 2: Error Filter Boundaries', () => {
     it('2.1: Non-existent route or resource yields clean NotFoundException', async () => {
       await expect(
-        servicesController.getServiceById('00000000-0000-0000-0000-000000000000'),
+        servicesController.getServiceById(
+          '00000000-0000-0000-0000-000000000000',
+        ),
       ).rejects.toThrow(NotFoundException);
     });
 
@@ -321,7 +334,9 @@ describe('Tier 2: Boundary & Corner Cases (Backend API & Invariant Enforcement)'
     });
 
     it('2.4: ConflictException includes descriptive conflict message without leaking stack trace', () => {
-      const conflict = new ConflictException('Simultaneous booking slot collision');
+      const conflict = new ConflictException(
+        'Simultaneous booking slot collision',
+      );
       expect(conflict.getStatus()).toBe(409);
       expect(conflict.message).toBe('Simultaneous booking slot collision');
     });
@@ -399,7 +414,10 @@ describe('Tier 2: Boundary & Corner Cases (Backend API & Invariant Enforcement)'
   // ==========================================
   describe('Feature 8: Query Indexing Boundaries & Large Volume', () => {
     it('8.1: Customer bookings query for user with 0 bookings returns empty list immediately', async () => {
-      const result = await bookingsService.findCustomerBookings('cust-empty-user', {});
+      const result = await bookingsService.findCustomerBookings(
+        'cust-empty-user',
+        {},
+      );
       expect(result.bookings).toEqual([]);
       expect(result.total).toBe(0);
     });
@@ -466,9 +484,13 @@ describe('Tier 2: Boundary & Corner Cases (Backend API & Invariant Enforcement)'
 
     it('9.4: Advance job status on non-existent booking throws NotFoundException', async () => {
       await expect(
-        proService.advanceBookingStatus('pro-user-id', 'non-existent-booking-id', {
-          toStatus: 'PRO_EN_ROUTE',
-        }),
+        proService.advanceBookingStatus(
+          'pro-user-id',
+          'non-existent-booking-id',
+          {
+            toStatus: 'PRO_EN_ROUTE',
+          },
+        ),
       ).rejects.toThrow(NotFoundException);
     });
 
@@ -585,8 +607,8 @@ describe('Tier 2: Boundary & Corner Cases (Backend API & Invariant Enforcement)'
       const mockReq = {
         adminActor: {
           id: 'admin-01',
-          email: 'owner@fixo.com.eg',
           role: 'OWNER',
+          email: 'owner-fixture@example.test',
           authTime: Math.floor(Date.now() / 1000),
         },
       } as any;
@@ -599,17 +621,16 @@ describe('Tier 2: Boundary & Corner Cases (Backend API & Invariant Enforcement)'
       const mockReq = {
         adminActor: {
           id: 'admin-01',
-          email: 'owner@fixo.com.eg',
           role: 'OWNER',
+          email: 'owner-fixture@example.test',
           authTime: Math.floor(Date.now() / 1000),
         },
       } as any;
       await expect(
-        adminCatalogController.update(
-          mockReq,
-          'non-existent-draft-id',
-          { version: 1, titleEn: 'Updated Title' },
-        ),
+        adminCatalogController.update(mockReq, 'non-existent-draft-id', {
+          version: 1,
+          titleEn: 'Updated Title',
+        }),
       ).rejects.toThrow(NotFoundException);
     });
 
@@ -617,17 +638,15 @@ describe('Tier 2: Boundary & Corner Cases (Backend API & Invariant Enforcement)'
       const mockReq = {
         adminActor: {
           id: 'admin-01',
-          email: 'owner@fixo.com.eg',
           role: 'OWNER',
+          email: 'owner-fixture@example.test',
           authTime: Math.floor(Date.now() / 1000),
         },
       } as any;
       await expect(
-        adminCatalogController.publish(
-          mockReq,
-          'non-existent-draft-id',
-          { version: 1 },
-        ),
+        adminCatalogController.publish(mockReq, 'non-existent-draft-id', {
+          version: 1,
+        }),
       ).rejects.toThrow(NotFoundException);
     });
 

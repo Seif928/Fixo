@@ -139,7 +139,7 @@ class CheckoutPage extends ConsumerWidget {
                 label: Text(isArabic ? 'إعادة المحاولة' : 'Retry'),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: palette.primaryBrand,
-                  foregroundColor: Colors.white,
+                  foregroundColor: Theme.of(context).colorScheme.onPrimary,
                 ),
               ),
             ],
@@ -297,13 +297,13 @@ class CheckoutPage extends ConsumerWidget {
                     ),
                   ),
                   child: state.isSubmitting
-                      ? const SizedBox(
+                      ? SizedBox(
                           width: 22,
                           height: 22,
                           child: CircularProgressIndicator(
                             strokeWidth: 2,
                             valueColor: AlwaysStoppedAnimation<Color>(
-                              Colors.white,
+                              Theme.of(context).colorScheme.onPrimary,
                             ),
                           ),
                         )
@@ -313,7 +313,7 @@ class CheckoutPage extends ConsumerWidget {
                             Icon(
                               Icons.check_circle_outline_rounded,
                               size: 18,
-                              color: Colors.white,
+                              color: Theme.of(context).colorScheme.onPrimary,
                             ),
                             const SizedBox(width: 8),
                             Flexible(
@@ -323,7 +323,9 @@ class CheckoutPage extends ConsumerWidget {
                                     : 'Confirm Booking (Pay Cash Later)',
                                 textAlign: TextAlign.center,
                                 style: FixoTypography.labelLg(
-                                  color: Colors.white,
+                                  color: Theme.of(
+                                    context,
+                                  ).colorScheme.onPrimary,
                                 ).copyWith(fontWeight: FontWeight.bold),
                                 maxLines: 2,
                               ),

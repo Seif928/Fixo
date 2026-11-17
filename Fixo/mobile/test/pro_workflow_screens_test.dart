@@ -631,6 +631,37 @@ void main() {
       },
     );
 
+    for (final width in [390.0, 1280.0]) {
+      testWidgets('professional workspace visual review $width', (
+        tester,
+      ) async {
+        await tester.binding.setSurfaceSize(Size(width, 900));
+        addTearDown(() => tester.binding.setSurfaceSize(null));
+        tester.view.physicalSize = Size(width, 900);
+        tester.view.devicePixelRatio = 1;
+        addTearDown(tester.view.resetPhysicalSize);
+        addTearDown(tester.view.resetDevicePixelRatio);
+        await tester.pumpWidget(
+          buildTestableScreen(
+            screen: const ProDashboardPage(),
+            fakeRepo: fakeRepo,
+            locale: width < 900 ? const Locale('ar') : const Locale('en'),
+            themeMode: width < 900 ? ThemeMode.dark : ThemeMode.light,
+            textScale: width < 900 ? 1.35 : 1.0,
+          ),
+        );
+        await tester.pumpAndSettle();
+        expect(
+          find.byKey(const ValueKey('workspace-professional')),
+          findsOneWidget,
+        );
+        expect(tester.takeException(), isNull);
+        await expectLater(
+          find.byType(ProDashboardPage),
+          matchesGoldenFile('goldens/pro/workspace_${width.toInt()}.png'),
+        );
+      });
+    }
     testWidgets(
       'Screen 16: IncomingJobPage displays countdown, customer summary, gross/net breakdown, and accept button',
       (tester) async {

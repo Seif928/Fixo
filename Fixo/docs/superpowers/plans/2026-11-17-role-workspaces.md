@@ -1,0 +1,10 @@
+# Consistent FIXO UI and distinct account workspaces
+
+The owner explicitly requests implementation after the earlier entry-only release left the full UI request unfinished. Retain Flutter, the working identity/session flow, one crest, Arabic/English and light/dark. Extend the approved slate/white visual system across all routed screens; use amber for the customer marketplace, blue for professional operations, and violet for administration. Owner authority remains verified server membership, never a UI toggle or email comparison in Flutter.
+
+1. Add shared workspace design tokens/theme, derived from the same entry foundation. Standardize surfaces, controls, borders, dialogs, navigation and readable text. Wire every route to its customer/pro/admin workspace; entry routes retain their approved appearance. Pure presentation must grant no access.
+2. Add a responsive shared workspace heading to the customer home, professional dashboard and verified administration. Each exposes its own purpose and actions. Owner/admin identity comes only from validated AdminAccess. Keep mobile navigation and desktop administration sidebar; no duplicate global logout.
+3. Add visible role identification in profile using verified authority, plus clear navigation to the authorized administration and professional onboarding. Existing backend customer/pro guards, server membership and owner-only invitation/revocation are retained and exercised with existing regression coverage.
+4. Verify workspace theme propagation, distinct headers, role access and owner-only controls; run full Flutter/RTL/responsive suite, analyze, backend authorization tests and web/Android builds. Inspect intentionally changed golden images before refreshing. Publish only the verified artifact to existing hosts and push the tested branch. No billing or live-record edits.
+
+Files: core/theme/fixo_workspace_theme.dart, core/widgets/workspace_heading.dart, app/router/app_router.dart; existing customer/pro/admin/profile presentation pages. Tests: workspace_ui_test.dart and existing auth/admin/pro/responsive suites.

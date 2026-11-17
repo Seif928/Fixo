@@ -1,12 +1,15 @@
-# FIXO — Cinematic Warmth
+# FIXO — Shared Identity, Distinct Workspaces
 
-User-approved palette replacement, 9 November 2026. Editable reference: https://www.figma.com/design/xAym32AGTmERySxtIyBbob
+Updated 17 November 2026 following the owner's request to extend the approved slate entry UI across the application and distinguish customer, professional, administrator and owner workspaces. The crest and bundled typography remain shared.
 
 ## Atmosphere
 Considered home care. Cinematic through composition, warm directional lighting and a calm hierarchy, not constant movement or exaggerated claims. Balanced density, restrained motion, generous desktop spacing and practical mobile controls.
 
 ## Palette
-Charcoal #17191C for dark canvas. Ink #24262B for primary light-mode text and buttons. Ivory #F6F2EB for light canvas. Champagne #C6A779 for the single accent, paired with dark text. Elevated charcoal #22252A, white #FFFFFF cards, warm gray #69645F secondary light text, #B8B2A9 dark secondary text. Semantic error/success colors remain distinct. No pure black, neon green or purple glows.
+Slate #0F172A for dark canvas and light-mode ink; #F8FAFC for light canvas; white cards and #172236 dark cards. Shared borders #E2E8F0 / #334155; secondary text #64748B / #CBD5E1. Customer and owner accents #B45309 / #FBBF24; professional #1D4ED8 / #93C5FD; administrator #6D28D9 / #C4B5FD. Use the workspace theme's onPrimary color for content over a filled action. Keep the architectural crest's gold unchanged. Semantic error/success colors remain distinct, without decorative glow.
+
+## Account identity and authority
+Customer: services, addresses and personal bookings. Professional: requests, availability, schedule and earnings. Administrator: operational review, bookings and catalog. Owner: administration plus membership management. Workspace styling never grants permission. The profile badge resolves verified administration membership before labeling an account Owner/Admin; otherwise it uses the professional/customer account type. The server restricts OWNER to the configured verified owner email and rechecks membership for mutations. Pending professional registration does not grant approved-technician capabilities.
 
 ## Typography
 Manrope for English and Cairo for Arabic, preserving bundled fonts. Body at least 14–16sp. Fluid headlines 30–52sp, restrained weights and generous line height. No decorative all-caps technical copy in product flows. Arabic is authored, not reversed English.

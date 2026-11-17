@@ -1,3 +1,4 @@
+import '../../core/theme/fixo_workspace_theme.dart';
 import '../../features/support/support_page.dart' deferred as support_page;
 import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart';
@@ -16,7 +17,8 @@ import '../../features/chat/presentation/chat_page.dart';
 import '../../features/profile/presentation/profile_page.dart';
 import '../../features/favorites/presentation/pages/favorites_page.dart';
 import '../../features/complaints/presentation/pages/my_complaints_page.dart';
-import '../../features/admin/presentation/admin_page.dart' deferred as admin_page;
+import '../../features/admin/presentation/admin_page.dart'
+    deferred as admin_page;
 import '../../features/booking/presentation/pages/create_booking_page.dart';
 import '../../features/booking/presentation/pages/order_tracking_page.dart';
 import '../../features/booking/presentation/pages/orders_page.dart';
@@ -25,14 +27,22 @@ import '../../features/customer_home/domain/marketplace_models.dart';
 import '../../features/customer_home/presentation/pages/customer_home_page.dart';
 import '../../features/onboarding/presentation/pages/onboarding_page.dart';
 import '../../features/payment/presentation/pages/checkout_page.dart';
-import '../../features/pro/presentation/pages/incoming_job_page.dart' deferred as incoming_job_page;
-import '../../features/pro/presentation/pages/pro_account_entry_page.dart' deferred as pro_account_entry_page;
-import '../../features/pro/presentation/pages/pro_dashboard_page.dart' deferred as pro_dashboard_page;
-import '../../features/pro/presentation/pages/pro_signup_page.dart' deferred as pro_signup_page;
-import '../../features/pro/presentation/pages/pro_skills_page.dart' deferred as pro_skills_page;
-import '../../features/pro/presentation/pages/pro_verification_docs_page.dart' deferred as pro_verification_docs_page;
-import '../../features/pro/presentation/pages/pro_verification_status_page.dart' deferred as pro_verification_status_page;
-import '../../features/pro/presentation/pages/pro_schedule_page.dart' deferred as pro_schedule_page;
+import '../../features/pro/presentation/pages/incoming_job_page.dart'
+    deferred as incoming_job_page;
+import '../../features/pro/presentation/pages/pro_account_entry_page.dart'
+    deferred as pro_account_entry_page;
+import '../../features/pro/presentation/pages/pro_dashboard_page.dart'
+    deferred as pro_dashboard_page;
+import '../../features/pro/presentation/pages/pro_signup_page.dart'
+    deferred as pro_signup_page;
+import '../../features/pro/presentation/pages/pro_skills_page.dart'
+    deferred as pro_skills_page;
+import '../../features/pro/presentation/pages/pro_verification_docs_page.dart'
+    deferred as pro_verification_docs_page;
+import '../../features/pro/presentation/pages/pro_verification_status_page.dart'
+    deferred as pro_verification_status_page;
+import '../../features/pro/presentation/pages/pro_schedule_page.dart'
+    deferred as pro_schedule_page;
 import 'app_routes.dart';
 
 /// Listenable bridge that notifies `GoRouter` whenever `authControllerProvider`
@@ -282,8 +292,7 @@ GoRouter createAppRouter({
         name: 'proVerificationDocs',
         builder: (context, state) => DeferredRouteView(
           loadLibrary: pro_verification_docs_page.loadLibrary,
-          builder: (_) =>
-              pro_verification_docs_page.ProVerificationDocsPage(),
+          builder: (_) => pro_verification_docs_page.ProVerificationDocsPage(),
         ),
       ),
       _motionRoute(
@@ -318,7 +327,8 @@ GoRouter createAppRouter({
           final jobId = state.pathParameters['jobId'] ?? '';
           return DeferredRouteView(
             loadLibrary: incoming_job_page.loadLibrary,
-            builder: (_) => incoming_job_page.IncomingJobPage(jobOfferId: jobId),
+            builder: (_) =>
+                incoming_job_page.IncomingJobPage(jobOfferId: jobId),
           );
         },
       ),
@@ -343,7 +353,10 @@ GoRoute _motionRoute({
     reverseTransitionDuration: FixoMotion.reduced(context)
         ? Duration.zero
         : FixoMotion.page,
-    child: builder(context, state),
+    child: FixoWorkspaceTheme(
+      workspace: FixoWorkspace.forPath(state.uri.path),
+      child: builder(context, state),
+    ),
     transitionsBuilder: (context, animation, secondaryAnimation, child) =>
         FixoPageMotion(
           animation: animation,

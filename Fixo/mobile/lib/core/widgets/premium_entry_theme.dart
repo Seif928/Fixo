@@ -1,5 +1,6 @@
 import 'package:material_ui/material_ui.dart';
 import '../theme/fixo_colors.dart';
+import '../theme/fixo_workspace_theme.dart';
 import 'fixo_brand_mark.dart';
 
 /// The owner's previous Web entry palette, shared by native Flutter forms.
@@ -8,61 +9,8 @@ class PremiumEntryTheme extends StatelessWidget {
   final Widget child;
 
   @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final dark = theme.brightness == Brightness.dark;
-    final ink = dark ? const Color(0xFFF1F5F9) : const Color(0xFF0F172A);
-    final accent = dark ? const Color(0xFFFBBF24) : const Color(0xFFB45309);
-    final background = dark ? const Color(0xFF0F172A) : const Color(0xFFF8FAFC);
-    final surface = dark ? const Color(0xFF172236) : Colors.white;
-    final palette = context.fixoPalette.copyWith(
-      canvasBackground: background,
-      warmCreamCanvas: background,
-      cardSurface: surface,
-      surfaceLow: background,
-      surfaceContainer: dark
-          ? const Color(0xFF1E293B)
-          : const Color(0xFFF1F5F9),
-      surfaceHigh: dark ? const Color(0xFF263449) : const Color(0xFFFFF7ED),
-      primaryBrand: accent,
-      deepForest: ink,
-      inkText: ink,
-      limeAccent: accent,
-      secondaryForest: accent,
-      mutedText: dark ? const Color(0xFFCBD5E1) : const Color(0xFF64748B),
-      subtleBorder: dark ? const Color(0xFF334155) : const Color(0xFFE2E8F0),
-    );
-    return Theme(
-      data: theme.copyWith(
-        scaffoldBackgroundColor: background,
-        filledButtonTheme: FilledButtonThemeData(
-          style: FilledButton.styleFrom(
-            backgroundColor: accent,
-            foregroundColor: dark ? const Color(0xFF0F172A) : Colors.white,
-            minimumSize: const Size(48, 48),
-          ),
-        ),
-        inputDecorationTheme: theme.inputDecorationTheme.copyWith(
-          fillColor: surface,
-          focusedBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(12),
-            borderSide: BorderSide(color: accent, width: 2),
-          ),
-        ),
-        colorScheme: theme.colorScheme.copyWith(
-          primary: accent,
-          onPrimary: dark ? const Color(0xFF0F172A) : Colors.white,
-          surface: surface,
-        ),
-        extensions: [
-          for (final extension in theme.extensions.values)
-            if (extension is! FixoPaletteExtension) extension,
-          palette,
-        ],
-      ),
-      child: child,
-    );
-  }
+  Widget build(BuildContext context) =>
+      FixoWorkspaceTheme(workspace: FixoWorkspace.customer, child: child);
 }
 
 class PremiumEntryMark extends StatelessWidget {

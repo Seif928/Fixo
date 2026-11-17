@@ -60,6 +60,7 @@ export class AdminAccessService {
     // A candidate lookup grants nothing; it avoids privileged provider calls for
     // ordinary profile views. Actual identity and authority are still rechecked.
     if (
+      (candidate?.role === 'OWNER' && configuredOwner !== email) ||
       (!candidate && configuredOwner !== email) ||
       (candidate &&
         (!candidate.isActive ||
@@ -145,7 +146,15 @@ export class AdminAccessService {
       const current = await tx.adminMembership.findUnique({
         where: { userId: actor.userId },
       });
-      if (!current?.isActive || (ownerOnly && current.role !== 'OWNER'))
+      if (
+        !current?.isActive ||
+        (ownerOnly && current.role !== 'OWNER') ||
+        (current.role === 'OWNER' &&
+          (!current.email ||
+            !process.env.FIXO_OWNER_EMAIL?.trim() ||
+            current.email.trim().toLowerCase() !==
+              process.env.FIXO_OWNER_EMAIL.trim().toLowerCase()))
+      )
         throw new ForbiddenException(
           'Your administration permission has ended.',
         );

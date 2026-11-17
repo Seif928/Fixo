@@ -150,10 +150,10 @@ describe('Pro Workflows PostgreSQL Real Database Integration Suite (fixo_test)',
 
     await prisma.adminMembership.create({
       data: {
-        slot: 1,
+        slot: 2,
         email: adminReviewerUser.email,
         userId: adminReviewerUser.id,
-        role: 'OWNER',
+        role: 'ADMIN',
       },
     });
 
@@ -331,7 +331,7 @@ describe('Pro Workflows PostgreSQL Real Database Integration Suite (fixo_test)',
       const approved = await proService.adminReviewProProfile(
         {
           userId: adminReviewerUser.id,
-          role: 'OWNER',
+          role: 'ADMIN',
           authTime: Math.floor(Date.now() / 1000),
         },
         applicantProfileId,

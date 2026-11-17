@@ -6,65 +6,65 @@ import 'package:material_ui/material_ui.dart';
 /// (`01_*` through `16_*`) with the narrative tokens from `DESIGN.md` and
 /// `docs/STITCH_AUDIT.md`.
 abstract final class FixoColors {
-  // Cinematic charcoal / ivory / champagne anchors (legacy API names retained)
-  static const Color deepestForest = Color(0xFF17191C); // Tailwind `primary`
+  // Shared slate / white / amber foundation (legacy API names retained)
+  static const Color deepestForest = Color(0xFF0F172A); // Tailwind `primary`
   static const Color primaryForest = Color(
-    0xFF24262B,
+    0xFF1E293B,
   ); // Tailwind `primary-container` / Narrative Primary Forest
   static const Color secondaryForest = Color(
-    0xFF4E4942,
+    0xFF475569,
   ); // Narrative Secondary Forest
-  static const Color secondary = Color(0xFF645A4A); // Tailwind `secondary`
-  static const Color onPrimaryContainer = Color(0xFFC6BBA9);
-  static const Color primaryFixed = Color(0xFFECE1D0);
-  static const Color primaryFixedDim = Color(0xFFD4C5AF);
+  static const Color secondary = Color(0xFF64748B); // Tailwind `secondary`
+  static const Color onPrimaryContainer = Color(0xFFE2E8F0);
+  static const Color primaryFixed = Color(0xFFF1F5F9);
+  static const Color primaryFixedDim = Color(0xFFCBD5E1);
 
   // Secondary Mint Tones
-  static const Color secondaryContainer = Color(0xFFE9DDC9);
-  static const Color onSecondaryContainer = Color(0xFF574A35);
-  static const Color secondaryFixed = Color(0xFFE9DDC9);
-  static const Color secondaryFixedDim = Color(0xFFD2C0A3);
+  static const Color secondaryContainer = Color(0xFFFFF7ED);
+  static const Color onSecondaryContainer = Color(0xFF92400E);
+  static const Color secondaryFixed = Color(0xFFFFF7ED);
+  static const Color secondaryFixedDim = Color(0xFFFDE68A);
 
   // Lime Accents (Always pair with deepestForest / primaryForest text)
   static const Color limeAccent = Color(
     0xFFC6A779,
   ); // Tailwind `tertiary-fixed`
   static const Color limeHighlight = Color(
-    0xFFD8BC90,
+    0xFFFDE68A,
   ); // Narrative Lime Highlight
   static const Color limeDim = Color(
-    0xFFB3976B,
+    0xFFD97706,
   ); // Tailwind `tertiary-fixed-dim`
-  static const Color tertiary = Color(0xFF302719);
-  static const Color tertiaryContainer = Color(0xFF473923);
-  static const Color onTertiaryFixed = Color(0xFF241D13);
+  static const Color tertiary = Color(0xFF78350F);
+  static const Color tertiaryContainer = Color(0xFF92400E);
+  static const Color onTertiaryFixed = Color(0xFF451A03);
 
   // Surfaces & Backgrounds
   static const Color surfaceBotanical = Color(
-    0xFFF6F2EB,
+    0xFFF8FAFC,
   ); // Tailwind `surface` / `background`
-  static const Color warmCream = Color(0xFFF6F2EB); // Narrative Warm Cream
+  static const Color warmCream = Color(0xFFF8FAFC); // Narrative Warm Cream
   static const Color surfaceContainerLowest = Color(
     0xFFFFFFFF,
   ); // Pure White cards
-  static const Color surfaceContainerLow = Color(0xFFF0EBE3);
-  static const Color surfaceContainer = Color(0xFFEAE3D8);
-  static const Color surfaceContainerHigh = Color(0xFFE4DBCE);
-  static const Color surfaceContainerHighest = Color(0xFFDDD2C2);
-  static const Color surfaceVariant = Color(0xFFDDD2C2);
+  static const Color surfaceContainerLow = Color(0xFFF1F5F9);
+  static const Color surfaceContainer = Color(0xFFE2E8F0);
+  static const Color surfaceContainerHigh = Color(0xFFDBE4EF);
+  static const Color surfaceContainerHighest = Color(0xFFCBD5E1);
+  static const Color surfaceVariant = Color(0xFFCBD5E1);
 
   // Typography & Ink
-  static const Color onSurface = Color(0xFF24262B); // Tailwind `on-surface`
-  static const Color ink = Color(0xFF24262B); // Narrative Ink
+  static const Color onSurface = Color(0xFF1E293B); // Tailwind `on-surface`
+  static const Color ink = Color(0xFF1E293B); // Narrative Ink
   static const Color onSurfaceVariant = Color(
-    0xFF5D5750,
+    0xFF475569,
   ); // Tailwind `on-surface-variant`
-  static const Color mutedText = Color(0xFF71685D); // Narrative Muted Text
+  static const Color mutedText = Color(0xFF64748B); // Narrative Muted Text
 
   // Borders & Dividers
-  static const Color outline = Color(0xFF82786C);
-  static const Color outlineVariant = Color(0xFFC8BFB2);
-  static const Color softBorder = Color(0xFFE7DED1); // Narrative Border
+  static const Color outline = Color(0xFF64748B);
+  static const Color outlineVariant = Color(0xFFCBD5E1);
+  static const Color softBorder = Color(0xFFE2E8F0); // Narrative Border
 
   // Urgency & Semantic Alerts
   static const Color coral = Color(0xFFFF795F); // Narrative Coral
@@ -77,22 +77,22 @@ abstract final class FixoColors {
   static const Color onErrorContainer = Color(0xFF93000A);
 
   // Warm charcoal dark-mode surfaces
-  static const Color darkBackground = Color(0xFF17191C); // Pure True Black OLED
+  static const Color darkBackground = Color(0xFF0F172A); // Pure True Black OLED
   static const Color darkSurfaceLowest = Color(
-    0xFF1D1F23,
+    0xFF172236,
   ); // Deep Obsidian Card Base
-  static const Color darkSurfaceLow = Color(0xFF22252A); // Elevated Obsidian
+  static const Color darkSurfaceLow = Color(0xFF1E293B); // Elevated Obsidian
   static const Color darkSurfaceContainer = Color(
-    0xFF292C31,
+    0xFF263449,
   ); // Interactive Surface
   static const Color darkSurfaceHigh = Color(
-    0xFF30333A,
+    0xFF334155,
   ); // High Elevation Surface
-  static const Color darkOnSurface = Color(0xFFF6F2EB); // Crisp Alabaster White
+  static const Color darkOnSurface = Color(0xFFF8FAFC); // Crisp Alabaster White
   static const Color darkOnSurfaceVariant = Color(
-    0xFFB8B2A9,
+    0xFFCBD5E1,
   ); // Silver Botanical Muted
-  static const Color darkBorder = Color(0xFF3A3C41); // Specular Obsidian Rim
+  static const Color darkBorder = Color(0xFF334155); // Specular Obsidian Rim
 }
 
 /// Theme extension providing semantic FIXO surface and accent tokens

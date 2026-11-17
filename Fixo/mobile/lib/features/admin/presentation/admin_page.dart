@@ -1,3 +1,5 @@
+import '../../../core/theme/fixo_workspace_theme.dart';
+import '../../../core/widgets/workspace_heading.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -90,7 +92,12 @@ class _AdminPageState extends ConsumerState<AdminPage> {
     loading: () => const Center(child: CircularProgressIndicator()),
     error: (error, _) => _problem(error, retry),
   );
-  Widget _navigation(AdminAccess access, bool mobile, bool ar) => SafeArea(
+  Widget _navigation(
+    BuildContext context,
+    AdminAccess access,
+    bool mobile,
+    bool ar,
+  ) => SafeArea(
     child: ListView(
       padding: const EdgeInsets.all(16),
       children: [
@@ -154,6 +161,16 @@ class _AdminPageState extends ConsumerState<AdminPage> {
   );
   @override
   Widget build(BuildContext context) {
+    final access = ref.watch(adminAccessProvider);
+    return FixoWorkspaceTheme(
+      workspace: access.asData?.value.isOwner == true
+          ? FixoWorkspace.owner
+          : FixoWorkspace.administrator,
+      child: Consumer(builder: (context, ref, _) => _buildPage(context, ref)),
+    );
+  }
+
+  Widget _buildPage(BuildContext context, WidgetRef ref) {
     final ar = ref.watch(appLocaleProvider).languageCode == 'ar';
     final account = ref.watch(authControllerProvider).session?.user.id;
     final access = ref.watch(adminAccessProvider);
@@ -247,7 +264,9 @@ class _AdminPageState extends ConsumerState<AdminPage> {
           const SizedBox(width: 8),
         ],
       ),
-      drawer: wide ? null : Drawer(child: _navigation(current, true, ar)),
+      drawer: wide
+          ? null
+          : Drawer(child: _navigation(context, current, true, ar)),
       body: Row(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
@@ -255,7 +274,7 @@ class _AdminPageState extends ConsumerState<AdminPage> {
             SizedBox(
               key: const Key('admin-sidebar'),
               width: 288,
-              child: _navigation(current, false, ar),
+              child: _navigation(context, current, false, ar),
             ),
           if (wide) const VerticalDivider(width: 1),
           Expanded(
@@ -266,7 +285,19 @@ class _AdminPageState extends ConsumerState<AdminPage> {
                   alignment: AlignmentDirectional.topStart,
                   child: ConstrainedBox(
                     constraints: const BoxConstraints(maxWidth: 1200),
-                    child: panel,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        WorkspaceHeading(
+                          workspace: current.isOwner
+                              ? FixoWorkspace.owner
+                              : FixoWorkspace.administrator,
+                          isArabic: ar,
+                        ),
+                        const SizedBox(height: 24),
+                        panel,
+                      ],
+                    ),
                   ),
                 ),
               ),

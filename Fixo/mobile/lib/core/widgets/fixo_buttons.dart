@@ -59,13 +59,13 @@ class FixoPrimaryButton extends StatelessWidget {
                   vertical: FixoSpacing.sm,
                 ),
                 child: isLoading
-                    ? const Center(
+                    ? Center(
                         child: SizedBox(
                           width: 20,
                           height: 20,
                           child: CircularProgressIndicator(
                             strokeWidth: 2.2,
-                            color: FixoColors.limeAccent,
+                            color: Theme.of(context).colorScheme.onPrimary,
                           ),
                         ),
                       )
@@ -77,7 +77,7 @@ class FixoPrimaryButton extends StatelessWidget {
                             child: Text(
                               label,
                               style: FixoTypography.labelLg(
-                                color: Colors.white,
+                                color: Theme.of(context).colorScheme.onPrimary,
                               ).copyWith(fontWeight: FontWeight.w700),
                             ),
                           ),
@@ -86,14 +86,16 @@ class FixoPrimaryButton extends StatelessWidget {
                             width: 32,
                             height: 32,
                             decoration: BoxDecoration(
-                              color: palette.limeAccent,
+                              color: Theme.of(
+                                context,
+                              ).colorScheme.onPrimary.withValues(alpha: .16),
                               shape: BoxShape.circle,
                             ),
                             alignment: Alignment.center,
                             child: Icon(
                               trailingIcon ?? Icons.arrow_forward_rounded,
                               size: 19,
-                              color: palette.primaryBrand,
+                              color: Theme.of(context).colorScheme.onPrimary,
                             ),
                           ),
                         ],
@@ -103,7 +105,11 @@ class FixoPrimaryButton extends StatelessWidget {
                         mainAxisSize: MainAxisSize.min,
                         children: [
                           if (leadingIcon != null) ...[
-                            Icon(leadingIcon, size: 18, color: Colors.white),
+                            Icon(
+                              leadingIcon,
+                              size: 18,
+                              color: Theme.of(context).colorScheme.onPrimary,
+                            ),
                             const SizedBox(width: FixoSpacing.sm),
                           ],
                           Flexible(
@@ -111,13 +117,17 @@ class FixoPrimaryButton extends StatelessWidget {
                               label,
                               textAlign: TextAlign.center,
                               style: FixoTypography.labelLg(
-                                color: Colors.white,
+                                color: Theme.of(context).colorScheme.onPrimary,
                               ).copyWith(fontWeight: FontWeight.w700),
                             ),
                           ),
                           if (trailingIcon != null) ...[
                             const SizedBox(width: FixoSpacing.sm),
-                            Icon(trailingIcon, size: 18, color: Colors.white),
+                            Icon(
+                              trailingIcon,
+                              size: 18,
+                              color: Theme.of(context).colorScheme.onPrimary,
+                            ),
                           ],
                         ],
                       ),
@@ -178,7 +188,11 @@ class FixoAccentButton extends StatelessWidget {
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     if (leadingIcon != null) ...[
-                      Icon(leadingIcon, size: 20, color: palette.primaryBrand),
+                      Icon(
+                        leadingIcon,
+                        size: 20,
+                        color: FixoColors.deepestForest,
+                      ),
                       const SizedBox(width: FixoSpacing.sm),
                     ],
                     Flexible(
@@ -186,13 +200,17 @@ class FixoAccentButton extends StatelessWidget {
                         label,
                         textAlign: TextAlign.center,
                         style: FixoTypography.labelLg(
-                          color: palette.primaryBrand,
+                          color: FixoColors.deepestForest,
                         ).copyWith(fontWeight: FontWeight.w700),
                       ),
                     ),
                     if (trailingIcon != null) ...[
                       const SizedBox(width: FixoSpacing.sm),
-                      Icon(trailingIcon, size: 20, color: palette.primaryBrand),
+                      Icon(
+                        trailingIcon,
+                        size: 20,
+                        color: FixoColors.deepestForest,
+                      ),
                     ],
                   ],
                 ),

@@ -1,0 +1,9 @@
+# Role workspaces and account badges
+
+This completes the application-wide visual work left out of the earlier entry-only release. All animated application routes receive FixoWorkspaceTheme. Entry screens reuse the same foundation. Customer/pro/admin primary pages expose task-specific WorkspaceHeading and use one shared crest. Surfaces, input focus, actions, dialogs and navigation are themed together; professional availability, earnings and chart contrast were corrected for dark mode.
+
+The profile no longer hardcodes every account as a customer. AccountRoleBadge shows FIXO Customer, FIXO Professional, Admin or App Owner. Administration labels use the current server-verified AdminAccess response, and disappear on denied/loading membership. Users cannot pick their own administrative role. Owner console includes membership management; Admin does not. Customer/protected professional operations still use their existing server guards.
+
+The existing configured owner identity remains unchanged. AdminAccessService now also rejects a persisted OWNER membership whose email differs from FIXO_OWNER_EMAIL and rechecks that invariant inside administrative mutations. Two regression tests failed before this enforcement and passed after it. Existing integration fixtures now identify their synthetic owner explicitly; the professional approval fixture uses a real ADMIN membership instead of silently impersonating Owner. No live database writes or grants were needed.
+
+Validation: 613 Flutter tests passed, with 2 existing opt-in skips; all 25 professional workflow tests passed after the final visual refinement; 572 backend tests across 62 suites passed on guarded localhost:5432/fixo_test. Reviewed updated customer/checkout/profile/admin/professional light/dark screenshots and AR/EN responsive cases. iOS native compilation is unavailable on Windows.

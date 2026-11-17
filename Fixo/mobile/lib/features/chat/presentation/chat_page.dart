@@ -189,7 +189,8 @@ class _ChatPageState extends ConsumerState<ChatPage>
         );
       }
     }
-    if (!mounted || ref.read(authControllerProvider).session?.user.id != owner) {
+    if (!mounted ||
+        ref.read(authControllerProvider).session?.user.id != owner) {
       return;
     }
     final source = await showModalBottomSheet<Object>(
@@ -965,7 +966,9 @@ class _ChatPageState extends ConsumerState<ChatPage>
                         tooltip: _ar ? 'إرسال' : 'Send',
                         style: IconButton.styleFrom(
                           backgroundColor: FixoColors.primaryForest,
-                          foregroundColor: palette.limeAccent,
+                          foregroundColor: Theme.of(
+                            context,
+                          ).colorScheme.onPrimary,
                           disabledBackgroundColor: palette.surfaceContainer,
                         ),
                         onPressed:

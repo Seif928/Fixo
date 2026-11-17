@@ -390,7 +390,9 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
                                         style: IconButton.styleFrom(
                                           minimumSize: const Size(48, 48),
                                           backgroundColor: palette.primaryBrand,
-                                          foregroundColor: palette.limeAccent,
+                                          foregroundColor: Theme.of(
+                                            context,
+                                          ).colorScheme.onPrimary,
                                         ),
                                         icon: const Icon(
                                           Icons.photo_camera_outlined,
@@ -416,16 +418,8 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
                                         borderRadius:
                                             FixoRadius.borderRadiusPill,
                                       ),
-                                      child: Text(
-                                        ar
-                                            ? 'حساب عميل فيكسو'
-                                            : 'FIXO CUSTOMER',
-                                        style: textTheme.labelSmall?.copyWith(
-                                          color: FixoColors.limeAccent,
-                                          fontWeight: FontWeight.w800,
-                                          fontSize: 10,
-                                          letterSpacing: ar ? 0 : 0.7,
-                                        ),
+                                      child: AccountRoleBadge(
+                                        professional: isPro,
                                       ),
                                     ),
                                     const SizedBox(height: 6),
@@ -731,7 +725,8 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
                                 color: palette.mutedText,
                               ),
                             ),
-                            value: _optimisticArrivalAlerts ??
+                            value:
+                                _optimisticArrivalAlerts ??
                                 (user['arrivalAlertsEnabled'] == true),
                             onChanged: _saving
                                 ? null
