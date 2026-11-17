@@ -407,8 +407,8 @@ class CairoLifestyleMoodAnchorCard extends StatelessWidget {
                     Expanded(
                       child: Text(
                         isArabic
-                            ? 'حجز خدمات الصيانة والإصلاح المنزلي في القاهرة والجيزة'
-                            : 'Home maintenance & repair bookings across Cairo & Giza',
+                            ? 'حجز خدمات الصيانة والإصلاح المنزلي في محافظات مصر'
+                            : 'Home maintenance & repair bookings across Egypt',
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
                         style: FixoTypography.bodySm(

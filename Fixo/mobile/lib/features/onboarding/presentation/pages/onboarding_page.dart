@@ -1,3 +1,4 @@
+import '../../../../core/widgets/premium_entry_theme.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -13,7 +14,6 @@ import '../../../../core/theme/fixo_typography.dart';
 import '../../../../core/widgets/fixo_brand_mark.dart';
 import '../../../../core/widgets/fixo_buttons.dart';
 import '../../../../core/widgets/fixo_cards.dart';
-import '../widgets/cairo_interior_hero_card.dart';
 
 /// Screen 01: `OnboardingPage` (`01_onboarding`).
 ///
@@ -204,7 +204,11 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage> {
   }
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context) => PremiumEntryTheme(
+    child: Consumer(builder: (context, ref, _) => _buildPage(context, ref)),
+  );
+
+  Widget _buildPage(BuildContext context, WidgetRef ref) {
     final palette = context.fixoPalette;
     final locale = ref.watch(appLocaleProvider);
     final isArabic = locale.languageCode == 'ar';
@@ -216,7 +220,7 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage> {
       body: SafeArea(
         child: Center(
           child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 520),
+            constraints: const BoxConstraints(maxWidth: 640),
             child: SingleChildScrollView(
               padding: const EdgeInsets.fromLTRB(
                 FixoSpacing.md,
@@ -249,8 +253,8 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage> {
                               Flexible(
                                 child: FixoStatusBadge(
                                   label: isArabic
-                                      ? 'القاهرة والجيزة نشط'
-                                      : 'Cairo & Giza Active',
+                                      ? 'كل محافظات مصر'
+                                      : 'All Egypt Governorates',
                                   showStatusDot: true,
                                   backgroundColor: palette.surfaceHigh,
                                   foregroundColor: palette.mutedText,
@@ -294,9 +298,7 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage> {
                   const SizedBox(height: FixoSpacing.sm),
 
                   // 2. Hero Visual Showcase
-                  FixoEntrance(
-                    child: CairoInteriorHeroCard(isArabic: isArabic),
-                  ),
+                  FixoEntrance(child: PremiumWelcomeHero(isArabic: isArabic)),
                   const SizedBox(height: FixoSpacing.lg),
 
                   // 3. Editorial Headline & Copy
@@ -346,8 +348,8 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage> {
                           icon: Icons.home_repair_service_outlined,
                           title: isArabic ? 'خدمات المنزل' : 'Home Services',
                           summary: isArabic
-                              ? '٢١ قسماً وأكثر من ١٤٠ خدمة منزلية في القاهرة والجيزة ومحافظات مصر.'
-                              : '21 trade categories across Cairo, Giza, and Egyptian governorates.',
+                              ? 'استكشف الخدمات المنزلية المتاحة في محافظتك.'
+                              : 'Explore available home services in your governorate.',
                           points: isArabic
                               ? const [
                                   'صيانة التكييف، السباكة، الكهرباء، النجارة، النقاشة، والأجهزة.',
@@ -511,8 +513,8 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage> {
                       Flexible(
                         child: Text(
                           isArabic
-                              ? 'تسعير مسبق بالجنيه • الدفع نقداً عند الخدمة متاح في القاهرة والجيزة'
-                              : 'Upfront EGP quotes • Cash on service available in Cairo & Giza',
+                              ? 'راجع السعر والتغطية المتاحة قبل تأكيد الحجز'
+                              : 'Review pricing and available coverage before booking',
                           textAlign: TextAlign.center,
                           style: FixoTypography.bodySm(
                             color: palette.mutedText,

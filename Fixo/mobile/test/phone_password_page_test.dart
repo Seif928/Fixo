@@ -189,17 +189,10 @@ void main() {
         addTearDown(tester.view.resetDevicePixelRatio);
         await pump(tester, arabic: arabic);
         expect(
-          find.text(arabic ? 'موعد تختاره أنت' : 'A time that works for you'),
-          findsOneWidget,
+          find.text(arabic ? 'تسجيل الدخول' : 'Sign in to FIXO'),
+          arabic ? findsNWidgets(2) : findsOneWidget,
         );
-        expect(
-          find.text(
-            arabic
-                ? 'راجع السعر قبل التأكيد'
-                : 'Review pricing before confirmation',
-          ),
-          findsOneWidget,
-        );
+        expect(find.byKey(const Key('phone-password-number')), findsOneWidget);
         for (final claim in [
           'Certified',
           'Criminal-Record',

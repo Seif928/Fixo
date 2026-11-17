@@ -70,16 +70,10 @@ void main() {
         // Brand header
         expect(find.text('FIXO'), findsOneWidget);
         expect(find.text('Better Homes. Better Everyday.'), findsOneWidget);
-        expect(find.text('Cairo & Giza Active'), findsOneWidget);
+        expect(find.text('All Egypt Governorates'), findsOneWidget);
 
-        // Hero card elements
-        expect(find.text('Services for Your Home'), findsOneWidget);
-        expect(find.text('Cairo & Giza'), findsOneWidget);
-        expect(
-          find.text('Maadi • New Cairo • Zamalek • Zayed'),
-          findsOneWidget,
-        );
-        expect(find.text('Cash'), findsOneWidget);
+        // Approved slate/amber welcome hero.
+        expect(find.text('Home care, thoughtfully done.'), findsOneWidget);
 
         // Editorial copy & trust chips
         expect(find.text('THE STANDARD IN HOME CARE'), findsOneWidget);
@@ -111,7 +105,7 @@ void main() {
         await tester.tap(getStartedFinder);
         await tester.pumpAndSettle();
 
-        expect(find.text('Welcome to FIXO'), findsOneWidget);
+        expect(find.text('Sign in to FIXO'), findsOneWidget);
         expect(find.byKey(const Key('phone-password-number')), findsOneWidget);
 
         await tester.tap(find.byKey(const Key('btn-back-to-onboarding')));
@@ -132,7 +126,7 @@ void main() {
         await tester.tap(signInFinder);
         await tester.pumpAndSettle();
 
-        expect(find.text('Welcome to FIXO'), findsOneWidget);
+        expect(find.text('Sign in to FIXO'), findsOneWidget);
         expect(find.byKey(const Key('phone-password-secret')), findsOneWidget);
       },
     );
@@ -161,7 +155,7 @@ void main() {
         await tester.tap(find.text('Get Started').last);
         await tester.pumpAndSettle();
 
-        expect(find.text('Welcome to FIXO'), findsOneWidget);
+        expect(find.text('Sign in to FIXO'), findsOneWidget);
       },
     );
 

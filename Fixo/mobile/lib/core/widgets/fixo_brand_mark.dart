@@ -14,11 +14,13 @@ class FixoBrandMark extends StatefulWidget {
     this.subtitle = 'Better Homes. Better Everyday.',
     this.showSubtitle = true,
     this.iconBoxSize = 32.0,
+    this.iconOnly = false,
   });
 
   final String subtitle;
   final bool showSubtitle;
   final double iconBoxSize;
+  final bool iconOnly;
 
   @override
   State<FixoBrandMark> createState() => _FixoBrandMarkState();
@@ -96,6 +98,9 @@ class _FixoBrandMarkState extends State<FixoBrandMark>
           : const CustomPaint(painter: _FixoLuxuryCrestPainter(progress: 0.35)),
     );
 
+    if (widget.iconOnly) {
+      return Semantics(label: 'FIXO', image: true, child: crestBox);
+    }
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [

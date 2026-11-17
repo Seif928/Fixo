@@ -434,9 +434,7 @@ class _PhoneAuthPageState extends ConsumerState<PhoneAuthPage> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      isArabic
-                          ? 'تغطية القاهرة والجيزة'
-                          : 'Cairo & Giza Coverage',
+                      isArabic ? 'كل محافظات مصر' : 'All Egypt Governorates',
                       style: FixoTypography.labelMd(
                         color: palette.inkText,
                       ).copyWith(fontWeight: FontWeight.w700),
@@ -722,8 +720,8 @@ class _PhoneAuthPageState extends ConsumerState<PhoneAuthPage> {
                   Flexible(
                     child: Text(
                       isArabic
-                          ? 'خدمات منزلية في القاهرة والجيزة'
-                          : 'Cairo & Giza Home Services',
+                          ? 'خدمات منزلية في محافظات مصر'
+                          : 'Home Services Across Egypt',
                       style: FixoTypography.bodySm(
                         color: palette.mutedText,
                       ).copyWith(fontWeight: FontWeight.w600),
