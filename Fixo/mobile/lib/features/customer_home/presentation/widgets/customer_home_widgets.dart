@@ -953,62 +953,70 @@ class ConciergeQuoteBanner extends StatelessWidget {
   Widget build(BuildContext context) {
     final palette = context.fixoPalette;
 
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: palette.surfaceContainer,
+    return Material(
+      type: MaterialType.transparency,
+      child: InkWell(
+        key: const Key('booking-help-banner'),
+        onTap: onTap,
         borderRadius: FixoRadius.borderRadiusLg,
-      ),
-      child: Row(
-        children: [
-          const Icon(
-            Icons.support_agent_rounded,
-            size: 24,
-            color: FixoColors.secondary,
+        child: Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: palette.surfaceContainer,
+            borderRadius: FixoRadius.borderRadiusLg,
           ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  isArabic ? 'إزاي تحجز خدمتك؟' : 'How does booking work?',
-                  style: FixoTypography.labelMd(
-                    color: palette.inkText,
-                  ).copyWith(fontWeight: FontWeight.w700),
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  isArabic
-                      ? 'اختار الخدمة والميعاد، والدفع بعد التنفيذ'
-                      : 'Choose a service and time. Pay after service.',
-                  style: FixoTypography.bodySm(color: palette.mutedText),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(width: 8),
-          Material(
-            color: palette.cardSurface,
-            shape: const CircleBorder(),
-            elevation: 1,
-            child: InkWell(
-              onTap: onTap,
-              customBorder: const CircleBorder(),
-              child: SizedBox(
-                width: 48,
-                height: 48,
-                child: Icon(
-                  isArabic
-                      ? Icons.chevron_left_rounded
-                      : Icons.chevron_right_rounded,
-                  size: 20,
-                  color: palette.deepForest,
+          child: Row(
+            children: [
+              const Icon(
+                Icons.support_agent_rounded,
+                size: 24,
+                color: FixoColors.secondary,
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      isArabic ? 'إزاي تحجز خدمتك؟' : 'How does booking work?',
+                      style: FixoTypography.labelMd(
+                        color: palette.inkText,
+                      ).copyWith(fontWeight: FontWeight.w700),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      isArabic
+                          ? 'اختار الخدمة والميعاد، والدفع بعد التنفيذ'
+                          : 'Choose a service and time. Pay after service.',
+                      style: FixoTypography.bodySm(color: palette.mutedText),
+                    ),
+                  ],
                 ),
               ),
-            ),
+              const SizedBox(width: 8),
+              Material(
+                color: palette.cardSurface,
+                shape: const CircleBorder(),
+                elevation: 1,
+                child: InkWell(
+                  onTap: onTap,
+                  customBorder: const CircleBorder(),
+                  child: SizedBox(
+                    width: 48,
+                    height: 48,
+                    child: Icon(
+                      isArabic
+                          ? Icons.chevron_left_rounded
+                          : Icons.chevron_right_rounded,
+                      size: 20,
+                      color: palette.deepForest,
+                    ),
+                  ),
+                ),
+              ),
+            ],
           ),
-        ],
+        ),
       ),
     );
   }

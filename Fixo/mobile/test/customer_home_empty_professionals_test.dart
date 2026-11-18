@@ -1,5 +1,7 @@
 import 'package:cupertino_ui/cupertino_ui.dart';
 import 'package:fixo_mobile/core/l10n/app_locale_controller.dart';
+import 'package:fixo_mobile/core/location/service_area_picker.dart';
+import 'package:fixo_mobile/core/location/egypt_places.dart';
 import 'package:fixo_mobile/core/theme/fixo_theme.dart';
 import 'package:fixo_mobile/features/customer_home/data/marketplace_repository.dart';
 import 'package:fixo_mobile/features/customer_home/domain/marketplace_models.dart';
@@ -12,6 +14,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:fixo_mobile/app/router/app_routes.dart';
 import 'package:fixo_mobile/features/customer_home/presentation/widgets/service_catalog_sheet.dart';
+import 'package:fixo_mobile/features/customer_home/presentation/widgets/customer_home_widgets.dart';
 
 /// Deterministic fixture mirroring a catalog-only database: categories,
 /// zones and offerings exist, but no approved professionals.
@@ -139,6 +142,67 @@ Widget _app(ProviderContainer container, Locale locale) {
 }
 
 void main() {
+  testWidgets('booking help starts the real catalog and booking journey', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(390, 1000);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    ServiceOfferModel? selected;
+    final router = GoRouter(
+      routes: [
+        GoRoute(path: '/', builder: (_, _) => const CustomerHomePage()),
+        GoRoute(
+          path: AppRoutes.createBooking,
+          builder: (_, state) {
+            selected =
+                (state.extra as Map<String, dynamic>)['offering']
+                    as ServiceOfferModel;
+            return const Scaffold(body: Text('Booking destination'));
+          },
+        ),
+      ],
+    );
+    addTearDown(router.dispose);
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          egyptPlacesProvider.overrideWith((ref) async => EgyptPlaces([])),
+          marketplaceRepositoryProvider.overrideWithValue(
+            _CatalogOnlyMarketplaceRepository(),
+          ),
+        ],
+        child: MaterialApp.router(
+          theme: FixoTheme.light(),
+          routerConfig: router,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    final banner = find.byType(ConciergeQuoteBanner);
+    await tester.ensureVisible(banner);
+    await tester.tap(find.text('How does booking work?'));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('booking-help-start')), findsOneWidget);
+    await tester.tap(find.byKey(const Key('booking-help-location')));
+    await tester.pumpAndSettle();
+    expect(find.byType(ServiceAreaPicker), findsOneWidget);
+    await tester.tap(find.byTooltip('Close'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('How does booking work?'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('booking-help-start')));
+    await tester.pumpAndSettle();
+    expect(find.byType(ServiceCatalogSheet), findsOneWidget);
+    await tester.tap(
+      find.byKey(const ValueKey('catalog-service-off-safety-inspection')),
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('Booking destination'), findsOneWidget);
+    expect(selected?.id, 'off-safety-inspection');
+  });
+
   for (final width in [360.0, 390.0, 412.0, 1280.0]) {
     testWidgets(
       'electrical category reaches booking with exact offering at $width',

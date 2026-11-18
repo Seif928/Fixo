@@ -26,6 +26,7 @@ import '../controllers/customer_home_controller.dart';
 import '../widgets/customer_home_widgets.dart';
 import '../widgets/cinematic_home_hero.dart';
 import '../widgets/service_catalog_sheet.dart';
+import '../widgets/booking_help_sheet.dart';
 
 /// Native Flutter implementation of live Stitch Screen 03 (`03 — Customer Home`,
 /// ID `ba52cf458e2a49b191b6912ea76117fa`).
@@ -40,6 +41,25 @@ class _CustomerHomePageState extends ConsumerState<CustomerHomePage> {
   late final TextEditingController _searchController;
   bool _showAllCategories = false;
   bool _showAllServices = false;
+
+  Future<void> _showBookingHelp() async {
+    final owner = ref.read(authControllerProvider).session?.user.id;
+    final action = await showModalBottomSheet<BookingHelpAction>(
+      context: context,
+      showDragHandle: true,
+      useSafeArea: true,
+      isScrollControlled: true,
+      constraints: const BoxConstraints(maxWidth: 600),
+      builder: (_) => BookingHelpSheet(
+        isArabic: ref.read(appLocaleProvider).languageCode == 'ar',
+      ),
+    );
+    if (!mounted || owner != ref.read(authControllerProvider).session?.user.id) {
+      return;
+    }
+    if (action == BookingHelpAction.services) await _browseServices();
+    if (action == BookingHelpAction.location) await _chooseArea();
+  }
 
   Future<void> _browseServices({ServiceCategoryModel? category}) async {
     final owner = ref.read(authControllerProvider).session?.user.id;
@@ -1296,23 +1316,7 @@ class _CustomerHomePageState extends ConsumerState<CustomerHomePage> {
 
     Widget buildConciergeBanner() => Padding(
       padding: const EdgeInsets.fromLTRB(FixoSpacing.md, 20, FixoSpacing.md, 0),
-      child: ConciergeQuoteBanner(
-        isArabic: isArabic,
-        onTap: () {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              behavior: SnackBarBehavior.floating,
-              backgroundColor: FixoColors.primaryForest,
-              content: Text(
-                isArabic
-                    ? 'اختار الخدمة، وضيف عنوانك وميعادك، وبعدها أكد الدفع نقداً بعد التنفيذ.'
-                    : 'Choose a service, add your address and time, then confirm cash after service.',
-                style: FixoTypography.bodySm(color: Colors.white),
-              ),
-            ),
-          );
-        },
-      ),
+      child: ConciergeQuoteBanner(isArabic: isArabic, onTap: _showBookingHelp),
     );
 
     if (!virtualizeServices && !virtualizePros) {

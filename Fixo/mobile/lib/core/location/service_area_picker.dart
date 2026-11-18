@@ -38,6 +38,49 @@ class ServiceAreaPicker extends ConsumerStatefulWidget {
 }
 
 class _ServiceAreaPickerState extends ConsumerState<ServiceAreaPicker> {
+  void _showSources() {
+    showDialog<void>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(
+          widget.isArabic ? 'مصادر بيانات الأماكن' : 'Location data sources',
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            TextButton(
+              onPressed: () => launchUrl(
+                Uri.parse('https://www.openstreetmap.org/copyright'),
+              ),
+              child: const Text('© OpenStreetMap contributors'),
+            ),
+            TextButton(
+              onPressed: () => launchUrl(
+                Uri.parse(
+                  'https://github.com/open-admin-data/egypt-administrative-divisions',
+                ),
+              ),
+              child: const Text('Open Admin Data'),
+            ),
+            TextButton(
+              onPressed: () => launchUrl(
+                Uri.parse('https://creativecommons.org/licenses/by/4.0/'),
+              ),
+              child: const Text('CC BY 4.0'),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text(widget.isArabic ? 'إغلاق' : 'Close'),
+          ),
+        ],
+      ),
+    );
+  }
+
   final _query = TextEditingController(), _manual = TextEditingController();
   EgyptPlace? _governorate;
   SelectedServiceArea? _selection;
@@ -342,19 +385,15 @@ class _ServiceAreaPickerState extends ConsumerState<ServiceAreaPicker> {
                       : () => Navigator.pop(context, _selection),
                 ),
               ),
-              const Text(
-                '© OpenStreetMap contributors',
-                style: TextStyle(fontSize: 10),
-              ),
-              TextButton(
-                onPressed: () => launchUrl(
-                  Uri.parse(
-                    'https://github.com/open-admin-data/egypt-administrative-divisions',
-                  ),
-                ),
-                child: const Text(
-                  'Open Admin Data · CC BY 4.0',
-                  style: TextStyle(fontSize: 11),
+              Align(
+                alignment: AlignmentDirectional.centerEnd,
+                child: IconButton(
+                  key: const Key('location-data-sources'),
+                  tooltip: ar
+                      ? 'مصادر بيانات الأماكن'
+                      : 'Location data sources',
+                  onPressed: _showSources,
+                  icon: const Icon(Icons.info_outline, size: 18),
                 ),
               ),
             ],
