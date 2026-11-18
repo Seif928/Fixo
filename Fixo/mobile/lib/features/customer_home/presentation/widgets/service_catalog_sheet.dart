@@ -7,10 +7,11 @@ import '../../../../core/widgets/fixo_skeleton.dart';
 import '../../data/marketplace_repository.dart';
 import '../../domain/marketplace_models.dart';
 
-/// Browses the live catalog independently of the Home search/category filter.
+/// Browses live bookable services, optionally scoped to one selected category.
 class ServiceCatalogSheet extends ConsumerStatefulWidget {
-  const ServiceCatalogSheet({super.key, required this.isArabic});
+  const ServiceCatalogSheet({super.key, required this.isArabic, this.category});
   final bool isArabic;
+  final ServiceCategoryModel? category;
   @override
   ConsumerState<ServiceCatalogSheet> createState() =>
       _ServiceCatalogSheetState();
@@ -44,19 +45,22 @@ class _ServiceCatalogSheetState extends ConsumerState<ServiceCatalogSheet> {
     });
     try {
       final repository = ref.read(marketplaceRepositoryProvider);
-      final searchVal =
-          _search.text.trim().isNotEmpty ? _search.text.trim() : null;
+      final searchVal = _search.text.trim().isNotEmpty
+          ? _search.text.trim()
+          : null;
       final result = repository is DioMarketplaceRepository
           ? await repository.getPaginatedServices(
               page: page,
               limit: 20,
               search: searchVal,
+              categoryId: widget.category?.id,
               cancelToken: cancelToken,
             )
           : await repository.getPaginatedServices(
               page: page,
               limit: 20,
               search: searchVal,
+              categoryId: widget.category?.id,
             );
       if (!mounted || epoch != _epoch) return;
       setState(() {
@@ -108,7 +112,8 @@ class _ServiceCatalogSheetState extends ConsumerState<ServiceCatalogSheet> {
                   children: [
                     Expanded(
                       child: Text(
-                        ar ? 'كل الخدمات' : 'All services',
+                        widget.category?.localizedName(ar) ??
+                            (ar ? 'كل الخدمات' : 'All services'),
                         style: Theme.of(context).textTheme.titleLarge,
                       ),
                     ),
@@ -124,7 +129,9 @@ class _ServiceCatalogSheetState extends ConsumerState<ServiceCatalogSheet> {
                   controller: _search,
                   decoration: InputDecoration(
                     prefixIcon: const Icon(Icons.search),
-                    hintText: ar ? 'ابحث في كل الخدمات' : 'Search all services',
+                    hintText: widget.category == null
+                        ? (ar ? 'ابحث في كل الخدمات' : 'Search all services')
+                        : (ar ? 'ابحث داخل القسم' : 'Search this category'),
                   ),
                   onChanged: (_) {
                     _debounce?.cancel();
@@ -159,7 +166,9 @@ class _ServiceCatalogSheetState extends ConsumerState<ServiceCatalogSheet> {
                         ),
                       if (_loading)
                         const Padding(
-                          padding: EdgeInsets.symmetric(vertical: FixoSpacing.sm),
+                          padding: EdgeInsets.symmetric(
+                            vertical: FixoSpacing.sm,
+                          ),
                           child: FixoListSkeleton(
                             itemCount: 3,
                             padding: EdgeInsets.zero,
@@ -180,9 +189,14 @@ class _ServiceCatalogSheetState extends ConsumerState<ServiceCatalogSheet> {
                         Padding(
                           padding: const EdgeInsets.all(20),
                           child: Text(
-                            ar
-                                ? 'مفيش خدمات مطابقة حاليًا.'
-                                : 'No matching services available yet.',
+                            widget.category != null &&
+                                    _search.text.trim().isEmpty
+                                ? (ar
+                                      ? 'لا توجد خدمات متاحة للحجز في هذا القسم حاليًا.'
+                                      : 'No bookable services in this category yet.')
+                                : (ar
+                                      ? 'مفيش خدمات مطابقة حاليًا.'
+                                      : 'No matching services available yet.'),
                           ),
                         ),
                       if (!_loading && _error == null && _page < _totalPages)
@@ -207,9 +221,7 @@ class _ServiceCatalogSheetState extends ConsumerState<ServiceCatalogSheet> {
                                   await _load();
                                 }
                               },
-                              child: Text(
-                                ar ? 'عرض الكل' : 'Show all',
-                              ),
+                              child: Text(ar ? 'عرض الكل' : 'Show all'),
                             ),
                           ],
                         ),

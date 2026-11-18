@@ -9,10 +9,14 @@ import 'package:flutter_localizations/flutter_localizations.dart'
     show GlobalWidgetsLocalizations;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:go_router/go_router.dart';
+import 'package:fixo_mobile/app/router/app_routes.dart';
+import 'package:fixo_mobile/features/customer_home/presentation/widgets/service_catalog_sheet.dart';
 
 /// Deterministic fixture mirroring a catalog-only database: categories,
 /// zones and offerings exist, but no approved professionals.
 class _CatalogOnlyMarketplaceRepository implements MarketplaceRepository {
+  final requestedCategories = <String?>[];
   static const CustomerHomeFeed feed = CustomerHomeFeed(
     zones: [
       CoverageZoneModel(
@@ -103,12 +107,18 @@ class _CatalogOnlyMarketplaceRepository implements MarketplaceRepository {
     int limit = 20,
     String? search,
     String? categoryId,
-  }) async => PaginatedServices(
-    items: feed.services,
-    page: page,
-    totalPages: 1,
-    total: feed.services.length,
-  );
+  }) async {
+    requestedCategories.add(categoryId);
+    final items = feed.services
+        .where((s) => categoryId == null || s.categoryId == categoryId)
+        .toList();
+    return PaginatedServices(
+      items: items,
+      page: page,
+      totalPages: 1,
+      total: items.length,
+    );
+  }
 }
 
 Widget _app(ProviderContainer container, Locale locale) {
@@ -129,6 +139,67 @@ Widget _app(ProviderContainer container, Locale locale) {
 }
 
 void main() {
+  for (final width in [360.0, 390.0, 412.0, 1280.0]) {
+    testWidgets(
+      'electrical category reaches booking with exact offering at $width',
+      (tester) async {
+        tester.view.physicalSize = Size(width, 1200);
+        tester.view.devicePixelRatio = 1;
+        addTearDown(tester.view.resetPhysicalSize);
+        addTearDown(tester.view.resetDevicePixelRatio);
+        ServiceOfferModel? selected;
+        final repository = _CatalogOnlyMarketplaceRepository();
+        final router = GoRouter(
+          routes: [
+            GoRoute(path: '/', builder: (_, _) => const CustomerHomePage()),
+            GoRoute(
+              path: AppRoutes.createBooking,
+              builder: (_, state) {
+                selected =
+                    (state.extra as Map<String, dynamic>)['offering']
+                        as ServiceOfferModel;
+                return const Scaffold(body: Text('Booking destination'));
+              },
+            ),
+          ],
+        );
+        addTearDown(router.dispose);
+        await tester.pumpWidget(
+          ProviderScope(
+            overrides: [
+              marketplaceRepositoryProvider.overrideWithValue(repository),
+            ],
+            child: MaterialApp.router(
+              theme: FixoTheme.light(),
+              routerConfig: router,
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+        // Both entry points must behave identically, including narrow mobile views.
+        final category = find.byKey(
+          Key(
+            width == 390
+                ? 'quick-cat-pill-electrical-lighting'
+                : 'category-tile-electrical-lighting',
+          ),
+        );
+        await tester.ensureVisible(category);
+        await tester.tap(category);
+        await tester.pumpAndSettle();
+        expect(repository.requestedCategories, ['cat-electrical-lighting']);
+        await tester.tap(
+          find.byKey(const ValueKey('catalog-service-off-safety-inspection')),
+        );
+        await tester.pumpAndSettle();
+        expect(find.text('Booking destination'), findsOneWidget);
+        expect(selected?.id, 'off-safety-inspection');
+        expect(selected?.categorySlug, 'electrical-lighting');
+        expect(tester.takeException(), isNull);
+      },
+    );
+  }
+
   testWidgets(
     'shows neutral English empty-professionals message without unsupported claims',
     (tester) async {
@@ -173,7 +244,7 @@ void main() {
     expect(find.text('تمت مراجعة الهوية وسجل الخبرة والتقييمات'), findsNothing);
   });
 
-  testWidgets('category selection actually filters displayed offerings', (
+  testWidgets('every category opens its own bookable services immediately', (
     tester,
   ) async {
     tester.view.physicalSize = const Size(800, 1800);
@@ -201,6 +272,18 @@ void main() {
     await tester.tap(find.byKey(const Key('category-tile-ac-maintenance')));
     await tester.pumpAndSettle();
 
+    expect(find.byType(ServiceCatalogSheet), findsOneWidget);
+    expect(
+      find.byKey(const ValueKey('catalog-service-off-ac-deep-clean')),
+      findsOneWidget,
+    );
+    expect(
+      find.byKey(const ValueKey('catalog-service-off-safety-inspection')),
+      findsNothing,
+    );
+    await tester.tap(find.byTooltip('Close'));
+    await tester.pumpAndSettle();
+
     expect(find.text('Summer AC Deep Clean & Gas Refill'), findsOneWidget);
     expect(find.text('Home Safety Inspection'), findsNothing);
     expect(find.byKey(const Key('btn-clear-home-filters')), findsOneWidget);
@@ -209,6 +292,18 @@ void main() {
     await tester.tap(
       find.byKey(const Key('category-tile-electrical-lighting')),
     );
+    await tester.pumpAndSettle();
+
+    expect(find.byType(ServiceCatalogSheet), findsOneWidget);
+    expect(
+      find.byKey(const ValueKey('catalog-service-off-safety-inspection')),
+      findsOneWidget,
+    );
+    expect(
+      find.byKey(const ValueKey('catalog-service-off-ac-deep-clean')),
+      findsNothing,
+    );
+    await tester.tap(find.byTooltip('Close'));
     await tester.pumpAndSettle();
 
     expect(find.text('Summer AC Deep Clean & Gas Refill'), findsNothing);

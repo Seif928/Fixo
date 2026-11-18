@@ -41,7 +41,7 @@ class _CustomerHomePageState extends ConsumerState<CustomerHomePage> {
   bool _showAllCategories = false;
   bool _showAllServices = false;
 
-  Future<void> _browseServices() async {
+  Future<void> _browseServices({ServiceCategoryModel? category}) async {
     final owner = ref.read(authControllerProvider).session?.user.id;
     final selected = await showModalBottomSheet<ServiceOfferModel>(
       context: context,
@@ -51,6 +51,7 @@ class _CustomerHomePageState extends ConsumerState<CustomerHomePage> {
       constraints: const BoxConstraints(maxWidth: 600),
       builder: (_) => ServiceCatalogSheet(
         isArabic: ref.read(appLocaleProvider).languageCode == 'ar',
+        category: category,
       ),
     );
     if (!mounted ||
@@ -59,6 +60,15 @@ class _CustomerHomePageState extends ConsumerState<CustomerHomePage> {
       return;
     }
     _navigateToCreateBooking(offering: selected);
+  }
+
+  void _openCategory(ServiceCategoryModel category) {
+    final controller = ref.read(customerHomeControllerProvider.notifier);
+    if (ref.read(customerHomeControllerProvider).selectedCategorySlug !=
+        category.slug) {
+      controller.selectCategory(category.slug);
+    }
+    _browseServices(category: category);
   }
 
   Future<void> _chooseArea() async {
@@ -1021,7 +1031,7 @@ class _CustomerHomePageState extends ConsumerState<CustomerHomePage> {
                       isArabic: isArabic,
                       isSelected:
                           homeState.selectedCategorySlug == category.slug,
-                      onTap: () => homeNotifier.selectCategory(category.slug),
+                      onTap: () => _openCategory(category),
                     ),
                   );
                 }).toList(),
@@ -1619,7 +1629,7 @@ class _CustomerHomePageState extends ConsumerState<CustomerHomePage> {
                     borderRadius: FixoRadius.borderRadiusPill,
                     onTap: () {
                       HapticFeedback.selectionClick();
-                      homeNotifier.selectCategory(cat.slug);
+                      _openCategory(cat);
                     },
                     child: Container(
                       padding: const EdgeInsets.symmetric(
