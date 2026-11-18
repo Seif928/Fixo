@@ -1,16 +1,31 @@
-# fixo_mobile
+# FIXO · Flutter application
 
-A new Flutter project.
+One Flutter/Dart client for Android, iOS, web and administration, with separate customer, professional and administrative workspaces. Supports Arabic/English, RTL/LTR, light/dark themes and responsive layouts.
 
-## Getting Started
+See the [main README](../../README.md) for architecture, Firebase/Supabase configuration, screenshots and delivery status.
 
-This project is a starting point for a Flutter application.
+## Run locally
 
-A few resources to get you started if this is your first Flutter project:
+From this directory, with a configured FIXO backend on port `3001`:
 
-- [Lab: Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Cookbook: Useful Flutter samples](https://docs.flutter.dev/cookbook)
+```powershell
+flutter pub get
+flutter run -d chrome --dart-define=FIXO_USE_LOCAL_API=true
+```
 
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+For a selected Android emulator:
+
+```powershell
+flutter run --dart-define=FIXO_USE_LOCAL_API=true
+```
+
+The local flag uses `10.0.2.2:3001` on Android and `localhost:3001` elsewhere. Use `--dart-define=FIXO_API_BASE_URL=http://YOUR_LAN_IP:3001/api/v1` for a physical device. Without overrides, the client uses the hosted API.
+
+## Verify
+
+```powershell
+flutter analyze
+flutter test
+```
+
+The visual system lives in [`../DESIGN.md`](../DESIGN.md). Firebase configuration must match your platform registrations. Service-account and Supabase service-role credentials belong only on the server.
