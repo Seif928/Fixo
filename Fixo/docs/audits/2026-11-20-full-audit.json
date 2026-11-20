@@ -1,0 +1,75 @@
+{
+  "date": "2026-11-20",
+  "timezone": "Africa/Cairo",
+  "baseRevision": "270e138",
+  "verifiedSourceRevision": "184c3cf",
+  "deployments": {
+    "web": {"url": "https://fixo-web-blue.vercel.app", "id": "dpl_2yiaTf3TjbAXQpP2WZb6yHMVnrXH", "state": "READY"},
+    "api": {"url": "https://fixo-api.vercel.app", "id": "dpl_5eii52jTQJfKX89B3Pb6JkfzA6Xn", "state": "READY"},
+    "firebaseMirror": "https://fixo-home-services-6507.web.app",
+    "webArtifactSha256": "C716BE267CA0616E7EB4728E758B01547333CC3789099DDE5452E3199E614A06"
+  },
+  "scope": "Flutter customer/professional/admin UI, session behavior, NestJS API, local PostgreSQL integration tests, hosted API access controls, Supabase permissions and dependency advisories",
+  "fixes": [
+    {
+      "area": "Flutter startup",
+      "problem": "The temporary startup Navigator replaced deep links before the real router initialized.",
+      "change": "Render the loading shell through MaterialApp.builder without a temporary Navigator.",
+      "verification": "Regression failed before the fix and passed after it; five direct entry/protected routes passed in headless Chrome."
+    },
+    {
+      "area": "Backend startup",
+      "problem": "start:prod referenced dist/main while the current build emits dist/src/main.js.",
+      "change": "Point start:prod to dist/src/main.",
+      "verification": "Executed the command against localhost:5432/fixo_test on port 3002 and verified healthy startup."
+    },
+    {
+      "area": "Dependencies",
+      "change": "Pin patched transitive effect 3.22.1 and fast-xml-parser 5.12.0 versions and update the lockfile.",
+      "advisories": [
+        "https://github.com/advisories/GHSA-7589-6fvf-x4pw",
+        "https://github.com/advisories/GHSA-474x-hrwr-fgx4"
+      ]
+    }
+  ],
+  "verification": {
+    "flutterAnalyze": "passed",
+    "flutterTests": {"passed": 637, "skippedOptInTests": 2},
+    "backendTypeCheck": "passed",
+    "backendTestsAfterDependencyUpdates": {"passed": 572, "suitesPassed": 62, "database": "local fixo_test only"},
+    "backendBuild": "passed",
+    "webReleaseBuild": "passed",
+    "androidDebugBuild": "passed",
+    "webBootstrapTests": {"passed": 2},
+    "browserUiChecks": {"passed": 9, "runtimeErrors": 0, "scope": "Direct routes, protected-route redirects, empty sign-in validation, email/pro entry and Arabic mobile layout"},
+    "publishedBrowserChecks": {"passed": 6, "runtimeErrors": 0, "scope": "Five cold deep links plus Google provider popup opening on the first click; no account consent completed"},
+    "publishedWebArtifactMatches": {"vercel": true, "firebase": true},
+    "hostedReadOnlyApiChecks": {"passed": 10},
+    "productionNpmAudit": {"knownAdvisories": 0},
+    "localAuthenticatedBrowserJourney": {"passed": 3, "scope": "Real development sign-in through the local PostgreSQL API; persisted session after page reload; profile sign-out followed by rejected protected navigation"}
+  },
+  "hostedDatabase": {
+    "securityAdvisorFindings": 0,
+    "tablesChecked": 31,
+    "tablesWithoutRls": 0,
+    "directAnonTableAccess": 0,
+    "directAuthenticatedTableAccess": 0,
+    "foreignKeysMissingLeadingIndexes": 0,
+    "negativeServicePrices": 0,
+    "duplicateCashPaymentGroups": 0,
+    "paidPaymentsWithoutPaidAt": 0,
+    "liveSchemaChangesDuringAudit": false
+  },
+  "remainingFindings": [
+    {"severity": "moderate", "area": "development dependencies", "count": 3, "packages": ["@nestjs/cli", "glob", "minimatch"], "note": "npm recommends a Nest CLI major upgrade. No force upgrade was applied; production dependency audit is clear."},
+    {"severity": "performance warning", "area": "Supabase policies", "advisorFindings": 62, "note": "Legacy or duplicate permissive policies should be consolidated in a separately tested migration; effective public table grants remain revoked."},
+    {"severity": "informational", "area": "database indexes", "count": 27, "note": "Unused index notices are usage observations, not proof the indexes are unnecessary. Retained pending representative traffic."},
+    {"severity": "informational", "area": "Android toolchain", "note": "Build passes with upstream Firebase plugin Kotlin migration warnings."}
+  ],
+  "limits": [
+    "iOS compilation and physical-device notification delivery were not verified on this Windows host.",
+    "No real card charge, Apple Pay transaction or Apple account consent was performed.",
+    "Protected role UI is covered by widget/golden and local API integration tests; no real owner account was impersonated.",
+    "The active client is Flutter; React-specific guidance does not apply to it."
+  ]
+}
