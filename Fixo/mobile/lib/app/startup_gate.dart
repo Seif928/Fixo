@@ -55,7 +55,9 @@ class _FixoStartupGateState extends ConsumerState<FixoStartupGate> {
       theme: FixoTheme.light(locale: locale),
       darkTheme: FixoTheme.dark(locale: locale),
       themeMode: ref.watch(appThemeModeProvider),
-      home: Scaffold(
+      // No temporary Navigator: it would replace the incoming browser URL
+      // before the real router can read the login/admin/booking deep link.
+      builder: (context, _) => Scaffold(
         body: Center(
           child: Column(
             mainAxisSize: MainAxisSize.min,
