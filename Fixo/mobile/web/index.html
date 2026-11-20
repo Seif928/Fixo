@@ -18,8 +18,12 @@
 
   <meta charset="UTF-8">
   <meta content="IE=Edge" http-equiv="X-UA-Compatible">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="description" content="FIXO home services in Egypt. Choose your governorate, service and time, and pay after service.">
-  <meta name="theme-color" content="#173F35">
+  <meta name="theme-color" content="#0F172A" media="(prefers-color-scheme: dark)">
+  <meta name="theme-color" content="#F8FAFC" media="(prefers-color-scheme: light)">
+  <link rel="dns-prefetch" href="https://fixo-api.vercel.app">
+  <link rel="preconnect" href="https://fixo-api.vercel.app" crossorigin>
 
   <!-- iOS meta tags & icons -->
   <meta name="mobile-web-app-capable" content="yes">
@@ -32,8 +36,105 @@
 
   <title>FIXO | Home Services</title>
   <link rel="manifest" href="manifest.json">
+  <style>
+    :root {
+      color-scheme: light dark;
+      --fixo-bg: #F8FAFC;
+      --fixo-ink: #0F172A;
+      --fixo-muted: #475569;
+      --fixo-accent: #B45309;
+      --fixo-track: #E2E8F0;
+    }
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --fixo-bg: #0F172A;
+        --fixo-ink: #F8FAFC;
+        --fixo-muted: #94A3B8;
+        --fixo-accent: #FBBF24;
+        --fixo-track: #1E293B;
+      }
+    }
+    html, body {
+      margin: 0;
+      padding: 0;
+      width: 100%;
+      height: 100%;
+      background-color: var(--fixo-bg);
+    }
+    #fixo-boot-splash {
+      position: fixed;
+      inset: 0;
+      z-index: 9999;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 14px;
+      background-color: var(--fixo-bg);
+      color: var(--fixo-ink);
+      font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+      transition: opacity 0.2s ease-out;
+    }
+    #fixo-boot-splash.is-hidden {
+      opacity: 0;
+      pointer-events: none;
+    }
+    .fixo-boot-wordmark {
+      font-size: 30px;
+      font-weight: 800;
+      letter-spacing: 0.14em;
+    }
+    .fixo-boot-bar {
+      width: 112px;
+      height: 3px;
+      border-radius: 999px;
+      background-color: var(--fixo-track);
+      overflow: hidden;
+    }
+    .fixo-boot-bar::after {
+      content: '';
+      display: block;
+      width: 44%;
+      height: 100%;
+      border-radius: 999px;
+      background-color: var(--fixo-accent);
+      animation: fixo-indeterminate 1.05s ease-in-out infinite;
+    }
+    @keyframes fixo-indeterminate {
+      0% { transform: translateX(-110%); }
+      100% { transform: translateX(240%); }
+    }
+  </style>
 </head>
 <body>
+  <div id="fixo-boot-splash" aria-label="Loading FIXO">
+    <div class="fixo-boot-wordmark">FIXO</div>
+    <div class="fixo-boot-bar"></div>
+  </div>
+  <script>
+    (function () {
+      var splash = document.getElementById('fixo-boot-splash');
+      function hideSplash() {
+        if (!splash || !splash.parentNode) return;
+        splash.classList.add('is-hidden');
+        setTimeout(function () {
+          if (splash && splash.parentNode) splash.parentNode.removeChild(splash);
+        }, 220);
+      }
+      window.addEventListener('flutter-first-frame', hideSplash, { once: true });
+      setTimeout(hideSplash, 12000);
+      try {
+        var host = window.location.hostname;
+        if (host !== 'localhost' && host !== '127.0.0.1' && navigator.onLine !== false) {
+          fetch('https://fixo-api.vercel.app/api/v1/health', {
+            mode: 'cors',
+            credentials: 'omit',
+            keepalive: true
+          }).catch(function () {});
+        }
+      } catch (_) {}
+    })();
+  </script>
   <script src="flutter_bootstrap.js" async></script>
 </body>
 </html>

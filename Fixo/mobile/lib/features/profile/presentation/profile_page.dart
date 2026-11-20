@@ -541,11 +541,15 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
                             begin: Alignment.topLeft,
                             end: Alignment.bottomRight,
                             colors: [
-                              FixoColors.deepestForest,
-                              FixoColors.primaryForest,
+                              Color(0xFF0F172A),
+                              Color(0xFF172236),
+                              Color(0xFF1E293B),
                             ],
                           ),
                           borderRadius: FixoRadius.borderRadiusLg,
+                          border: Border.all(
+                            color: const Color(0xFF93C5FD).withValues(alpha: 0.35),
+                          ),
                           boxShadow: FixoShadows.level2Interactive,
                         ),
                         child: Row(
@@ -555,7 +559,7 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
                               width: 44,
                               height: 44,
                               decoration: BoxDecoration(
-                                color: FixoColors.limeAccent,
+                                color: const Color(0xFF93C5FD),
                                 borderRadius: BorderRadius.circular(12),
                               ),
                               alignment: Alignment.center,
@@ -575,7 +579,7 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
                                         ? 'انضم لشبكة فنيي فيكسو'
                                         : 'EARN WITH FIXO PRO',
                                     style: textTheme.labelSmall?.copyWith(
-                                      color: FixoColors.limeAccent,
+                                      color: const Color(0xFF93C5FD),
                                       fontWeight: FontWeight.w800,
                                       letterSpacing: ar ? 0 : 0.8,
                                     ),
@@ -850,8 +854,8 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
                       Container(
                         width: 8,
                         height: 8,
-                        decoration: const BoxDecoration(
-                          color: FixoColors.secondary,
+                        decoration: BoxDecoration(
+                          color: palette.primaryBrand,
                           shape: BoxShape.circle,
                         ),
                       ),

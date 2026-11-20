@@ -167,12 +167,17 @@ class _ReviewPageState extends ConsumerState<ReviewPage> {
       });
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          backgroundColor: FixoColors.secondary,
+          backgroundColor: context.fixoPalette.success,
           content: Text(
             ar
                 ? 'شكراً لتقييمك! تمت إضافة ٢٥ نقطة مكافآت لحسابك.'
                 : 'Thank you for your review! +25 Reward Points added.',
-            style: const TextStyle(color: Colors.white),
+            style: TextStyle(
+              color: Theme.of(context).brightness == Brightness.dark
+                  ? FixoColors.deepestForest
+                  : Colors.white,
+              fontWeight: FontWeight.w600,
+            ),
           ),
         ),
       );
@@ -320,9 +325,9 @@ class _ReviewPageState extends ConsumerState<ReviewPage> {
               children: [
                 Row(
                   children: [
-                    const Icon(
+                    Icon(
                       Icons.check_circle_rounded,
-                      color: FixoColors.secondary,
+                      color: palette.success,
                       size: 28,
                     ),
                     const SizedBox(width: 10),
@@ -392,7 +397,7 @@ class _ReviewPageState extends ConsumerState<ReviewPage> {
                         ? 'إكرامية الفني: ${rev.tipAmountEgp} ج.م'
                         : 'Artisan Tip Included: ${rev.tipAmountEgp} EGP',
                     style: FixoTypography.labelMd(
-                      color: FixoColors.secondary,
+                      color: palette.primaryBrand,
                     ).copyWith(fontWeight: FontWeight.w800),
                   ),
                 ],
@@ -413,7 +418,7 @@ class _ReviewPageState extends ConsumerState<ReviewPage> {
                 FilledButton(
                   style: FilledButton.styleFrom(
                     backgroundColor: palette.primaryBrand,
-                    foregroundColor: Colors.white,
+                    foregroundColor: palette.onPrimary,
                   ),
                   onPressed: () => context.go(AppRoutes.myOrders),
                   child: Text(ar ? 'العودة إلى طلباتي' : 'Back to My Orders'),
@@ -505,7 +510,7 @@ class _ReviewPageState extends ConsumerState<ReviewPage> {
                     Text(
                       '#${booking.orderCode} • ${booking.pricing.totalEgp} ${ar ? 'ج.م' : 'EGP'}',
                       style: FixoTypography.labelMd(
-                        color: FixoColors.secondary,
+                        color: palette.primaryBrand,
                       ).copyWith(fontWeight: FontWeight.w800),
                     ),
                   ],
@@ -557,7 +562,9 @@ class _ReviewPageState extends ConsumerState<ReviewPage> {
                         star <= _rating
                             ? Icons.star_rounded
                             : Icons.star_border_rounded,
-                        color: Colors.amber,
+                        color: star <= _rating
+                            ? palette.primaryBrand
+                            : palette.mutedText,
                       ),
                     ),
                 ],
@@ -565,7 +572,7 @@ class _ReviewPageState extends ConsumerState<ReviewPage> {
               Text(
                 _ratingDescription(_rating, ar),
                 style: FixoTypography.labelLg(
-                  color: FixoColors.secondary,
+                  color: palette.primaryBrand,
                 ).copyWith(fontWeight: FontWeight.w800),
               ),
             ],
@@ -646,7 +653,7 @@ class _ReviewPageState extends ConsumerState<ReviewPage> {
                             ? 'تم إرفاق ${_uploadedPhotos.length} صورة'
                             : '${_uploadedPhotos.length} photo(s) attached',
                         style: FixoTypography.labelMd(
-                          color: FixoColors.secondary,
+                          color: palette.success,
                         ).copyWith(fontWeight: FontWeight.w700),
                       ),
                     ),
@@ -699,12 +706,12 @@ class _ReviewPageState extends ConsumerState<ReviewPage> {
           Container(
             padding: const EdgeInsets.all(FixoSpacing.sm),
             decoration: BoxDecoration(
-              color: FixoColors.errorContainer,
+              color: palette.errorContainer,
               borderRadius: FixoRadius.borderRadiusMd,
             ),
             child: Text(
               _error!,
-              style: FixoTypography.bodySm(color: FixoColors.onErrorContainer),
+              style: FixoTypography.bodySm(color: palette.onErrorContainer),
             ),
           ),
         ],
@@ -716,7 +723,7 @@ class _ReviewPageState extends ConsumerState<ReviewPage> {
             key: const Key('submit-review-btn'),
             style: FilledButton.styleFrom(
               backgroundColor: palette.primaryBrand,
-              foregroundColor: Colors.white,
+              foregroundColor: palette.onPrimary,
               shape: RoundedRectangleBorder(
                 borderRadius: FixoRadius.borderRadiusMd,
               ),
@@ -728,7 +735,7 @@ class _ReviewPageState extends ConsumerState<ReviewPage> {
                   ? (ar ? 'جارٍ إرسال التقييم...' : 'Submitting Review...')
                   : (ar ? 'إرسال التقييم' : 'Submit Review'),
               style: FixoTypography.labelLg(
-                color: Colors.white,
+                color: palette.onPrimary,
               ).copyWith(fontWeight: FontWeight.w800),
             ),
           ),

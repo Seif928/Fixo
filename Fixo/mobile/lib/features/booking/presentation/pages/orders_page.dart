@@ -195,7 +195,7 @@ class _OrdersPageState extends ConsumerState<OrdersPage> {
                         states,
                       ) {
                         if (states.contains(WidgetState.selected)) {
-                          return Colors.white;
+                          return palette.onPrimary;
                         }
                         return palette.mutedText;
                       }),
@@ -331,7 +331,7 @@ class _OrdersPageState extends ConsumerState<OrdersPage> {
                                                   : Icons.receipt_long_outlined,
                                               size: 28,
                                               color: isDark
-                                                  ? palette.limeAccent
+                                                  ? palette.primaryBrand
                                                   : palette.deepForest,
                                             ),
                                           ),
@@ -532,19 +532,20 @@ class _OrdersPageState extends ConsumerState<OrdersPage> {
                   ),
                   decoration: BoxDecoration(
                     color: isCompleted
-                        ? FixoColors.secondaryContainer
+                        ? palette.successContainer
                         : isCancelled
-                        ? FixoColors.errorContainer
-                        : palette.surfaceHigh,
+                        ? palette.errorContainer
+                        : palette.surfaceLow,
                     borderRadius: FixoRadius.borderRadiusPill,
+                    border: Border.all(color: palette.subtleBorder),
                   ),
                   child: Text(
                     _status(booking.status, ar),
                     style: FixoTypography.labelMd(
                       color: isCompleted
-                          ? FixoColors.onSecondaryContainer
+                          ? palette.onSuccessContainer
                           : isCancelled
-                          ? FixoColors.onErrorContainer
+                          ? palette.onErrorContainer
                           : palette.deepForest,
                     ).copyWith(fontWeight: FontWeight.w700),
                   ),
@@ -632,7 +633,7 @@ class _OrdersPageState extends ConsumerState<OrdersPage> {
                           style: FilledButton.styleFrom(
                             minimumSize: const Size(0, 40),
                             backgroundColor: palette.primaryBrand,
-                            foregroundColor: Colors.white,
+                            foregroundColor: palette.onPrimary,
                             shape: RoundedRectangleBorder(
                               borderRadius: FixoRadius.borderRadiusMd,
                             ),
@@ -684,8 +685,8 @@ class _OrdersPageState extends ConsumerState<OrdersPage> {
                           FilledButton.icon(
                             style: FilledButton.styleFrom(
                               minimumSize: const Size(0, 40),
-                              backgroundColor: FixoColors.primaryForest,
-                              foregroundColor: Colors.white,
+                              backgroundColor: palette.primaryBrand,
+                              foregroundColor: palette.onPrimary,
                               shape: RoundedRectangleBorder(
                                 borderRadius: FixoRadius.borderRadiusMd,
                               ),

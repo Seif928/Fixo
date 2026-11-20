@@ -75,14 +75,16 @@ class _ProSchedulePageState extends ConsumerState<ProSchedulePage>
         _days = updated.weeklySchedule;
         _isSavingSchedule = false;
       });
+      final palette = context.fixoPalette;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
             isAr
                 ? 'تم حفظ مواعيد العمل الأسبوعية بنجاح'
                 : 'Working schedule saved successfully',
+            style: TextStyle(color: palette.onPrimary),
           ),
-          backgroundColor: context.fixoPalette.primaryBrand,
+          backgroundColor: palette.primaryBrand,
         ),
       );
     } catch (e) {
@@ -113,6 +115,7 @@ class _ProSchedulePageState extends ConsumerState<ProSchedulePage>
   }
 
   Future<void> _cancelLeave(ProLeaveItem leave) async {
+    final palette = context.fixoPalette;
     final isAr = Localizations.localeOf(context).languageCode == 'ar';
     final confirmed = await showDialog<bool>(
       context: context,
@@ -130,7 +133,8 @@ class _ProSchedulePageState extends ConsumerState<ProSchedulePage>
           ),
           ElevatedButton(
             style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.red.shade700,
+              backgroundColor: FixoColors.error,
+              foregroundColor: Colors.white,
             ),
             onPressed: () => Navigator.of(ctx).pop(true),
             child: Text(isAr ? 'تأكيد الإلغاء' : 'Confirm'),
@@ -158,8 +162,11 @@ class _ProSchedulePageState extends ConsumerState<ProSchedulePage>
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(e.toString()),
-          backgroundColor: Colors.red.shade700,
+          content: Text(
+            e.toString(),
+            style: TextStyle(color: palette.onErrorContainer),
+          ),
+          backgroundColor: palette.errorContainer,
         ),
       );
     }
@@ -201,7 +208,7 @@ class _ProSchedulePageState extends ConsumerState<ProSchedulePage>
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
                         Icon(Icons.error_outline,
-                            size: 48, color: Colors.red.shade600),
+                            size: 48, color: palette.error),
                         const SizedBox(height: FixoSpacing.md),
                         Text(_errorMessage!, textAlign: TextAlign.center),
                         const SizedBox(height: FixoSpacing.md),
@@ -367,11 +374,11 @@ class _ProSchedulePageState extends ConsumerState<ProSchedulePage>
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      const Icon(Icons.add, size: 18, color: Colors.white),
+                      Icon(Icons.add, size: 18, color: palette.onPrimary),
                       const SizedBox(width: 4),
                       Text(
                         isAr ? 'طلب إجازة' : 'Request Leave',
-                        style: FixoTypography.labelSm(color: Colors.white)
+                        style: FixoTypography.labelSm(color: palette.onPrimary)
                             .copyWith(fontWeight: FontWeight.bold),
                       ),
                     ],
@@ -444,8 +451,8 @@ class _ProSchedulePageState extends ConsumerState<ProSchedulePage>
                 ),
               ),
               IconButton(
-                icon: const Icon(Icons.delete_outline,
-                    color: Colors.red, size: 20),
+                icon: Icon(Icons.delete_outline,
+                    color: palette.error, size: 20),
                 tooltip: isAr ? 'إلغاء الإجازة' : 'Cancel Leave',
                 onPressed: () => _cancelLeave(leave),
               ),
@@ -524,6 +531,7 @@ class _CreateLeaveBottomSheetState
           );
       if (!mounted) return;
       widget.onLeaveCreated(leave);
+      final palette = context.fixoPalette;
       Navigator.of(context).pop();
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -531,8 +539,9 @@ class _CreateLeaveBottomSheetState
             isAr
                 ? 'تم تسجيل طلب الإجازة بنجاح'
                 : 'Leave request recorded successfully',
+            style: TextStyle(color: palette.onPrimary),
           ),
-          backgroundColor: context.fixoPalette.primaryBrand,
+          backgroundColor: palette.primaryBrand,
         ),
       );
     } on ProScheduleException catch (e) {

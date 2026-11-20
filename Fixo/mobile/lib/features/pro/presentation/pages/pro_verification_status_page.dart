@@ -59,20 +59,20 @@ class _ProVerificationStatusPageState
     _ => ar ? 'مسودة ملف' : 'Draft Dossier',
   };
 
-  Color _statusColor(String status) => switch (status) {
-    'APPROVED' => FixoColors.primaryForest,
-    'PENDING_REVIEW' => const Color(0xFFC05621), // Warm Amber
-    'ACTION_REQUIRED' => FixoColors.error,
-    'SUSPENDED' => FixoColors.error,
-    _ => FixoColors.onSurfaceVariant,
+  Color _statusColor(FixoPaletteExtension palette, String status) => switch (status) {
+    'APPROVED' => palette.success,
+    'PENDING_REVIEW' => palette.warning,
+    'ACTION_REQUIRED' => palette.error,
+    'SUSPENDED' => palette.error,
+    _ => palette.mutedText,
   };
 
-  Color _statusBgColor(String status) => switch (status) {
-    'APPROVED' => FixoColors.secondaryContainer,
-    'PENDING_REVIEW' => const Color(0xFFFEEBC8),
-    'ACTION_REQUIRED' => FixoColors.errorContainer,
-    'SUSPENDED' => FixoColors.errorContainer,
-    _ => const Color(0xFFE2E8F0),
+  Color _statusBgColor(FixoPaletteExtension palette, String status) => switch (status) {
+    'APPROVED' => palette.successContainer,
+    'PENDING_REVIEW' => palette.warningContainer,
+    'ACTION_REQUIRED' => palette.errorContainer,
+    'SUSPENDED' => palette.errorContainer,
+    _ => palette.surfaceLow,
   };
 
   @override
@@ -138,13 +138,13 @@ class _ProVerificationStatusPageState
                             ),
                             padding: const EdgeInsets.all(FixoSpacing.sm),
                             decoration: BoxDecoration(
-                              color: FixoColors.errorContainer,
+                              color: palette.errorContainer,
                               borderRadius: FixoRadius.borderRadiusMd,
                             ),
                             child: Text(
                               _errorMessage!,
                               style: FixoTypography.bodySm(
-                                color: FixoColors.onErrorContainer,
+                                color: palette.onErrorContainer,
                               ),
                             ),
                           ),
@@ -161,7 +161,7 @@ class _ProVerificationStatusPageState
                                   width: 64,
                                   height: 64,
                                   decoration: BoxDecoration(
-                                    color: _statusBgColor(status.status),
+                                    color: _statusBgColor(palette, status.status),
                                     shape: BoxShape.circle,
                                   ),
                                   alignment: Alignment.center,
@@ -171,7 +171,7 @@ class _ProVerificationStatusPageState
                                         : status.isPendingReview
                                         ? Icons.hourglass_top_rounded
                                         : Icons.info_outline_rounded,
-                                    color: _statusColor(status.status),
+                                    color: _statusColor(palette, status.status),
                                     size: 34,
                                   ),
                                 ),
@@ -179,7 +179,7 @@ class _ProVerificationStatusPageState
                                 Text(
                                   _statusLabel(status.status, ar),
                                   style: FixoTypography.headlineLgMobile(
-                                    color: _statusColor(status.status),
+                                    color: _statusColor(palette, status.status),
                                   ).copyWith(fontWeight: FontWeight.w800),
                                 ),
                                 const SizedBox(height: 6),
@@ -273,35 +273,44 @@ class _ProVerificationStatusPageState
                                           height: 28,
                                           decoration: BoxDecoration(
                                             color: isDone
-                                                ? FixoColors.primaryForest
+                                                ? palette.success
                                                 : isCurrent
-                                                ? FixoColors.secondaryContainer
+                                                ? palette.primaryContainer
                                                 : isRejected
-                                                ? FixoColors.errorContainer
+                                                ? palette.errorContainer
                                                 : palette.surfaceLow,
                                             shape: BoxShape.circle,
                                             border: Border.all(
                                               color: isDone
-                                                  ? FixoColors.primaryForest
+                                                  ? palette.success
                                                   : isCurrent
-                                                  ? FixoColors.secondary
+                                                  ? palette.primaryBrand
+                                                  : isRejected
+                                                  ? palette.error
                                                   : palette.subtleBorder,
                                             ),
                                           ),
                                           alignment: Alignment.center,
                                           child: isDone
-                                              ? const Icon(
+                                              ? Icon(
                                                   Icons.check_rounded,
                                                   size: 16,
-                                                  color: Colors.white,
+                                                  color: Theme.of(context)
+                                                              .brightness ==
+                                                          Brightness.dark
+                                                      ? FixoColors.deepestForest
+                                                      : Colors.white,
                                                 )
                                               : Text(
                                                   '${milestone.stepNumber}',
                                                   style:
                                                       FixoTypography.labelSm(
                                                         color: isCurrent
-                                                            ? FixoColors
-                                                                  .primaryForest
+                                                            ? palette
+                                                                  .primaryBrand
+                                                            : isRejected
+                                                            ? palette
+                                                                  .onErrorContainer
                                                             : palette.mutedText,
                                                       ).copyWith(
                                                         fontWeight:
@@ -353,7 +362,8 @@ class _ProVerificationStatusPageState
                             FilledButton.icon(
                               style: FilledButton.styleFrom(
                                 minimumSize: const Size(0, 52),
-                                backgroundColor: FixoColors.primaryForest,
+                                backgroundColor: palette.primaryBrand,
+                                foregroundColor: palette.onPrimary,
                                 shape: RoundedRectangleBorder(
                                   borderRadius: FixoRadius.borderRadiusMd,
                                 ),
@@ -366,7 +376,7 @@ class _ProVerificationStatusPageState
                                     ? 'الانتقال إلى لوحة الفني'
                                     : 'Go to Pro Dashboard',
                                 style: FixoTypography.labelLg(
-                                  color: Colors.white,
+                                  color: palette.onPrimary,
                                 ).copyWith(fontWeight: FontWeight.bold),
                               ),
                             )
@@ -374,7 +384,12 @@ class _ProVerificationStatusPageState
                             FilledButton.icon(
                               style: FilledButton.styleFrom(
                                 minimumSize: const Size(0, 52),
-                                backgroundColor: FixoColors.error,
+                                backgroundColor: palette.error,
+                                foregroundColor:
+                                    Theme.of(context).brightness ==
+                                        Brightness.dark
+                                    ? FixoColors.deepestForest
+                                    : Colors.white,
                                 shape: RoundedRectangleBorder(
                                   borderRadius: FixoRadius.borderRadiusMd,
                                 ),
@@ -387,7 +402,11 @@ class _ProVerificationStatusPageState
                                     ? 'تعديل واستكمال المستندات'
                                     : 'Update Verification Documents',
                                 style: FixoTypography.labelLg(
-                                  color: Colors.white,
+                                  color:
+                                      Theme.of(context).brightness ==
+                                          Brightness.dark
+                                      ? FixoColors.deepestForest
+                                      : Colors.white,
                                 ).copyWith(fontWeight: FontWeight.bold),
                               ),
                             )

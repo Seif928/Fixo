@@ -12,21 +12,28 @@ import '../../features/auth/presentation/controllers/account_entry_controller.da
 import '../../features/auth/presentation/pages/phone_auth_page.dart';
 import '../../features/auth/presentation/pages/email_auth_page.dart';
 import '../../features/auth/presentation/pages/phone_password_page.dart';
-import '../../features/auth/presentation/pages/logout_page.dart';
-import '../../features/chat/presentation/chat_page.dart';
+import '../../features/auth/presentation/pages/logout_page.dart'
+    deferred as logout_page;
+import '../../features/chat/presentation/chat_page.dart' deferred as chat_page;
 import '../../features/profile/presentation/profile_page.dart';
-import '../../features/favorites/presentation/pages/favorites_page.dart';
-import '../../features/complaints/presentation/pages/my_complaints_page.dart';
+import '../../features/favorites/presentation/pages/favorites_page.dart'
+    deferred as favorites_page;
+import '../../features/complaints/presentation/pages/my_complaints_page.dart'
+    deferred as my_complaints_page;
 import '../../features/admin/presentation/admin_page.dart'
     deferred as admin_page;
-import '../../features/booking/presentation/pages/create_booking_page.dart';
-import '../../features/booking/presentation/pages/order_tracking_page.dart';
+import '../../features/booking/presentation/pages/create_booking_page.dart'
+    deferred as create_booking_page;
+import '../../features/booking/presentation/pages/order_tracking_page.dart'
+    deferred as order_tracking_page;
 import '../../features/booking/presentation/pages/orders_page.dart';
-import '../../features/booking/presentation/pages/review_page.dart';
+import '../../features/booking/presentation/pages/review_page.dart'
+    deferred as review_page;
 import '../../features/customer_home/domain/marketplace_models.dart';
 import '../../features/customer_home/presentation/pages/customer_home_page.dart';
 import '../../features/onboarding/presentation/pages/onboarding_page.dart';
-import '../../features/payment/presentation/pages/checkout_page.dart';
+import '../../features/payment/presentation/pages/checkout_page.dart'
+    deferred as checkout_page;
 import '../../features/pro/presentation/pages/incoming_job_page.dart'
     deferred as incoming_job_page;
 import '../../features/pro/presentation/pages/pro_account_entry_page.dart'
@@ -185,25 +192,38 @@ GoRouter createAppRouter({
       _motionRoute(
         path: AppRoutes.logout,
         name: 'logout',
-        builder: (_, _) => const LogoutPage(),
+        builder: (_, _) => DeferredRouteView(
+          loadLibrary: logout_page.loadLibrary,
+          builder: (_) => logout_page.LogoutPage(),
+        ),
       ),
       _motionRoute(
         path: AppRoutes.favorites,
         name: 'favorites',
-        builder: (_, _) => const FavoritesPage(),
+        builder: (_, _) => DeferredRouteView(
+          loadLibrary: favorites_page.loadLibrary,
+          builder: (_) => favorites_page.FavoritesPage(),
+        ),
       ),
       _motionRoute(
         path: AppRoutes.myComplaints,
         name: 'myComplaints',
-        builder: (_, _) => const MyComplaintsPage(),
+        builder: (_, _) => DeferredRouteView(
+          loadLibrary: my_complaints_page.loadLibrary,
+          builder: (_) => my_complaints_page.MyComplaintsPage(),
+        ),
       ),
       _motionRoute(
         path: AppRoutes.customerChat,
         name: 'customerChat',
-        builder: (context, state) => ChatPage(
-          key: ValueKey(state.pathParameters['orderId']),
-          bookingId: state.pathParameters['orderId']!,
-        ),
+        builder: (context, state) {
+          final orderId = state.pathParameters['orderId']!;
+          return DeferredRouteView(
+            key: ValueKey(orderId),
+            loadLibrary: chat_page.loadLibrary,
+            builder: (_) => chat_page.ChatPage(bookingId: orderId),
+          );
+        },
       ),
       _motionRoute(
         path: AppRoutes.onboarding,
@@ -241,9 +261,12 @@ GoRouter createAppRouter({
           final extra = state.extra as Map<String, dynamic>?;
           final offering = extra?['offering'] as ServiceOfferModel?;
           final preferredPro = extra?['preferredPro'] as ProfessionalCardModel?;
-          return CreateBookingPage(
-            initialOffering: offering,
-            initialPreferredPro: preferredPro,
+          return DeferredRouteView(
+            loadLibrary: create_booking_page.loadLibrary,
+            builder: (_) => create_booking_page.CreateBookingPage(
+              initialOffering: offering,
+              initialPreferredPro: preferredPro,
+            ),
           );
         },
       ),
@@ -252,7 +275,10 @@ GoRouter createAppRouter({
         name: 'checkout',
         builder: (context, state) {
           final bookingId = state.pathParameters['bookingId'] ?? '';
-          return CheckoutPage(bookingId: bookingId);
+          return DeferredRouteView(
+            loadLibrary: checkout_page.loadLibrary,
+            builder: (_) => checkout_page.CheckoutPage(bookingId: bookingId),
+          );
         },
       ),
       _motionRoute(
@@ -260,7 +286,10 @@ GoRouter createAppRouter({
         name: 'orderTracking',
         builder: (context, state) {
           final orderId = state.pathParameters['orderId'] ?? '';
-          return OrderTrackingPage(orderId: orderId);
+          return DeferredRouteView(
+            loadLibrary: order_tracking_page.loadLibrary,
+            builder: (_) => order_tracking_page.OrderTrackingPage(orderId: orderId),
+          );
         },
       ),
       _motionRoute(
@@ -268,7 +297,10 @@ GoRouter createAppRouter({
         name: 'rateReview',
         builder: (context, state) {
           final orderId = state.pathParameters['orderId'] ?? '';
-          return ReviewPage(orderId: orderId);
+          return DeferredRouteView(
+            loadLibrary: review_page.loadLibrary,
+            builder: (_) => review_page.ReviewPage(orderId: orderId),
+          );
         },
       ),
       _motionRoute(

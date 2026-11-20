@@ -66,33 +66,42 @@ abstract final class FixoColors {
   static const Color outlineVariant = Color(0xFFCBD5E1);
   static const Color softBorder = Color(0xFFE2E8F0); // Narrative Border
 
-  // Urgency & Semantic Alerts
+  // Semantics & Alerts
   static const Color coral = Color(0xFFFF795F); // Narrative Coral
   static const Color goldAccent = Color(
     0xFFC6A779,
   ); // Luxury Architectural Gold
   static const Color goldBright = Color(0xFFE4D0AE); // Specular Gold Highlight
+  static const Color amberLight = Color(0xFFB45309);
+  static const Color amberDark = Color(0xFFFBBF24);
+  static const Color successLight = Color(0xFF0F766E);
+  static const Color successDark = Color(0xFF34D399);
+  static const Color successSurfaceLight = Color(0xFFECFDF5);
+  static const Color successSurfaceDark = Color(0xFF0E2E27);
+  static const Color onSuccessContainerLight = Color(0xFF065F46);
+  static const Color onSuccessContainerDark = Color(0xFFA7F3D0);
+  static const Color warningLight = Color(0xFFB45309);
+  static const Color warningDark = Color(0xFFFBBF24);
+  static const Color warningSurfaceLight = Color(0xFFFFF7ED);
+  static const Color warningSurfaceDark = Color(0xFF2B2110);
+  static const Color onWarningContainerLight = Color(0xFF92400E);
+  static const Color onWarningContainerDark = Color(0xFFFDE68A);
   static const Color error = Color(0xFFBA1A1A);
   static const Color errorContainer = Color(0xFFFFDAD6);
   static const Color onErrorContainer = Color(0xFF93000A);
+  static const Color darkError = Color(0xFFF87171);
+  static const Color darkErrorContainer = Color(0xFF3F161D);
+  static const Color darkOnErrorContainer = Color(0xFFFECACA);
 
-  // Warm charcoal dark-mode surfaces
-  static const Color darkBackground = Color(0xFF0F172A); // Pure True Black OLED
-  static const Color darkSurfaceLowest = Color(
-    0xFF172236,
-  ); // Deep Obsidian Card Base
-  static const Color darkSurfaceLow = Color(0xFF1E293B); // Elevated Obsidian
-  static const Color darkSurfaceContainer = Color(
-    0xFF263449,
-  ); // Interactive Surface
-  static const Color darkSurfaceHigh = Color(
-    0xFF334155,
-  ); // High Elevation Surface
-  static const Color darkOnSurface = Color(0xFFF8FAFC); // Crisp Alabaster White
-  static const Color darkOnSurfaceVariant = Color(
-    0xFFCBD5E1,
-  ); // Silver Botanical Muted
-  static const Color darkBorder = Color(0xFF334155); // Specular Obsidian Rim
+  // Obsidian / Slate dark-mode surfaces
+  static const Color darkBackground = Color(0xFF0F172A);
+  static const Color darkSurfaceLowest = Color(0xFF172236);
+  static const Color darkSurfaceLow = Color(0xFF1E293B);
+  static const Color darkSurfaceContainer = Color(0xFF263449);
+  static const Color darkSurfaceHigh = Color(0xFF334155);
+  static const Color darkOnSurface = Color(0xFFF8FAFC);
+  static const Color darkOnSurfaceVariant = Color(0xFFCBD5E1);
+  static const Color darkBorder = Color(0xFF334155);
 }
 
 /// Theme extension providing semantic FIXO surface and accent tokens
@@ -115,6 +124,18 @@ class FixoPaletteExtension extends ThemeExtension<FixoPaletteExtension> {
     required this.inkText,
     required this.mutedText,
     required this.subtleBorder,
+    this.onPrimary = Colors.white,
+    this.primaryContainer = FixoColors.primaryFixed,
+    this.onPrimaryContainer = FixoColors.deepestForest,
+    this.success = FixoColors.successLight,
+    this.successContainer = FixoColors.successSurfaceLight,
+    this.onSuccessContainer = FixoColors.onSuccessContainerLight,
+    this.warning = FixoColors.warningLight,
+    this.warningContainer = FixoColors.warningSurfaceLight,
+    this.onWarningContainer = FixoColors.onWarningContainerLight,
+    this.error = FixoColors.error,
+    this.errorContainer = FixoColors.errorContainer,
+    this.onErrorContainer = FixoColors.onErrorContainer,
   });
 
   final Color canvasBackground;
@@ -132,6 +153,18 @@ class FixoPaletteExtension extends ThemeExtension<FixoPaletteExtension> {
   final Color inkText;
   final Color mutedText;
   final Color subtleBorder;
+  final Color onPrimary;
+  final Color primaryContainer;
+  final Color onPrimaryContainer;
+  final Color success;
+  final Color successContainer;
+  final Color onSuccessContainer;
+  final Color warning;
+  final Color warningContainer;
+  final Color onWarningContainer;
+  final Color error;
+  final Color errorContainer;
+  final Color onErrorContainer;
 
   static const FixoPaletteExtension light = FixoPaletteExtension(
     canvasBackground: FixoColors.surfaceBotanical,
@@ -144,11 +177,23 @@ class FixoPaletteExtension extends ThemeExtension<FixoPaletteExtension> {
     primaryBrand: FixoColors.primaryForest,
     deepForest: FixoColors.deepestForest,
     secondaryForest: FixoColors.secondaryForest,
-    limeAccent: FixoColors.limeAccent,
+    limeAccent: FixoColors.goldBright,
     coralUrgent: FixoColors.coral,
-    inkText: FixoColors.onSurface,
+    inkText: FixoColors.deepestForest,
     mutedText: FixoColors.onSurfaceVariant,
     subtleBorder: FixoColors.softBorder,
+    onPrimary: Colors.white,
+    primaryContainer: Color(0xFFEFF4FA),
+    onPrimaryContainer: FixoColors.deepestForest,
+    success: FixoColors.successLight,
+    successContainer: FixoColors.successSurfaceLight,
+    onSuccessContainer: FixoColors.onSuccessContainerLight,
+    warning: FixoColors.warningLight,
+    warningContainer: FixoColors.warningSurfaceLight,
+    onWarningContainer: FixoColors.onWarningContainerLight,
+    error: FixoColors.error,
+    errorContainer: FixoColors.errorContainer,
+    onErrorContainer: FixoColors.onErrorContainer,
   );
 
   static const FixoPaletteExtension dark = FixoPaletteExtension(
@@ -159,14 +204,26 @@ class FixoPaletteExtension extends ThemeExtension<FixoPaletteExtension> {
     surfaceContainer: FixoColors.darkSurfaceContainer,
     surfaceHigh: FixoColors.darkSurfaceHigh,
     surfaceHighest: FixoColors.darkBorder,
-    primaryBrand: FixoColors.primaryForest,
-    deepForest: FixoColors.primaryFixed,
-    secondaryForest: FixoColors.secondary,
-    limeAccent: FixoColors.limeAccent,
-    coralUrgent: FixoColors.coral,
+    primaryBrand: FixoColors.amberDark,
+    deepForest: FixoColors.darkOnSurface,
+    secondaryForest: Color(0xFF94A3B8),
+    limeAccent: FixoColors.limeHighlight,
+    coralUrgent: FixoColors.darkError,
     inkText: FixoColors.darkOnSurface,
     mutedText: FixoColors.darkOnSurfaceVariant,
     subtleBorder: FixoColors.darkBorder,
+    onPrimary: FixoColors.deepestForest,
+    primaryContainer: FixoColors.warningSurfaceDark,
+    onPrimaryContainer: FixoColors.limeHighlight,
+    success: FixoColors.successDark,
+    successContainer: FixoColors.successSurfaceDark,
+    onSuccessContainer: FixoColors.onSuccessContainerDark,
+    warning: FixoColors.warningDark,
+    warningContainer: FixoColors.warningSurfaceDark,
+    onWarningContainer: FixoColors.onWarningContainerDark,
+    error: FixoColors.darkError,
+    errorContainer: FixoColors.darkErrorContainer,
+    onErrorContainer: FixoColors.darkOnErrorContainer,
   );
 
   @override
@@ -186,6 +243,18 @@ class FixoPaletteExtension extends ThemeExtension<FixoPaletteExtension> {
     Color? inkText,
     Color? mutedText,
     Color? subtleBorder,
+    Color? onPrimary,
+    Color? primaryContainer,
+    Color? onPrimaryContainer,
+    Color? success,
+    Color? successContainer,
+    Color? onSuccessContainer,
+    Color? warning,
+    Color? warningContainer,
+    Color? onWarningContainer,
+    Color? error,
+    Color? errorContainer,
+    Color? onErrorContainer,
   }) {
     return FixoPaletteExtension(
       canvasBackground: canvasBackground ?? this.canvasBackground,
@@ -203,6 +272,18 @@ class FixoPaletteExtension extends ThemeExtension<FixoPaletteExtension> {
       inkText: inkText ?? this.inkText,
       mutedText: mutedText ?? this.mutedText,
       subtleBorder: subtleBorder ?? this.subtleBorder,
+      onPrimary: onPrimary ?? this.onPrimary,
+      primaryContainer: primaryContainer ?? this.primaryContainer,
+      onPrimaryContainer: onPrimaryContainer ?? this.onPrimaryContainer,
+      success: success ?? this.success,
+      successContainer: successContainer ?? this.successContainer,
+      onSuccessContainer: onSuccessContainer ?? this.onSuccessContainer,
+      warning: warning ?? this.warning,
+      warningContainer: warningContainer ?? this.warningContainer,
+      onWarningContainer: onWarningContainer ?? this.onWarningContainer,
+      error: error ?? this.error,
+      errorContainer: errorContainer ?? this.errorContainer,
+      onErrorContainer: onErrorContainer ?? this.onErrorContainer,
     );
   }
 
@@ -236,6 +317,46 @@ class FixoPaletteExtension extends ThemeExtension<FixoPaletteExtension> {
       inkText: Color.lerp(inkText, other.inkText, t)!,
       mutedText: Color.lerp(mutedText, other.mutedText, t)!,
       subtleBorder: Color.lerp(subtleBorder, other.subtleBorder, t)!,
+      onPrimary: Color.lerp(onPrimary, other.onPrimary, t)!,
+      primaryContainer: Color.lerp(
+        primaryContainer,
+        other.primaryContainer,
+        t,
+      )!,
+      onPrimaryContainer: Color.lerp(
+        onPrimaryContainer,
+        other.onPrimaryContainer,
+        t,
+      )!,
+      success: Color.lerp(success, other.success, t)!,
+      successContainer: Color.lerp(
+        successContainer,
+        other.successContainer,
+        t,
+      )!,
+      onSuccessContainer: Color.lerp(
+        onSuccessContainer,
+        other.onSuccessContainer,
+        t,
+      )!,
+      warning: Color.lerp(warning, other.warning, t)!,
+      warningContainer: Color.lerp(
+        warningContainer,
+        other.warningContainer,
+        t,
+      )!,
+      onWarningContainer: Color.lerp(
+        onWarningContainer,
+        other.onWarningContainer,
+        t,
+      )!,
+      error: Color.lerp(error, other.error, t)!,
+      errorContainer: Color.lerp(errorContainer, other.errorContainer, t)!,
+      onErrorContainer: Color.lerp(
+        onErrorContainer,
+        other.onErrorContainer,
+        t,
+      )!,
     );
   }
 }

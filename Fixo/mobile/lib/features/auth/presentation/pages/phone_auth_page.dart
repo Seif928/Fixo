@@ -200,7 +200,7 @@ class _PhoneAuthPageState extends ConsumerState<PhoneAuthPage> {
                         child: Icon(
                           Icons.home_repair_service_rounded,
                           size: 26,
-                          color: palette.limeAccent,
+                          color: palette.onPrimary,
                         ),
                       ),
                       const SizedBox(height: 12),
@@ -236,25 +236,25 @@ class _PhoneAuthPageState extends ConsumerState<PhoneAuthPage> {
                         vertical: 10,
                       ),
                       decoration: BoxDecoration(
-                        color: FixoColors.errorContainer,
+                        color: palette.errorContainer,
                         borderRadius: FixoRadius.borderRadiusMd,
                         border: Border.all(
-                          color: FixoColors.error.withValues(alpha: 0.35),
+                          color: palette.error.withValues(alpha: 0.35),
                         ),
                       ),
                       child: Row(
                         children: [
-                          const Icon(
+                          Icon(
                             Icons.error_outline_rounded,
                             size: 18,
-                            color: FixoColors.onErrorContainer,
+                            color: palette.onErrorContainer,
                           ),
                           const SizedBox(width: 8),
                           Expanded(
                             child: Text(
                               authState.errorMessage!,
                               style: FixoTypography.bodySm(
-                                color: FixoColors.onErrorContainer,
+                                color: palette.onErrorContainer,
                               ).copyWith(fontWeight: FontWeight.w600),
                             ),
                           ),
@@ -289,7 +289,7 @@ class _PhoneAuthPageState extends ConsumerState<PhoneAuthPage> {
                           ? 'بالمتابعة، فإنك توافق على شروط الخدمة وسياسة الخصوصية الخاصة بـ FIXO.'
                           : "By continuing, you agree to FIXO's Terms of Service and Privacy Policy.",
                       textAlign: TextAlign.center,
-                      style: FixoTypography.bodySm(color: FixoColors.outline),
+                      style: FixoTypography.bodySm(color: palette.mutedText),
                     ),
                   ),
                 ],
@@ -348,17 +348,17 @@ class _PhoneAuthPageState extends ConsumerState<PhoneAuthPage> {
                     Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        const Icon(
+                        Icon(
                           Icons.bolt_rounded,
                           size: 16,
-                          color: FixoColors.secondary,
+                          color: palette.primaryBrand,
                         ),
                         const SizedBox(width: 4),
                         Flexible(
                           child: Text(
                             isArabic ? 'رمز SMS فوري' : 'Instant SMS code',
                             style: FixoTypography.bodySm(
-                              color: FixoColors.secondary,
+                              color: palette.mutedText,
                             ).copyWith(fontWeight: FontWeight.w600),
                           ),
                         ),
@@ -366,15 +366,15 @@ class _PhoneAuthPageState extends ConsumerState<PhoneAuthPage> {
                     ),
                     Text(
                       '•',
-                      style: FixoTypography.bodySm(color: FixoColors.outline),
+                      style: FixoTypography.bodySm(color: palette.mutedText),
                     ),
                     Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        const Icon(
+                        Icon(
                           Icons.lock_reset_rounded,
                           size: 16,
-                          color: FixoColors.secondary,
+                          color: palette.mutedText,
                         ),
                         const SizedBox(width: 4),
                         Flexible(
@@ -383,7 +383,7 @@ class _PhoneAuthPageState extends ConsumerState<PhoneAuthPage> {
                                 ? 'بدون كلمة مرور'
                                 : 'No password required',
                             style: FixoTypography.bodySm(
-                              color: FixoColors.secondary,
+                              color: palette.mutedText,
                             ).copyWith(fontWeight: FontWeight.w600),
                           ),
                         ),
@@ -614,10 +614,10 @@ class _PhoneAuthPageState extends ConsumerState<PhoneAuthPage> {
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        const Icon(
+                        Icon(
                           Icons.schedule_rounded,
                           size: 16,
-                          color: FixoColors.outline,
+                          color: palette.mutedText,
                         ),
                         const SizedBox(width: 6),
                         Flexible(
@@ -659,7 +659,7 @@ class _PhoneAuthPageState extends ConsumerState<PhoneAuthPage> {
                       style: FixoTypography.labelMd(
                         color: canResend
                             ? palette.primaryBrand
-                            : FixoColors.outline.withValues(alpha: 0.6),
+                            : palette.mutedText.withValues(alpha: 0.6),
                       ).copyWith(fontWeight: FontWeight.w700),
                     ),
                   ),
@@ -686,10 +686,10 @@ class _PhoneAuthPageState extends ConsumerState<PhoneAuthPage> {
               Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  const Icon(
+                  Icon(
                     Icons.lock_outline_rounded,
                     size: 16,
-                    color: FixoColors.secondary,
+                    color: palette.mutedText,
                   ),
                   const SizedBox(width: 4),
                   Flexible(
@@ -706,15 +706,15 @@ class _PhoneAuthPageState extends ConsumerState<PhoneAuthPage> {
               ),
               Text(
                 '•',
-                style: FixoTypography.bodySm(color: FixoColors.outline),
+                style: FixoTypography.bodySm(color: palette.mutedText),
               ),
               Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  const Icon(
+                  Icon(
                     Icons.home_repair_service_outlined,
                     size: 16,
-                    color: FixoColors.secondary,
+                    color: palette.mutedText,
                   ),
                   const SizedBox(width: 4),
                   Flexible(

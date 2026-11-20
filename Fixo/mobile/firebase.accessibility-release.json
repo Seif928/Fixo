@@ -28,7 +28,7 @@
         "headers": [
           {
             "key": "Cache-Control",
-            "value": "no-cache, no-store, must-revalidate"
+            "value": "public, no-cache, must-revalidate"
           }
         ]
       },
@@ -37,7 +37,52 @@
         "headers": [
           {
             "key": "Cache-Control",
-            "value": "no-cache, no-store, must-revalidate"
+            "value": "public, no-cache, must-revalidate"
+          }
+        ]
+      },
+      {
+        "source": "/main.dart.mjs",
+        "headers": [
+          {
+            "key": "Cache-Control",
+            "value": "public, no-cache, must-revalidate"
+          }
+        ]
+      },
+      {
+        "source": "/main.dart.wasm",
+        "headers": [
+          {
+            "key": "Cache-Control",
+            "value": "public, no-cache, must-revalidate"
+          }
+        ]
+      },
+      {
+        "source": "/assets/**",
+        "headers": [
+          {
+            "key": "Cache-Control",
+            "value": "public, max-age=3600, s-maxage=86400, stale-while-revalidate=604800, must-revalidate"
+          }
+        ]
+      },
+      {
+        "source": "/canvaskit/**",
+        "headers": [
+          {
+            "key": "Cache-Control",
+            "value": "public, max-age=604800, s-maxage=2592000, stale-while-revalidate=2592000, must-revalidate"
+          }
+        ]
+      },
+      {
+        "source": "/icons/**",
+        "headers": [
+          {
+            "key": "Cache-Control",
+            "value": "public, max-age=3600, s-maxage=86400, stale-while-revalidate=604800, must-revalidate"
           }
         ]
       },

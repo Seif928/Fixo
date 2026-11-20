@@ -37,7 +37,7 @@ class BookingProgressHeader extends StatelessWidget {
                 child: Text(
                   '1',
                   style: FixoTypography.labelMd(
-                    color: palette.limeAccent,
+                    color: palette.onPrimary,
                   ).copyWith(fontWeight: FontWeight.bold),
                 ),
               ),
@@ -77,8 +77,8 @@ class BookingProgressHeader extends StatelessWidget {
               Container(
                 width: 6,
                 height: 6,
-                decoration: const BoxDecoration(
-                  color: FixoColors.secondary,
+                decoration: BoxDecoration(
+                  color: palette.primaryBrand,
                   shape: BoxShape.circle,
                 ),
               ),
@@ -143,7 +143,7 @@ class SelectedServiceCard extends StatelessWidget {
                         preferredPro != null
                             ? Icons.handyman_rounded
                             : Icons.home_repair_service_rounded,
-                        color: palette.limeAccent,
+                        color: palette.onPrimary,
                         size: 28,
                       ),
                     ),
@@ -158,9 +158,9 @@ class SelectedServiceCard extends StatelessWidget {
                           color: palette.cardSurface,
                           shape: BoxShape.circle,
                         ),
-                        child: const Icon(
+                        child: Icon(
                           Icons.verified_rounded,
-                          color: FixoColors.secondary,
+                          color: palette.primaryBrand,
                           size: 16,
                         ),
                       ),
@@ -384,7 +384,7 @@ class ServiceLocationCard extends StatelessWidget {
                   child: Text(
                     isArabic ? '+ إضافة' : '+ Add',
                     style: FixoTypography.labelMd(
-                      color: FixoColors.secondary,
+                      color: palette.primaryBrand,
                     ).copyWith(fontWeight: FontWeight.bold),
                   ),
                 ),
@@ -465,7 +465,7 @@ class ServiceLocationCard extends StatelessWidget {
                 color: palette.surfaceLow,
                 borderRadius: BorderRadius.circular(10),
                 border: Border.all(
-                  color: FixoColors.outline.withValues(alpha: 0.25),
+                  color: palette.subtleBorder,
                 ),
               ),
               child: Column(
@@ -710,7 +710,7 @@ class BookingDateSelector extends StatelessWidget {
                               dayName,
                               style: FixoTypography.labelMd(
                                 color: isSelected
-                                    ? palette.limeAccent
+                                    ? palette.onPrimary.withValues(alpha: 0.85)
                                     : palette.mutedText,
                               ).copyWith(fontWeight: FontWeight.w600),
                             ),
@@ -719,7 +719,7 @@ class BookingDateSelector extends StatelessWidget {
                               '${d.day}',
                               style: FixoTypography.priceDisplay(
                                 color: isSelected
-                                    ? palette.limeAccent
+                                    ? palette.onPrimary
                                     : palette.deepForest,
                               ).copyWith(fontSize: 20, height: 1.2),
                             ),
@@ -728,7 +728,7 @@ class BookingDateSelector extends StatelessWidget {
                               monthName,
                               style: FixoTypography.bodySm(
                                 color: isSelected
-                                    ? palette.limeAccent
+                                    ? palette.onPrimary.withValues(alpha: 0.85)
                                     : palette.mutedText,
                               ),
                             ),
@@ -824,7 +824,7 @@ class BookingTimeWindowSelector extends StatelessWidget {
                                 Icon(
                                   slot.icon,
                                   color: isSelected
-                                      ? palette.limeAccent
+                                      ? palette.onPrimary
                                       : palette.mutedText,
                                   size: 20,
                                 ),
@@ -838,7 +838,7 @@ class BookingTimeWindowSelector extends StatelessWidget {
                                         slot.localizedTitle(isArabic),
                                         style: FixoTypography.labelLg(
                                           color: isSelected
-                                              ? Colors.white
+                                              ? palette.onPrimary
                                               : palette.deepForest,
                                         ).copyWith(fontWeight: FontWeight.bold),
                                         overflow: TextOverflow.ellipsis,
@@ -847,7 +847,9 @@ class BookingTimeWindowSelector extends StatelessWidget {
                                         slot.localizedTimeRange(isArabic),
                                         style: FixoTypography.bodySm(
                                           color: isSelected
-                                              ? palette.limeAccent
+                                              ? palette.onPrimary.withValues(
+                                                  alpha: 0.82,
+                                                )
                                               : palette.mutedText,
                                         ),
                                         overflow: TextOverflow.ellipsis,
@@ -865,7 +867,7 @@ class BookingTimeWindowSelector extends StatelessWidget {
                             decoration: BoxDecoration(
                               shape: BoxShape.circle,
                               color: isSelected
-                                  ? palette.limeAccent
+                                  ? palette.onPrimary
                                   : palette.surfaceContainer,
                             ),
                             child: isSelected
@@ -930,9 +932,9 @@ class BookingFareBreakdownCard extends StatelessWidget {
               Expanded(
                 child: Row(
                   children: [
-                    const Icon(
+                    Icon(
                       Icons.receipt_long_rounded,
-                      color: FixoColors.secondary,
+                      color: palette.primaryBrand,
                       size: 20,
                     ),
                     const SizedBox(width: FixoSpacing.xs),
@@ -952,13 +954,13 @@ class BookingFareBreakdownCard extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                 decoration: BoxDecoration(
-                  color: FixoColors.secondaryContainer.withValues(alpha: 0.5),
+                  color: palette.primaryContainer,
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Text(
                   isArabic ? 'تسعير قياسي' : 'Standard Rate',
                   style: FixoTypography.labelMd(
-                    color: FixoColors.onSecondaryContainer,
+                    color: palette.onPrimaryContainer,
                   ).copyWith(fontWeight: FontWeight.bold),
                 ),
               ),
@@ -1024,16 +1026,16 @@ class BookingFareBreakdownCard extends StatelessWidget {
                     Container(
                       padding: const EdgeInsets.symmetric(
                         horizontal: 6,
-                        vertical: 1,
+                        vertical: 2,
                       ),
                       decoration: BoxDecoration(
-                        color: palette.limeAccent,
+                        color: palette.successContainer,
                         borderRadius: BorderRadius.circular(4),
                       ),
                       child: Text(
                         isArabic ? 'مجاناً' : 'WAIVED',
                         style: FixoTypography.labelMd(
-                          color: FixoColors.onTertiaryFixed,
+                          color: palette.onSuccessContainer,
                         ).copyWith(fontWeight: FontWeight.bold, fontSize: 10),
                       ),
                     ),
@@ -1044,7 +1046,7 @@ class BookingFareBreakdownCard extends StatelessWidget {
               Text(
                 '0 EGP',
                 style: FixoTypography.labelLg(
-                  color: FixoColors.secondary,
+                  color: palette.success,
                 ).copyWith(fontWeight: FontWeight.bold),
               ),
             ],
@@ -1547,7 +1549,7 @@ class _AddressCreationBottomSheetState
                   ),
                   value: _isDefault,
                   onChanged: (val) => setState(() => _isDefault = val),
-                  activeTrackColor: FixoColors.secondary,
+                  activeTrackColor: palette.primaryBrand,
                 ),
                 const SizedBox(height: FixoSpacing.sm),
 
@@ -1560,18 +1562,19 @@ class _AddressCreationBottomSheetState
                     onPressed: widget.isSubmitting ? null : _handleSubmit,
                     style: ElevatedButton.styleFrom(
                       backgroundColor: palette.primaryBrand,
+                      foregroundColor: palette.onPrimary,
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(10),
                       ),
                     ),
                     child: widget.isSubmitting
-                        ? const SizedBox(
+                        ? SizedBox(
                             width: 20,
                             height: 20,
                             child: CircularProgressIndicator(
                               strokeWidth: 2,
                               valueColor: AlwaysStoppedAnimation<Color>(
-                                Colors.white,
+                                palette.onPrimary,
                               ),
                             ),
                           )
@@ -1580,7 +1583,7 @@ class _AddressCreationBottomSheetState
                                 ? 'حفظ واختيار العنوان'
                                 : 'Save & Select Address',
                             style: FixoTypography.labelLg(
-                              color: Colors.white,
+                              color: palette.onPrimary,
                             ).copyWith(fontWeight: FontWeight.bold),
                           ),
                   ),

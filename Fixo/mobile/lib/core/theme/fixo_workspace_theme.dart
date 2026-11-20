@@ -78,16 +78,43 @@ class FixoWorkspaceTheme extends StatelessWidget {
       FixoWorkspace.administrator =>
         dark ? const Color(0xFFC4B5FD) : const Color(0xFF6D28D9),
     };
-    final ink = dark ? const Color(0xFFF1F5F9) : const Color(0xFF0F172A);
-    final muted = dark ? const Color(0xFFCBD5E1) : const Color(0xFF64748B);
+    final ink = dark ? const Color(0xFFF8FAFC) : const Color(0xFF0F172A);
+    final muted = dark ? const Color(0xFFCBD5E1) : const Color(0xFF475569);
     final canvas = dark ? const Color(0xFF0F172A) : const Color(0xFFF8FAFC);
     final surface = dark ? const Color(0xFF172236) : Colors.white;
+    final surfaceLow = dark
+        ? const Color(0xFF1E293B)
+        : const Color(0xFFF1F5F9);
     final border = dark ? const Color(0xFF334155) : const Color(0xFFE2E8F0);
     final tint = Color.alphaBlend(
-      accent.withValues(alpha: dark ? .12 : .06),
+      accent.withValues(alpha: dark ? .14 : .08),
       surface,
     );
     final onAccent = dark ? const Color(0xFF0F172A) : Colors.white;
+    final err = dark ? FixoColors.darkError : FixoColors.error;
+    final errBg = dark
+        ? FixoColors.darkErrorContainer
+        : FixoColors.errorContainer;
+    final onErrBg = dark
+        ? FixoColors.darkOnErrorContainer
+        : FixoColors.onErrorContainer;
+    final ok = dark ? FixoColors.successDark : FixoColors.successLight;
+    final okBg = dark
+        ? FixoColors.successSurfaceDark
+        : FixoColors.successSurfaceLight;
+    final onOkBg = dark
+        ? FixoColors.onSuccessContainerDark
+        : FixoColors.onSuccessContainerLight;
+    final warnBg = dark
+        ? FixoColors.warningSurfaceDark
+        : FixoColors.warningSurfaceLight;
+    final onWarnBg = dark
+        ? FixoColors.onWarningContainerDark
+        : FixoColors.onWarningContainerLight;
+    final highlightPill = dark
+        ? FixoColors.amberDark
+        : FixoColors.goldBright;
+
     final colors = theme.colorScheme.copyWith(
       primary: accent,
       onPrimary: onAccent,
@@ -97,40 +124,58 @@ class FixoWorkspaceTheme extends StatelessWidget {
       onSecondary: onAccent,
       secondaryContainer: tint,
       onSecondaryContainer: ink,
+      error: err,
+      onError: onAccent,
+      errorContainer: errBg,
+      onErrorContainer: onErrBg,
       surface: surface,
       onSurface: ink,
       onSurfaceVariant: muted,
       outline: muted,
       outlineVariant: border,
       surfaceContainerLowest: surface,
-      surfaceContainerLow: canvas,
+      surfaceContainerLow: surfaceLow,
       surfaceContainer: tint,
       surfaceContainerHigh: tint,
+      surfaceContainerHighest: border,
     );
     final palette = context.fixoPalette.copyWith(
       canvasBackground: canvas,
       warmCreamCanvas: canvas,
       cardSurface: surface,
-      surfaceLow: canvas,
+      surfaceLow: surfaceLow,
       surfaceContainer: tint,
       surfaceHigh: tint,
       surfaceHighest: border,
       primaryBrand: accent,
+      onPrimary: onAccent,
+      primaryContainer: tint,
+      onPrimaryContainer: ink,
       deepForest: ink,
-      secondaryForest: accent,
-      limeAccent: dark
-          ? accent
-          : Color.alphaBlend(accent.withValues(alpha: .2), surface),
+      secondaryForest: dark ? const Color(0xFF94A3B8) : muted,
+      limeAccent: highlightPill,
+      coralUrgent: err,
       inkText: ink,
       mutedText: muted,
       subtleBorder: border,
+      success: ok,
+      successContainer: okBg,
+      onSuccessContainer: onOkBg,
+      warning: accent,
+      warningContainer: warnBg,
+      onWarningContainer: onWarnBg,
+      error: err,
+      errorContainer: errBg,
+      onErrorContainer: onErrBg,
     );
     final shape = RoundedRectangleBorder(
       borderRadius: BorderRadius.circular(14),
     );
     final solid = ButtonStyle(
       backgroundColor: WidgetStateProperty.resolveWith(
-        (s) => s.contains(WidgetState.disabled) ? border : accent,
+        (s) => s.contains(WidgetState.disabled)
+            ? (dark ? const Color(0xFF263449) : border)
+            : accent,
       ),
       foregroundColor: WidgetStateProperty.resolveWith(
         (s) => s.contains(WidgetState.disabled) ? muted : onAccent,
@@ -164,6 +209,7 @@ class FixoWorkspaceTheme extends StatelessWidget {
         outlinedButtonTheme: OutlinedButtonThemeData(
           style: OutlinedButton.styleFrom(
             foregroundColor: ink,
+            backgroundColor: surface,
             side: BorderSide(color: border),
             shape: shape,
             minimumSize: const Size(48, 48),
@@ -174,6 +220,38 @@ class FixoWorkspaceTheme extends StatelessWidget {
             foregroundColor: accent,
             minimumSize: const Size(48, 48),
           ),
+        ),
+        switchTheme: SwitchThemeData(
+          thumbColor: WidgetStateProperty.resolveWith((s) {
+            if (s.contains(WidgetState.selected)) return onAccent;
+            return muted;
+          }),
+          trackColor: WidgetStateProperty.resolveWith((s) {
+            if (s.contains(WidgetState.selected)) return accent;
+            return surfaceLow;
+          }),
+          trackOutlineColor: WidgetStateProperty.resolveWith((s) {
+            if (s.contains(WidgetState.selected)) return Colors.transparent;
+            return border;
+          }),
+        ),
+        checkboxTheme: CheckboxThemeData(
+          fillColor: WidgetStateProperty.resolveWith((s) {
+            if (s.contains(WidgetState.selected)) return accent;
+            return Colors.transparent;
+          }),
+          checkColor: WidgetStatePropertyAll(onAccent),
+        ),
+        chipTheme: theme.chipTheme.copyWith(
+          backgroundColor: surfaceLow,
+          selectedColor: accent,
+          secondarySelectedColor: accent,
+          labelStyle: TextStyle(color: ink, fontWeight: FontWeight.w600),
+          secondaryLabelStyle: TextStyle(
+            color: onAccent,
+            fontWeight: FontWeight.w700,
+          ),
+          side: BorderSide(color: border),
         ),
         inputDecorationTheme: theme.inputDecorationTheme.copyWith(
           fillColor: surface,
@@ -194,10 +272,19 @@ class FixoWorkspaceTheme extends StatelessWidget {
           indicatorColor: tint,
         ),
         drawerTheme: theme.drawerTheme.copyWith(backgroundColor: surface),
-        dialogTheme: theme.dialogTheme.copyWith(backgroundColor: surface),
+        dialogTheme: theme.dialogTheme.copyWith(
+          backgroundColor: surface,
+          surfaceTintColor: Colors.transparent,
+        ),
+        popupMenuTheme: theme.popupMenuTheme.copyWith(
+          color: surface,
+          surfaceTintColor: Colors.transparent,
+        ),
         bottomSheetTheme: theme.bottomSheetTheme.copyWith(
           backgroundColor: surface,
+          surfaceTintColor: Colors.transparent,
         ),
+        progressIndicatorTheme: ProgressIndicatorThemeData(color: accent),
         extensions: [
           for (final e in theme.extensions.values)
             if (e is! FixoPaletteExtension) e,

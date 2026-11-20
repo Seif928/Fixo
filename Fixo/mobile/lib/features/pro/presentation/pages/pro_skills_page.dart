@@ -241,13 +241,13 @@ class _ProSkillsPageState extends ConsumerState<ProSkillsPage> {
                                   vertical: 4,
                                 ),
                                 decoration: BoxDecoration(
-                                  color: FixoColors.primaryForest,
+                                  color: palette.primaryBrand,
                                   borderRadius: FixoRadius.borderRadiusPill,
                                 ),
                                 child: Text(
                                   ar ? 'الخطوة ٢ من ٤' : 'Step 2 of 4',
                                   style: FixoTypography.labelSm(
-                                    color: FixoColors.limeAccent,
+                                    color: palette.onPrimary,
                                   ).copyWith(fontWeight: FontWeight.w800),
                                 ),
                               ),
@@ -274,13 +274,13 @@ class _ProSkillsPageState extends ConsumerState<ProSkillsPage> {
                             ),
                             padding: const EdgeInsets.all(FixoSpacing.sm),
                             decoration: BoxDecoration(
-                              color: FixoColors.errorContainer,
+                              color: palette.errorContainer,
                               borderRadius: FixoRadius.borderRadiusMd,
                             ),
                             child: Text(
                               _errorMessage!,
                               style: FixoTypography.bodySm(
-                                color: FixoColors.onErrorContainer,
+                                color: palette.onErrorContainer,
                               ),
                             ),
                           ),
@@ -319,11 +319,11 @@ class _ProSkillsPageState extends ConsumerState<ProSkillsPage> {
                                   return ChoiceChip(
                                     label: Text(cat.localizedName(ar)),
                                     selected: isSelected,
-                                    selectedColor:
-                                        FixoColors.secondaryContainer,
+                                    selectedColor: palette.primaryContainer,
+                                    checkmarkColor: palette.primaryBrand,
                                     labelStyle: FixoTypography.labelMd(
                                       color: isSelected
-                                          ? FixoColors.primaryForest
+                                          ? palette.primaryBrand
                                           : palette.inkText,
                                     ).copyWith(fontWeight: FontWeight.w700),
                                     onSelected: (val) {
@@ -360,11 +360,11 @@ class _ProSkillsPageState extends ConsumerState<ProSkillsPage> {
                                     return FilterChip(
                                       label: Text(ar ? sub.nameAr : sub.nameEn),
                                       selected: isSelected,
-                                      selectedColor:
-                                          FixoColors.secondaryContainer,
+                                      selectedColor: palette.primaryContainer,
+                                      checkmarkColor: palette.primaryBrand,
                                       labelStyle: FixoTypography.bodySm(
                                         color: isSelected
-                                            ? FixoColors.primaryForest
+                                            ? palette.primaryBrand
                                             : palette.inkText,
                                       ).copyWith(fontWeight: FontWeight.w600),
                                       onSelected: (val) {
@@ -419,7 +419,7 @@ class _ProSkillsPageState extends ConsumerState<ProSkillsPage> {
                                               ? Icons.radio_button_checked
                                               : Icons.radio_button_off,
                                           color: isSel
-                                              ? FixoColors.primaryForest
+                                              ? palette.primaryBrand
                                               : palette.mutedText,
                                         ),
                                         const SizedBox(width: 10),
@@ -477,8 +477,8 @@ class _ProSkillsPageState extends ConsumerState<ProSkillsPage> {
                                   return FilterChip(
                                     label: Text(zone.localizedName(ar)),
                                     selected: isSelected,
-                                    selectedColor:
-                                        FixoColors.secondaryContainer,
+                                    selectedColor: palette.primaryContainer,
+                                    checkmarkColor: palette.primaryBrand,
                                     onSelected: (val) {
                                       setState(() {
                                         if (val) {
@@ -568,20 +568,21 @@ class _ProSkillsPageState extends ConsumerState<ProSkillsPage> {
                         FilledButton.icon(
                           style: FilledButton.styleFrom(
                             minimumSize: const Size(0, 52),
-                            backgroundColor: FixoColors.primaryForest,
+                            backgroundColor: palette.primaryBrand,
+                            foregroundColor: palette.onPrimary,
                             shape: RoundedRectangleBorder(
                               borderRadius: FixoRadius.borderRadiusMd,
                             ),
                           ),
                           onPressed: _saving ? null : () => _submit(ar),
                           icon: _saving
-                              ? const SizedBox(
+                              ? SizedBox(
                                   width: 20,
                                   height: 20,
                                   child: CircularProgressIndicator(
                                     strokeWidth: 2,
                                     valueColor: AlwaysStoppedAnimation(
-                                      Colors.white,
+                                      palette.onPrimary,
                                     ),
                                   ),
                                 )
@@ -595,7 +596,7 @@ class _ProSkillsPageState extends ConsumerState<ProSkillsPage> {
                                 ? 'المتابعة لرفع مستندات التحقق'
                                 : 'Continue to Document Upload',
                             style: FixoTypography.labelLg(
-                              color: Colors.white,
+                              color: palette.onPrimary,
                             ).copyWith(fontWeight: FontWeight.bold),
                           ),
                         ),

@@ -194,19 +194,21 @@ class SeasonalPromoHeroCard extends StatelessWidget {
   );
 
   Widget _card(BuildContext context) {
-    final palette = context.fixoPalette;
-
     return Container(
       key: const Key('card-seasonal-promo'),
       decoration: BoxDecoration(
         gradient: const LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
-          colors: [Color(0xFF38332B), Color(0xFF24262B), Color(0xFF17191C)],
+          colors: [
+            Color(0xFF0F172A),
+            Color(0xFF172236),
+            Color(0xFF1E293B),
+          ],
         ),
         borderRadius: FixoRadius.borderRadiusLg,
         border: Border.all(
-          color: FixoColors.goldAccent.withValues(alpha: 0.42),
+          color: FixoColors.amberDark.withValues(alpha: 0.45),
           width: 1.1,
         ),
         boxShadow: FixoShadows.level2Interactive,
@@ -223,7 +225,7 @@ class SeasonalPromoHeroCard extends StatelessWidget {
                 height: 168,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
-                  color: palette.limeAccent.withValues(alpha: 0.11),
+                  color: FixoColors.amberDark.withValues(alpha: 0.12),
                 ),
               ),
             ),
@@ -245,7 +247,7 @@ class SeasonalPromoHeroCard extends StatelessWidget {
                         vertical: 3,
                       ),
                       decoration: BoxDecoration(
-                        color: palette.limeAccent,
+                        color: FixoColors.amberDark,
                         borderRadius: FixoRadius.borderRadiusPill,
                       ),
                       child: Text(
@@ -253,7 +255,7 @@ class SeasonalPromoHeroCard extends StatelessWidget {
                             .toUpperCase(),
                         style:
                             FixoTypography.labelMd(
-                              color: FixoColors.onTertiaryFixed,
+                              color: FixoColors.deepestForest,
                             ).copyWith(
                               fontWeight: FontWeight.w800,
                               letterSpacing: 0.6,
@@ -273,7 +275,7 @@ class SeasonalPromoHeroCard extends StatelessWidget {
                 Text(
                   offer.localizedDescription(isArabic),
                   style: FixoTypography.bodyMd(
-                    color: FixoColors.surfaceVariant,
+                    color: FixoColors.darkOnSurfaceVariant,
                   ),
                 ),
                 const SizedBox(height: 16),
@@ -291,27 +293,27 @@ class SeasonalPromoHeroCard extends StatelessWidget {
                         Text(
                           isArabic ? 'سعر ثابت' : 'Flat',
                           style: FixoTypography.labelMd(
-                            color: FixoColors.surfaceVariant,
+                            color: FixoColors.darkOnSurfaceVariant,
                           ),
                         ),
                         const SizedBox(width: 5),
                         Text(
                           '${offer.flatPriceEgp}',
                           style: FixoTypography.priceDisplay(
-                            color: palette.limeAccent,
+                            color: FixoColors.amberDark,
                           ),
                         ),
                         const SizedBox(width: 4),
                         Text(
                           'EGP',
                           style: FixoTypography.labelMd(
-                            color: palette.limeAccent,
+                            color: FixoColors.amberDark,
                           ).copyWith(fontWeight: FontWeight.w700),
                         ),
                       ],
                     ),
                     Material(
-                      color: palette.limeAccent,
+                      color: FixoColors.amberDark,
                       borderRadius: FixoRadius.borderRadiusMd,
                       child: InkWell(
                         key: const Key('btn-book-seasonal-promo'),
@@ -328,14 +330,14 @@ class SeasonalPromoHeroCard extends StatelessWidget {
                               Text(
                                 isArabic ? 'احجز الآن' : 'Book Now',
                                 style: FixoTypography.labelLg(
-                                  color: FixoColors.onTertiaryFixed,
+                                  color: FixoColors.deepestForest,
                                 ).copyWith(fontWeight: FontWeight.w700),
                               ),
                               const SizedBox(width: 6),
                               const Icon(
                                 Icons.arrow_forward_rounded,
                                 size: 18,
-                                color: FixoColors.onTertiaryFixed,
+                                color: FixoColors.deepestForest,
                               ),
                             ],
                           ),
@@ -393,7 +395,7 @@ class ServiceCategoryGridTile extends StatelessWidget {
             borderRadius: FixoRadius.borderRadiusLg,
             border: Border.all(
               color: isSelected
-                  ? (isDark ? palette.limeAccent : palette.primaryBrand)
+                  ? palette.primaryBrand
                   : palette.subtleBorder,
               width: isSelected ? 1.8 : 1.0,
             ),
@@ -421,8 +423,8 @@ class ServiceCategoryGridTile extends StatelessWidget {
                       mapCategoryIconName(category.iconName),
                       size: 22,
                       color: isSelected
-                          ? palette.limeAccent
-                          : palette.deepForest,
+                          ? palette.onPrimary
+                          : palette.primaryBrand,
                     ),
                   ),
                   Flexible(
@@ -433,8 +435,8 @@ class ServiceCategoryGridTile extends StatelessWidget {
                         textAlign: TextAlign.end,
                         style: FixoTypography.labelMd(
                           color: isDark
-                              ? FixoColors.goldBright
-                              : FixoColors.secondary,
+                              ? FixoColors.amberDark
+                              : palette.primaryBrand,
                           tabularFigures: true,
                         ).copyWith(fontWeight: FontWeight.w700),
                       ),
@@ -506,7 +508,7 @@ class BundleSaveInspectionCard extends StatelessWidget {
                 child: Icon(
                   Icons.health_and_safety_outlined,
                   size: 26,
-                  color: palette.limeAccent,
+                  color: palette.onPrimary,
                 ),
               ),
               const SizedBox(width: 12),
@@ -525,14 +527,14 @@ class BundleSaveInspectionCard extends StatelessWidget {
                             vertical: 2,
                           ),
                           decoration: BoxDecoration(
-                            color: palette.limeAccent,
+                            color: palette.primaryBrand,
                             borderRadius: BorderRadius.circular(4),
                           ),
                           child: Text(
                             offer.localizedBadge(isArabic) ?? 'BUNDLE SAVE',
                             style:
                                 FixoTypography.labelMd(
-                                  color: FixoColors.onTertiaryFixed,
+                                  color: palette.onPrimary,
                                 ).copyWith(
                                   fontSize: 10.5,
                                   fontWeight: FontWeight.w800,
@@ -641,7 +643,7 @@ class ServiceOfferCatalogCard extends StatelessWidget {
                 child: Icon(
                   iconData,
                   size: 22,
-                  color: isDark ? palette.limeAccent : palette.deepForest,
+                  color: isDark ? palette.primaryBrand : palette.deepForest,
                 ),
               ),
               const SizedBox(width: 12),
@@ -683,7 +685,7 @@ class ServiceOfferCatalogCard extends StatelessWidget {
                             '${offer.flatPriceEgp} ${isArabic ? 'ج.م' : 'EGP'}',
                             style: FixoTypography.labelMd(
                               color: isDark
-                                  ? palette.limeAccent
+                                  ? palette.primaryBrand
                                   : palette.deepForest,
                               tabularFigures: true,
                             ).copyWith(fontWeight: FontWeight.w800),
@@ -707,13 +709,13 @@ class ServiceOfferCatalogCard extends StatelessWidget {
                   vertical: 7,
                 ),
                 decoration: BoxDecoration(
-                  color: isDark ? palette.limeAccent : palette.primaryBrand,
+                  color: palette.primaryBrand,
                   borderRadius: FixoRadius.borderRadiusSm,
                 ),
                 child: Text(
                   isArabic ? 'احجز' : 'Book',
                   style: FixoTypography.labelMd(
-                    color: isDark ? FixoColors.onTertiaryFixed : Colors.white,
+                    color: palette.onPrimary,
                   ).copyWith(fontWeight: FontWeight.w700),
                 ),
               ),
@@ -791,8 +793,8 @@ class RecommendedProCard extends StatelessWidget {
                           Icons.star_rounded,
                           size: 16,
                           color: isDark
-                              ? palette.limeAccent
-                              : const Color(0xFF473923),
+                              ? FixoColors.amberDark
+                              : FixoColors.amberLight,
                         ),
                         const SizedBox(width: 4),
                         Text(
@@ -877,8 +879,8 @@ class RecommendedProCard extends StatelessWidget {
                         ),
                         decoration: BoxDecoration(
                           color: isFastResponder
-                              ? FixoColors.secondaryContainer
-                              : palette.surfaceHigh,
+                              ? palette.primaryContainer
+                              : palette.surfaceLow,
                           borderRadius: FixoRadius.borderRadiusPill,
                         ),
                         child: Row(
@@ -890,7 +892,7 @@ class RecommendedProCard extends StatelessWidget {
                                   : Icons.verified_user_rounded,
                               size: 14,
                               color: isFastResponder
-                                  ? FixoColors.onSecondaryContainer
+                                  ? palette.onPrimaryContainer
                                   : palette.deepForest,
                             ),
                             const SizedBox(width: 4),
@@ -901,7 +903,7 @@ class RecommendedProCard extends StatelessWidget {
                                 overflow: TextOverflow.ellipsis,
                                 style: FixoTypography.labelMd(
                                   color: isFastResponder
-                                      ? FixoColors.onSecondaryContainer
+                                      ? palette.onPrimaryContainer
                                       : palette.deepForest,
                                 ).copyWith(fontWeight: FontWeight.w700),
                               ),
@@ -924,7 +926,7 @@ class RecommendedProCard extends StatelessWidget {
                     child: Text(
                       isArabic ? 'احجز موعداً' : 'Book Slot',
                       style: FixoTypography.labelMd(
-                        color: Colors.white,
+                        color: palette.onPrimary,
                       ).copyWith(fontWeight: FontWeight.w700),
                     ),
                   ),
@@ -967,10 +969,10 @@ class ConciergeQuoteBanner extends StatelessWidget {
           ),
           child: Row(
             children: [
-              const Icon(
+              Icon(
                 Icons.support_agent_rounded,
                 size: 24,
-                color: FixoColors.secondary,
+                color: palette.primaryBrand,
               ),
               const SizedBox(width: 12),
               Expanded(

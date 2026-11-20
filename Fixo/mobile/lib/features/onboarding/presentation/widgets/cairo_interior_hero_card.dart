@@ -259,8 +259,8 @@ class CairoInteriorHeroCard extends StatelessWidget {
                             borderRadius: BorderRadius.circular(FixoRadius.sm),
                             border: isDark
                                 ? Border.all(
-                                    color: FixoColors.limeAccent.withValues(
-                                      alpha: 0.35,
+                                    color: FixoColors.amberDark.withValues(
+                                      alpha: 0.45,
                                     ),
                                   )
                                 : null,
@@ -272,7 +272,7 @@ class CairoInteriorHeroCard extends StatelessWidget {
                                 Icons.bolt_rounded,
                                 size: 14,
                                 color: isDark
-                                    ? FixoColors.limeAccent
+                                    ? FixoColors.amberDark
                                     : FixoColors.deepestForest,
                               ),
                               const SizedBox(width: FixoSpacing.xxs),
@@ -280,7 +280,7 @@ class CairoInteriorHeroCard extends StatelessWidget {
                                 isArabic ? 'نقداً' : 'Cash',
                                 style: FixoTypography.labelMd(
                                   color: isDark
-                                      ? FixoColors.limeAccent
+                                      ? FixoColors.amberDark
                                       : FixoColors.deepestForest,
                                   locale: locale,
                                 ).copyWith(fontWeight: FontWeight.w700),

@@ -44,12 +44,12 @@ class FixoGlassCard extends StatelessWidget {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     final baseColor = isDark
-        ? const Color(0xFF14241F).withValues(alpha: tintOpacity)
+        ? FixoColors.darkSurfaceLowest.withValues(alpha: tintOpacity)
         : Colors.white.withValues(alpha: tintOpacity);
 
     final borderColor = isDark
-        ? Colors.white.withValues(alpha: 0.12)
-        : Colors.white.withValues(alpha: 0.65);
+        ? FixoColors.darkBorder.withValues(alpha: 0.75)
+        : Colors.white.withValues(alpha: 0.72);
 
     Widget cardContent = Container(
       margin: margin,

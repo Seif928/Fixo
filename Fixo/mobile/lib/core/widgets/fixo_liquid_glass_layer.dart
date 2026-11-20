@@ -1,5 +1,6 @@
 import 'dart:ui';
 import 'package:material_ui/material_ui.dart';
+import '../theme/fixo_colors.dart';
 import '../theme/fixo_spacing.dart';
 import '../motion/fixo_motion.dart';
 
@@ -87,19 +88,19 @@ class _LiquidGlassLayerState extends State<LiquidGlassLayer> {
     final opacity = widget.tintOpacity ?? defaultOpacity;
 
     final substrateColor = isDark
-        ? const Color(0xFF0C1210).withValues(alpha: opacity)
-        : const Color(0xFFFCFBFA).withValues(alpha: opacity);
+        ? FixoColors.darkSurfaceLowest.withValues(alpha: opacity)
+        : const Color(0xFFFFFFFF).withValues(alpha: opacity);
 
     final rimTopColor = isDark
         ? Colors.white.withValues(
-            alpha: (0.42 * widget.specularIntensity + 0.16).clamp(0.0, 1.0),
+            alpha: (0.34 * widget.specularIntensity + 0.14).clamp(0.0, 1.0),
           )
         : Colors.white.withValues(
             alpha: (0.82 * widget.specularIntensity + 0.22).clamp(0.0, 1.0),
           );
     final rimBottomColor = isDark
-        ? const Color(0xFFD8BC90).withValues(alpha: 0.10)
-        : Colors.black.withValues(alpha: 0.07);
+        ? FixoColors.darkBorder.withValues(alpha: 0.70)
+        : FixoColors.softBorder.withValues(alpha: 0.90);
 
     final Widget paintedBody = CustomPaint(
       foregroundPainter: _AppleGlassBevelPainter(
@@ -121,10 +122,10 @@ class _LiquidGlassLayerState extends State<LiquidGlassLayer> {
             colors: isDark
                 ? [
                     Colors.white.withValues(
-                      alpha: (0.14 * widget.specularIntensity).clamp(0.0, 1.0),
+                      alpha: (0.12 * widget.specularIntensity).clamp(0.0, 1.0),
                     ),
                     Colors.white.withValues(alpha: 0.03),
-                    const Color(0xFF080D0B).withValues(alpha: 0.55),
+                    FixoColors.darkBackground.withValues(alpha: 0.50),
                   ]
                 : [
                     Colors.white.withValues(
@@ -133,8 +134,8 @@ class _LiquidGlassLayerState extends State<LiquidGlassLayer> {
                         1.0,
                       ),
                     ),
-                    Colors.white.withValues(alpha: 0.38),
-                    const Color(0xFFEBE8DF).withValues(alpha: 0.22),
+                    Colors.white.withValues(alpha: 0.42),
+                    FixoColors.surfaceContainerLow.withValues(alpha: 0.28),
                   ],
             stops: const [0.0, 0.42, 1.0],
           ),

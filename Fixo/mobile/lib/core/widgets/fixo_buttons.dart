@@ -157,7 +157,9 @@ class FixoAccentButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final palette = context.fixoPalette;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final fillColor = isDark ? FixoColors.amberDark : FixoColors.goldBright;
+    final inkColor = FixoColors.deepestForest;
 
     return FixoPressFeedback(
       enabled: onPressed != null,
@@ -168,7 +170,7 @@ class FixoAccentButton extends StatelessWidget {
         label: label,
         onTap: onPressed,
         child: Material(
-          color: palette.limeAccent,
+          color: fillColor,
           borderRadius: FixoRadius.borderRadiusSm,
           child: InkWell(
             onHighlightChanged: onHighlightChanged,
@@ -191,7 +193,7 @@ class FixoAccentButton extends StatelessWidget {
                       Icon(
                         leadingIcon,
                         size: 20,
-                        color: FixoColors.deepestForest,
+                        color: inkColor,
                       ),
                       const SizedBox(width: FixoSpacing.sm),
                     ],
@@ -200,7 +202,7 @@ class FixoAccentButton extends StatelessWidget {
                         label,
                         textAlign: TextAlign.center,
                         style: FixoTypography.labelLg(
-                          color: FixoColors.deepestForest,
+                          color: inkColor,
                         ).copyWith(fontWeight: FontWeight.w700),
                       ),
                     ),
@@ -209,7 +211,7 @@ class FixoAccentButton extends StatelessWidget {
                       Icon(
                         trailingIcon,
                         size: 20,
-                        color: FixoColors.deepestForest,
+                        color: inkColor,
                       ),
                     ],
                   ],

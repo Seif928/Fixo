@@ -221,7 +221,7 @@ class CustomerHomeController extends Notifier<CustomerHomeState> {
     state = state.copyWith(sortMode: mode);
   }
 
-  Future<void> loadFeed() async {
+  Future<void> loadFeed({bool forceRefresh = false}) async {
     if (_disposed) return;
     _feedCancelToken?.cancel('Superseded by new feed load');
     final cancelToken = CancelToken();
@@ -234,6 +234,7 @@ class CustomerHomeController extends Notifier<CustomerHomeState> {
           ? await repository.fetchCustomerHomeFeed(
               zone: state.selectedZoneSlug,
               cancelToken: cancelToken,
+              forceRefresh: forceRefresh,
             )
           : await repository.fetchCustomerHomeFeed(
               zone: state.selectedZoneSlug,

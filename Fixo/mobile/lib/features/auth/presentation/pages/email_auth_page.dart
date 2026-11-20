@@ -580,10 +580,10 @@ class _EmailAuthPageState extends ConsumerState<EmailAuthPage> {
                           Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              const Icon(
+                              Icon(
                                 Icons.verified_user_outlined,
                                 size: 16,
-                                color: FixoColors.secondary,
+                                color: palette.mutedText,
                               ),
                               const SizedBox(width: 4),
                               Flexible(
@@ -602,16 +602,16 @@ class _EmailAuthPageState extends ConsumerState<EmailAuthPage> {
                           Text(
                             '•',
                             style: FixoTypography.bodySm(
-                              color: FixoColors.outline,
+                              color: palette.mutedText,
                             ),
                           ),
                           Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              const Icon(
+                              Icon(
                                 Icons.support_agent_rounded,
                                 size: 16,
-                                color: FixoColors.secondary,
+                                color: palette.mutedText,
                               ),
                               const SizedBox(width: 4),
                               Flexible(

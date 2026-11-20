@@ -78,18 +78,18 @@ class _Holographic3DReceiptCardState extends State<Holographic3DReceiptCard>
 
                 return Container(
                   decoration: BoxDecoration(
-                    color: isDark ? const Color(0xFF14241F) : Colors.white,
+                    color: isDark ? FixoColors.darkSurfaceLowest : Colors.white,
                     borderRadius: BorderRadius.circular(20),
                     border: Border.all(
                       color: isDark
-                          ? Colors.white.withValues(alpha: 0.15)
+                          ? FixoColors.darkBorder
                           : palette.subtleBorder,
                       width: 1.5,
                     ),
                     boxShadow: [
                       BoxShadow(
-                        color: palette.deepForest.withValues(
-                          alpha: isDark ? 0.45 : 0.12,
+                        color: Colors.black.withValues(
+                          alpha: isDark ? 0.45 : 0.08,
                         ),
                         blurRadius: 28,
                         offset: const Offset(0, 12),
@@ -113,11 +113,11 @@ class _Holographic3DReceiptCardState extends State<Holographic3DReceiptCard>
                             begin: Alignment(-1.0 + shimmer * 2.0, -0.6),
                             end: Alignment(1.0 + shimmer * 2.0, 0.6),
                             colors: const [
-                              Color(0xFF24262B),
-                              Color(0xFF225C4D),
-                              Color(0xFF2DD4BF),
+                              Color(0xFF0F172A),
+                              Color(0xFF1E293B),
                               Color(0xFFD8BC90),
-                              Color(0xFF24262B),
+                              Color(0xFF334155),
+                              Color(0xFF0F172A),
                             ],
                             stops: const [0.0, 0.35, 0.55, 0.75, 1.0],
                           ),
@@ -137,7 +137,7 @@ class _Holographic3DReceiptCardState extends State<Holographic3DReceiptCard>
                                   child: const Icon(
                                     Icons.check_circle_rounded,
                                     size: 20,
-                                    color: FixoColors.primaryForest,
+                                    color: FixoColors.deepestForest,
                                   ),
                                 ),
                                 const SizedBox(width: 10),
@@ -321,7 +321,7 @@ class _Holographic3DReceiptCardState extends State<Holographic3DReceiptCard>
           style:
               FixoTypography.bodySm(
                 color: isHighlight
-                    ? FixoColors.primaryForest
+                    ? palette.primaryBrand
                     : palette.deepForest,
               ).copyWith(
                 fontWeight: isHighlight ? FontWeight.bold : FontWeight.w600,

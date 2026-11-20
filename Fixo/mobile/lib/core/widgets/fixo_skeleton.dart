@@ -52,14 +52,14 @@ class _FixoSkeletonBoxState extends State<FixoSkeletonBox>
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final baseColor = isDark
-        ? const Color(0xFF111815)
-        : const Color(0xFFE4EFE9);
+        ? FixoColors.darkSurfaceLowest
+        : FixoColors.surfaceContainerLow;
     final highlightColor = isDark
-        ? const Color(0xFF1E2B25)
-        : const Color(0xFFF6FBF8);
+        ? FixoColors.darkSurfaceContainer
+        : Colors.white;
     final borderColor = isDark
-        ? FixoColors.darkBorder.withValues(alpha: 0.55)
-        : Colors.white.withValues(alpha: 0.70);
+        ? FixoColors.darkBorder.withValues(alpha: 0.65)
+        : FixoColors.softBorder.withValues(alpha: 0.85);
 
     Widget buildBox(double progress) {
       final sweep = -1.0 + (progress * 3.0);

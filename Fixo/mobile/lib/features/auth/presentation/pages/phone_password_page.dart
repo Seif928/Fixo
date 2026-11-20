@@ -660,14 +660,12 @@ class _PhonePasswordPageState extends ConsumerState<PhonePasswordPage> {
                     key: const Key('phone-password-submit'),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: palette.primaryBrand,
-                      foregroundColor: isDark
-                          ? const Color(0xFF0F172A)
-                          : Colors.white,
+                      foregroundColor: palette.onPrimary,
                       padding: const EdgeInsets.symmetric(vertical: 16),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(16),
                       ),
-                      elevation: 2,
+                      elevation: 0,
                     ),
                     onPressed: _busy
                         ? null
@@ -726,13 +724,13 @@ class _PhonePasswordPageState extends ConsumerState<PhonePasswordPage> {
                         ? Row(
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
-                              const SizedBox(
+                              SizedBox(
                                 width: 18,
                                 height: 18,
                                 child: CircularProgressIndicator(
                                   strokeWidth: 2,
                                   valueColor: AlwaysStoppedAnimation<Color>(
-                                    Colors.white,
+                                    palette.onPrimary,
                                   ),
                                 ),
                               ),
@@ -758,8 +756,8 @@ class _PhonePasswordPageState extends ConsumerState<PhonePasswordPage> {
                       child: Text(
                         ar ? 'نسيت كلمة المرور؟' : 'Forgot password?',
                         style: TextStyle(
-                          color: FixoColors.secondaryForest,
-                          fontWeight: FontWeight.w600,
+                          color: palette.primaryBrand,
+                          fontWeight: FontWeight.w700,
                         ),
                       ),
                     ),

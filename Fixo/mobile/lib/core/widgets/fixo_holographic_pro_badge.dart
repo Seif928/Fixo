@@ -84,21 +84,21 @@ class _FixoHolographicProBadgeState extends State<FixoHolographicProBadge>
                   begin: Alignment(-1.0 + shimmer * 2.0, -0.8),
                   end: Alignment(1.0 + shimmer * 2.0, 0.8),
                   colors: const [
-                    Color(0xFF24262B),
-                    Color(0xFF1E5B4B),
-                    Color(0xFF2DD4BF),
-                    Color(0xFFD8BC90),
-                    Color(0xFF24262B),
+                    Color(0xFF0F172A),
+                    Color(0xFF1E3A8A),
+                    Color(0xFF60A5FA),
+                    Color(0xFFFBBF24),
+                    Color(0xFF0F172A),
                   ],
                   stops: const [0.0, 0.35, 0.55, 0.75, 1.0],
                 ),
                 border: Border.all(
-                  color: FixoColors.limeAccent.withValues(alpha: 0.85),
+                  color: FixoColors.amberDark.withValues(alpha: 0.85),
                   width: 1.2,
                 ),
                 boxShadow: [
                   BoxShadow(
-                    color: const Color(0xFF2DD4BF).withValues(alpha: 0.25),
+                    color: const Color(0xFF60A5FA).withValues(alpha: 0.25),
                     blurRadius: 10,
                     offset: const Offset(0, 2),
                   ),
@@ -114,7 +114,7 @@ class _FixoHolographicProBadgeState extends State<FixoHolographicProBadge>
                     decoration: const BoxDecoration(
                       shape: BoxShape.circle,
                       gradient: RadialGradient(
-                        colors: [Color(0xFFD8BC90), Color(0xFF0F766E)],
+                        colors: [Color(0xFFFDE68A), Color(0xFF1D4ED8)],
                       ),
                     ),
                     child: Icon(

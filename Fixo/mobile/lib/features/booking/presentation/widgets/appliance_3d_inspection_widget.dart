@@ -204,17 +204,15 @@ class _Appliance3DInspectionWidgetState
     return Container(
       margin: const EdgeInsets.only(bottom: FixoSpacing.sm),
       decoration: BoxDecoration(
-        color: isDark ? const Color(0xFF14241F) : Colors.white,
+        color: isDark ? FixoColors.darkSurfaceLow : palette.surfaceLow,
         borderRadius: FixoRadius.borderRadiusLg,
         border: Border.all(
-          color: isDark
-              ? palette.subtleBorder.withValues(alpha: 0.3)
-              : palette.subtleBorder,
+          color: palette.subtleBorder,
           width: 1.2,
         ),
         boxShadow: [
           BoxShadow(
-            color: palette.deepForest.withValues(alpha: isDark ? 0.3 : 0.05),
+            color: Colors.black.withValues(alpha: isDark ? 0.28 : 0.04),
             blurRadius: 12,
             offset: const Offset(0, 4),
           ),
@@ -234,22 +232,22 @@ class _Appliance3DInspectionWidgetState
                     vertical: 4,
                   ),
                   decoration: BoxDecoration(
-                    color: FixoColors.primaryForest,
+                    color: palette.primaryBrand,
                     borderRadius: BorderRadius.circular(FixoRadius.pill),
                   ),
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      const Icon(
+                      Icon(
                         Icons.view_in_ar_rounded,
                         size: 13,
-                        color: FixoColors.limeAccent,
+                        color: palette.onPrimary,
                       ),
                       const SizedBox(width: 4),
                       Text(
                         widget.isArabic ? 'معاينة 3D' : '3D Defect Pinning',
                         style: FixoTypography.labelMd(
-                          color: Colors.white,
+                          color: palette.onPrimary,
                         ).copyWith(fontWeight: FontWeight.bold, fontSize: 11),
                       ),
                     ],
@@ -304,14 +302,10 @@ class _Appliance3DInspectionWidgetState
                 margin: const EdgeInsets.symmetric(horizontal: 10),
                 decoration: BoxDecoration(
                   color: isDark
-                      ? const Color(0xFF0F1B17)
-                      : const Color(0xFFF9F8F5),
+                      ? FixoColors.darkBackground
+                      : FixoColors.surfaceContainerLowest,
                   borderRadius: BorderRadius.circular(14),
-                  border: Border.all(
-                    color: isDark
-                        ? Colors.white.withValues(alpha: 0.05)
-                        : Colors.black.withValues(alpha: 0.04),
-                  ),
+                  border: Border.all(color: palette.subtleBorder),
                 ),
                 child: Stack(
                   children: [
@@ -350,7 +344,7 @@ class _Appliance3DInspectionWidgetState
                                           height: 28 + pulse * 8,
                                           decoration: BoxDecoration(
                                             shape: BoxShape.circle,
-                                            color: FixoColors.limeAccent
+                                            color: palette.primaryBrand
                                                 .withValues(
                                                   alpha: 0.3 * (1 - pulse),
                                                 ),
@@ -362,7 +356,7 @@ class _Appliance3DInspectionWidgetState
                                         decoration: BoxDecoration(
                                           shape: BoxShape.circle,
                                           color: isSelected
-                                              ? FixoColors.limeAccent
+                                              ? palette.primaryBrand
                                               : FixoColors.primaryForest,
                                           border: Border.all(
                                             color: Colors.white,
@@ -382,7 +376,7 @@ class _Appliance3DInspectionWidgetState
                                           pin.icon,
                                           size: 13,
                                           color: isSelected
-                                              ? FixoColors.deepestForest
+                                              ? palette.onPrimary
                                               : Colors.white,
                                         ),
                                       ),
@@ -396,14 +390,16 @@ class _Appliance3DInspectionWidgetState
                                     ),
                                     decoration: BoxDecoration(
                                       color: isSelected
-                                          ? FixoColors.primaryForest
-                                          : Colors.black.withValues(alpha: 0.7),
+                                          ? palette.primaryBrand
+                                          : Colors.black.withValues(alpha: 0.72),
                                       borderRadius: BorderRadius.circular(6),
                                     ),
                                     child: Text(
                                       pin.title(widget.isArabic),
-                                      style: const TextStyle(
-                                        color: Colors.white,
+                                      style: TextStyle(
+                                        color: isSelected
+                                            ? palette.onPrimary
+                                            : Colors.white,
                                         fontSize: 10,
                                         fontWeight: FontWeight.bold,
                                       ),
@@ -429,29 +425,25 @@ class _Appliance3DInspectionWidgetState
               child: Container(
                 padding: const EdgeInsets.all(10),
                 decoration: BoxDecoration(
-                  color: isDark
-                      ? FixoColors.primaryForest.withValues(alpha: 0.35)
-                      : FixoColors.secondaryContainer,
+                  color: palette.successContainer,
                   borderRadius: BorderRadius.circular(10),
                   border: Border.all(
-                    color: FixoColors.limeAccent.withValues(alpha: 0.6),
+                    color: palette.success.withValues(alpha: 0.45),
                   ),
                 ),
                 child: Row(
                   children: [
-                    const Icon(
+                    Icon(
                       Icons.check_circle_rounded,
                       size: 18,
-                      color: FixoColors.limeAccent,
+                      color: palette.success,
                     ),
                     const SizedBox(width: 8),
                     Expanded(
                       child: Text(
                         _selectedPin!.detail(widget.isArabic),
                         style: FixoTypography.bodySm(
-                          color: isDark
-                              ? Colors.white
-                              : FixoColors.onSecondaryContainer,
+                          color: palette.onSuccessContainer,
                         ).copyWith(fontWeight: FontWeight.w600),
                       ),
                     ),

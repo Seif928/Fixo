@@ -161,17 +161,27 @@ export class ServicesService {
       );
 
       if (!needInMemoryPhraseFilter) {
-        const rows = await this.prisma.serviceOffering.findMany({
+        const rowsPromise = this.prisma.serviceOffering.findMany({
           where,
           include: { category: true },
           orderBy: { id: 'asc' },
           skip: offset,
           take: limit,
         });
-        const total =
-          offset === 0 && rows.length < limit
-            ? rows.length
-            : await this.prisma.serviceOffering.count({ where });
+        let rows;
+        let total: number;
+        if (offset > 0) {
+          [rows, total] = await Promise.all([
+            rowsPromise,
+            this.prisma.serviceOffering.count({ where }),
+          ]);
+        } else {
+          rows = await rowsPromise;
+          total =
+            rows.length < limit
+              ? rows.length
+              : await this.prisma.serviceOffering.count({ where });
+        }
 
         return {
           items: rows.map((row) => this.mapOfferingRow(row)),
@@ -455,13 +465,26 @@ export class ServicesService {
       );
 
       if (!needInMemoryPhraseFilter) {
-        const rows = await this.prisma.proProfile.findMany({
+        const canCount =
+          typeof (this.prisma.proProfile as { count?: unknown }).count ===
+          'function';
+        const rowsPromise = this.prisma.proProfile.findMany({
           where,
           include: proInclude,
           orderBy: [{ updatedAt: 'desc' }, { id: 'desc' }],
           skip: offset,
           take: limit,
         });
+        let rows;
+        let precomputedCount: number | null = null;
+        if (offset > 0 && canCount) {
+          [rows, precomputedCount] = await Promise.all([
+            rowsPromise,
+            this.prisma.proProfile.count({ where }),
+          ]);
+        } else {
+          rows = await rowsPromise;
+        }
         const mapped = rows.map((row) => this.mapProfessionalRow(row));
         const filtered = this.filterProfessionals(mapped, {
           categoryFilter,
@@ -477,12 +500,13 @@ export class ServicesService {
         );
         const total = mockIgnoredWhere
           ? filtered.length
-          : offset === 0 && rows.length < limit
-            ? rows.length
-            : typeof (this.prisma.proProfile as { count?: unknown }).count ===
-                'function'
-              ? await this.prisma.proProfile.count({ where })
-              : rows.length;
+          : precomputedCount !== null
+            ? precomputedCount
+            : offset === 0 && rows.length < limit
+              ? rows.length
+              : canCount
+                ? await this.prisma.proProfile.count({ where })
+                : rows.length;
         const totalPages = Math.max(1, Math.ceil(total / limit));
 
         return {

@@ -294,7 +294,7 @@ class _CustomerHomePageState extends ConsumerState<CustomerHomePage> {
             Expanded(
               child: RefreshIndicator(
                 color: palette.primaryBrand,
-                onRefresh: homeNotifier.loadFeed,
+                onRefresh: () => homeNotifier.loadFeed(forceRefresh: true),
                 child: _buildScrollableBody(
                   context,
                   homeState: homeState,
@@ -359,10 +359,10 @@ class _CustomerHomePageState extends ConsumerState<CustomerHomePage> {
                           Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              const Icon(
+                              Icon(
                                 Icons.location_on_outlined,
                                 size: 14,
-                                color: FixoColors.secondary,
+                                color: palette.primaryBrand,
                               ),
                               const SizedBox(width: 2),
                               Flexible(
@@ -385,10 +385,10 @@ class _CustomerHomePageState extends ConsumerState<CustomerHomePage> {
                                   ),
                                 ),
                               ),
-                              const Icon(
+                              Icon(
                                 Icons.keyboard_arrow_down_rounded,
                                 size: 15,
-                                color: FixoColors.outline,
+                                color: palette.mutedText,
                               ),
                             ],
                           ),
@@ -545,10 +545,10 @@ class _CustomerHomePageState extends ConsumerState<CustomerHomePage> {
             child: Row(
               children: [
                 const SizedBox(width: 12),
-                const Icon(
+                Icon(
                   Icons.search_rounded,
                   size: 20,
-                  color: FixoColors.outline,
+                  color: palette.mutedText,
                 ),
                 Expanded(
                   child: TextField(
@@ -680,7 +680,7 @@ class _CustomerHomePageState extends ConsumerState<CustomerHomePage> {
               key: const Key('btn-retry-home'),
               label: isArabic ? 'إعادة المحاولة' : 'Retry Connection',
               trailingIcon: Icons.refresh_rounded,
-              onPressed: notifier.loadFeed,
+              onPressed: () => notifier.loadFeed(forceRefresh: true),
             ),
           ],
         ),
@@ -893,7 +893,6 @@ class _CustomerHomePageState extends ConsumerState<CustomerHomePage> {
     bool forceCompactWidgets = false,
   }) {
     final feed = homeState.feed!;
-    final isDark = Theme.of(context).brightness == Brightness.dark;
     final selectedCategory = homeState.selectedCategorySlug;
     final seasonalPromo =
         (selectedCategory == null ||
@@ -927,14 +926,19 @@ class _CustomerHomePageState extends ConsumerState<CustomerHomePage> {
     final virtualizePros = !forceCompactWidgets && professionals.length > 6;
 
     final leadingLandingChildren = <Widget>[
-      CinematicHomeHero(isArabic: isArabic, onBrowse: _browseServices),
+      RepaintBoundary(
+        child: CinematicHomeHero(isArabic: isArabic, onBrowse: _browseServices),
+      ),
       if (seasonalPromo != null)
         Padding(
           padding: const EdgeInsets.fromLTRB(16, 0, 16, 20),
-          child: SeasonalPromoHeroCard(
-            offer: seasonalPromo,
-            isArabic: isArabic,
-            onBookNow: () => _navigateToCreateBooking(offering: seasonalPromo),
+          child: RepaintBoundary(
+            child: SeasonalPromoHeroCard(
+              offer: seasonalPromo,
+              isArabic: isArabic,
+              onBookNow: () =>
+                  _navigateToCreateBooking(offering: seasonalPromo),
+            ),
           ),
         ),
       // 1B. Pinned Liquid Glass Category & Sort Bar
@@ -1018,9 +1022,7 @@ class _CustomerHomePageState extends ConsumerState<CustomerHomePage> {
                       ? (isArabic ? 'عرض أقل' : 'Show Less')
                       : (isArabic ? 'عرض الكل' : 'View All'),
                   style: FixoTypography.labelMd(
-                    color: isDark
-                        ? FixoColors.goldBright
-                        : FixoColors.secondary,
+                    color: palette.primaryBrand,
                   ).copyWith(fontWeight: FontWeight.w700),
                 ),
               ),
@@ -1075,7 +1077,7 @@ class _CustomerHomePageState extends ConsumerState<CustomerHomePage> {
                       ? Icons.expand_less_rounded
                       : Icons.grid_view_rounded,
                   size: 18,
-                  color: FixoColors.secondary,
+                  color: palette.primaryBrand,
                 ),
                 label: Text(
                   _showAllCategories
@@ -1084,7 +1086,7 @@ class _CustomerHomePageState extends ConsumerState<CustomerHomePage> {
                             ? 'عرض كل الأقسام (${categories.length})'
                             : 'Show All Categories (${categories.length})'),
                   style: FixoTypography.labelMd(
-                    color: FixoColors.secondary,
+                    color: palette.primaryBrand,
                   ).copyWith(fontWeight: FontWeight.w700),
                 ),
               ),
@@ -1171,9 +1173,7 @@ class _CustomerHomePageState extends ConsumerState<CustomerHomePage> {
                       ? (isArabic ? 'عرض أقل' : 'Show Less')
                       : (isArabic ? 'عرض الكل' : 'View All'),
                   style: FixoTypography.labelMd(
-                    color: isDark
-                        ? FixoColors.goldBright
-                        : FixoColors.secondary,
+                    color: palette.primaryBrand,
                   ).copyWith(fontWeight: FontWeight.w700),
                 ),
               ),
@@ -1183,7 +1183,7 @@ class _CustomerHomePageState extends ConsumerState<CustomerHomePage> {
                 child: Text(
                   isArabic ? 'تصفح الكل' : 'Browse All',
                   style: FixoTypography.labelMd(
-                    color: isDark ? palette.limeAccent : FixoColors.secondary,
+                    color: palette.primaryBrand,
                   ).copyWith(fontWeight: FontWeight.w700),
                 ),
               ),
@@ -1210,7 +1210,7 @@ class _CustomerHomePageState extends ConsumerState<CustomerHomePage> {
                     ? Icons.expand_less_rounded
                     : Icons.expand_more_rounded,
                 size: 18,
-                color: FixoColors.secondary,
+                color: palette.primaryBrand,
               ),
               label: Text(
                 _showAllServices
@@ -1219,7 +1219,7 @@ class _CustomerHomePageState extends ConsumerState<CustomerHomePage> {
                           ? 'عرض كل الخدمات (${catalogServices.length})'
                           : 'Show All Services (${catalogServices.length})'),
                 style: FixoTypography.labelMd(
-                  color: FixoColors.secondary,
+                  color: palette.primaryBrand,
                 ).copyWith(fontWeight: FontWeight.w700),
               ),
             ),
@@ -1230,10 +1230,12 @@ class _CustomerHomePageState extends ConsumerState<CustomerHomePage> {
 
     Widget buildBundleSection() => Padding(
       padding: const EdgeInsets.fromLTRB(FixoSpacing.md, 20, FixoSpacing.md, 0),
-      child: BundleSaveInspectionCard(
-        offer: bundleOffer!,
-        isArabic: isArabic,
-        onTap: () => _navigateToCreateBooking(offering: bundleOffer),
+      child: RepaintBoundary(
+        child: BundleSaveInspectionCard(
+          offer: bundleOffer!,
+          isArabic: isArabic,
+          onTap: () => _navigateToCreateBooking(offering: bundleOffer),
+        ),
       ),
     );
 
@@ -1276,7 +1278,7 @@ class _CustomerHomePageState extends ConsumerState<CustomerHomePage> {
               child: Text(
                 isArabic ? 'استكشاف' : 'Explore',
                 style: FixoTypography.labelMd(
-                  color: FixoColors.secondary,
+                  color: palette.primaryBrand,
                 ).copyWith(fontWeight: FontWeight.w700),
               ),
             ),
@@ -1495,11 +1497,8 @@ class _CustomerHomePageState extends ConsumerState<CustomerHomePage> {
     required FixoPaletteExtension palette,
     required VoidCallback onTap,
   }) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Material(
-      color: isActive
-          ? (isDark ? FixoColors.primaryForest : palette.surfaceHigh)
-          : Colors.transparent,
+      color: isActive ? palette.primaryContainer : Colors.transparent,
       borderRadius: FixoRadius.borderRadiusPill,
       child: InkWell(
         onTap: onTap,
@@ -1512,18 +1511,14 @@ class _CustomerHomePageState extends ConsumerState<CustomerHomePage> {
               Icon(
                 icon,
                 size: 16,
-                color: isActive
-                    ? (isDark ? FixoColors.limeAccent : palette.deepForest)
-                    : palette.mutedText,
+                color: isActive ? palette.primaryBrand : palette.mutedText,
               ),
               const SizedBox(width: 6),
               Text(
                 label,
                 style:
                     FixoTypography.labelMd(
-                      color: isActive
-                          ? (isDark ? Colors.white : palette.deepForest)
-                          : palette.mutedText,
+                      color: isActive ? palette.inkText : palette.mutedText,
                     ).copyWith(
                       fontWeight: isActive ? FontWeight.w800 : FontWeight.w600,
                     ),
@@ -1598,12 +1593,12 @@ class _CustomerHomePageState extends ConsumerState<CustomerHomePage> {
                       ),
                       decoration: BoxDecoration(
                         color: homeState.sortMode == opt.id
-                            ? FixoColors.primaryForest
-                            : palette.surfaceContainer,
+                            ? palette.primaryBrand
+                            : palette.surfaceLow,
                         borderRadius: FixoRadius.borderRadiusPill,
                         border: Border.all(
                           color: homeState.sortMode == opt.id
-                              ? FixoColors.limeAccent.withValues(alpha: 0.7)
+                              ? palette.primaryBrand
                               : palette.subtleBorder,
                         ),
                       ),
@@ -1611,7 +1606,7 @@ class _CustomerHomePageState extends ConsumerState<CustomerHomePage> {
                         isArabic ? opt.labelAr : opt.labelEn,
                         style: FixoTypography.labelSm(
                           color: homeState.sortMode == opt.id
-                              ? FixoColors.limeAccent
+                              ? palette.onPrimary
                               : palette.inkText,
                         ).copyWith(fontWeight: FontWeight.w700),
                       ),
@@ -1642,12 +1637,12 @@ class _CustomerHomePageState extends ConsumerState<CustomerHomePage> {
                       ),
                       decoration: BoxDecoration(
                         color: homeState.selectedCategorySlug == cat.slug
-                            ? FixoColors.secondaryForest
+                            ? palette.primaryContainer
                             : Colors.transparent,
                         borderRadius: FixoRadius.borderRadiusPill,
                         border: Border.all(
                           color: homeState.selectedCategorySlug == cat.slug
-                              ? FixoColors.goldBright
+                              ? palette.primaryBrand
                               : palette.subtleBorder,
                         ),
                       ),
@@ -1657,7 +1652,7 @@ class _CustomerHomePageState extends ConsumerState<CustomerHomePage> {
                             : 'Trade: ${cat.localizedName(false)}',
                         style: FixoTypography.labelSm(
                           color: homeState.selectedCategorySlug == cat.slug
-                              ? Colors.white
+                              ? palette.inkText
                               : palette.mutedText,
                         ).copyWith(fontWeight: FontWeight.w600),
                       ),

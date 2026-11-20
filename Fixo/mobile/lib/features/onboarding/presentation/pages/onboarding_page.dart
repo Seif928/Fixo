@@ -169,10 +169,10 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage> {
                   child: Row(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Icon(
+                      Icon(
                         Icons.check_circle_rounded,
                         size: 18,
-                        color: FixoColors.secondary,
+                        color: palette.success,
                       ),
                       const SizedBox(width: 8),
                       Expanded(
@@ -452,7 +452,7 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage> {
                                       height: 8,
                                       decoration: BoxDecoration(
                                         color: isCompletedOrActive
-                                            ? palette.limeAccent
+                                            ? palette.primaryBrand
                                             : palette.surfaceHighest,
                                         borderRadius:
                                             FixoRadius.borderRadiusPill,
@@ -504,10 +504,10 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage> {
                     mainAxisAlignment: MainAxisAlignment.center,
                     crossAxisAlignment: CrossAxisAlignment.center,
                     children: [
-                      const Icon(
+                      Icon(
                         Icons.lock_outline_rounded,
                         size: 14,
-                        color: FixoColors.secondary,
+                        color: palette.mutedText,
                       ),
                       const SizedBox(width: 6),
                       Flexible(

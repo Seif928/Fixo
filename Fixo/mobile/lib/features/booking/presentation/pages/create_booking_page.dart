@@ -217,9 +217,9 @@ class _CreateBookingPageState extends ConsumerState<CreateBookingPage> {
                     style: FixoTypography.bodySm(color: palette.mutedText),
                   ),
                   trailing: isSelected
-                      ? const Icon(
+                      ? Icon(
                           Icons.check_circle_rounded,
-                          color: FixoColors.secondary,
+                          color: palette.primaryBrand,
                         )
                       : null,
                   onTap: () {
@@ -234,14 +234,14 @@ class _CreateBookingPageState extends ConsumerState<CreateBookingPage> {
               ListTile(
                 key: const Key('add-address-modal-btn'),
                 contentPadding: EdgeInsets.zero,
-                leading: const Icon(
+                leading: Icon(
                   Icons.add_circle_outline_rounded,
-                  color: FixoColors.secondary,
+                  color: palette.primaryBrand,
                 ),
                 title: Text(
                   isArabic ? '+ إضافة عنوان جديد' : '+ Add New Address',
                   style: FixoTypography.labelLg(
-                    color: FixoColors.secondary,
+                    color: palette.primaryBrand,
                   ).copyWith(fontWeight: FontWeight.bold),
                 ),
                 onTap: () {
@@ -342,7 +342,7 @@ class _CreateBookingPageState extends ConsumerState<CreateBookingPage> {
                     ),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: palette.primaryBrand,
-                      foregroundColor: Colors.white,
+                      foregroundColor: palette.onPrimary,
                       padding: const EdgeInsets.symmetric(
                         horizontal: FixoSpacing.lg,
                         vertical: FixoSpacing.sm,
@@ -561,10 +561,10 @@ class _CreateBookingPageState extends ConsumerState<CreateBookingPage> {
                           child: Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              const Icon(
+                              Icon(
                                 Icons.view_in_ar_rounded,
                                 size: 14,
-                                color: FixoColors.primaryForest,
+                                color: palette.primaryBrand,
                               ),
                               const SizedBox(width: 6),
                               Flexible(
@@ -653,8 +653,8 @@ class _CreateBookingPageState extends ConsumerState<CreateBookingPage> {
                                   color: palette.surfaceLow,
                                   borderRadius: BorderRadius.circular(10),
                                   border: Border.all(
-                                    color: FixoColors.primaryForest.withValues(
-                                      alpha: 0.3,
+                                    color: palette.primaryBrand.withValues(
+                                      alpha: 0.45,
                                     ),
                                     width: 1.5,
                                   ),
@@ -664,13 +664,13 @@ class _CreateBookingPageState extends ConsumerState<CreateBookingPage> {
                                   mainAxisAlignment: MainAxisAlignment.center,
                                   children: [
                                     if (_isUploadingPhoto)
-                                      const SizedBox(
+                                      SizedBox(
                                         width: 18,
                                         height: 18,
                                         child: CircularProgressIndicator(
                                           strokeWidth: 2,
                                           valueColor: AlwaysStoppedAnimation(
-                                            FixoColors.primaryForest,
+                                            palette.primaryBrand,
                                           ),
                                         ),
                                       )
@@ -678,14 +678,14 @@ class _CreateBookingPageState extends ConsumerState<CreateBookingPage> {
                                       Icon(
                                         Icons.add_a_photo_outlined,
                                         size: 20,
-                                        color: FixoColors.primaryForest,
+                                        color: palette.primaryBrand,
                                       ),
                                     const SizedBox(height: 2),
                                     Text(
                                       isArabic ? '+ صورة' : '+ Add',
                                       style:
                                           FixoTypography.bodySm(
-                                            color: FixoColors.primaryForest,
+                                            color: palette.primaryBrand,
                                           ).copyWith(
                                             fontSize: 10,
                                             fontWeight: FontWeight.w700,
@@ -726,10 +726,10 @@ class _CreateBookingPageState extends ConsumerState<CreateBookingPage> {
                                     ),
                                     const SizedBox(width: 4),
                                     IconButton(
-                                      icon: const Icon(
+                                      icon: Icon(
                                         Icons.close_rounded,
                                         size: 16,
-                                        color: FixoColors.error,
+                                        color: palette.error,
                                       ),
                                       padding: EdgeInsets.zero,
                                       constraints: const BoxConstraints(),
@@ -906,7 +906,7 @@ class _CreateBookingPageState extends ConsumerState<CreateBookingPage> {
                                                   ? 'تم تسجيل طلب الحجز #$orderCode بنجاح (مسودة).'
                                                   : 'Booking #$orderCode created in DRAFT status.',
                                               style: FixoTypography.bodySm(
-                                                color: Colors.white,
+                                                color: palette.onPrimary,
                                               ),
                                             ),
                                           ),
@@ -919,6 +919,7 @@ class _CreateBookingPageState extends ConsumerState<CreateBookingPage> {
                                     },
                               style: ElevatedButton.styleFrom(
                                 backgroundColor: palette.primaryBrand,
+                                foregroundColor: palette.onPrimary,
                                 disabledBackgroundColor: palette.primaryBrand
                                     .withValues(alpha: 0.35),
                                 shape: RoundedRectangleBorder(
@@ -930,14 +931,14 @@ class _CreateBookingPageState extends ConsumerState<CreateBookingPage> {
                                 ),
                               ),
                               child: state.isSubmitting
-                                  ? const SizedBox(
+                                  ? SizedBox(
                                       width: 22,
                                       height: 22,
                                       child: CircularProgressIndicator(
                                         strokeWidth: 2,
                                         valueColor:
                                             AlwaysStoppedAnimation<Color>(
-                                              Colors.white,
+                                              palette.onPrimary,
                                             ),
                                       ),
                                     )
@@ -952,7 +953,7 @@ class _CreateBookingPageState extends ConsumerState<CreateBookingPage> {
                                                 : 'Confirm Booking Draft',
                                             style:
                                                 FixoTypography.labelLg(
-                                                  color: Colors.white,
+                                                  color: palette.onPrimary,
                                                 ).copyWith(
                                                   fontWeight: FontWeight.bold,
                                                 ),
@@ -962,21 +963,22 @@ class _CreateBookingPageState extends ConsumerState<CreateBookingPage> {
                                         const SizedBox(width: 8),
                                         Container(
                                           padding: const EdgeInsets.symmetric(
-                                            horizontal: 8,
-                                            vertical: 3,
+                                            horizontal: 10,
+                                            vertical: 4,
                                           ),
                                           decoration: BoxDecoration(
-                                            color: palette.limeAccent,
+                                            color: palette.onPrimary.withValues(
+                                              alpha: 0.14,
+                                            ),
                                             borderRadius: BorderRadius.circular(
-                                              6,
+                                              8,
                                             ),
                                           ),
                                           child: Text(
                                             '${offering.flatPriceEgp} EGP',
                                             style:
                                                 FixoTypography.labelMd(
-                                                  color: FixoColors
-                                                      .onTertiaryFixed,
+                                                  color: palette.onPrimary,
                                                 ).copyWith(
                                                   fontWeight: FontWeight.w800,
                                                 ),

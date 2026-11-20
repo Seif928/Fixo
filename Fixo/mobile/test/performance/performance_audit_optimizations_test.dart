@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:dio/dio.dart';
+import 'package:fixo_mobile/core/location/egypt_places.dart';
 import 'package:fixo_mobile/core/theme/fixo_theme.dart';
 import 'package:fixo_mobile/core/widgets/deferred_route_view.dart';
 import 'package:fixo_mobile/core/widgets/fixo_skeleton.dart';
@@ -347,7 +348,84 @@ void main() {
 
     expect(firebaseBySource['/index.html'], contains('no-cache'));
     expect(firebaseBySource['/main.dart.wasm'], contains('no-cache'));
+    expect(firebaseBySource['/main.dart.wasm'], isNot(contains('no-store')));
+    expect(firebaseBySource['/main.dart.js'], isNot(contains('no-store')));
     expect(firebaseBySource['/assets/**'], contains('must-revalidate'));
     expect(firebaseBySource['/canvaskit/**'], contains('must-revalidate'));
+  });
+
+  test('DioMarketplaceRepository caches zone feed and honors forceRefresh', () async {
+    final dio = Dio(BaseOptions(baseUrl: 'https://example.test/api/v1'));
+    final adapter = _StubCategoriesAdapter();
+    dio.httpClientAdapter = adapter;
+    var networkHits = 0;
+    dio.interceptors.add(
+      InterceptorsWrapper(
+        onRequest: (options, handler) {
+          if (options.path.endsWith('/services') ||
+              options.path.endsWith('/professionals')) {
+            networkHits++;
+          }
+          handler.next(options);
+        },
+      ),
+    );
+    final repo = DioMarketplaceRepository(dio);
+
+    await repo.fetchCustomerHomeFeed(zone: 'nasr-city');
+    expect(networkHits, 2);
+
+    await repo.fetchCustomerHomeFeed(zone: 'nasr-city');
+    expect(networkHits, 2);
+
+    await repo.fetchCustomerHomeFeed(zone: 'maadi');
+    expect(networkHits, 4);
+
+    await repo.fetchCustomerHomeFeed(zone: 'nasr-city', forceRefresh: true);
+    expect(networkHits, 6);
+  });
+
+  test('EgyptPlaces pre-indexed search matches Arabic and English accurately', () {
+    final places = EgyptPlaces(const [
+      EgyptPlace(
+        id: 'EG01',
+        governorateId: 'EG01',
+        nameEn: 'Cairo',
+        nameAr: 'القاهرة',
+      ),
+      EgyptPlace(
+        id: 'EG0101',
+        governorateId: 'EG01',
+        parent: 'EG01',
+        nameEn: 'Nasr City',
+        nameAr: 'مدينة نصر',
+      ),
+      EgyptPlace(
+        id: 'EG0102',
+        governorateId: 'EG01',
+        parent: 'EG01',
+        nameEn: 'Maadi',
+        nameAr: 'المعادي',
+      ),
+    ]);
+
+    expect(places.governorates.map((g) => g.id), ['EG01']);
+    expect(places.search('EG01', '').length, 2);
+    expect(places.search('EG01', 'نصر').single.id, 'EG0101');
+    expect(places.search('EG01', 'maadi').single.id, 'EG0102');
+  });
+
+  test('Web boot files render instant splash, preconnect API, and never block loader behind SW cleanup', () {
+    final indexHtml = File('web/index.html').readAsStringSync();
+    expect(indexHtml, contains('rel="preconnect" href="https://fixo-api.vercel.app"'));
+    expect(indexHtml, contains('id="fixo-boot-splash"'));
+    expect(indexHtml, contains('flutter-first-frame'));
+
+    final bootstrapJs = File('web/flutter_bootstrap.js').readAsStringSync();
+    final loadIdx = bootstrapJs.indexOf('_flutter.loader.load()');
+    final swRegIdx = bootstrapJs.indexOf('getRegistrations()');
+    expect(loadIdx, isNonNegative);
+    expect(swRegIdx, greaterThan(-1));
+    expect(bootstrapJs, contains('void retireLegacyFlutterServiceWorker()'));
   });
 }

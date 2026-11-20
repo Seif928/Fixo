@@ -208,7 +208,7 @@ class _ComplaintSubmissionDialogState
                         cat.icon,
                         size: 16,
                         color: isSelected
-                            ? Colors.white
+                            ? palette.onPrimary
                             : palette.mutedText,
                       ),
                       const SizedBox(width: 6),
@@ -218,7 +218,7 @@ class _ComplaintSubmissionDialogState
                   selected: isSelected,
                   selectedColor: palette.primaryBrand,
                   labelStyle: TextStyle(
-                    color: isSelected ? Colors.white : palette.inkText,
+                    color: isSelected ? palette.onPrimary : palette.inkText,
                     fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
                   ),
                   onSelected: (val) {
@@ -294,18 +294,19 @@ class _ComplaintSubmissionDialogState
                 key: const Key('complaint-submit-button'),
                 style: FilledButton.styleFrom(
                   backgroundColor: palette.primaryBrand,
+                  foregroundColor: palette.onPrimary,
                   shape: RoundedRectangleBorder(
                     borderRadius: FixoRadius.borderRadiusMd,
                   ),
                 ),
                 onPressed: _submitting ? null : _submit,
                 child: _submitting
-                    ? const SizedBox(
+                    ? SizedBox(
                         width: 20,
                         height: 20,
                         child: CircularProgressIndicator(
                           strokeWidth: 2,
-                          color: Colors.white,
+                          color: palette.onPrimary,
                         ),
                       )
                     : Text(
