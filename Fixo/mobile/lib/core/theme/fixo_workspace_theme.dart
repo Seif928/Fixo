@@ -189,6 +189,10 @@ class FixoWorkspaceTheme extends StatelessWidget {
         colorScheme: colors,
         scaffoldBackgroundColor: canvas,
         textTheme: theme.textTheme.apply(bodyColor: ink, displayColor: ink),
+        primaryTextTheme: theme.textTheme.apply(
+          bodyColor: ink,
+          displayColor: ink,
+        ),
         appBarTheme: theme.appBarTheme.copyWith(
           backgroundColor: canvas,
           foregroundColor: ink,

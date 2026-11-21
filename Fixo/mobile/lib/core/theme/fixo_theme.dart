@@ -49,7 +49,9 @@ abstract final class FixoTheme {
       colorScheme: colorScheme,
       scaffoldBackgroundColor: FixoColors.surfaceBotanical,
       fontFamily: FixoTypography.fontFamilyForLocale(locale),
+      fontFamilyFallback: FixoTypography.fallbackFontsForLocale(locale),
       textTheme: textTheme,
+      primaryTextTheme: textTheme,
       extensions: const <ThemeExtension<dynamic>>[FixoPaletteExtension.light],
       appBarTheme: AppBarTheme(
         backgroundColor: FixoColors.surfaceBotanical.withValues(alpha: 0.9),
@@ -285,7 +287,9 @@ abstract final class FixoTheme {
       colorScheme: colorScheme,
       scaffoldBackgroundColor: FixoColors.darkBackground,
       fontFamily: FixoTypography.fontFamilyForLocale(locale),
+      fontFamilyFallback: FixoTypography.fallbackFontsForLocale(locale),
       textTheme: textTheme,
+      primaryTextTheme: textTheme,
       extensions: const <ThemeExtension<dynamic>>[FixoPaletteExtension.dark],
       appBarTheme: AppBarTheme(
         backgroundColor: FixoColors.darkBackground.withValues(alpha: 0.94),
