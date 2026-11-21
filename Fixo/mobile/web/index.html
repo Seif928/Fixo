@@ -24,6 +24,27 @@
   <meta name="theme-color" content="#F8FAFC" media="(prefers-color-scheme: light)">
   <link rel="dns-prefetch" href="https://fixo-api.vercel.app">
   <link rel="preconnect" href="https://fixo-api.vercel.app" crossorigin>
+  <link rel="preload" href="flutter_bootstrap.js" as="script">
+  <link rel="preload" href="main.dart.js" as="script">
+  <link rel="preload" href="assets/FontManifest.json" as="fetch" crossorigin="anonymous">
+  <link rel="preload" href="assets/assets/fonts/manrope/Manrope.ttf" as="fetch" crossorigin="anonymous">
+  <link rel="preload" href="assets/assets/fonts/cairo/Cairo.ttf" as="fetch" crossorigin="anonymous">
+  <script>
+    (function () {
+      var hasChromiumCk = typeof Intl !== 'undefined' && typeof Intl.Segmenter !== 'undefined' && typeof ImageDecoder !== 'undefined';
+      var ckBase = hasChromiumCk ? 'canvaskit/chromium/' : 'canvaskit/';
+      var wasmLink = document.createElement('link');
+      wasmLink.rel = 'preload';
+      wasmLink.href = ckBase + 'canvaskit.wasm';
+      wasmLink.as = 'fetch';
+      wasmLink.crossOrigin = 'anonymous';
+      document.head.appendChild(wasmLink);
+      var jsLink = document.createElement('link');
+      jsLink.rel = 'modulepreload';
+      jsLink.href = ckBase + 'canvaskit.js';
+      document.head.appendChild(jsLink);
+    })();
+  </script>
 
   <!-- iOS meta tags & icons -->
   <meta name="mobile-web-app-capable" content="yes">

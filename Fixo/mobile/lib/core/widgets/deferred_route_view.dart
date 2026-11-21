@@ -19,28 +19,45 @@ class DeferredRouteView extends StatefulWidget {
 }
 
 class _DeferredRouteViewState extends State<DeferredRouteView> {
-  late Future<void> _libraryFuture;
+  static final Set<Future<void> Function()> _loadedLibraries =
+      <Future<void> Function()>{};
+
+  late bool _isReady;
+  Future<void>? _libraryFuture;
 
   @override
   void initState() {
     super.initState();
-    _libraryFuture = widget.loadLibrary();
+    _isReady = _loadedLibraries.contains(widget.loadLibrary);
+    if (!_isReady) {
+      _libraryFuture = _startLoad();
+    }
+  }
+
+  Future<void> _startLoad() async {
+    await widget.loadLibrary();
+    _loadedLibraries.add(widget.loadLibrary);
   }
 
   void _retry() {
     setState(() {
-      _libraryFuture = widget.loadLibrary();
+      _isReady = false;
+      _libraryFuture = _startLoad();
     });
   }
 
   @override
   Widget build(BuildContext context) {
+    if (_isReady) {
+      return widget.builder(context);
+    }
     final palette = context.fixoPalette;
     return FutureBuilder<void>(
       future: _libraryFuture,
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.done &&
             !snapshot.hasError) {
+          _isReady = true;
           return widget.builder(context);
         }
         if (snapshot.hasError) {

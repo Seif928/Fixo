@@ -10,12 +10,14 @@ import 'package:go_router/go_router.dart';
 import '../../features/auth/presentation/controllers/auth_controller.dart';
 import '../../features/auth/presentation/controllers/account_entry_controller.dart';
 import '../../features/auth/presentation/pages/phone_auth_page.dart';
-import '../../features/auth/presentation/pages/email_auth_page.dart';
+import '../../features/auth/presentation/pages/email_auth_page.dart'
+    deferred as email_auth_page;
 import '../../features/auth/presentation/pages/phone_password_page.dart';
 import '../../features/auth/presentation/pages/logout_page.dart'
     deferred as logout_page;
 import '../../features/chat/presentation/chat_page.dart' deferred as chat_page;
-import '../../features/profile/presentation/profile_page.dart';
+import '../../features/profile/presentation/profile_page.dart'
+    deferred as profile_page;
 import '../../features/favorites/presentation/pages/favorites_page.dart'
     deferred as favorites_page;
 import '../../features/complaints/presentation/pages/my_complaints_page.dart'
@@ -26,7 +28,8 @@ import '../../features/booking/presentation/pages/create_booking_page.dart'
     deferred as create_booking_page;
 import '../../features/booking/presentation/pages/order_tracking_page.dart'
     deferred as order_tracking_page;
-import '../../features/booking/presentation/pages/orders_page.dart';
+import '../../features/booking/presentation/pages/orders_page.dart'
+    deferred as orders_page;
 import '../../features/booking/presentation/pages/review_page.dart'
     deferred as review_page;
 import '../../features/customer_home/domain/marketplace_models.dart';
@@ -165,13 +168,23 @@ GoRouter createAppRouter({
         name: 'myOrders',
         builder: (_, state) {
           final chats = state.uri.queryParameters['view'] == 'chat';
-          return OrdersPage(key: ValueKey(chats), showChats: chats);
+          return DeferredRouteView(
+            key: ValueKey(chats),
+            loadLibrary: orders_page.loadLibrary,
+            builder: (_) => orders_page.OrdersPage(
+              key: ValueKey(chats),
+              showChats: chats,
+            ),
+          );
         },
       ),
       _motionRoute(
         path: AppRoutes.customerProfile,
         name: 'customerProfile',
-        builder: (_, _) => const ProfilePage(),
+        builder: (_, _) => DeferredRouteView(
+          loadLibrary: profile_page.loadLibrary,
+          builder: (_) => profile_page.ProfilePage(),
+        ),
       ),
       _motionRoute(
         path: '/support',
@@ -240,7 +253,11 @@ GoRouter createAppRouter({
             _ => null,
           };
           if (state.uri.queryParameters['method'] == 'email') {
-            return EmailAuthPage(professional: isPro);
+            return DeferredRouteView(
+              loadLibrary: email_auth_page.loadLibrary,
+              builder: (_) =>
+                  email_auth_page.EmailAuthPage(professional: isPro),
+            );
           }
           if (!kReleaseMode &&
               state.uri.queryParameters['method'] == 'dev-otp') {

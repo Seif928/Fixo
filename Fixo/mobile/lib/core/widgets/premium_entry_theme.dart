@@ -26,9 +26,14 @@ class PremiumWelcomeHero extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final palette = context.fixoPalette;
+    final size = MediaQuery.sizeOf(context);
+    final compactDesktop = size.width >= 600 && size.height <= 860;
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.all(28),
+      padding: EdgeInsets.symmetric(
+        horizontal: 28,
+        vertical: compactDesktop ? 16 : 28,
+      ),
       decoration: BoxDecoration(
         color: palette.cardSurface,
         borderRadius: BorderRadius.circular(28),
@@ -49,18 +54,18 @@ class PremiumWelcomeHero extends StatelessWidget {
       child: Column(
         children: [
           const PremiumEntryMark(),
-          const SizedBox(height: 20),
+          SizedBox(height: compactDesktop ? 12 : 20),
           Text(
             isArabic ? 'رعاية تليق ببيتك' : 'Home care, thoughtfully done.',
             textAlign: TextAlign.center,
             style: TextStyle(
-              fontSize: 28,
+              fontSize: compactDesktop ? 24 : 28,
               height: 1.35,
               fontWeight: FontWeight.w800,
               color: palette.inkText,
             ),
           ),
-          const SizedBox(height: 10),
+          SizedBox(height: compactDesktop ? 6 : 10),
           Text(
             isArabic
                 ? 'من أول تسجيل لحد إتمام خدمتك، كل التفاصيل في مكان واحد.'
@@ -72,7 +77,7 @@ class PremiumWelcomeHero extends StatelessWidget {
               color: palette.mutedText,
             ),
           ),
-          const SizedBox(height: 24),
+          SizedBox(height: compactDesktop ? 14 : 24),
           Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [

@@ -214,19 +214,22 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage> {
     final isArabic = locale.languageCode == 'ar';
     final steps = isArabic ? _stepsAr : _stepsEn;
     final currentStep = steps[_activeStepIndex];
+    final viewport = MediaQuery.sizeOf(context);
+    final compactDesktop = viewport.width >= 600 && viewport.height <= 860;
+    final sectionGap = compactDesktop ? 12.0 : FixoSpacing.lg;
 
     return Scaffold(
       backgroundColor: palette.canvasBackground,
       body: SafeArea(
         child: Center(
           child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 640),
+            constraints: BoxConstraints(maxWidth: compactDesktop ? 700 : 640),
             child: SingleChildScrollView(
-              padding: const EdgeInsets.fromLTRB(
+              padding: EdgeInsets.fromLTRB(
                 FixoSpacing.md,
-                FixoSpacing.sm,
+                compactDesktop ? FixoSpacing.xs : FixoSpacing.sm,
                 FixoSpacing.md,
-                FixoSpacing.lg,
+                compactDesktop ? FixoSpacing.sm : FixoSpacing.lg,
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -295,11 +298,13 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage> {
                       ),
                     ),
                   ),
-                  const SizedBox(height: FixoSpacing.sm),
+                  SizedBox(height: compactDesktop ? 4 : FixoSpacing.sm),
 
-                  // 2. Hero Visual Showcase
-                  FixoEntrance(child: PremiumWelcomeHero(isArabic: isArabic)),
-                  const SizedBox(height: FixoSpacing.lg),
+                  // 2. Hero Visual Showcase (renders immediately with zero opacity fade delay)
+                  RepaintBoundary(
+                    child: PremiumWelcomeHero(isArabic: isArabic),
+                  ),
+                  SizedBox(height: sectionGap),
 
                   // 3. Editorial Headline & Copy
                   FixoStatusBadge(
@@ -332,7 +337,7 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage> {
                       locale: locale,
                     ).copyWith(height: 1.48),
                   ),
-                  const SizedBox(height: 20),
+                  SizedBox(height: compactDesktop ? 10 : 20),
 
                   // 4. Trust Value Pillars (Neutral MVP-accurate wording per STITCH_AUDIT.md)
                   Wrap(
@@ -381,7 +386,7 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage> {
                       ),
                     ],
                   ),
-                  const SizedBox(height: FixoSpacing.lg),
+                  SizedBox(height: sectionGap),
 
                   // 5. Visual Step Milestone Bar
                   Container(
@@ -467,7 +472,7 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage> {
                       ],
                     ),
                   ),
-                  const SizedBox(height: FixoSpacing.lg),
+                  SizedBox(height: sectionGap),
 
                   // 6. Interactive Action CTAs
                   FixoPrimaryButton(
@@ -476,7 +481,7 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage> {
                     showCircularLimeBadge: true,
                     onPressed: () => _navigateToPhoneAuth(intent: 'signup'),
                   ),
-                  const SizedBox(height: 12),
+                  SizedBox(height: compactDesktop ? 8 : 12),
                   FixoSecondaryButton(
                     key: const Key('btn-sign-in'),
                     label: isArabic
@@ -484,7 +489,7 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage> {
                         : 'I already have an account',
                     onPressed: () => _navigateToPhoneAuth(intent: 'signin'),
                   ),
-                  const SizedBox(height: 20),
+                  SizedBox(height: compactDesktop ? 8 : 20),
 
                   FixoSecondaryButton(
                     key: const Key('btn-professional-entry'),
@@ -497,7 +502,7 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage> {
                       professional: true,
                     ),
                   ),
-                  const SizedBox(height: 20),
+                  SizedBox(height: compactDesktop ? 10 : 20),
 
                   // 7. Honest MVP Footer Note (replaces unsupported 25,000 EGP insurance claim)
                   Row(

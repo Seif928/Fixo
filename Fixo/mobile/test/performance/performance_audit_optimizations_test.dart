@@ -428,4 +428,24 @@ void main() {
     expect(swRegIdx, greaterThan(-1));
     expect(bootstrapJs, contains('void retireLegacyFlutterServiceWorker()'));
   });
+
+  test('CanvasKit Web build uses local runtime, parallel preloads, zero Roboto fetch, and cached deferred libraries', () {
+    final buildScript = File('tool/build-web.ps1').readAsStringSync();
+    expect(buildScript, contains('--no-web-resources-cdn'));
+    expect(buildScript, contains('-O4'));
+    expect(buildScript, isNot(contains('--wasm')));
+
+    final indexHtml = File('web/index.html').readAsStringSync();
+    expect(indexHtml, contains('href="main.dart.js"'));
+    expect(indexHtml, contains('href="flutter_bootstrap.js"'));
+    expect(indexHtml, contains('canvaskit.wasm'));
+    expect(indexHtml, contains('assets/assets/fonts/manrope/Manrope.ttf'));
+    expect(indexHtml, contains('assets/assets/fonts/cairo/Cairo.ttf'));
+
+    final typography = File('lib/core/theme/fixo_typography.dart').readAsStringSync();
+    expect(typography, isNot(contains("'Roboto'")));
+
+    final deferredView = File('lib/core/widgets/deferred_route_view.dart').readAsStringSync();
+    expect(deferredView, contains('_loadedLibraries'));
+  });
 }
