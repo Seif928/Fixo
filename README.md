@@ -25,3 +25,14 @@ The [portfolio project gallery](https://ahmed-gamal-portfolio-alpha.vercel.app/#
 ## Security
 
 Keep credentials, private keys, and environment variable files out of Git. Review production backend, authentication, data-handling, and deployment configurations separately before any commercial launch.
+
+---
+
+## Developer & contact
+
+**Ahmed Gamal Saeed** — Software Developer focused on Flutter and modern web applications.
+
+- [Portfolio — selected projects and demos](https://ahmed-gamal-portfolio-alpha.vercel.app/)
+- [LinkedIn — professional profile](https://www.linkedin.com/in/ahmed-gamal-717b54450/)
+- [GitHub — source code](https://github.com/gamal6507-ops)
+
