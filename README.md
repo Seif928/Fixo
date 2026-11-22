@@ -33,6 +33,6 @@ Keep credentials, private keys, and environment variable files out of Git. Revie
 **Ahmed Gamal Saeed** — Software Developer focused on Flutter and modern web applications.
 
 - [Portfolio — selected projects and demos](https://ahmed-gamal-portfolio-alpha.vercel.app/)
-- [LinkedIn — professional profile](https://www.linkedin.com/in/ahmed-gamal-717b54450/)
+- [LinkedIn — professional profile](https://www.linkedin.com/in/ahmed-gamal-saeed-717b54450/)
 - [GitHub — source code](https://github.com/gamal6507-ops)
 
