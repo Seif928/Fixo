@@ -189,7 +189,8 @@ class _ChatPageState extends ConsumerState<ChatPage>
         );
       }
     }
-    if (!mounted || ref.read(authControllerProvider).session?.user.id != owner) {
+    if (!mounted ||
+        ref.read(authControllerProvider).session?.user.id != owner) {
       return;
     }
     final source = await showModalBottomSheet<Object>(
@@ -521,10 +522,10 @@ class _ChatPageState extends ConsumerState<ChatPage>
                                   ),
                                   if (hasAssignedPro) ...[
                                     const SizedBox(width: 4),
-                                    const Icon(
+                                    Icon(
                                       Icons.verified_rounded,
                                       size: 16,
-                                      color: FixoColors.secondary,
+                                      color: palette.primaryBrand,
                                     ),
                                   ],
                                 ],
@@ -603,7 +604,7 @@ class _ChatPageState extends ConsumerState<ChatPage>
                                         maxLines: 1,
                                         overflow: TextOverflow.ellipsis,
                                         style: FixoTypography.labelMd(
-                                          color: FixoColors.secondary,
+                                          color: palette.primaryBrand,
                                         ).copyWith(fontWeight: FontWeight.w700),
                                       ),
                                     ),
@@ -646,13 +647,13 @@ class _ChatPageState extends ConsumerState<ChatPage>
                               vertical: 3,
                             ),
                             decoration: BoxDecoration(
-                              color: palette.limeAccent,
+                              color: palette.primaryBrand,
                               borderRadius: FixoRadius.borderRadiusPill,
                             ),
                             child: Text(
                               '${_booking!.pricing.totalEgp} EGP',
                               style: FixoTypography.labelMd(
-                                color: FixoColors.onTertiaryFixed,
+                                color: palette.onPrimary,
                                 tabularFigures: true,
                               ).copyWith(fontWeight: FontWeight.w800),
                             ),
@@ -777,7 +778,10 @@ class _ChatPageState extends ConsumerState<ChatPage>
                             ),
                             decoration: BoxDecoration(
                               color: mine
-                                  ? FixoColors.primaryForest
+                                  ? (Theme.of(context).brightness ==
+                                            Brightness.dark
+                                        ? const Color(0xFF23324B)
+                                        : FixoColors.primaryForest)
                                   : palette.cardSurface,
                               borderRadius: BorderRadiusDirectional.only(
                                 topStart: const Radius.circular(18),
@@ -786,7 +790,13 @@ class _ChatPageState extends ConsumerState<ChatPage>
                                 bottomEnd: Radius.circular(mine ? 4 : 18),
                               ),
                               border: mine
-                                  ? null
+                                  ? (Theme.of(context).brightness ==
+                                            Brightness.dark
+                                        ? Border.all(
+                                            color: palette.primaryBrand
+                                                .withValues(alpha: 0.35),
+                                          )
+                                        : null)
                                   : Border.all(color: palette.subtleBorder),
                               boxShadow: FixoShadows.level1CardResting,
                             ),
@@ -832,7 +842,7 @@ class _ChatPageState extends ConsumerState<ChatPage>
                                         size: 16,
                                         color: message.readAt == null
                                             ? Colors.white70
-                                            : palette.limeAccent,
+                                            : palette.success,
                                       ),
                                     ],
                                   ],
@@ -964,9 +974,9 @@ class _ChatPageState extends ConsumerState<ChatPage>
                         key: const Key('send-chat-message'),
                         tooltip: _ar ? 'إرسال' : 'Send',
                         style: IconButton.styleFrom(
-                          backgroundColor: FixoColors.primaryForest,
-                          foregroundColor: palette.limeAccent,
-                          disabledBackgroundColor: palette.surfaceContainer,
+                          backgroundColor: palette.primaryBrand,
+                          foregroundColor: palette.onPrimary,
+                          disabledBackgroundColor: palette.surfaceLow,
                         ),
                         onPressed:
                             !_writable || _sending || _text.text.trim().isEmpty

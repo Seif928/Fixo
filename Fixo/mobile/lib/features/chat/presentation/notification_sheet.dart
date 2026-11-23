@@ -93,8 +93,8 @@ class _NotificationSheetState extends ConsumerState<NotificationSheet> {
                   Container(
                     width: 8,
                     height: 8,
-                    decoration: const BoxDecoration(
-                      color: FixoColors.secondary,
+                    decoration: BoxDecoration(
+                      color: palette.primaryBrand,
                       shape: BoxShape.circle,
                     ),
                   ),
@@ -157,13 +157,13 @@ class _NotificationSheetState extends ConsumerState<NotificationSheet> {
                               width: 48,
                               height: 48,
                               decoration: BoxDecoration(
-                                color: FixoColors.error.withValues(alpha: 0.12),
+                                color: palette.errorContainer,
                                 shape: BoxShape.circle,
                               ),
                               alignment: Alignment.center,
-                              child: const Icon(
+                              child: Icon(
                                 Icons.error_outline_rounded,
-                                color: FixoColors.error,
+                                color: palette.error,
                               ),
                             ),
                             const SizedBox(height: FixoSpacing.sm),
@@ -261,7 +261,7 @@ class _NotificationSheetState extends ConsumerState<NotificationSheet> {
                                         : Icons.notifications_active_outlined,
                                     size: 19,
                                     color: message
-                                        ? FixoColors.limeAccent
+                                        ? palette.onPrimary
                                         : palette.deepForest,
                                   ),
                                 ),

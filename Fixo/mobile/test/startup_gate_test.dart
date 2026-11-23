@@ -48,6 +48,9 @@ void main() {
       expect(find.byType(CircularProgressIndicator), findsOneWidget);
       expect(find.text('real-application'), findsNothing);
       expect(ready, 0);
+      // A temporary Navigator reports '/' to the browser and discards /login,
+      // /admin or a booking deep link before the real router is ready.
+      expect(find.byType(Navigator), findsNothing);
       restore.complete();
       await tester.pumpAndSettle();
       expect(find.text('real-application'), findsOneWidget);

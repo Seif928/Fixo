@@ -90,7 +90,7 @@ class _StepTabButton extends StatelessWidget {
               Icon(
                 icon,
                 size: 15,
-                color: isSelected ? Colors.white : palette.mutedText,
+                color: isSelected ? palette.onPrimary : palette.mutedText,
               ),
               const SizedBox(width: 4),
               Flexible(
@@ -100,7 +100,9 @@ class _StepTabButton extends StatelessWidget {
                   overflow: TextOverflow.ellipsis,
                   style:
                       FixoTypography.labelMd(
-                        color: isSelected ? Colors.white : palette.mutedText,
+                        color: isSelected
+                            ? palette.onPrimary
+                            : palette.mutedText,
                       ).copyWith(
                         fontWeight: isSelected
                             ? FontWeight.w700
@@ -196,7 +198,7 @@ class FixoOtpDigitRow extends StatelessWidget {
                           width: 10,
                           height: 2,
                           decoration: BoxDecoration(
-                            color: FixoColors.outline.withValues(alpha: 0.65),
+                            color: palette.mutedText.withValues(alpha: 0.45),
                             borderRadius: BorderRadius.circular(2),
                           ),
                         ),
@@ -207,7 +209,7 @@ class FixoOtpDigitRow extends StatelessWidget {
                             width: 20,
                             height: 4,
                             decoration: BoxDecoration(
-                              color: palette.limeAccent,
+                              color: palette.primaryBrand,
                               borderRadius: BorderRadius.circular(2),
                             ),
                           ),
@@ -266,7 +268,7 @@ class FixoNumericKeypad extends StatelessWidget {
                       child: Icon(
                         Icons.emergency_outlined,
                         size: 18,
-                        color: FixoColors.outline,
+                        color: palette.mutedText,
                       ),
                     ),
                   ),
@@ -401,14 +403,14 @@ class CairoLifestyleMoodAnchorCard extends StatelessWidget {
                     const Icon(
                       Icons.handyman_rounded,
                       size: 16,
-                      color: FixoColors.limeAccent,
+                      color: FixoColors.amberDark,
                     ),
                     const SizedBox(width: 6),
                     Expanded(
                       child: Text(
                         isArabic
-                            ? 'حجز خدمات الصيانة والإصلاح المنزلي في القاهرة والجيزة'
-                            : 'Home maintenance & repair bookings across Cairo & Giza',
+                            ? 'حجز خدمات الصيانة والإصلاح المنزلي في محافظات مصر'
+                            : 'Home maintenance & repair bookings across Egypt',
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
                         style: FixoTypography.bodySm(
@@ -436,13 +438,13 @@ class _ZamalekMoodPainter extends CustomPainter {
       ..shader = const LinearGradient(
         begin: Alignment.topLeft,
         end: Alignment.bottomRight,
-        colors: [Color(0xFFE6DEC8), Color(0xFFD2C7AF), Color(0xFF9EB09E)],
+        colors: [Color(0xFF1E293B), Color(0xFF172236), Color(0xFF0F172A)],
       ).createShader(Offset.zero & size);
     canvas.drawRect(Offset.zero & size, bgPaint);
 
-    // Sunlit French balcony window panes on the left
+    // Subtle frosted pane highlight on the left
     final windowGlow = Paint()
-      ..color = const Color(0xFFFFFBF0).withValues(alpha: 0.65);
+      ..color = const Color(0xFFF8FAFC).withValues(alpha: 0.08);
     canvas.drawRRect(
       RRect.fromRectAndRadius(
         Rect.fromLTWH(16, 8, size.width * 0.28, size.height * 0.78),
@@ -451,15 +453,16 @@ class _ZamalekMoodPainter extends CustomPainter {
       windowGlow,
     );
 
-    // Botanical fiddle-leaf fig silhouette in the middle-left
-    final leafPaint = Paint()..color = const Color(0xFF2B5B46);
+    // Architectural warm amber & slate geometric accent
+    final amberHalo = Paint()
+      ..color = FixoColors.amberDark.withValues(alpha: 0.22);
     canvas.drawOval(
       Rect.fromCenter(
         center: Offset(size.width * 0.32, size.height * 0.42),
         width: 34,
         height: 44,
       ),
-      leafPaint,
+      amberHalo,
     );
     canvas.drawOval(
       Rect.fromCenter(
@@ -467,35 +470,35 @@ class _ZamalekMoodPainter extends CustomPainter {
         width: 28,
         height: 36,
       ),
-      Paint()..color = const Color(0xFF24262B),
+      Paint()..color = const Color(0xFF334155),
     );
 
-    // Minimalist phone device frame on the right (matching Screen 02 mood photo)
+    // Minimalist phone device frame on the right
     final phoneRect = RRect.fromRectAndRadius(
       Rect.fromLTWH(size.width * 0.62, 14, 72, size.height - 10),
       const Radius.circular(10),
     );
-    canvas.drawRRect(phoneRect, Paint()..color = const Color(0xFF24262B));
+    canvas.drawRRect(phoneRect, Paint()..color = const Color(0xFF0F172A));
     final screenRect = RRect.fromRectAndRadius(
       Rect.fromLTWH(size.width * 0.62 + 3, 17, 66, size.height - 16),
       const Radius.circular(8),
     );
-    canvas.drawRRect(screenRect, Paint()..color = const Color(0xFFF6F2EB));
+    canvas.drawRRect(screenRect, Paint()..color = const Color(0xFFF8FAFC));
 
-    // Tiny UI bars inside the miniature phone screen
+    // Clean UI bars inside the miniature phone screen
     canvas.drawRRect(
       RRect.fromRectAndRadius(
         Rect.fromLTWH(size.width * 0.62 + 10, 32, 52, 8),
         const Radius.circular(3),
       ),
-      Paint()..color = const Color(0xFF24262B),
+      Paint()..color = const Color(0xFF1E293B),
     );
     canvas.drawRRect(
       RRect.fromRectAndRadius(
         Rect.fromLTWH(size.width * 0.62 + 10, 46, 52, 10),
         const Radius.circular(3),
       ),
-      Paint()..color = const Color(0xFFC6A779),
+      Paint()..color = FixoColors.amberDark,
     );
   }
 

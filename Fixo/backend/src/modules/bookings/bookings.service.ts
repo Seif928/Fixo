@@ -1,3 +1,4 @@
+import { randomInt } from "crypto";
 import { cairoBookingTime } from "./cairo-booking-time";
 import {
   BadRequestException,
@@ -141,6 +142,7 @@ export class BookingsService {
       dto.preferredProId
         ? this.prisma.proProfile.findUnique({
             where: { id: dto.preferredProId },
+            select: { id: true, verificationStatus: true },
           })
         : Promise.resolve(null),
     ]);
@@ -1036,15 +1038,23 @@ export class BookingsService {
         return;
       }
 
+      const notifyUserIds: string[] = [];
       for (const pro of eligiblePros) {
         const result = await ensureDispatchOffer(
           this.prisma,
           booking.id,
           pro.id,
         );
-        if (result?.created && this.pushService) {
-          await this.pushService.notify(result.userId, booking.id);
+        if (result?.created && result.userId) {
+          notifyUserIds.push(result.userId);
         }
+      }
+      if (notifyUserIds.length > 0 && this.pushService) {
+        await Promise.allSettled(
+          notifyUserIds.map((userId) =>
+            this.pushService!.notify(userId, booking.id),
+          ),
+        );
       }
     } catch {
       // Non-blocking: Pro dashboard also synchronizes pending offers on poll
@@ -1208,7 +1218,7 @@ export class BookingsService {
 
   private async generateUniqueOrderCode(): Promise<string> {
     for (let attempt = 0; attempt < 5; attempt++) {
-      const randomNum = Math.floor(1000 + Math.random() * 9000);
+      const randomNum = randomInt(1000, 10000);
       const code = `FX-${randomNum}`;
       const existing = await this.prisma.booking.findUnique({
         where: { orderCode: code },
@@ -1218,12 +1228,12 @@ export class BookingsService {
         return code;
       }
     }
-    const fallbackSuffix = Date.now().toString().slice(-4);
+    const fallbackSuffix = String(randomInt(1000, 10000));
     return `FX-${fallbackSuffix}`;
   }
 
   private generateArrivalPinCode(): string {
-    return Math.floor(1000 + Math.random() * 9000).toString();
+    return String(randomInt(1000, 10000));
   }
 
   private mapReviewSummary(review: any): BookingReviewSummary {

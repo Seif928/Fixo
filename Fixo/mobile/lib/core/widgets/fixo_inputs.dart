@@ -53,7 +53,7 @@ class FixoTextField extends StatelessWidget {
             if (secondaryLabel != null)
               Text(
                 secondaryLabel!,
-                style: FixoTypography.bodySm(color: FixoColors.outline),
+                style: FixoTypography.bodySm(color: palette.mutedText),
               ),
           ],
         ),
@@ -68,7 +68,7 @@ class FixoTextField extends StatelessWidget {
           decoration: InputDecoration(
             hintText: hintText,
             prefixIcon: prefixIcon != null
-                ? Icon(prefixIcon, size: 20, color: FixoColors.outline)
+                ? Icon(prefixIcon, size: 20, color: palette.mutedText)
                 : null,
             suffixIcon: suffixWidget,
           ),
@@ -127,7 +127,7 @@ class FixoEgyptPhoneField extends StatelessWidget {
                   Text(
                     '+20',
                     style: FixoTypography.labelLg(
-                      color: Colors.white,
+                      color: palette.onPrimary,
                     ).copyWith(fontWeight: FontWeight.w700),
                   ),
                 ],

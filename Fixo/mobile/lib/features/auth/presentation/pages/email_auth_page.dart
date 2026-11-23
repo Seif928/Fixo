@@ -1,3 +1,4 @@
+import '../../../../core/widgets/premium_entry_theme.dart';
 import '../../../../core/auth/platform_auth_capabilities.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -99,7 +100,11 @@ class _EmailAuthPageState extends ConsumerState<EmailAuthPage> {
   }
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context) => PremiumEntryTheme(
+    child: Consumer(builder: (context, ref, _) => _buildPage(context, ref)),
+  );
+
+  Widget _buildPage(BuildContext context, WidgetRef ref) {
     final locale = ref.watch(appLocaleProvider);
     final ar = locale.languageCode == 'ar';
     final palette = context.fixoPalette;
@@ -155,21 +160,7 @@ class _EmailAuthPageState extends ConsumerState<EmailAuthPage> {
                     // Editorial Brand Header (Stitch Screen 02)
                     Column(
                       children: [
-                        Container(
-                          width: 48,
-                          height: 48,
-                          decoration: BoxDecoration(
-                            color: palette.primaryBrand,
-                            borderRadius: FixoRadius.borderRadiusMd,
-                            boxShadow: FixoShadows.level1CardResting,
-                          ),
-                          alignment: Alignment.center,
-                          child: Icon(
-                            Icons.home_repair_service_outlined,
-                            size: 26,
-                            color: palette.limeAccent,
-                          ),
-                        ),
+                        const PremiumEntryMark(),
                         const SizedBox(height: 12),
                         Text(
                           ar ? 'أهلًا بك في FIXO' : 'Welcome to FIXO',
@@ -589,10 +580,10 @@ class _EmailAuthPageState extends ConsumerState<EmailAuthPage> {
                           Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              const Icon(
+                              Icon(
                                 Icons.verified_user_outlined,
                                 size: 16,
-                                color: FixoColors.secondary,
+                                color: palette.mutedText,
                               ),
                               const SizedBox(width: 4),
                               Flexible(
@@ -611,23 +602,23 @@ class _EmailAuthPageState extends ConsumerState<EmailAuthPage> {
                           Text(
                             '•',
                             style: FixoTypography.bodySm(
-                              color: FixoColors.outline,
+                              color: palette.mutedText,
                             ),
                           ),
                           Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              const Icon(
+                              Icon(
                                 Icons.support_agent_rounded,
                                 size: 16,
-                                color: FixoColors.secondary,
+                                color: palette.mutedText,
                               ),
                               const SizedBox(width: 4),
                               Flexible(
                                 child: Text(
                                   ar
-                                      ? 'دعم القاهرة والجيزة'
-                                      : 'Cairo & Giza Support',
+                                      ? 'دعم كل محافظات مصر'
+                                      : 'All Egypt Governorates Support',
                                   style: FixoTypography.bodySm(
                                     color: palette.mutedText,
                                     locale: locale,

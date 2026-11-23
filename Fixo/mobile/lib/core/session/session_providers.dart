@@ -21,7 +21,8 @@ final currentUserProvider = Provider<AuthUser?>((ref) {
 
 /// Exposes the active user ID, aligning [sessionProvider] with [activeSessionOwnerProvider].
 final currentUserIdProvider = Provider<String?>((ref) {
-  return ref.watch(sessionProvider)?.user.id ?? ref.watch(activeSessionOwnerProvider);
+  return ref.watch(sessionProvider)?.user.id ??
+      ref.watch(activeSessionOwnerProvider);
 });
 
 /// Convenience provider indicating whether a user is currently authenticated.

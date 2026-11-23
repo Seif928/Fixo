@@ -10,6 +10,7 @@ import {
   MaxLength,
   Min,
 } from 'class-validator';
+import { IsSafePhotoUrl } from '../../../common/validators/safe-photo-url.validator';
 
 export class CreateReviewDto {
   @ApiProperty({
@@ -54,6 +55,11 @@ export class CreateReviewDto {
   @IsArray()
   @ArrayMaxSize(5)
   @IsString({ each: true })
+  @IsSafePhotoUrl({
+    maxHttpLength: 2048,
+    maxDataUriLength: 2_800_000,
+    each: true,
+  })
   photoUrls?: string[];
 
   @ApiPropertyOptional({

@@ -20,7 +20,7 @@ export class RepeatBookingService {
         },
         proProfile: {
           include: {
-            user: true,
+            user: { select: { fullName: true } },
             primaryCategory: true,
             primaryZone: true,
           },

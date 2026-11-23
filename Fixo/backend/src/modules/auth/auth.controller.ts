@@ -1,5 +1,6 @@
-import { Body, Controller, HttpCode, HttpStatus, Post } from '@nestjs/common';
+import { Body, Controller, HttpCode, HttpStatus, Post, UseGuards } from '@nestjs/common';
 import { ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
+import { RateLimit, RateLimitGuard } from '../../common/guards/rate-limit.guard';
 import {
   AuthService,
   AuthTokensResponse,
@@ -13,11 +14,13 @@ import {
 } from './dto/auth.dto';
 
 @ApiTags('auth')
+@UseGuards(RateLimitGuard)
 @Controller('auth')
 export class AuthController {
   constructor(private readonly authService: AuthService) {}
 
   @Post('otp/request')
+  @RateLimit({ max: 20, windowMs: 60_000, keyBy: 'ip' })
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
     summary: 'Request a 6-digit SMS OTP challenge for an Egyptian (+20) mobile number',
@@ -30,6 +33,7 @@ export class AuthController {
   }
 
   @Post('otp/verify')
+  @RateLimit({ max: 15, windowMs: 60_000, keyBy: 'ip' })
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
     summary: 'Verify a 6-digit OTP code and issue JWT access + refresh tokens',
@@ -42,6 +46,7 @@ export class AuthController {
   }
 
   @Post('refresh')
+  @RateLimit({ max: 30, windowMs: 60_000, keyBy: 'ip' })
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
     summary: 'Rotate refresh token and issue a fresh JWT access + refresh token pair',
@@ -53,6 +58,7 @@ export class AuthController {
   }
 
   @Post('logout')
+  @RateLimit({ max: 30, windowMs: 60_000, keyBy: 'ip' })
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
     summary: 'Revoke active refresh token and terminate session',

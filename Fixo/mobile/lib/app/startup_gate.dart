@@ -55,32 +55,56 @@ class _FixoStartupGateState extends ConsumerState<FixoStartupGate> {
       theme: FixoTheme.light(locale: locale),
       darkTheme: FixoTheme.dark(locale: locale),
       themeMode: ref.watch(appThemeModeProvider),
-      home: Scaffold(
-        body: Center(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const Text(
-                'FIXO',
-                style: TextStyle(fontSize: 32, fontWeight: FontWeight.w700),
-              ),
-              const SizedBox(height: 24),
-              if (!_failed)
-                const CircularProgressIndicator()
-              else
-                Padding(
-                  padding: const EdgeInsets.all(24),
-                  child: Text(
-                    locale.languageCode == 'ar'
-                        ? 'تعذّر فتح التطبيق. أعد تحميل الصفحة وحاول مجددًا.'
-                        : 'Could not start the app. Reload and try again.',
-                    textAlign: TextAlign.center,
+      // No temporary Navigator: it would replace the incoming browser URL
+      // before the real router can read the login/admin/booking deep link.
+      builder: (context, _) {
+        final isDark = Theme.of(context).brightness == Brightness.dark;
+        final bg = isDark ? const Color(0xFF0F172A) : const Color(0xFFF8FAFC);
+        final ink = isDark ? const Color(0xFFF8FAFC) : const Color(0xFF0F172A);
+        final accent =
+            isDark ? const Color(0xFFFBBF24) : const Color(0xFFB45309);
+        return Scaffold(
+          backgroundColor: bg,
+          body: Center(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  'FIXO',
+                  style: TextStyle(
+                    fontFamily: 'Manrope',
+                    fontSize: 30,
+                    fontWeight: FontWeight.w800,
+                    letterSpacing: 4.2,
+                    color: ink,
                   ),
                 ),
-            ],
+                const SizedBox(height: 16),
+                if (!_failed)
+                  SizedBox(
+                    width: 24,
+                    height: 24,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2.6,
+                      color: accent,
+                    ),
+                  )
+                else
+                  Padding(
+                    padding: const EdgeInsets.all(24),
+                    child: Text(
+                      locale.languageCode == 'ar'
+                          ? 'تعذّر فتح التطبيق. أعد تحميل الصفحة وحاول مجددًا.'
+                          : 'Could not start the app. Reload and try again.',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(color: ink),
+                    ),
+                  ),
+              ],
+            ),
           ),
-        ),
-      ),
+        );
+      },
     );
   }
 }

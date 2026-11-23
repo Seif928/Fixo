@@ -215,13 +215,13 @@ class _ProVerificationDocsPageState
                                   vertical: 4,
                                 ),
                                 decoration: BoxDecoration(
-                                  color: FixoColors.primaryForest,
+                                  color: palette.primaryBrand,
                                   borderRadius: FixoRadius.borderRadiusPill,
                                 ),
                                 child: Text(
                                   ar ? 'الخطوة ٣ من ٤' : 'Step 3 of 4',
                                   style: FixoTypography.labelSm(
-                                    color: FixoColors.limeAccent,
+                                    color: palette.onPrimary,
                                   ).copyWith(fontWeight: FontWeight.w800),
                                 ),
                               ),
@@ -248,13 +248,13 @@ class _ProVerificationDocsPageState
                             ),
                             padding: const EdgeInsets.all(FixoSpacing.sm),
                             decoration: BoxDecoration(
-                              color: FixoColors.errorContainer,
+                              color: palette.errorContainer,
                               borderRadius: FixoRadius.borderRadiusMd,
                             ),
                             child: Text(
                               _errorMessage!,
                               style: FixoTypography.bodySm(
-                                color: FixoColors.onErrorContainer,
+                                color: palette.onErrorContainer,
                               ),
                             ),
                           ),
@@ -263,19 +263,19 @@ class _ProVerificationDocsPageState
                         Container(
                           padding: const EdgeInsets.all(FixoSpacing.md),
                           decoration: BoxDecoration(
-                            color: FixoColors.secondaryContainer,
+                            color: palette.primaryContainer,
                             borderRadius: FixoRadius.borderRadiusLg,
                             border: Border.all(
-                              color: FixoColors.primaryForest.withValues(
-                                alpha: 0.2,
+                              color: palette.primaryBrand.withValues(
+                                alpha: 0.35,
                               ),
                             ),
                           ),
                           child: Row(
                             children: [
-                              const Icon(
+                              Icon(
                                 Icons.verified_user_rounded,
-                                color: FixoColors.primaryForest,
+                                color: palette.primaryBrand,
                                 size: 28,
                               ),
                               const SizedBox(width: 12),
@@ -288,7 +288,7 @@ class _ProVerificationDocsPageState
                                           ? 'حماية مشددة للمستندات'
                                           : 'Private Documents',
                                       style: FixoTypography.labelMd(
-                                        color: FixoColors.primaryForest,
+                                        color: palette.onPrimaryContainer,
                                       ).copyWith(fontWeight: FontWeight.w800),
                                     ),
                                     const SizedBox(height: 2),
@@ -297,7 +297,7 @@ class _ProVerificationDocsPageState
                                           ? 'مستنداتك الشخصية مشفرة ولا تظهر لأي عميل أو جهة خارجية وتستخدم للتحقق القانوني فقط.'
                                           : 'Only you and authorized FIXO reviewers can open these files. Your application is reviewed manually.',
                                       style: FixoTypography.bodySm(
-                                        color: FixoColors.deepestForest,
+                                        color: palette.mutedText,
                                       ),
                                     ),
                                   ],
@@ -368,10 +368,10 @@ class _ProVerificationDocsPageState
                           style: FilledButton.styleFrom(
                             minimumSize: const Size(0, 52),
                             backgroundColor: _hasAllRequired
-                                ? FixoColors.primaryForest
+                                ? palette.primaryBrand
                                 : palette.surfaceHigh,
                             foregroundColor: _hasAllRequired
-                                ? Colors.white
+                                ? palette.onPrimary
                                 : palette.mutedText,
                             shape: RoundedRectangleBorder(
                               borderRadius: FixoRadius.borderRadiusMd,
@@ -381,13 +381,13 @@ class _ProVerificationDocsPageState
                               ? () => _submitDossier(ar)
                               : null,
                           icon: _submitting
-                              ? const SizedBox(
+                              ? SizedBox(
                                   width: 20,
                                   height: 20,
                                   child: CircularProgressIndicator(
                                     strokeWidth: 2,
                                     valueColor: AlwaysStoppedAnimation(
-                                      Colors.white,
+                                      palette.onPrimary,
                                     ),
                                   ),
                                 )
@@ -398,7 +398,7 @@ class _ProVerificationDocsPageState
                                 : 'Submit Dossier for Verification',
                             style: FixoTypography.labelLg(
                               color: _hasAllRequired
-                                  ? Colors.white
+                                  ? palette.onPrimary
                                   : palette.mutedText,
                             ).copyWith(fontWeight: FontWeight.bold),
                           ),
@@ -437,11 +437,11 @@ class _ProVerificationDocsPageState
             height: 44,
             decoration: BoxDecoration(
               color: isUploaded
-                  ? FixoColors.secondaryContainer
+                  ? palette.successContainer
                   : palette.surfaceLow,
               borderRadius: FixoRadius.borderRadiusMd,
               border: Border.all(
-                color: isUploaded ? FixoColors.secondary : palette.subtleBorder,
+                color: isUploaded ? palette.success : palette.subtleBorder,
               ),
             ),
             alignment: Alignment.center,
@@ -456,7 +456,7 @@ class _ProVerificationDocsPageState
                         ? Icons.check_circle_rounded
                         : Icons.file_upload_outlined,
                     color: isUploaded
-                        ? FixoColors.primaryForest
+                        ? palette.success
                         : palette.mutedText,
                     size: 22,
                   ),
@@ -483,13 +483,13 @@ class _ProVerificationDocsPageState
                           vertical: 2,
                         ),
                         decoration: BoxDecoration(
-                          color: FixoColors.errorContainer,
+                          color: palette.errorContainer,
                           borderRadius: FixoRadius.borderRadiusPill,
                         ),
                         child: Text(
                           ar ? 'إلزامي' : 'Required',
                           style: FixoTypography.labelSm(
-                            color: FixoColors.onErrorContainer,
+                            color: palette.onErrorContainer,
                           ).copyWith(fontSize: 10, fontWeight: FontWeight.w700),
                         ),
                       )
@@ -514,7 +514,9 @@ class _ProVerificationDocsPageState
                             ? Icons.verified_rounded
                             : Icons.check_circle_outline,
                         size: 14,
-                        color: FixoColors.secondary,
+                        color: doc.status == 'REJECTED'
+                            ? palette.error
+                            : palette.success,
                       ),
                       const SizedBox(width: 4),
                       Text(
@@ -526,7 +528,9 @@ class _ProVerificationDocsPageState
                                   ? 'New photo needed'
                                   : 'Photo uploaded'),
                         style: FixoTypography.bodySm(
-                          color: FixoColors.primaryForest,
+                          color: doc.status == 'REJECTED'
+                              ? palette.error
+                              : palette.success,
                         ).copyWith(fontWeight: FontWeight.w700),
                       ),
                     ],

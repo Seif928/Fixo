@@ -354,8 +354,9 @@ class _OrderTrackingPageState extends ConsumerState<OrderTrackingPage> {
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight,
                     colors: [
-                      FixoColors.deepestForest,
-                      FixoColors.primaryForest,
+                      Color(0xFF0F172A),
+                      Color(0xFF172236),
+                      Color(0xFF1E293B),
                     ],
                   ),
                   borderRadius: const BorderRadius.vertical(
@@ -377,7 +378,7 @@ class _OrderTrackingPageState extends ConsumerState<OrderTrackingPage> {
                             vertical: 4,
                           ),
                           decoration: BoxDecoration(
-                            color: FixoColors.limeAccent,
+                            color: FixoColors.amberDark,
                             borderRadius: FixoRadius.borderRadiusPill,
                           ),
                           child: Text(
@@ -704,8 +705,8 @@ class _OrderTrackingPageState extends ConsumerState<OrderTrackingPage> {
                     FilledButton.icon(
                       key: const Key('tracking-rate-review-btn'),
                       style: FilledButton.styleFrom(
-                        backgroundColor: FixoColors.secondary,
-                        foregroundColor: Colors.white,
+                        backgroundColor: palette.primaryBrand,
+                        foregroundColor: palette.onPrimary,
                       ),
                       onPressed: () async {
                         await context.push(
@@ -900,7 +901,7 @@ class _OrderTrackingPageState extends ConsumerState<OrderTrackingPage> {
               key: const Key('tracking-open-chat-btn'),
               style: FilledButton.styleFrom(
                 backgroundColor: palette.primaryBrand,
-                foregroundColor: Colors.white,
+                foregroundColor: palette.onPrimary,
                 minimumSize: const Size.fromHeight(44),
               ),
               onPressed: () => context.push(
@@ -930,12 +931,22 @@ class _OrderTrackingPageState extends ConsumerState<OrderTrackingPage> {
     final isCancelled = milestone.state == 'CANCELLED';
 
     final Color dotColor = isCompleted
-        ? FixoColors.secondary
+        ? palette.success
         : isCurrent
         ? palette.primaryBrand
         : isCancelled
-        ? FixoColors.error
-        : palette.surfaceHigh;
+        ? palette.error
+        : palette.surfaceLow;
+
+    final Color iconColor = isCompleted
+        ? (Theme.of(context).brightness == Brightness.dark
+              ? FixoColors.deepestForest
+              : Colors.white)
+        : isCurrent
+        ? palette.onPrimary
+        : isCancelled
+        ? Colors.white
+        : palette.mutedText;
 
     final IconData iconData = isCompleted
         ? Icons.check_rounded
@@ -967,9 +978,7 @@ class _OrderTrackingPageState extends ConsumerState<OrderTrackingPage> {
                 child: Icon(
                   iconData,
                   size: 16,
-                  color: (isCompleted || isCurrent || isCancelled)
-                      ? Colors.white
-                      : palette.mutedText,
+                  color: iconColor,
                 ),
               ),
               if (!isLast)
@@ -977,7 +986,7 @@ class _OrderTrackingPageState extends ConsumerState<OrderTrackingPage> {
                   child: Container(
                     width: 2,
                     color: isCompleted
-                        ? FixoColors.secondary.withValues(alpha: 0.5)
+                        ? palette.success.withValues(alpha: 0.5)
                         : palette.subtleBorder,
                   ),
                 ),

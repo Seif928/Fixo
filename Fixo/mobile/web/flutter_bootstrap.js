@@ -1,8 +1,8 @@
 {{flutter_js}}
 {{flutter_build_config}}
 
-// Retire only Flutter's old offline shell; keep Firebase's push worker intact.
-(async () => {
+// Retire only Flutter's old offline shell without delaying boot on normal visits.
+async function retireLegacyFlutterServiceWorker() {
   try {
     if ('serviceWorker' in navigator) {
       const expected = new URL('flutter_service_worker.js', document.baseURI);
@@ -21,5 +21,17 @@
   } catch (_) {
     console.warn('FIXO asset cache refresh was unavailable. Continuing startup.');
   }
-  return _flutter.loader.load();
+}
+
+(async () => {
+  const controllerUrl = ('serviceWorker' in navigator && navigator.serviceWorker.controller)
+    ? navigator.serviceWorker.controller.scriptURL
+    : '';
+  if (controllerUrl.endsWith('/flutter_service_worker.js')) {
+    await retireLegacyFlutterServiceWorker();
+    return _flutter.loader.load();
+  }
+  const loadPromise = _flutter.loader.load();
+  void retireLegacyFlutterServiceWorker();
+  return loadPromise;
 })();

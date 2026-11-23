@@ -94,6 +94,19 @@ class AuthUser {
     avatarVersion: version,
   );
 
+  Map<String, dynamic> toJson() => <String, dynamic>{
+    'id': id,
+    'phone': phone,
+    'fullName': fullName,
+    'role': role,
+    if (email != null) 'email': email,
+    'preferredLocale': preferredLocale,
+    'rewardPoints': rewardPoints,
+    'requiresProfileSetup': requiresProfileSetup,
+    'hasAvatar': hasAvatar,
+    if (avatarVersion != null) 'avatarVersion': avatarVersion,
+  };
+
   factory AuthUser.fromJson(Map<String, dynamic> json) {
     if (json['id'] is! String ||
         (json['id'] as String).trim().isEmpty ||
@@ -154,6 +167,12 @@ class AuthSession {
   final String accessToken;
   final String refreshToken;
   final AuthUser user;
+
+  Map<String, dynamic> toJson() => <String, dynamic>{
+    'accessToken': accessToken,
+    'refreshToken': refreshToken,
+    'user': user.toJson(),
+  };
 
   factory AuthSession.fromJson(Map<String, dynamic> json) {
     for (final key in ['accessToken', 'refreshToken']) {

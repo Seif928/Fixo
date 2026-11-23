@@ -1,3 +1,4 @@
+import 'package:fixo_mobile/core/theme/fixo_workspace_theme.dart';
 import 'dart:convert';
 import 'dart:typed_data';
 
@@ -474,7 +475,10 @@ Future<Widget> _buildTestHarness({
             ).copyWith(textScaler: TextScaler.linear(textScale)),
             child: inner!,
           ),
-          home: child,
+          home: FixoWorkspaceTheme(
+            workspace: FixoWorkspace.customer,
+            child: child,
+          ),
         );
       },
     ),

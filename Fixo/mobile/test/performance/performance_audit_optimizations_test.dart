@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:dio/dio.dart';
+import 'package:fixo_mobile/core/location/egypt_places.dart';
 import 'package:fixo_mobile/core/theme/fixo_theme.dart';
 import 'package:fixo_mobile/core/widgets/deferred_route_view.dart';
 import 'package:fixo_mobile/core/widgets/fixo_skeleton.dart';
@@ -308,7 +309,7 @@ void main() {
     expect(find.text('Loaded Chunk'), findsOneWidget);
   });
 
-  test('Static hosting configs cache immutable assets while keeping entrypoints uncached',
+  test('Static hosting configs revalidate mutable assets and keep entrypoints uncached',
       () {
     final vercel = jsonDecode(
       File('vercel.static.json').readAsStringSync(),
@@ -328,8 +329,8 @@ void main() {
     expect(vercelBySource['/main.dart.js'], contains('no-cache'));
     expect(vercelBySource['/main.dart.mjs'], contains('no-cache'));
     expect(vercelBySource['/main.dart.wasm'], contains('no-cache'));
-    expect(vercelBySource['/assets/:path*'], contains('immutable'));
-    expect(vercelBySource['/canvaskit/:path*'], contains('immutable'));
+    expect(vercelBySource['/assets/:path*'], contains('must-revalidate'));
+    expect(vercelBySource['/canvaskit/:path*'], contains('must-revalidate'));
 
     final firebase = jsonDecode(
       File('firebase.json').readAsStringSync(),
@@ -347,8 +348,104 @@ void main() {
 
     expect(firebaseBySource['/index.html'], contains('no-cache'));
     expect(firebaseBySource['/main.dart.wasm'], contains('no-cache'));
-    expect(firebaseBySource['/assets/**'], contains('immutable'));
-    expect(firebaseBySource['/canvaskit/**'], contains('immutable'));
+    expect(firebaseBySource['/main.dart.wasm'], isNot(contains('no-store')));
+    expect(firebaseBySource['/main.dart.js'], isNot(contains('no-store')));
+    expect(firebaseBySource['/assets/**'], contains('must-revalidate'));
+    expect(firebaseBySource['/canvaskit/**'], contains('must-revalidate'));
+  });
+
+  test('DioMarketplaceRepository caches zone feed and honors forceRefresh', () async {
+    final dio = Dio(BaseOptions(baseUrl: 'https://example.test/api/v1'));
+    final adapter = _StubCategoriesAdapter();
+    dio.httpClientAdapter = adapter;
+    var networkHits = 0;
+    dio.interceptors.add(
+      InterceptorsWrapper(
+        onRequest: (options, handler) {
+          if (options.path.endsWith('/services') ||
+              options.path.endsWith('/professionals')) {
+            networkHits++;
+          }
+          handler.next(options);
+        },
+      ),
+    );
+    final repo = DioMarketplaceRepository(dio);
+
+    await repo.fetchCustomerHomeFeed(zone: 'nasr-city');
+    expect(networkHits, 2);
+
+    await repo.fetchCustomerHomeFeed(zone: 'nasr-city');
+    expect(networkHits, 2);
+
+    await repo.fetchCustomerHomeFeed(zone: 'maadi');
+    expect(networkHits, 4);
+
+    await repo.fetchCustomerHomeFeed(zone: 'nasr-city', forceRefresh: true);
+    expect(networkHits, 6);
+  });
+
+  test('EgyptPlaces pre-indexed search matches Arabic and English accurately', () {
+    final places = EgyptPlaces(const [
+      EgyptPlace(
+        id: 'EG01',
+        governorateId: 'EG01',
+        nameEn: 'Cairo',
+        nameAr: 'القاهرة',
+      ),
+      EgyptPlace(
+        id: 'EG0101',
+        governorateId: 'EG01',
+        parent: 'EG01',
+        nameEn: 'Nasr City',
+        nameAr: 'مدينة نصر',
+      ),
+      EgyptPlace(
+        id: 'EG0102',
+        governorateId: 'EG01',
+        parent: 'EG01',
+        nameEn: 'Maadi',
+        nameAr: 'المعادي',
+      ),
+    ]);
+
+    expect(places.governorates.map((g) => g.id), ['EG01']);
+    expect(places.search('EG01', '').length, 2);
+    expect(places.search('EG01', 'نصر').single.id, 'EG0101');
+    expect(places.search('EG01', 'maadi').single.id, 'EG0102');
+  });
+
+  test('Web boot files render instant splash, preconnect API, and never block loader behind SW cleanup', () {
+    final indexHtml = File('web/index.html').readAsStringSync();
+    expect(indexHtml, contains('rel="preconnect" href="https://fixo-api.vercel.app"'));
+    expect(indexHtml, contains('id="fixo-boot-splash"'));
+    expect(indexHtml, contains('flutter-first-frame'));
+
+    final bootstrapJs = File('web/flutter_bootstrap.js').readAsStringSync();
+    final loadIdx = bootstrapJs.indexOf('_flutter.loader.load()');
+    final swRegIdx = bootstrapJs.indexOf('getRegistrations()');
+    expect(loadIdx, isNonNegative);
+    expect(swRegIdx, greaterThan(-1));
+    expect(bootstrapJs, contains('void retireLegacyFlutterServiceWorker()'));
+  });
+
+  test('CanvasKit Web build uses local runtime, parallel preloads, zero Roboto fetch, and cached deferred libraries', () {
+    final buildScript = File('tool/build-web.ps1').readAsStringSync();
+    expect(buildScript, contains('--no-web-resources-cdn'));
+    expect(buildScript, contains('-O4'));
+    expect(buildScript, isNot(contains('--wasm')));
+
+    final indexHtml = File('web/index.html').readAsStringSync();
+    expect(indexHtml, contains('href="main.dart.js"'));
+    expect(indexHtml, contains('href="flutter_bootstrap.js"'));
+    expect(indexHtml, contains('canvaskit.wasm'));
+    expect(indexHtml, contains('assets/assets/fonts/manrope/Manrope.ttf'));
+    expect(indexHtml, contains('assets/assets/fonts/cairo/Cairo.ttf'));
+
+    final typography = File('lib/core/theme/fixo_typography.dart').readAsStringSync();
+    expect(typography, isNot(contains("'Roboto'")));
+
+    final deferredView = File('lib/core/widgets/deferred_route_view.dart').readAsStringSync();
+    expect(deferredView, contains('_loadedLibraries'));
   });
 }
-

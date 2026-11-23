@@ -67,7 +67,7 @@ class FixoTrustPillarChip extends StatelessWidget {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(icon, size: 18, color: FixoColors.secondary),
+          Icon(icon, size: 18, color: palette.primaryBrand),
           const SizedBox(width: 6),
           Flexible(
             child: Text(
@@ -129,8 +129,8 @@ class FixoStatusBadge extends StatelessWidget {
             Container(
               width: 6,
               height: 6,
-              decoration: const BoxDecoration(
-                color: FixoColors.secondary,
+              decoration: BoxDecoration(
+                color: palette.primaryBrand,
                 shape: BoxShape.circle,
               ),
             ),

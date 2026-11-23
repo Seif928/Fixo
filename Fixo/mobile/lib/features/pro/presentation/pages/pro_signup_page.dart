@@ -169,13 +169,13 @@ class _ProSignUpPageState extends ConsumerState<ProSignUpPage> {
                                     vertical: 4,
                                   ),
                                   decoration: BoxDecoration(
-                                    color: FixoColors.primaryForest,
+                                    color: palette.primaryBrand,
                                     borderRadius: FixoRadius.borderRadiusPill,
                                   ),
                                   child: Text(
                                     ar ? 'الخطوة ١ من ٤' : 'Step 1 of 4',
                                     style: FixoTypography.labelSm(
-                                      color: FixoColors.limeAccent,
+                                      color: palette.onPrimary,
                                     ).copyWith(fontWeight: FontWeight.w800),
                                   ),
                                 ),
@@ -202,13 +202,13 @@ class _ProSignUpPageState extends ConsumerState<ProSignUpPage> {
                               ),
                               padding: const EdgeInsets.all(FixoSpacing.sm),
                               decoration: BoxDecoration(
-                                color: FixoColors.errorContainer,
+                                color: palette.errorContainer,
                                 borderRadius: FixoRadius.borderRadiusMd,
                               ),
                               child: Text(
                                 _errorMessage!,
                                 style: FixoTypography.bodySm(
-                                  color: FixoColors.onErrorContainer,
+                                  color: palette.onErrorContainer,
                                 ),
                               ),
                             ),
@@ -295,20 +295,21 @@ class _ProSignUpPageState extends ConsumerState<ProSignUpPage> {
                           FilledButton.icon(
                             style: FilledButton.styleFrom(
                               minimumSize: const Size(0, 52),
-                              backgroundColor: FixoColors.primaryForest,
+                              backgroundColor: palette.primaryBrand,
+                              foregroundColor: palette.onPrimary,
                               shape: RoundedRectangleBorder(
                                 borderRadius: FixoRadius.borderRadiusMd,
                               ),
                             ),
                             onPressed: _saving ? null : () => _submit(ar),
                             icon: _saving
-                                ? const SizedBox(
+                                ? SizedBox(
                                     width: 20,
                                     height: 20,
                                     child: CircularProgressIndicator(
                                       strokeWidth: 2,
                                       valueColor: AlwaysStoppedAnimation(
-                                        Colors.white,
+                                        palette.onPrimary,
                                       ),
                                     ),
                                   )
@@ -322,7 +323,7 @@ class _ProSignUpPageState extends ConsumerState<ProSignUpPage> {
                                   ? 'المتابعة لتحديد المهارات والتغطية'
                                   : 'Continue to Skills & Coverage',
                               style: FixoTypography.labelLg(
-                                color: Colors.white,
+                                color: palette.onPrimary,
                               ).copyWith(fontWeight: FontWeight.bold),
                             ),
                           ),

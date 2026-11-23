@@ -30,7 +30,7 @@ import {
 import { PrismaService } from '../../prisma/prisma.service';
 import { INTERNAL_FAILED_PIN_EVENT_NOTE } from '../bookings/bookings.service';
 import { validatePrivateUploadPayload } from '../bookings/private-upload.util';
-import { createHash, randomUUID } from 'crypto';
+import { createHash, randomInt, randomUUID, timingSafeEqual } from 'crypto';
 import { PrivateStorageService } from '../media/private-storage.service';
 import { normalizePrivatePhoto } from '../media/normalize-private-photo';
 import { PushService } from '../communications/push.service';
@@ -992,7 +992,6 @@ export class ProService {
             proProfileId: profile.id,
             status: JobOfferStatus.PENDING,
             expiresAt: { gt: now },
-            proProfile: { verificationStatus: ProVerificationStatus.APPROVED },
           },
           include: {
             booking: {
@@ -1458,10 +1457,14 @@ export class ProService {
           );
         }
 
-        if (
-          !dto.arrivalPinCode ||
-          dto.arrivalPinCode.trim() !== booking.arrivalPinCode
-        ) {
+        const submittedPin = Buffer.from(dto.arrivalPinCode?.trim() ?? '');
+        const expectedPin = Buffer.from(booking.arrivalPinCode ?? '');
+        const pinMatches =
+          submittedPin.length > 0 &&
+          submittedPin.length === expectedPin.length &&
+          timingSafeEqual(submittedPin, expectedPin);
+
+        if (!pinMatches) {
           await tx.bookingStatusEvent.create({
             data: {
               bookingId: booking.id,
@@ -1495,7 +1498,7 @@ export class ProService {
         COMPLETED: 'Service completed and cash settlement confirmed',
       };
 
-      await tx.booking.update({
+      const updatedBooking = await tx.booking.update({
         where: { id: booking.id },
         data: {
           status: dto.toStatus as BookingStatus,
@@ -1511,13 +1514,14 @@ export class ProService {
         },
       });
 
+      let updatedPayment = updatedBooking.payment;
       if (dto.toStatus === BookingStatus.COMPLETED) {
         if (
           booking.payment &&
           booking.payment.method === PaymentMethodType.CASH_ON_SERVICE &&
           booking.payment.status !== PaymentStatus.PAID
         ) {
-          await tx.paymentRecord.update({
+          updatedPayment = await tx.paymentRecord.update({
             where: { id: booking.payment.id },
             data: {
               status: PaymentStatus.PAID,
@@ -1544,15 +1548,10 @@ export class ProService {
         },
       });
 
-      const updated = await tx.booking.findUniqueOrThrow({
-        where: { id: booking.id },
-        include: {
-          offering: { include: { category: true } },
-          address: { include: { zone: true } },
-          customer: { select: { id: true, fullName: true, phone: true } },
-          payment: true,
-        },
-      });
+      const updated =
+        updatedPayment !== updatedBooking.payment
+          ? { ...updatedBooking, payment: updatedPayment }
+          : updatedBooking;
       return { updated, changed: true, pinError: null };
     });
 
@@ -1658,7 +1657,7 @@ export class ProService {
 
   private async generateUniqueDossierCode(): Promise<string> {
     for (let i = 0; i < 5; i++) {
-      const num = Math.floor(1000 + Math.random() * 9000);
+      const num = randomInt(1000, 10000);
       const code = `FX-PRO-${num}`;
       const existing = await this.prisma.proProfile.findUnique({
         where: { dossierCode: code },

@@ -1,5 +1,7 @@
 # FIXO — consolidated approved work and remaining scope
 
+Latest: [Unified Flutter release and session persistence](UNIFIED_FLUTTER_RELEASE_2026-11-17.md). Owner chose Flutter for mobile/Web/admin; independent Next.js client retired. Secure-vault restoration, legacy migration, offline session handling, compatibility routes and cache fixes passed 598 Flutter tests; backend passed 570 tests. Approved live backend-only access migration applied. Fresh reported Google sign-in error still needs exact reproduction; existing Chrome session recovery was observed. See the checkpoint for rollout and limits.
+
 Latest client repair: [Web responsiveness and Google sign-in](WEB_PERFORMANCE_GOOGLE_2026-11-11.md). Finite decorative effects, cheaper Web surfaces, prepared Google popups, official Google artwork and first-frame session gating. 577 Flutter tests passed with 2 existing opt-in skips; analyze and Web/Android debug builds passed. See the repair checkpoint for rollout evidence and remaining validation limits.
 
 Current work: [Clerk trial and native push correction](CLERK_PUSH_RELEASE_2026-11-11.md). Gated dual-proof identity linking/exchange and provider-bound refresh are implemented; Clerk is still disabled on the live API pending real credentials/client proof. FID sending, native configuration and expired-session push cleanup are corrected. Refer to that checkpoint for final test/build/deployment evidence and remaining device/account prerequisites. Older entries below describe prior releases.

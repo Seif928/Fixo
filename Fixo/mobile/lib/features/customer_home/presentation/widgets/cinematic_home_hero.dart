@@ -56,8 +56,8 @@ class CinematicHomeHero extends StatelessWidget {
                 icon: const Icon(Icons.arrow_forward_rounded),
                 label: Text(isArabic ? 'اكتشف الخدمات' : 'Explore services'),
                 style: FilledButton.styleFrom(
-                  backgroundColor: FixoColors.limeAccent,
-                  foregroundColor: FixoColors.deepestForest,
+                  backgroundColor: p.primaryBrand,
+                  foregroundColor: p.onPrimary,
                   minimumSize: const Size(0, 50),
                   padding: const EdgeInsets.symmetric(horizontal: 22),
                 ),

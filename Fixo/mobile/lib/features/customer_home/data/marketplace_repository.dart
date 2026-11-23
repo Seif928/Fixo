@@ -43,7 +43,11 @@ class DioMarketplaceRepository implements MarketplaceRepository {
   static final Expando<_CachedCategoriesEntry> _categoriesCacheByDio =
       Expando<_CachedCategoriesEntry>('fixoCategoriesCache');
 
-  static const Duration _categoriesCacheTtl = Duration(seconds: 30);
+  static final Expando<Map<String, _CachedFeedEntry>> _feedCacheByDio =
+      Expando<Map<String, _CachedFeedEntry>>('fixoFeedCache');
+
+  static const Duration _categoriesCacheTtl = Duration(minutes: 5);
+  static const Duration _feedCacheTtl = Duration(seconds: 45);
 
   Future<Response<Map<String, dynamic>>> _getCategoriesDeduped() {
     final now = DateTime.now();
@@ -75,7 +79,21 @@ class DioMarketplaceRepository implements MarketplaceRepository {
     String? categoryId,
     String? zone,
     CancelToken? cancelToken,
+    bool forceRefresh = false,
   }) async {
+    final isDefaultFeed =
+        (search == null || search.trim().isEmpty) &&
+        (categoryId == null || categoryId.trim().isEmpty);
+    final zoneKey = zone?.trim() ?? '';
+    final now = DateTime.now();
+    if (isDefaultFeed && !forceRefresh) {
+      final cachedMap = _feedCacheByDio[_dio];
+      final cachedEntry = cachedMap?[zoneKey];
+      if (cachedEntry != null && now.isBefore(cachedEntry.expiresAt)) {
+        return cachedEntry.feed;
+      }
+    }
+
     try {
       final categoriesFuture = _getCategoriesDeduped();
       final servicesFuture = _dio.get<Map<String, dynamic>>(
@@ -127,7 +145,7 @@ class DioMarketplaceRepository implements MarketplaceRepository {
           (categoriesPayload['meta'] as Map<String, dynamic>?) ??
           const <String, dynamic>{};
 
-      return CustomerHomeFeed(
+      final feed = CustomerHomeFeed(
         zones: rawZones
             .whereType<Map<String, dynamic>>()
             .map(CoverageZoneModel.fromJson)
@@ -147,6 +165,14 @@ class DioMarketplaceRepository implements MarketplaceRepository {
         storageMode: meta['storageMode'] as String? ?? 'UNKNOWN',
         databaseConnected: meta['databaseConnected'] as bool? ?? false,
       );
+      if (isDefaultFeed) {
+        final cacheMap = _feedCacheByDio[_dio] ??= <String, _CachedFeedEntry>{};
+        cacheMap[zoneKey] = _CachedFeedEntry(
+          feed: feed,
+          expiresAt: DateTime.now().add(_feedCacheTtl),
+        );
+      }
+      return feed;
     } on DioException catch (error) {
       throw _mapError(
         error,
@@ -234,6 +260,16 @@ class _CachedCategoriesEntry {
   });
 
   final Future<Response<Map<String, dynamic>>> future;
+  final DateTime expiresAt;
+}
+
+class _CachedFeedEntry {
+  const _CachedFeedEntry({
+    required this.feed,
+    required this.expiresAt,
+  });
+
+  final CustomerHomeFeed feed;
   final DateTime expiresAt;
 }
 

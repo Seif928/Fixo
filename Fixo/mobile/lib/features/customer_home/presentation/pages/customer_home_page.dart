@@ -1,3 +1,5 @@
+import '../../../../core/theme/fixo_workspace_theme.dart';
+import '../../../../core/widgets/workspace_heading.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -24,6 +26,7 @@ import '../controllers/customer_home_controller.dart';
 import '../widgets/customer_home_widgets.dart';
 import '../widgets/cinematic_home_hero.dart';
 import '../widgets/service_catalog_sheet.dart';
+import '../widgets/booking_help_sheet.dart';
 
 /// Native Flutter implementation of live Stitch Screen 03 (`03 — Customer Home`,
 /// ID `ba52cf458e2a49b191b6912ea76117fa`).
@@ -39,7 +42,26 @@ class _CustomerHomePageState extends ConsumerState<CustomerHomePage> {
   bool _showAllCategories = false;
   bool _showAllServices = false;
 
-  Future<void> _browseServices() async {
+  Future<void> _showBookingHelp() async {
+    final owner = ref.read(authControllerProvider).session?.user.id;
+    final action = await showModalBottomSheet<BookingHelpAction>(
+      context: context,
+      showDragHandle: true,
+      useSafeArea: true,
+      isScrollControlled: true,
+      constraints: const BoxConstraints(maxWidth: 600),
+      builder: (_) => BookingHelpSheet(
+        isArabic: ref.read(appLocaleProvider).languageCode == 'ar',
+      ),
+    );
+    if (!mounted || owner != ref.read(authControllerProvider).session?.user.id) {
+      return;
+    }
+    if (action == BookingHelpAction.services) await _browseServices();
+    if (action == BookingHelpAction.location) await _chooseArea();
+  }
+
+  Future<void> _browseServices({ServiceCategoryModel? category}) async {
     final owner = ref.read(authControllerProvider).session?.user.id;
     final selected = await showModalBottomSheet<ServiceOfferModel>(
       context: context,
@@ -49,6 +71,7 @@ class _CustomerHomePageState extends ConsumerState<CustomerHomePage> {
       constraints: const BoxConstraints(maxWidth: 600),
       builder: (_) => ServiceCatalogSheet(
         isArabic: ref.read(appLocaleProvider).languageCode == 'ar',
+        category: category,
       ),
     );
     if (!mounted ||
@@ -57,6 +80,15 @@ class _CustomerHomePageState extends ConsumerState<CustomerHomePage> {
       return;
     }
     _navigateToCreateBooking(offering: selected);
+  }
+
+  void _openCategory(ServiceCategoryModel category) {
+    final controller = ref.read(customerHomeControllerProvider.notifier);
+    if (ref.read(customerHomeControllerProvider).selectedCategorySlug !=
+        category.slug) {
+      controller.selectCategory(category.slug);
+    }
+    _browseServices(category: category);
   }
 
   Future<void> _chooseArea() async {
@@ -212,7 +244,12 @@ class _CustomerHomePageState extends ConsumerState<CustomerHomePage> {
   }
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context) => FixoWorkspaceTheme(
+    workspace: FixoWorkspace.customer,
+    child: Consumer(builder: (context, ref, _) => _buildPage(context, ref)),
+  );
+
+  Widget _buildPage(BuildContext context, WidgetRef ref) {
     final homeState = ref.watch(customerHomeControllerProvider);
     final homeNotifier = ref.read(customerHomeControllerProvider.notifier);
     final isArabic = ref.watch(
@@ -257,7 +294,7 @@ class _CustomerHomePageState extends ConsumerState<CustomerHomePage> {
             Expanded(
               child: RefreshIndicator(
                 color: palette.primaryBrand,
-                onRefresh: homeNotifier.loadFeed,
+                onRefresh: () => homeNotifier.loadFeed(forceRefresh: true),
                 child: _buildScrollableBody(
                   context,
                   homeState: homeState,
@@ -322,10 +359,10 @@ class _CustomerHomePageState extends ConsumerState<CustomerHomePage> {
                           Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              const Icon(
+                              Icon(
                                 Icons.location_on_outlined,
                                 size: 14,
-                                color: FixoColors.secondary,
+                                color: palette.primaryBrand,
                               ),
                               const SizedBox(width: 2),
                               Flexible(
@@ -348,10 +385,10 @@ class _CustomerHomePageState extends ConsumerState<CustomerHomePage> {
                                   ),
                                 ),
                               ),
-                              const Icon(
+                              Icon(
                                 Icons.keyboard_arrow_down_rounded,
                                 size: 15,
-                                color: FixoColors.outline,
+                                color: palette.mutedText,
                               ),
                             ],
                           ),
@@ -508,10 +545,10 @@ class _CustomerHomePageState extends ConsumerState<CustomerHomePage> {
             child: Row(
               children: [
                 const SizedBox(width: 12),
-                const Icon(
+                Icon(
                   Icons.search_rounded,
                   size: 20,
-                  color: FixoColors.outline,
+                  color: palette.mutedText,
                 ),
                 Expanded(
                   child: TextField(
@@ -643,7 +680,7 @@ class _CustomerHomePageState extends ConsumerState<CustomerHomePage> {
               key: const Key('btn-retry-home'),
               label: isArabic ? 'إعادة المحاولة' : 'Retry Connection',
               trailingIcon: Icons.refresh_rounded,
-              onPressed: notifier.loadFeed,
+              onPressed: () => notifier.loadFeed(forceRefresh: true),
             ),
           ],
         ),
@@ -700,12 +737,24 @@ class _CustomerHomePageState extends ConsumerState<CustomerHomePage> {
     required FixoPaletteExtension palette,
   }) {
     final maxWidth = MediaQuery.sizeOf(context).width >= 1000 ? 1200.0 : 600.0;
-    final locationBar = _buildLocationAndSearchSection(
-      context,
-      homeState: homeState,
-      homeNotifier: homeNotifier,
-      isArabic: isArabic,
-      palette: palette,
+    final locationBar = Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+          child: WorkspaceHeading(
+            workspace: FixoWorkspace.customer,
+            isArabic: isArabic,
+          ),
+        ),
+        _buildLocationAndSearchSection(
+          context,
+          homeState: homeState,
+          homeNotifier: homeNotifier,
+          isArabic: isArabic,
+          palette: palette,
+        ),
+      ],
     );
 
     if (homeState.isLoading ||
@@ -844,7 +893,6 @@ class _CustomerHomePageState extends ConsumerState<CustomerHomePage> {
     bool forceCompactWidgets = false,
   }) {
     final feed = homeState.feed!;
-    final isDark = Theme.of(context).brightness == Brightness.dark;
     final selectedCategory = homeState.selectedCategorySlug;
     final seasonalPromo =
         (selectedCategory == null ||
@@ -878,178 +926,174 @@ class _CustomerHomePageState extends ConsumerState<CustomerHomePage> {
     final virtualizePros = !forceCompactWidgets && professionals.length > 6;
 
     final leadingLandingChildren = <Widget>[
-            CinematicHomeHero(isArabic: isArabic, onBrowse: _browseServices),
-            if (seasonalPromo != null)
-              Padding(
-                padding: const EdgeInsets.fromLTRB(16, 0, 16, 20),
-                child: SeasonalPromoHeroCard(
-                  offer: seasonalPromo,
-                  isArabic: isArabic,
-                  onBookNow: () =>
-                      _navigateToCreateBooking(offering: seasonalPromo),
-                ),
-              ),
-            // 1B. Pinned Liquid Glass Category & Sort Bar
-            _buildLiquidGlassFilterAndSortBar(
-              context,
-              homeState: homeState,
-              homeNotifier: homeNotifier,
-              categories: categories,
+      RepaintBoundary(
+        child: CinematicHomeHero(isArabic: isArabic, onBrowse: _browseServices),
+      ),
+      if (seasonalPromo != null)
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 0, 16, 20),
+          child: RepaintBoundary(
+            child: SeasonalPromoHeroCard(
+              offer: seasonalPromo,
               isArabic: isArabic,
-              palette: palette,
-            ),
-
-        // 2. Select Service Category (6 Ready + 2-column grid)
-        if (categories.isNotEmpty) ...[
-          Padding(
-            padding: const EdgeInsets.fromLTRB(
-              FixoSpacing.md,
-              8,
-              FixoSpacing.md,
-              10,
-            ),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Flexible(
-                  child: Wrap(
-                    crossAxisAlignment: WrapCrossAlignment.center,
-                    spacing: 6,
-                    runSpacing: 4,
-                    children: [
-                      Text(
-                        isArabic
-                            ? 'اختر فئة الخدمة'
-                            : 'Select Service Category',
-                        style: FixoTypography.headlineSm(
-                          color: palette.inkText,
-                        ).copyWith(fontWeight: FontWeight.w700),
-                      ),
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 6,
-                          vertical: 2,
-                        ),
-                        decoration: BoxDecoration(
-                          color: palette.surfaceHigh,
-                          borderRadius: BorderRadius.circular(4),
-                        ),
-                        child: Text(
-                          isArabic
-                              ? '${categories.length} متاحة'
-                              : '${categories.length} Ready',
-                          style: FixoTypography.labelMd(
-                            color: palette.mutedText,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                TextButton(
-                  key: const Key('btn-view-all-categories-and-services'),
-                  onPressed: () {
-                    final hasActiveFilter =
-                        homeState.selectedCategorySlug != null ||
-                        homeState.searchQuery.trim().isNotEmpty;
-                    if (hasActiveFilter) {
-                      homeNotifier.clearFilters();
-                      setState(() {
-                        _showAllCategories = true;
-                        _showAllServices = true;
-                      });
-                    } else {
-                      final expandAll =
-                          !(_showAllCategories && _showAllServices);
-                      setState(() {
-                        _showAllCategories = expandAll;
-                        _showAllServices = expandAll;
-                      });
-                    }
-                  },
-                  child: Text(
-                    (_showAllCategories &&
-                            _showAllServices &&
-                            homeState.selectedCategorySlug == null &&
-                            homeState.searchQuery.trim().isEmpty)
-                        ? (isArabic ? 'عرض أقل' : 'Show Less')
-                        : (isArabic ? 'عرض الكل' : 'View All'),
-                    style: FixoTypography.labelMd(
-                      color: isDark
-                          ? FixoColors.goldBright
-                          : FixoColors.secondary,
-                    ).copyWith(fontWeight: FontWeight.w700),
-                  ),
-                ),
-              ],
+              onBookNow: () =>
+                  _navigateToCreateBooking(offering: seasonalPromo),
             ),
           ),
+        ),
+      // 1B. Pinned Liquid Glass Category & Sort Bar
+      _buildLiquidGlassFilterAndSortBar(
+        context,
+        homeState: homeState,
+        homeNotifier: homeNotifier,
+        categories: categories,
+        isArabic: isArabic,
+        palette: palette,
+      ),
+
+      // 2. Select Service Category (6 Ready + 2-column grid)
+      if (categories.isNotEmpty) ...[
+        Padding(
+          padding: const EdgeInsets.fromLTRB(
+            FixoSpacing.md,
+            8,
+            FixoSpacing.md,
+            10,
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Flexible(
+                child: Wrap(
+                  crossAxisAlignment: WrapCrossAlignment.center,
+                  spacing: 6,
+                  runSpacing: 4,
+                  children: [
+                    Text(
+                      isArabic ? 'اختر فئة الخدمة' : 'Select Service Category',
+                      style: FixoTypography.headlineSm(
+                        color: palette.inkText,
+                      ).copyWith(fontWeight: FontWeight.w700),
+                    ),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 6,
+                        vertical: 2,
+                      ),
+                      decoration: BoxDecoration(
+                        color: palette.surfaceHigh,
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                      child: Text(
+                        isArabic
+                            ? '${categories.length} متاحة'
+                            : '${categories.length} Ready',
+                        style: FixoTypography.labelMd(color: palette.mutedText),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              TextButton(
+                key: const Key('btn-view-all-categories-and-services'),
+                onPressed: () {
+                  final hasActiveFilter =
+                      homeState.selectedCategorySlug != null ||
+                      homeState.searchQuery.trim().isNotEmpty;
+                  if (hasActiveFilter) {
+                    homeNotifier.clearFilters();
+                    setState(() {
+                      _showAllCategories = true;
+                      _showAllServices = true;
+                    });
+                  } else {
+                    final expandAll = !(_showAllCategories && _showAllServices);
+                    setState(() {
+                      _showAllCategories = expandAll;
+                      _showAllServices = expandAll;
+                    });
+                  }
+                },
+                child: Text(
+                  (_showAllCategories &&
+                          _showAllServices &&
+                          homeState.selectedCategorySlug == null &&
+                          homeState.searchQuery.trim().isEmpty)
+                      ? (isArabic ? 'عرض أقل' : 'Show Less')
+                      : (isArabic ? 'عرض الكل' : 'View All'),
+                  style: FixoTypography.labelMd(
+                    color: palette.primaryBrand,
+                  ).copyWith(fontWeight: FontWeight.w700),
+                ),
+              ),
+            ],
+          ),
+        ),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: FixoSpacing.md),
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              final spacing = 12.0;
+              final columns = constraints.maxWidth >= 1000
+                  ? 4
+                  : constraints.maxWidth >= 760
+                  ? 3
+                  : 2;
+              final itemWidth =
+                  (constraints.maxWidth - spacing * (columns - 1)) / columns;
+
+              return Wrap(
+                spacing: spacing,
+                runSpacing: spacing,
+                children: visibleCategories.map((category) {
+                  return SizedBox(
+                    width: itemWidth,
+                    child: ServiceCategoryGridTile(
+                      category: category,
+                      isArabic: isArabic,
+                      isSelected:
+                          homeState.selectedCategorySlug == category.slug,
+                      onTap: () => _openCategory(category),
+                    ),
+                  );
+                }).toList(),
+              );
+            },
+          ),
+        ),
+        if (categories.length > 8 && homeState.searchQuery.trim().isEmpty) ...[
+          const SizedBox(height: 10),
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: FixoSpacing.md),
-            child: LayoutBuilder(
-              builder: (context, constraints) {
-                final spacing = 12.0;
-                final columns = constraints.maxWidth >= 1000
-                    ? 4
-                    : constraints.maxWidth >= 760
-                    ? 3
-                    : 2;
-                final itemWidth =
-                    (constraints.maxWidth - spacing * (columns - 1)) / columns;
-
-                return Wrap(
-                  spacing: spacing,
-                  runSpacing: spacing,
-                  children: visibleCategories.map((category) {
-                    return SizedBox(
-                      width: itemWidth,
-                      child: ServiceCategoryGridTile(
-                        category: category,
-                        isArabic: isArabic,
-                        isSelected:
-                            homeState.selectedCategorySlug == category.slug,
-                        onTap: () => homeNotifier.selectCategory(category.slug),
-                      ),
-                    );
-                  }).toList(),
-                );
-              },
-            ),
-          ),
-          if (categories.length > 8 &&
-              homeState.searchQuery.trim().isEmpty) ...[
-            const SizedBox(height: 10),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: FixoSpacing.md),
-              child: Align(
-                alignment: Alignment.center,
-                child: TextButton.icon(
-                  key: const Key('btn-toggle-all-categories'),
-                  onPressed: () => setState(() {
-                    _showAllCategories = !_showAllCategories;
-                  }),
-                  icon: Icon(
-                    _showAllCategories
-                        ? Icons.expand_less_rounded
-                        : Icons.grid_view_rounded,
-                    size: 18,
-                    color: FixoColors.secondary,
-                  ),
-                  label: Text(
-                    _showAllCategories
-                        ? (isArabic ? 'عرض أقسام أقل' : 'Show Less Categories')
-                        : (isArabic
-                              ? 'عرض كل الأقسام (${categories.length})'
-                              : 'Show All Categories (${categories.length})'),
-                    style: FixoTypography.labelMd(
-                      color: FixoColors.secondary,
-                    ).copyWith(fontWeight: FontWeight.w700),
-                  ),
+            child: Align(
+              alignment: Alignment.center,
+              child: TextButton.icon(
+                key: const Key('btn-toggle-all-categories'),
+                onPressed: () => setState(() {
+                  _showAllCategories = !_showAllCategories;
+                }),
+                icon: Icon(
+                  _showAllCategories
+                      ? Icons.expand_less_rounded
+                      : Icons.grid_view_rounded,
+                  size: 18,
+                  color: palette.primaryBrand,
+                ),
+                label: Text(
+                  _showAllCategories
+                      ? (isArabic ? 'عرض أقسام أقل' : 'Show Less Categories')
+                      : (isArabic
+                            ? 'عرض كل الأقسام (${categories.length})'
+                            : 'Show All Categories (${categories.length})'),
+                  style: FixoTypography.labelMd(
+                    color: palette.primaryBrand,
+                  ).copyWith(fontWeight: FontWeight.w700),
                 ),
               ),
             ),
-          ],
+          ),
         ],
+      ],
     ];
 
     Widget buildServiceCard(int index) {
@@ -1129,9 +1173,7 @@ class _CustomerHomePageState extends ConsumerState<CustomerHomePage> {
                       ? (isArabic ? 'عرض أقل' : 'Show Less')
                       : (isArabic ? 'عرض الكل' : 'View All'),
                   style: FixoTypography.labelMd(
-                    color: isDark
-                        ? FixoColors.goldBright
-                        : FixoColors.secondary,
+                    color: palette.primaryBrand,
                   ).copyWith(fontWeight: FontWeight.w700),
                 ),
               ),
@@ -1141,7 +1183,7 @@ class _CustomerHomePageState extends ConsumerState<CustomerHomePage> {
                 child: Text(
                   isArabic ? 'تصفح الكل' : 'Browse All',
                   style: FixoTypography.labelMd(
-                    color: isDark ? palette.limeAccent : FixoColors.secondary,
+                    color: palette.primaryBrand,
                   ).copyWith(fontWeight: FontWeight.w700),
                 ),
               ),
@@ -1168,7 +1210,7 @@ class _CustomerHomePageState extends ConsumerState<CustomerHomePage> {
                     ? Icons.expand_less_rounded
                     : Icons.expand_more_rounded,
                 size: 18,
-                color: FixoColors.secondary,
+                color: palette.primaryBrand,
               ),
               label: Text(
                 _showAllServices
@@ -1177,7 +1219,7 @@ class _CustomerHomePageState extends ConsumerState<CustomerHomePage> {
                           ? 'عرض كل الخدمات (${catalogServices.length})'
                           : 'Show All Services (${catalogServices.length})'),
                 style: FixoTypography.labelMd(
-                  color: FixoColors.secondary,
+                  color: palette.primaryBrand,
                 ).copyWith(fontWeight: FontWeight.w700),
               ),
             ),
@@ -1188,10 +1230,12 @@ class _CustomerHomePageState extends ConsumerState<CustomerHomePage> {
 
     Widget buildBundleSection() => Padding(
       padding: const EdgeInsets.fromLTRB(FixoSpacing.md, 20, FixoSpacing.md, 0),
-      child: BundleSaveInspectionCard(
-        offer: bundleOffer!,
-        isArabic: isArabic,
-        onTap: () => _navigateToCreateBooking(offering: bundleOffer),
+      child: RepaintBoundary(
+        child: BundleSaveInspectionCard(
+          offer: bundleOffer!,
+          isArabic: isArabic,
+          onTap: () => _navigateToCreateBooking(offering: bundleOffer),
+        ),
       ),
     );
 
@@ -1234,7 +1278,7 @@ class _CustomerHomePageState extends ConsumerState<CustomerHomePage> {
               child: Text(
                 isArabic ? 'استكشاف' : 'Explore',
                 style: FixoTypography.labelMd(
-                  color: FixoColors.secondary,
+                  color: palette.primaryBrand,
                 ).copyWith(fontWeight: FontWeight.w700),
               ),
             ),
@@ -1274,23 +1318,7 @@ class _CustomerHomePageState extends ConsumerState<CustomerHomePage> {
 
     Widget buildConciergeBanner() => Padding(
       padding: const EdgeInsets.fromLTRB(FixoSpacing.md, 20, FixoSpacing.md, 0),
-      child: ConciergeQuoteBanner(
-        isArabic: isArabic,
-        onTap: () {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              behavior: SnackBarBehavior.floating,
-              backgroundColor: FixoColors.primaryForest,
-              content: Text(
-                isArabic
-                    ? 'اختار الخدمة، وضيف عنوانك وميعادك، وبعدها أكد الدفع نقداً بعد التنفيذ.'
-                    : 'Choose a service, add your address and time, then confirm cash after service.',
-                style: FixoTypography.bodySm(color: Colors.white),
-              ),
-            ),
-          );
-        },
-      ),
+      child: ConciergeQuoteBanner(isArabic: isArabic, onTap: _showBookingHelp),
     );
 
     if (!virtualizeServices && !virtualizePros) {
@@ -1374,8 +1402,10 @@ class _CustomerHomePageState extends ConsumerState<CustomerHomePage> {
       return SliverLayoutBuilder(
         builder: (context, constraints) {
           final availableWidth =
-              (constraints.crossAxisExtent - FixoSpacing.md * 2)
-                  .clamp(1.0, double.infinity);
+              (constraints.crossAxisExtent - FixoSpacing.md * 2).clamp(
+                1.0,
+                double.infinity,
+              );
           final columns = availableWidth >= wideBreakpoint
               ? wideColumns
               : availableWidth >= midBreakpoint
@@ -1467,11 +1497,8 @@ class _CustomerHomePageState extends ConsumerState<CustomerHomePage> {
     required FixoPaletteExtension palette,
     required VoidCallback onTap,
   }) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Material(
-      color: isActive
-          ? (isDark ? FixoColors.primaryForest : palette.surfaceHigh)
-          : Colors.transparent,
+      color: isActive ? palette.primaryContainer : Colors.transparent,
       borderRadius: FixoRadius.borderRadiusPill,
       child: InkWell(
         onTap: onTap,
@@ -1484,18 +1511,14 @@ class _CustomerHomePageState extends ConsumerState<CustomerHomePage> {
               Icon(
                 icon,
                 size: 16,
-                color: isActive
-                    ? (isDark ? FixoColors.limeAccent : palette.deepForest)
-                    : palette.mutedText,
+                color: isActive ? palette.primaryBrand : palette.mutedText,
               ),
               const SizedBox(width: 6),
               Text(
                 label,
                 style:
                     FixoTypography.labelMd(
-                      color: isActive
-                          ? (isDark ? Colors.white : palette.deepForest)
-                          : palette.mutedText,
+                      color: isActive ? palette.inkText : palette.mutedText,
                     ).copyWith(
                       fontWeight: isActive ? FontWeight.w800 : FontWeight.w600,
                     ),
@@ -1570,12 +1593,12 @@ class _CustomerHomePageState extends ConsumerState<CustomerHomePage> {
                       ),
                       decoration: BoxDecoration(
                         color: homeState.sortMode == opt.id
-                            ? FixoColors.primaryForest
-                            : palette.surfaceContainer,
+                            ? palette.primaryBrand
+                            : palette.surfaceLow,
                         borderRadius: FixoRadius.borderRadiusPill,
                         border: Border.all(
                           color: homeState.sortMode == opt.id
-                              ? FixoColors.limeAccent.withValues(alpha: 0.7)
+                              ? palette.primaryBrand
                               : palette.subtleBorder,
                         ),
                       ),
@@ -1583,7 +1606,7 @@ class _CustomerHomePageState extends ConsumerState<CustomerHomePage> {
                         isArabic ? opt.labelAr : opt.labelEn,
                         style: FixoTypography.labelSm(
                           color: homeState.sortMode == opt.id
-                              ? FixoColors.limeAccent
+                              ? palette.onPrimary
                               : palette.inkText,
                         ).copyWith(fontWeight: FontWeight.w700),
                       ),
@@ -1605,7 +1628,7 @@ class _CustomerHomePageState extends ConsumerState<CustomerHomePage> {
                     borderRadius: FixoRadius.borderRadiusPill,
                     onTap: () {
                       HapticFeedback.selectionClick();
-                      homeNotifier.selectCategory(cat.slug);
+                      _openCategory(cat);
                     },
                     child: Container(
                       padding: const EdgeInsets.symmetric(
@@ -1614,12 +1637,12 @@ class _CustomerHomePageState extends ConsumerState<CustomerHomePage> {
                       ),
                       decoration: BoxDecoration(
                         color: homeState.selectedCategorySlug == cat.slug
-                            ? FixoColors.secondaryForest
+                            ? palette.primaryContainer
                             : Colors.transparent,
                         borderRadius: FixoRadius.borderRadiusPill,
                         border: Border.all(
                           color: homeState.selectedCategorySlug == cat.slug
-                              ? FixoColors.goldBright
+                              ? palette.primaryBrand
                               : palette.subtleBorder,
                         ),
                       ),
@@ -1629,7 +1652,7 @@ class _CustomerHomePageState extends ConsumerState<CustomerHomePage> {
                             : 'Trade: ${cat.localizedName(false)}',
                         style: FixoTypography.labelSm(
                           color: homeState.selectedCategorySlug == cat.slug
-                              ? Colors.white
+                              ? palette.inkText
                               : palette.mutedText,
                         ).copyWith(fontWeight: FontWeight.w600),
                       ),

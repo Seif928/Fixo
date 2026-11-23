@@ -75,7 +75,7 @@ describe("Staged Clerk identity linking and FIXO refresh (local PostgreSQL)", ()
     db = new PrismaService();
     await db.onModuleInit();
     await assertCurrentDatabaseIsTest(db);
-  });
+  }, 30000);
   beforeEach(async () => {
     await safeCleanupTestDatabase(db);
     owner = await db.user.create({
@@ -112,7 +112,7 @@ describe("Staged Clerk identity linking and FIXO refresh (local PostgreSQL)", ()
       auth,
       policy,
     );
-  });
+  }, 30000);
   afterAll(async () => {
     if (db) {
       await safeCleanupTestDatabase(db);

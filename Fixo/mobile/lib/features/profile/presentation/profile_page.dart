@@ -390,7 +390,9 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
                                         style: IconButton.styleFrom(
                                           minimumSize: const Size(48, 48),
                                           backgroundColor: palette.primaryBrand,
-                                          foregroundColor: palette.limeAccent,
+                                          foregroundColor: Theme.of(
+                                            context,
+                                          ).colorScheme.onPrimary,
                                         ),
                                         icon: const Icon(
                                           Icons.photo_camera_outlined,
@@ -416,16 +418,8 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
                                         borderRadius:
                                             FixoRadius.borderRadiusPill,
                                       ),
-                                      child: Text(
-                                        ar
-                                            ? 'حساب عميل فيكسو'
-                                            : 'FIXO CUSTOMER',
-                                        style: textTheme.labelSmall?.copyWith(
-                                          color: FixoColors.limeAccent,
-                                          fontWeight: FontWeight.w800,
-                                          fontSize: 10,
-                                          letterSpacing: ar ? 0 : 0.7,
-                                        ),
+                                      child: AccountRoleBadge(
+                                        professional: isPro,
                                       ),
                                     ),
                                     const SizedBox(height: 6),
@@ -547,11 +541,15 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
                             begin: Alignment.topLeft,
                             end: Alignment.bottomRight,
                             colors: [
-                              FixoColors.deepestForest,
-                              FixoColors.primaryForest,
+                              Color(0xFF0F172A),
+                              Color(0xFF172236),
+                              Color(0xFF1E293B),
                             ],
                           ),
                           borderRadius: FixoRadius.borderRadiusLg,
+                          border: Border.all(
+                            color: const Color(0xFF93C5FD).withValues(alpha: 0.35),
+                          ),
                           boxShadow: FixoShadows.level2Interactive,
                         ),
                         child: Row(
@@ -561,7 +559,7 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
                               width: 44,
                               height: 44,
                               decoration: BoxDecoration(
-                                color: FixoColors.limeAccent,
+                                color: const Color(0xFF93C5FD),
                                 borderRadius: BorderRadius.circular(12),
                               ),
                               alignment: Alignment.center,
@@ -581,7 +579,7 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
                                         ? 'انضم لشبكة فنيي فيكسو'
                                         : 'EARN WITH FIXO PRO',
                                     style: textTheme.labelSmall?.copyWith(
-                                      color: FixoColors.limeAccent,
+                                      color: const Color(0xFF93C5FD),
                                       fontWeight: FontWeight.w800,
                                       letterSpacing: ar ? 0 : 0.8,
                                     ),
@@ -731,7 +729,8 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
                                 color: palette.mutedText,
                               ),
                             ),
-                            value: _optimisticArrivalAlerts ??
+                            value:
+                                _optimisticArrivalAlerts ??
                                 (user['arrivalAlertsEnabled'] == true),
                             onChanged: _saving
                                 ? null
@@ -855,8 +854,8 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
                       Container(
                         width: 8,
                         height: 8,
-                        decoration: const BoxDecoration(
-                          color: FixoColors.secondary,
+                        decoration: BoxDecoration(
+                          color: palette.primaryBrand,
                           shape: BoxShape.circle,
                         ),
                       ),

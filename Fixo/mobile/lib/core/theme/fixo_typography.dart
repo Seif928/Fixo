@@ -9,11 +9,13 @@ abstract final class FixoTypography {
   static const String arabicFontFamily = 'Cairo';
   static const List<String> fallbackFonts = [
     'Cairo',
-    'Segoe UI',
-    'Roboto',
-    'Arial',
     'sans-serif',
   ];
+
+  static List<String> fallbackFontsForLocale(Locale? locale) =>
+      locale?.languageCode == 'ar'
+      ? const ['Manrope', 'sans-serif']
+      : fallbackFonts;
 
   static String fontFamilyForLocale(Locale? locale) {
     if (locale?.languageCode == 'ar') {
@@ -25,7 +27,7 @@ abstract final class FixoTypography {
   /// Display (48px / 56px, w800)
   static TextStyle display({Color? color, Locale? locale}) => TextStyle(
     fontFamily: fontFamilyForLocale(locale),
-    fontFamilyFallback: fallbackFonts,
+    fontFamilyFallback: fallbackFontsForLocale(locale),
     fontSize: 48,
     height: 56 / 48,
     fontWeight: FontWeight.w800,
@@ -36,7 +38,7 @@ abstract final class FixoTypography {
   /// Display Mobile (36px / 44px, w800)
   static TextStyle displayMobile({Color? color, Locale? locale}) => TextStyle(
     fontFamily: fontFamilyForLocale(locale),
-    fontFamilyFallback: fallbackFonts,
+    fontFamilyFallback: fallbackFontsForLocale(locale),
     fontSize: 36,
     height: 44 / 36,
     fontWeight: FontWeight.w800,
@@ -52,7 +54,7 @@ abstract final class FixoTypography {
     bool tabularFigures = false,
   }) => TextStyle(
     fontFamily: fontFamilyForLocale(locale),
-    fontFamilyFallback: fallbackFonts,
+    fontFamilyFallback: fallbackFontsForLocale(locale),
     fontSize: 32,
     height: 40 / 32,
     fontWeight: FontWeight.w700,
@@ -65,7 +67,7 @@ abstract final class FixoTypography {
   static TextStyle headlineLgMobile({Color? color, Locale? locale}) =>
       TextStyle(
         fontFamily: fontFamilyForLocale(locale),
-        fontFamilyFallback: fallbackFonts,
+        fontFamilyFallback: fallbackFontsForLocale(locale),
         fontSize: 26,
         height: 34 / 26,
         fontWeight: FontWeight.w700,
@@ -76,7 +78,7 @@ abstract final class FixoTypography {
   /// Headline Medium (22px / 30px, w600)
   static TextStyle headlineMd({Color? color, Locale? locale}) => TextStyle(
     fontFamily: fontFamilyForLocale(locale),
-    fontFamilyFallback: fallbackFonts,
+    fontFamilyFallback: fallbackFontsForLocale(locale),
     fontSize: 22,
     height: 30 / 22,
     fontWeight: FontWeight.w600,
@@ -91,7 +93,7 @@ abstract final class FixoTypography {
     bool tabularFigures = false,
   }) => TextStyle(
     fontFamily: fontFamilyForLocale(locale),
-    fontFamilyFallback: fallbackFonts,
+    fontFamilyFallback: fallbackFontsForLocale(locale),
     fontSize: 18,
     height: 26 / 18,
     fontWeight: FontWeight.w600,
@@ -102,7 +104,7 @@ abstract final class FixoTypography {
   /// Price Display (24px / 28px, w800, tabular figures)
   static TextStyle priceDisplay({Color? color, Locale? locale}) => TextStyle(
     fontFamily: fontFamilyForLocale(locale),
-    fontFamilyFallback: fallbackFonts,
+    fontFamilyFallback: fallbackFontsForLocale(locale),
     fontSize: 24,
     height: 28 / 24,
     fontWeight: FontWeight.w800,
@@ -114,7 +116,7 @@ abstract final class FixoTypography {
   /// Body Large (16px / 24px, w400)
   static TextStyle bodyLg({Color? color, Locale? locale}) => TextStyle(
     fontFamily: fontFamilyForLocale(locale),
-    fontFamilyFallback: fallbackFonts,
+    fontFamilyFallback: fallbackFontsForLocale(locale),
     fontSize: 16,
     height: 24 / 16,
     fontWeight: FontWeight.w400,
@@ -124,7 +126,7 @@ abstract final class FixoTypography {
   /// Body Medium (14px / 20px, w400)
   static TextStyle bodyMd({Color? color, Locale? locale}) => TextStyle(
     fontFamily: fontFamilyForLocale(locale),
-    fontFamilyFallback: fallbackFonts,
+    fontFamilyFallback: fallbackFontsForLocale(locale),
     fontSize: 14,
     height: 20 / 14,
     fontWeight: FontWeight.w400,
@@ -134,7 +136,7 @@ abstract final class FixoTypography {
   /// Body Small (12px / 18px, w400)
   static TextStyle bodySm({Color? color, Locale? locale}) => TextStyle(
     fontFamily: fontFamilyForLocale(locale),
-    fontFamilyFallback: fallbackFonts,
+    fontFamilyFallback: fallbackFontsForLocale(locale),
     fontSize: 12,
     height: 18 / 12,
     fontWeight: FontWeight.w400,
@@ -148,7 +150,7 @@ abstract final class FixoTypography {
     bool tabularFigures = true,
   }) => TextStyle(
     fontFamily: fontFamilyForLocale(locale),
-    fontFamilyFallback: fallbackFonts,
+    fontFamilyFallback: fallbackFontsForLocale(locale),
     fontSize: 14,
     height: 20 / 14,
     fontWeight: FontWeight.w600,
@@ -164,7 +166,7 @@ abstract final class FixoTypography {
     bool tabularFigures = true,
   }) => TextStyle(
     fontFamily: fontFamilyForLocale(locale),
-    fontFamilyFallback: fallbackFonts,
+    fontFamilyFallback: fallbackFontsForLocale(locale),
     fontSize: 12,
     height: 16 / 12,
     fontWeight: FontWeight.w600,
@@ -180,7 +182,7 @@ abstract final class FixoTypography {
     bool tabularFigures = true,
   }) => TextStyle(
     fontFamily: fontFamilyForLocale(locale),
-    fontFamilyFallback: fallbackFonts,
+    fontFamilyFallback: fallbackFontsForLocale(locale),
     fontSize: 11,
     height: 14 / 11,
     fontWeight: FontWeight.w600,
@@ -197,6 +199,7 @@ abstract final class FixoTypography {
     return TextTheme(
       displayLarge: display(color: primaryTextColor, locale: locale),
       displayMedium: displayMobile(color: primaryTextColor, locale: locale),
+      displaySmall: displayMobile(color: primaryTextColor, locale: locale),
       headlineLarge: headlineLg(color: primaryTextColor, locale: locale),
       headlineMedium: headlineLgMobile(color: primaryTextColor, locale: locale),
       headlineSmall: headlineMd(color: primaryTextColor, locale: locale),
@@ -208,6 +211,7 @@ abstract final class FixoTypography {
       bodySmall: bodySm(color: secondaryTextColor, locale: locale),
       labelLarge: labelLg(color: primaryTextColor, locale: locale),
       labelMedium: labelMd(color: secondaryTextColor, locale: locale),
+      labelSmall: labelSm(color: secondaryTextColor, locale: locale),
     );
   }
 }

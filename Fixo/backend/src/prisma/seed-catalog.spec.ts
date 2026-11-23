@@ -9,6 +9,7 @@ import {
 import { seedCatalog } from './seed-catalog';
 import {
   assertCurrentDatabaseIsTest,
+  safeCleanupBookingTestTables,
   safeCleanupCatalogTestTables,
   validateTestDatabaseTarget,
 } from './test-database-safety.util';
@@ -54,7 +55,14 @@ describe('Catalog Seed Integration Suite (fixo_test)', () => {
     // 3. PostgreSQL runtime database identity check
     const currentDb = await assertCurrentDatabaseIsTest(prisma);
     expect(currentDb).toBe('fixo_test');
-  });
+
+    // Clean stale user/booking records from any prior suite before catalog checks
+    await safeCleanupBookingTestTables({
+      $queryRaw: prisma.$queryRaw.bind(prisma),
+      $executeRawUnsafe: prisma.$executeRawUnsafe.bind(prisma),
+      isDatabaseConnected: () => true,
+    });
+  }, 30000);
 
   afterAll(async () => {
     if (prisma) {

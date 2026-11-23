@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/storage/secure_token_storage.dart';
+import '../../../../core/storage/auth_session_preferences.dart';
 import '../../../../core/session/session_providers.dart';
 import '../../../../core/notifications/device_push_service.dart';
 import '../../data/auth_repository.dart';
@@ -77,12 +78,14 @@ class AuthController extends Notifier<AuthState> {
       ref.read(activeSessionOwnerProvider.notifier).state = null;
       ref.read(sessionProvider.notifier).state = null;
       state = const AuthState();
+      unawaited(ref.read(authSessionPreferencesProvider).clearSession());
       unawaited(ref.read(devicePushProvider).invalidateLocalSession());
     });
     ref.onDispose(() {
       _disposed = true;
       _countdownTimer?.cancel();
     });
+
     return const AuthState();
   }
 
@@ -263,6 +266,7 @@ class AuthController extends Notifier<AuthState> {
         tokenToRevoke = latest.refreshToken;
         await tokenStorage.replaceTokensIfCurrent(latest, null);
       }
+      await ref.read(authSessionPreferencesProvider).clearSession();
       await email.signOutIfCurrent(userEmail);
     } finally {
       _countdownTimer?.cancel();
@@ -287,39 +291,93 @@ class AuthController extends Notifier<AuthState> {
 
   Future<void> _restoreSession(int epoch) async {
     final storage = ref.read(secureTokenStorageProvider);
-    StoredAuthTokens? restoringTokens;
+    final authPrefs = ref.read(authSessionPreferencesProvider);
+    StoredAuthTokens? vaultSnapshot;
     try {
-      final tokens = await storage.readTokens();
+      vaultSnapshot = await storage.readTokens();
+      var tokens = vaultSnapshot;
+      tokens ??= authPrefs.getSavedTokens();
       if (tokens == null || tokens.refreshToken.isEmpty) return;
-      restoringTokens = tokens;
       final session = await ref
           .read(authRepositoryProvider)
           .refreshSession(refreshToken: tokens.refreshToken);
       if (_disposed || epoch != _sessionEpoch) return;
       if (session.user.id != tokens.userId) {
-        await storage.replaceTokensIfCurrent(tokens, null);
+        if (await storage.replaceTokensIfCurrent(vaultSnapshot, null) &&
+            !_disposed &&
+            epoch == _sessionEpoch) {
+          await authPrefs.clearSession();
+        }
         return;
       }
       final replaced = await storage.replaceTokensIfCurrent(
-        tokens,
+        vaultSnapshot,
         _storedSession(session),
       );
       if (!replaced || _disposed || epoch != _sessionEpoch) return;
+      await authPrefs.saveSession(session);
+      if (_disposed || epoch != _sessionEpoch) return;
       _sessionEpoch++;
       _publishSession(session);
     } on AuthApiException catch (error) {
       if (!_disposed &&
           epoch == _sessionEpoch &&
           [400, 401, 403].contains(error.statusCode)) {
-        await storage.replaceTokensIfCurrent(restoringTokens, null);
+        if (!await storage.replaceTokensIfCurrent(vaultSnapshot, null) ||
+            _disposed ||
+            epoch != _sessionEpoch) {
+          return;
+        }
+        await authPrefs.clearSession();
+        if (state.isAuthenticated) {
+          state = const AuthState();
+          ref.read(sessionProvider.notifier).state = null;
+          ref.read(activeSessionOwnerProvider.notifier).state = null;
+        }
+      } else if (error.statusCode == null || error.statusCode! >= 500) {
+        await _restoreOffline(vaultSnapshot, epoch);
       }
     } on FormatException {
       if (!_disposed && epoch == _sessionEpoch) {
-        await storage.replaceTokensIfCurrent(restoringTokens, null);
+        if (!await storage.replaceTokensIfCurrent(vaultSnapshot, null) ||
+            _disposed ||
+            epoch != _sessionEpoch) {
+          return;
+        }
+        await authPrefs.clearSession();
+        if (state.isAuthenticated) {
+          state = const AuthState();
+          ref.read(sessionProvider.notifier).state = null;
+          ref.read(activeSessionOwnerProvider.notifier).state = null;
+        }
       }
     } catch (_) {
-      // Offline or unavailable secure storage: show sign-in, never a fake session.
+      await _restoreOffline(vaultSnapshot, epoch);
     }
+  }
+
+  Future<void> _restoreOffline(StoredAuthTokens? snapshot, int epoch) async {
+    if (snapshot == null || _disposed || epoch != _sessionEpoch) return;
+    final current = await ref.read(secureTokenStorageProvider).readTokens();
+    if (_disposed ||
+        epoch != _sessionEpoch ||
+        current?.userId != snapshot.userId ||
+        current?.refreshToken != snapshot.refreshToken) {
+      return;
+    }
+    final profile = ref.read(authSessionPreferencesProvider).getSavedUser();
+    if (profile == null ||
+        profile.id != snapshot.userId ||
+        profile.role != snapshot.role) {
+      return;
+    }
+    _publishSession(
+      AuthSession(
+        accessToken: snapshot.accessToken,
+        refreshToken: snapshot.refreshToken,
+        user: profile,
+      ),
+    );
   }
 
   Future<void> acceptVerifiedSession(AuthSession session) async {
@@ -330,6 +388,10 @@ class AuthController extends Notifier<AuthState> {
     await ref
         .read(secureTokenStorageProvider)
         .saveTokens(_storedSession(session));
+    if (_disposed || epoch != _sessionEpoch) {
+      throw StateError('The account changed before sign-in completed.');
+    }
+    await ref.read(authSessionPreferencesProvider).saveSession(session);
     if (_disposed || epoch != _sessionEpoch) {
       throw StateError('The account changed before sign-in completed.');
     }
@@ -387,6 +449,10 @@ class AuthController extends Notifier<AuthState> {
       refreshToken: tokens.refreshToken,
       user: user,
     );
+    await ref.read(authSessionPreferencesProvider).saveSession(updatedSession);
+    if (_disposed || epoch != _sessionEpoch) {
+      throw const FormatException('The account session has changed.');
+    }
     ref.read(sessionProvider.notifier).state = updatedSession;
     state = state.copyWith(session: updatedSession);
   }

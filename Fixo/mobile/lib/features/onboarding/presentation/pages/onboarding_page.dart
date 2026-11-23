@@ -1,9 +1,11 @@
+import '../../../../core/widgets/premium_entry_theme.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../app/router/app_routes.dart';
 import '../../../auth/presentation/controllers/account_entry_controller.dart';
+import '../../../../core/storage/auth_session_preferences.dart';
 import '../../../../core/l10n/app_locale_controller.dart';
 import '../../../../core/motion/fixo_motion.dart';
 import '../../../../core/theme/fixo_colors.dart';
@@ -12,7 +14,6 @@ import '../../../../core/theme/fixo_typography.dart';
 import '../../../../core/widgets/fixo_brand_mark.dart';
 import '../../../../core/widgets/fixo_buttons.dart';
 import '../../../../core/widgets/fixo_cards.dart';
-import '../widgets/cairo_interior_hero_card.dart';
 
 /// Screen 01: `OnboardingPage` (`01_onboarding`).
 ///
@@ -96,6 +97,7 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage> {
     await ref
         .read(professionalEntryProvider.notifier)
         .selectProfessional(professional);
+    await ref.read(authSessionPreferencesProvider).setOnboardingCompleted(true);
     if (mounted) {
       context.push(
         '${AppRoutes.phoneAuth}?intent=$intent&account=${professional ? 'pro' : 'customer'}',
@@ -167,10 +169,10 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage> {
                   child: Row(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Icon(
+                      Icon(
                         Icons.check_circle_rounded,
                         size: 18,
-                        color: FixoColors.secondary,
+                        color: palette.success,
                       ),
                       const SizedBox(width: 8),
                       Expanded(
@@ -202,25 +204,32 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage> {
   }
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context) => PremiumEntryTheme(
+    child: Consumer(builder: (context, ref, _) => _buildPage(context, ref)),
+  );
+
+  Widget _buildPage(BuildContext context, WidgetRef ref) {
     final palette = context.fixoPalette;
     final locale = ref.watch(appLocaleProvider);
     final isArabic = locale.languageCode == 'ar';
     final steps = isArabic ? _stepsAr : _stepsEn;
     final currentStep = steps[_activeStepIndex];
+    final viewport = MediaQuery.sizeOf(context);
+    final compactDesktop = viewport.width >= 600 && viewport.height <= 860;
+    final sectionGap = compactDesktop ? 12.0 : FixoSpacing.lg;
 
     return Scaffold(
       backgroundColor: palette.canvasBackground,
       body: SafeArea(
         child: Center(
           child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 520),
+            constraints: BoxConstraints(maxWidth: compactDesktop ? 700 : 640),
             child: SingleChildScrollView(
-              padding: const EdgeInsets.fromLTRB(
+              padding: EdgeInsets.fromLTRB(
                 FixoSpacing.md,
-                FixoSpacing.sm,
+                compactDesktop ? FixoSpacing.xs : FixoSpacing.sm,
                 FixoSpacing.md,
-                FixoSpacing.lg,
+                compactDesktop ? FixoSpacing.sm : FixoSpacing.lg,
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -247,8 +256,8 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage> {
                               Flexible(
                                 child: FixoStatusBadge(
                                   label: isArabic
-                                      ? 'القاهرة والجيزة نشط'
-                                      : 'Cairo & Giza Active',
+                                      ? 'كل محافظات مصر'
+                                      : 'All Egypt Governorates',
                                   showStatusDot: true,
                                   backgroundColor: palette.surfaceHigh,
                                   foregroundColor: palette.mutedText,
@@ -289,13 +298,13 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage> {
                       ),
                     ),
                   ),
-                  const SizedBox(height: FixoSpacing.sm),
+                  SizedBox(height: compactDesktop ? 4 : FixoSpacing.sm),
 
-                  // 2. Hero Visual Showcase
-                  FixoEntrance(
-                    child: CairoInteriorHeroCard(isArabic: isArabic),
+                  // 2. Hero Visual Showcase (renders immediately with zero opacity fade delay)
+                  RepaintBoundary(
+                    child: PremiumWelcomeHero(isArabic: isArabic),
                   ),
-                  const SizedBox(height: FixoSpacing.lg),
+                  SizedBox(height: sectionGap),
 
                   // 3. Editorial Headline & Copy
                   FixoStatusBadge(
@@ -328,7 +337,7 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage> {
                       locale: locale,
                     ).copyWith(height: 1.48),
                   ),
-                  const SizedBox(height: 20),
+                  SizedBox(height: compactDesktop ? 10 : 20),
 
                   // 4. Trust Value Pillars (Neutral MVP-accurate wording per STITCH_AUDIT.md)
                   Wrap(
@@ -344,8 +353,8 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage> {
                           icon: Icons.home_repair_service_outlined,
                           title: isArabic ? 'خدمات المنزل' : 'Home Services',
                           summary: isArabic
-                              ? '٢١ قسماً وأكثر من ١٤٠ خدمة منزلية في القاهرة والجيزة ومحافظات مصر.'
-                              : '21 trade categories across Cairo, Giza, and Egyptian governorates.',
+                              ? 'استكشف الخدمات المنزلية المتاحة في محافظتك.'
+                              : 'Explore available home services in your governorate.',
                           points: isArabic
                               ? const [
                                   'صيانة التكييف، السباكة، الكهرباء، النجارة، النقاشة، والأجهزة.',
@@ -377,7 +386,7 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage> {
                       ),
                     ],
                   ),
-                  const SizedBox(height: FixoSpacing.lg),
+                  SizedBox(height: sectionGap),
 
                   // 5. Visual Step Milestone Bar
                   Container(
@@ -448,7 +457,7 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage> {
                                       height: 8,
                                       decoration: BoxDecoration(
                                         color: isCompletedOrActive
-                                            ? palette.limeAccent
+                                            ? palette.primaryBrand
                                             : palette.surfaceHighest,
                                         borderRadius:
                                             FixoRadius.borderRadiusPill,
@@ -463,7 +472,7 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage> {
                       ],
                     ),
                   ),
-                  const SizedBox(height: FixoSpacing.lg),
+                  SizedBox(height: sectionGap),
 
                   // 6. Interactive Action CTAs
                   FixoPrimaryButton(
@@ -472,7 +481,7 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage> {
                     showCircularLimeBadge: true,
                     onPressed: () => _navigateToPhoneAuth(intent: 'signup'),
                   ),
-                  const SizedBox(height: 12),
+                  SizedBox(height: compactDesktop ? 8 : 12),
                   FixoSecondaryButton(
                     key: const Key('btn-sign-in'),
                     label: isArabic
@@ -480,7 +489,7 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage> {
                         : 'I already have an account',
                     onPressed: () => _navigateToPhoneAuth(intent: 'signin'),
                   ),
-                  const SizedBox(height: 20),
+                  SizedBox(height: compactDesktop ? 8 : 20),
 
                   FixoSecondaryButton(
                     key: const Key('btn-professional-entry'),
@@ -493,24 +502,24 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage> {
                       professional: true,
                     ),
                   ),
-                  const SizedBox(height: 20),
+                  SizedBox(height: compactDesktop ? 10 : 20),
 
                   // 7. Honest MVP Footer Note (replaces unsupported 25,000 EGP insurance claim)
                   Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     crossAxisAlignment: CrossAxisAlignment.center,
                     children: [
-                      const Icon(
+                      Icon(
                         Icons.lock_outline_rounded,
                         size: 14,
-                        color: FixoColors.secondary,
+                        color: palette.mutedText,
                       ),
                       const SizedBox(width: 6),
                       Flexible(
                         child: Text(
                           isArabic
-                              ? 'تسعير مسبق بالجنيه • الدفع نقداً عند الخدمة متاح في القاهرة والجيزة'
-                              : 'Upfront EGP quotes • Cash on service available in Cairo & Giza',
+                              ? 'راجع السعر والتغطية المتاحة قبل تأكيد الحجز'
+                              : 'Review pricing and available coverage before booking',
                           textAlign: TextAlign.center,
                           style: FixoTypography.bodySm(
                             color: palette.mutedText,

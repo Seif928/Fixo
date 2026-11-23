@@ -77,9 +77,9 @@ class _BookingReceiptSheetState extends ConsumerState<BookingReceiptSheet> {
               return Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  const Icon(
+                  Icon(
                     Icons.error_outline_rounded,
-                    color: FixoColors.error,
+                    color: palette.error,
                     size: 32,
                   ),
                   const SizedBox(height: 8),
@@ -123,7 +123,7 @@ class _BookingReceiptSheetState extends ConsumerState<BookingReceiptSheet> {
                           Text(
                             ar ? 'إيصال الخدمة الرسمي' : 'OFFICIAL SERVICE RECEIPT',
                             style: FixoTypography.labelSm(
-                              color: FixoColors.secondary,
+                              color: palette.primaryBrand,
                             ).copyWith(
                               fontWeight: FontWeight.w800,
                               letterSpacing: ar ? 0 : 0.8,
@@ -146,9 +146,10 @@ class _BookingReceiptSheetState extends ConsumerState<BookingReceiptSheet> {
                       ),
                       decoration: BoxDecoration(
                         color: isPaid
-                            ? FixoColors.secondaryContainer
-                            : palette.surfaceHigh,
+                            ? palette.successContainer
+                            : palette.surfaceLow,
                         borderRadius: FixoRadius.borderRadiusPill,
+                        border: Border.all(color: palette.subtleBorder),
                       ),
                       child: Text(
                         isPaid
@@ -156,7 +157,7 @@ class _BookingReceiptSheetState extends ConsumerState<BookingReceiptSheet> {
                             : (ar ? 'يُحصّل بعد الخدمة' : 'DUE ON COMPLETION'),
                         style: FixoTypography.labelSm(
                           color: isPaid
-                              ? FixoColors.onSecondaryContainer
+                              ? palette.onSuccessContainer
                               : palette.deepForest,
                         ).copyWith(fontWeight: FontWeight.w800),
                       ),
@@ -243,7 +244,7 @@ class _BookingReceiptSheetState extends ConsumerState<BookingReceiptSheet> {
                       '${receipt.grandTotalEgp} ${ar ? 'ج.م' : 'EGP'}',
                       key: const Key('receipt-grand-total-text'),
                       style: FixoTypography.headlineSm(
-                        color: FixoColors.secondary,
+                        color: palette.primaryBrand,
                       ).copyWith(fontWeight: FontWeight.w800),
                     ),
                   ],
@@ -254,7 +255,7 @@ class _BookingReceiptSheetState extends ConsumerState<BookingReceiptSheet> {
                   style: FilledButton.styleFrom(
                     minimumSize: const Size.fromHeight(48),
                     backgroundColor: palette.primaryBrand,
-                    foregroundColor: Colors.white,
+                    foregroundColor: palette.onPrimary,
                   ),
                   onPressed: () => Navigator.of(context).pop(),
                   child: Text(ar ? 'إغلاق الإيصال' : 'Close Receipt'),

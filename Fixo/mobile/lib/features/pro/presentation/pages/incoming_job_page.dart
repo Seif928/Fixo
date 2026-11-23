@@ -232,7 +232,7 @@ class _IncomingJobPageState extends ConsumerState<IncomingJobPage>
                                   ? Icons.radio_button_checked
                                   : Icons.radio_button_off,
                               color: isSel
-                                  ? FixoColors.primaryForest
+                                  ? palette.primaryBrand
                                   : palette.mutedText,
                             ),
                             const SizedBox(width: 10),
@@ -247,7 +247,11 @@ class _IncomingJobPageState extends ConsumerState<IncomingJobPage>
                   const SizedBox(height: 12),
                   FilledButton(
                     style: FilledButton.styleFrom(
-                      backgroundColor: FixoColors.error,
+                      backgroundColor: palette.error,
+                      foregroundColor:
+                          Theme.of(context).brightness == Brightness.dark
+                          ? FixoColors.deepestForest
+                          : Colors.white,
                       minimumSize: const Size(0, 48),
                     ),
                     onPressed: () async {
@@ -346,13 +350,13 @@ class _IncomingJobPageState extends ConsumerState<IncomingJobPage>
                             ),
                             padding: const EdgeInsets.all(FixoSpacing.sm),
                             decoration: BoxDecoration(
-                              color: FixoColors.errorContainer,
+                              color: palette.errorContainer,
                               borderRadius: FixoRadius.borderRadiusMd,
                             ),
                             child: Text(
                               _errorMessage!,
                               style: FixoTypography.bodySm(
-                                color: FixoColors.onErrorContainer,
+                                color: palette.onErrorContainer,
                               ),
                             ),
                           ),
@@ -370,13 +374,13 @@ class _IncomingJobPageState extends ConsumerState<IncomingJobPage>
                             padding: const EdgeInsets.all(FixoSpacing.md),
                             decoration: BoxDecoration(
                               color: _secondsLeft > 0
-                                  ? FixoColors.secondaryContainer
-                                  : FixoColors.errorContainer,
+                                  ? palette.warningContainer
+                                  : palette.errorContainer,
                               borderRadius: FixoRadius.borderRadiusLg,
                               border: Border.all(
                                 color: _secondsLeft > 0
-                                    ? FixoColors.secondary
-                                    : FixoColors.error,
+                                    ? palette.warning
+                                    : palette.error,
                               ),
                             ),
                             child: Row(
@@ -387,8 +391,8 @@ class _IncomingJobPageState extends ConsumerState<IncomingJobPage>
                                       ? Icons.timer_outlined
                                       : Icons.timer_off_outlined,
                                   color: _secondsLeft > 0
-                                      ? FixoColors.primaryForest
-                                      : FixoColors.error,
+                                      ? palette.onWarningContainer
+                                      : palette.onErrorContainer,
                                   size: 24,
                                 ),
                                 const SizedBox(width: 8),
@@ -400,8 +404,8 @@ class _IncomingJobPageState extends ConsumerState<IncomingJobPage>
                                     textAlign: TextAlign.center,
                                     style: FixoTypography.headlineSm(
                                       color: _secondsLeft > 0
-                                          ? FixoColors.primaryForest
-                                          : FixoColors.error,
+                                          ? palette.onWarningContainer
+                                          : palette.onErrorContainer,
                                       tabularFigures: true,
                                     ).copyWith(fontWeight: FontWeight.w800),
                                   ),
@@ -583,7 +587,7 @@ class _IncomingJobPageState extends ConsumerState<IncomingJobPage>
                                     Text(
                                       '- ${offer.platformFeeEgp} ${ar ? 'ج.م' : 'EGP'}',
                                       style: FixoTypography.labelMd(
-                                        color: FixoColors.error,
+                                        color: palette.error,
                                       ).copyWith(fontWeight: FontWeight.w700),
                                     ),
                                   ],
@@ -599,7 +603,7 @@ class _IncomingJobPageState extends ConsumerState<IncomingJobPage>
                                             ? 'الصافي بعد رسوم المنصة'
                                             : 'Net after platform fee',
                                         style: FixoTypography.headlineSm(
-                                          color: FixoColors.primaryForest,
+                                          color: palette.deepForest,
                                         ).copyWith(fontWeight: FontWeight.w800),
                                       ),
                                     ),
@@ -607,7 +611,7 @@ class _IncomingJobPageState extends ConsumerState<IncomingJobPage>
                                     Text(
                                       '${offer.netArtisanEgp} ${ar ? 'ج.م' : 'EGP'}',
                                       style: FixoTypography.headlineLgMobile(
-                                        color: FixoColors.primaryForest,
+                                        color: palette.primaryBrand,
                                       ).copyWith(fontWeight: FontWeight.w900),
                                     ),
                                   ],
@@ -626,10 +630,8 @@ class _IncomingJobPageState extends ConsumerState<IncomingJobPage>
                                   key: const Key('pro-offer-decline'),
                                   style: OutlinedButton.styleFrom(
                                     minimumSize: const Size(0, 52),
-                                    foregroundColor: FixoColors.error,
-                                    side: const BorderSide(
-                                      color: FixoColors.error,
-                                    ),
+                                    foregroundColor: palette.error,
+                                    side: BorderSide(color: palette.error),
                                     shape: RoundedRectangleBorder(
                                       borderRadius: FixoRadius.borderRadiusMd,
                                     ),
@@ -640,7 +642,7 @@ class _IncomingJobPageState extends ConsumerState<IncomingJobPage>
                                   child: Text(
                                     ar ? 'اعتذار' : 'Decline',
                                     style: FixoTypography.labelLg(
-                                      color: FixoColors.error,
+                                      color: palette.error,
                                     ).copyWith(fontWeight: FontWeight.bold),
                                   ),
                                 ),
@@ -653,8 +655,11 @@ class _IncomingJobPageState extends ConsumerState<IncomingJobPage>
                                   style: FilledButton.styleFrom(
                                     minimumSize: const Size(0, 52),
                                     backgroundColor: _secondsLeft > 0
-                                        ? FixoColors.primaryForest
+                                        ? palette.primaryBrand
                                         : palette.surfaceHigh,
+                                    foregroundColor: _secondsLeft > 0
+                                        ? palette.onPrimary
+                                        : palette.mutedText,
                                     shape: RoundedRectangleBorder(
                                       borderRadius: FixoRadius.borderRadiusMd,
                                     ),
@@ -663,13 +668,13 @@ class _IncomingJobPageState extends ConsumerState<IncomingJobPage>
                                       ? () => _acceptJob(ar)
                                       : null,
                                   icon: _acting
-                                      ? const SizedBox(
+                                      ? SizedBox(
                                           width: 20,
                                           height: 20,
                                           child: CircularProgressIndicator(
                                             strokeWidth: 2,
                                             valueColor: AlwaysStoppedAnimation(
-                                              Colors.white,
+                                              palette.onPrimary,
                                             ),
                                           ),
                                         )
@@ -679,7 +684,9 @@ class _IncomingJobPageState extends ConsumerState<IncomingJobPage>
                                         ? 'قبول الطلب والتوجه للعميل'
                                         : 'Accept Job Offer',
                                     style: FixoTypography.labelLg(
-                                      color: Colors.white,
+                                      color: _secondsLeft > 0
+                                          ? palette.onPrimary
+                                          : palette.mutedText,
                                     ).copyWith(fontWeight: FontWeight.bold),
                                   ),
                                 ),

@@ -49,7 +49,9 @@ abstract final class FixoTheme {
       colorScheme: colorScheme,
       scaffoldBackgroundColor: FixoColors.surfaceBotanical,
       fontFamily: FixoTypography.fontFamilyForLocale(locale),
+      fontFamilyFallback: FixoTypography.fallbackFontsForLocale(locale),
       textTheme: textTheme,
+      primaryTextTheme: textTheme,
       extensions: const <ThemeExtension<dynamic>>[FixoPaletteExtension.light],
       appBarTheme: AppBarTheme(
         backgroundColor: FixoColors.surfaceBotanical.withValues(alpha: 0.9),
@@ -201,28 +203,66 @@ abstract final class FixoTheme {
         thickness: 1,
         space: 1,
       ),
+      dialogTheme: const DialogThemeData(
+        backgroundColor: FixoColors.surfaceContainerLowest,
+        surfaceTintColor: Colors.transparent,
+      ),
+      popupMenuTheme: const PopupMenuThemeData(
+        color: FixoColors.surfaceContainerLowest,
+        surfaceTintColor: Colors.transparent,
+      ),
+      switchTheme: SwitchThemeData(
+        thumbColor: WidgetStateProperty.resolveWith((states) {
+          if (states.contains(WidgetState.selected)) return Colors.white;
+          return FixoColors.onSurfaceVariant;
+        }),
+        trackColor: WidgetStateProperty.resolveWith((states) {
+          if (states.contains(WidgetState.selected)) {
+            return FixoColors.primaryForest;
+          }
+          return FixoColors.surfaceContainer;
+        }),
+        trackOutlineColor: WidgetStateProperty.resolveWith((states) {
+          if (states.contains(WidgetState.selected)) {
+            return Colors.transparent;
+          }
+          return FixoColors.outlineVariant;
+        }),
+      ),
+      checkboxTheme: CheckboxThemeData(
+        fillColor: WidgetStateProperty.resolveWith((states) {
+          if (states.contains(WidgetState.selected)) {
+            return FixoColors.primaryForest;
+          }
+          return Colors.transparent;
+        }),
+        checkColor: const WidgetStatePropertyAll(Colors.white),
+      ),
+      progressIndicatorTheme: const ProgressIndicatorThemeData(
+        color: FixoColors.primaryForest,
+      ),
     );
   }
 
   static ThemeData dark({Locale? locale}) {
     const colorScheme = ColorScheme(
       brightness: Brightness.dark,
-      primary: FixoColors.limeAccent,
+      primary: FixoColors.amberDark,
       onPrimary: FixoColors.deepestForest,
-      primaryContainer: FixoColors.primaryForest,
-      onPrimaryContainer: Colors.white,
-      secondary: FixoColors.secondaryFixedDim,
+      primaryContainer: FixoColors.warningSurfaceDark,
+      onPrimaryContainer: FixoColors.limeHighlight,
+      secondary: FixoColors.darkOnSurfaceVariant,
       onSecondary: FixoColors.deepestForest,
-      secondaryContainer: FixoColors.secondaryForest,
-      onSecondaryContainer: FixoColors.secondaryFixed,
-      tertiary: FixoColors.limeAccent,
-      onTertiary: FixoColors.onTertiaryFixed,
-      tertiaryContainer: FixoColors.tertiaryContainer,
-      onTertiaryContainer: FixoColors.limeAccent,
-      error: FixoColors.coral,
+      secondaryContainer: FixoColors.darkSurfaceContainer,
+      onSecondaryContainer: FixoColors.darkOnSurface,
+      tertiary: FixoColors.limeHighlight,
+      onTertiary: FixoColors.deepestForest,
+      tertiaryContainer: FixoColors.warningSurfaceDark,
+      onTertiaryContainer: FixoColors.limeHighlight,
+      error: FixoColors.darkError,
       onError: FixoColors.deepestForest,
-      errorContainer: FixoColors.onErrorContainer,
-      onErrorContainer: FixoColors.errorContainer,
+      errorContainer: FixoColors.darkErrorContainer,
+      onErrorContainer: FixoColors.darkOnErrorContainer,
       surface: FixoColors.darkBackground,
       onSurface: FixoColors.darkOnSurface,
       surfaceContainerLowest: FixoColors.darkSurfaceLowest,
@@ -231,7 +271,7 @@ abstract final class FixoTheme {
       surfaceContainerHigh: FixoColors.darkSurfaceHigh,
       surfaceContainerHighest: FixoColors.darkBorder,
       onSurfaceVariant: FixoColors.darkOnSurfaceVariant,
-      outline: FixoColors.outline,
+      outline: Color(0xFF94A3B8),
       outlineVariant: FixoColors.darkBorder,
     );
 
@@ -247,10 +287,12 @@ abstract final class FixoTheme {
       colorScheme: colorScheme,
       scaffoldBackgroundColor: FixoColors.darkBackground,
       fontFamily: FixoTypography.fontFamilyForLocale(locale),
+      fontFamilyFallback: FixoTypography.fallbackFontsForLocale(locale),
       textTheme: textTheme,
+      primaryTextTheme: textTheme,
       extensions: const <ThemeExtension<dynamic>>[FixoPaletteExtension.dark],
       appBarTheme: AppBarTheme(
-        backgroundColor: FixoColors.darkBackground.withValues(alpha: 0.92),
+        backgroundColor: FixoColors.darkBackground.withValues(alpha: 0.94),
         foregroundColor: FixoColors.darkOnSurface,
         systemOverlayStyle: SystemUiOverlayStyle.light,
         elevation: 0,
@@ -296,43 +338,49 @@ abstract final class FixoTheme {
         focusedBorder: OutlineInputBorder(
           borderRadius: FixoRadius.borderRadiusSm,
           borderSide: const BorderSide(
-            color: FixoColors.limeAccent,
+            color: FixoColors.amberDark,
             width: 2,
           ),
         ),
         errorBorder: OutlineInputBorder(
           borderRadius: FixoRadius.borderRadiusSm,
-          borderSide: const BorderSide(color: FixoColors.coral, width: 1.5),
+          borderSide: const BorderSide(color: FixoColors.darkError, width: 1.5),
         ),
         focusedErrorBorder: OutlineInputBorder(
           borderRadius: FixoRadius.borderRadiusSm,
-          borderSide: const BorderSide(color: FixoColors.coral, width: 2),
+          borderSide: const BorderSide(color: FixoColors.darkError, width: 2),
         ),
       ),
       elevatedButtonTheme: ElevatedButtonThemeData(
         style: ElevatedButton.styleFrom(
-          backgroundColor: FixoColors.primaryForest,
-          foregroundColor: Colors.white,
+          backgroundColor: FixoColors.amberDark,
+          foregroundColor: FixoColors.deepestForest,
+          disabledBackgroundColor: FixoColors.darkSurfaceHigh,
+          disabledForegroundColor: FixoColors.darkOnSurfaceVariant,
+          elevation: 0,
           minimumSize: const Size.fromHeight(FixoSpacing.minTouchTarget),
           shape: const RoundedRectangleBorder(
             borderRadius: FixoRadius.borderRadiusSm,
           ),
           textStyle: FixoTypography.labelLg(
-            color: Colors.white,
+            color: FixoColors.deepestForest,
             locale: locale,
           ).copyWith(fontWeight: FontWeight.w700),
         ),
       ),
       filledButtonTheme: FilledButtonThemeData(
         style: FilledButton.styleFrom(
-          backgroundColor: FixoColors.primaryForest,
-          foregroundColor: Colors.white,
+          backgroundColor: FixoColors.amberDark,
+          foregroundColor: FixoColors.deepestForest,
+          disabledBackgroundColor: FixoColors.darkSurfaceHigh,
+          disabledForegroundColor: FixoColors.darkOnSurfaceVariant,
+          elevation: 0,
           minimumSize: const Size.fromHeight(FixoSpacing.minTouchTarget),
           shape: const RoundedRectangleBorder(
             borderRadius: FixoRadius.borderRadiusSm,
           ),
           textStyle: FixoTypography.labelLg(
-            color: Colors.white,
+            color: FixoColors.deepestForest,
             locale: locale,
           ).copyWith(fontWeight: FontWeight.w700),
         ),
@@ -354,23 +402,23 @@ abstract final class FixoTheme {
       ),
       textButtonTheme: TextButtonThemeData(
         style: TextButton.styleFrom(
-          foregroundColor: FixoColors.limeAccent,
+          foregroundColor: FixoColors.amberDark,
           textStyle: FixoTypography.labelMd(
-            color: FixoColors.limeAccent,
+            color: FixoColors.amberDark,
             locale: locale,
           ).copyWith(fontWeight: FontWeight.w700),
         ),
       ),
       chipTheme: ChipThemeData(
         backgroundColor: FixoColors.darkSurfaceLow,
-        selectedColor: FixoColors.primaryForest,
-        secondarySelectedColor: FixoColors.primaryForest,
+        selectedColor: FixoColors.amberDark,
+        secondarySelectedColor: FixoColors.amberDark,
         labelStyle: FixoTypography.labelMd(
           color: FixoColors.darkOnSurface,
           locale: locale,
         ),
         secondaryLabelStyle: FixoTypography.labelMd(
-          color: Colors.white,
+          color: FixoColors.deepestForest,
           locale: locale,
         ),
         side: const BorderSide(color: FixoColors.darkBorder),
@@ -386,6 +434,46 @@ abstract final class FixoTheme {
             top: Radius.circular(FixoRadius.xl),
           ),
         ),
+      ),
+      dialogTheme: const DialogThemeData(
+        backgroundColor: FixoColors.darkSurfaceLowest,
+        surfaceTintColor: Colors.transparent,
+      ),
+      popupMenuTheme: const PopupMenuThemeData(
+        color: FixoColors.darkSurfaceLowest,
+        surfaceTintColor: Colors.transparent,
+      ),
+      switchTheme: SwitchThemeData(
+        thumbColor: WidgetStateProperty.resolveWith((states) {
+          if (states.contains(WidgetState.selected)) {
+            return FixoColors.deepestForest;
+          }
+          return FixoColors.darkOnSurfaceVariant;
+        }),
+        trackColor: WidgetStateProperty.resolveWith((states) {
+          if (states.contains(WidgetState.selected)) {
+            return FixoColors.amberDark;
+          }
+          return FixoColors.darkSurfaceLow;
+        }),
+        trackOutlineColor: WidgetStateProperty.resolveWith((states) {
+          if (states.contains(WidgetState.selected)) {
+            return Colors.transparent;
+          }
+          return FixoColors.darkBorder;
+        }),
+      ),
+      checkboxTheme: CheckboxThemeData(
+        fillColor: WidgetStateProperty.resolveWith((states) {
+          if (states.contains(WidgetState.selected)) {
+            return FixoColors.amberDark;
+          }
+          return Colors.transparent;
+        }),
+        checkColor: const WidgetStatePropertyAll(FixoColors.deepestForest),
+      ),
+      progressIndicatorTheme: const ProgressIndicatorThemeData(
+        color: FixoColors.amberDark,
       ),
       snackBarTheme: SnackBarThemeData(
         backgroundColor: FixoColors.darkSurfaceHigh,

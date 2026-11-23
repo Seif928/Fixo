@@ -27,10 +27,10 @@ class CheckoutReassuranceBanner extends StatelessWidget {
           Expanded(
             child: Row(
               children: [
-                const Icon(
+                Icon(
                   Icons.payments_outlined,
                   size: 18,
-                  color: FixoColors.secondary,
+                  color: palette.primaryBrand,
                 ),
                 const SizedBox(width: FixoSpacing.xs),
                 Flexible(
@@ -57,8 +57,8 @@ class CheckoutReassuranceBanner extends StatelessWidget {
                 Container(
                   width: 6,
                   height: 6,
-                  decoration: const BoxDecoration(
-                    color: FixoColors.secondaryFixedDim,
+                  decoration: BoxDecoration(
+                    color: palette.primaryBrand,
                     shape: BoxShape.circle,
                   ),
                 ),
@@ -200,10 +200,10 @@ class CheckoutOrderSummaryCard extends StatelessWidget {
                     const SizedBox(height: 6),
                     Row(
                       children: [
-                        const Icon(
+                        Icon(
                           Icons.tag_rounded,
                           size: 14,
-                          color: FixoColors.secondary,
+                          color: palette.primaryBrand,
                         ),
                         const SizedBox(width: 4),
                         Text(
@@ -217,10 +217,10 @@ class CheckoutOrderSummaryCard extends StatelessWidget {
                     const SizedBox(height: 4),
                     Row(
                       children: [
-                        const Icon(
+                        Icon(
                           Icons.calendar_today_outlined,
                           size: 14,
-                          color: FixoColors.secondary,
+                          color: palette.primaryBrand,
                         ),
                         const SizedBox(width: 4),
                         Expanded(
@@ -238,10 +238,10 @@ class CheckoutOrderSummaryCard extends StatelessWidget {
                     const SizedBox(height: 4),
                     Row(
                       children: [
-                        const Icon(
+                        Icon(
                           Icons.location_on_outlined,
                           size: 14,
-                          color: FixoColors.secondary,
+                          color: palette.primaryBrand,
                         ),
                         const SizedBox(width: 4),
                         Expanded(
@@ -270,10 +270,10 @@ class CheckoutOrderSummaryCard extends StatelessWidget {
             ),
             child: Row(
               children: [
-                const Icon(
+                Icon(
                   Icons.handshake_outlined,
                   size: 16,
-                  color: FixoColors.secondary,
+                  color: palette.primaryBrand,
                 ),
                 const SizedBox(width: 6),
                 Expanded(
@@ -311,7 +311,6 @@ class CheckoutPaymentMethodsSection extends StatelessWidget {
   Widget build(BuildContext context) {
     final isArabic = Directionality.of(context) == TextDirection.rtl;
     final palette = context.fixoPalette;
-    final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: FixoSpacing.md),
@@ -349,16 +348,10 @@ class CheckoutPaymentMethodsSection extends StatelessWidget {
               color: palette.cardSurface,
               borderRadius: BorderRadius.circular(FixoRadius.lg),
               border: Border.all(
-                color: isDark ? palette.limeAccent : FixoColors.primaryForest,
+                color: palette.primaryBrand,
                 width: 1.5,
               ),
-              boxShadow: [
-                BoxShadow(
-                  color: FixoColors.primaryForest.withValues(alpha: 0.05),
-                  blurRadius: 6,
-                  offset: const Offset(0, 2),
-                ),
-              ],
+              boxShadow: FixoShadows.level1CardResting,
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -399,11 +392,11 @@ class CheckoutPaymentMethodsSection extends StatelessWidget {
                               ),
                               Container(
                                 padding: const EdgeInsets.symmetric(
-                                  horizontal: 6,
+                                  horizontal: 8,
                                   vertical: 2,
                                 ),
                                 decoration: BoxDecoration(
-                                  color: FixoColors.secondaryContainer,
+                                  color: palette.successContainer,
                                   borderRadius: BorderRadius.circular(
                                     FixoRadius.pill,
                                   ),
@@ -411,7 +404,7 @@ class CheckoutPaymentMethodsSection extends StatelessWidget {
                                 child: Text(
                                   isArabic ? 'مفعل حالياً' : 'Active in MVP',
                                   style: FixoTypography.labelMd(
-                                    color: FixoColors.onSecondaryContainer,
+                                    color: palette.onSuccessContainer,
                                   ).copyWith(fontWeight: FontWeight.bold),
                                 ),
                               ),
@@ -432,13 +425,13 @@ class CheckoutPaymentMethodsSection extends StatelessWidget {
                     Container(
                       width: 22,
                       height: 22,
-                      decoration: const BoxDecoration(
-                        color: FixoColors.primaryForest,
+                      decoration: BoxDecoration(
+                        color: palette.primaryBrand,
                         shape: BoxShape.circle,
                       ),
-                      child: const Icon(
+                      child: Icon(
                         Icons.check_rounded,
-                        color: FixoColors.limeAccent,
+                        color: palette.onPrimary,
                         size: 15,
                       ),
                     ),
@@ -455,10 +448,10 @@ class CheckoutPaymentMethodsSection extends StatelessWidget {
                   child: Row(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Icon(
+                      Icon(
                         Icons.info_outline_rounded,
                         size: 16,
-                        color: FixoColors.secondary,
+                        color: palette.mutedText,
                       ),
                       const SizedBox(width: 6),
                       Expanded(
@@ -592,17 +585,17 @@ class CheckoutReceiptCard extends StatelessWidget {
               children: [
                 Row(
                   children: [
-                    const Icon(
+                    Icon(
                       Icons.check_circle_outline,
                       size: 16,
-                      color: FixoColors.secondary,
+                      color: palette.success,
                     ),
                     const SizedBox(width: 8),
                     Expanded(
                       child: Text(
                         isArabic ? 'المستحق الآن: 0 ج.م' : 'Due now: 0 EGP',
                         style: FixoTypography.labelMd(
-                          color: FixoColors.secondary,
+                          color: palette.success,
                         ).copyWith(fontWeight: FontWeight.w600),
                       ),
                     ),
@@ -653,7 +646,7 @@ class CheckoutReceiptCard extends StatelessWidget {
           value,
           style:
               FixoTypography.bodySm(
-                color: isSecondary ? FixoColors.secondary : palette.deepForest,
+                color: isSecondary ? palette.primaryBrand : palette.deepForest,
               ).copyWith(
                 fontWeight: isBold || isSecondary
                     ? FontWeight.bold
@@ -684,10 +677,10 @@ class CheckoutTrustFootnote extends StatelessWidget {
           Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              const Icon(
+              Icon(
                 Icons.payments_outlined,
                 size: 15,
-                color: FixoColors.secondary,
+                color: palette.primaryBrand,
               ),
               const SizedBox(width: 6),
               Flexible(
@@ -751,13 +744,13 @@ class CheckoutConfirmationView extends StatelessWidget {
           Container(
             width: 72,
             height: 72,
-            decoration: const BoxDecoration(
-              color: FixoColors.secondaryContainer,
+            decoration: BoxDecoration(
+              color: palette.successContainer,
               shape: BoxShape.circle,
             ),
-            child: const Icon(
+            child: Icon(
               Icons.check_circle_rounded,
-              color: FixoColors.primaryForest,
+              color: palette.success,
               size: 44,
             ),
           ),
@@ -877,9 +870,9 @@ class CheckoutConfirmationView extends StatelessWidget {
                         color: palette.surfaceLow,
                         borderRadius: BorderRadius.circular(FixoRadius.md),
                       ),
-                      child: const Icon(
+                      child: Icon(
                         Icons.assignment_ind_outlined,
-                        color: FixoColors.secondary,
+                        color: palette.primaryBrand,
                         size: 22,
                       ),
                     ),
@@ -935,21 +928,22 @@ class CheckoutConfirmationView extends StatelessWidget {
                 ),
               ),
               style: FilledButton.styleFrom(
-                backgroundColor: FixoColors.primaryForest,
+                backgroundColor: palette.primaryBrand,
+                foregroundColor: palette.onPrimary,
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(12),
                 ),
                 elevation: 0,
               ),
-              icon: const Icon(
+              icon: Icon(
                 Icons.view_in_ar_rounded,
                 size: 20,
-                color: FixoColors.limeAccent,
+                color: palette.onPrimary,
               ),
               label: Text(
                 isArabic ? 'تتبع الفني والطلب 3D' : 'Live 3D Order Tracking',
                 style: FixoTypography.labelLg(
-                  color: Colors.white,
+                  color: palette.onPrimary,
                 ).copyWith(fontWeight: FontWeight.bold),
               ),
             ),

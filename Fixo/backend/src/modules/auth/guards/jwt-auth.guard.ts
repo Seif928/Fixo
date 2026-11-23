@@ -11,7 +11,7 @@ import { FixoJwtPayload } from '../utils/jwt-token.util';
 export class JwtAuthGuard implements CanActivate {
   constructor(private readonly authService: AuthService) {}
 
-  canActivate(context: ExecutionContext): boolean {
+  canActivate(context: ExecutionContext): boolean | Promise<boolean> {
     const request = context.switchToHttp().getRequest<{
       headers?: Record<string, string | string[] | undefined>;
       user?: FixoJwtPayload;
@@ -28,6 +28,18 @@ export class JwtAuthGuard implements CanActivate {
     }
 
     const payload = this.authService.verifyAccessToken(token);
+    if (
+      typeof this.authService.isDatabaseConnected === 'function' &&
+      this.authService.isDatabaseConnected() &&
+      typeof this.authService.verifyActiveAccessUser === 'function'
+    ) {
+      return this.authService
+        .verifyActiveAccessUser(payload)
+        .then((activePayload) => {
+          request.user = activePayload;
+          return true;
+        });
+    }
     request.user = payload;
     return true;
   }

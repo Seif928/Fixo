@@ -21,7 +21,7 @@
     }
   },
   "hosting": {
-    "public": "build/web",
+    "public": "build/web-accessible",
     "ignore": [
       "firebase.json",
       "**/.*",
@@ -34,6 +34,27 @@
       }
     ],
     "headers": [
+      {
+        "source": "**",
+        "headers": [
+          {
+            "key": "X-Content-Type-Options",
+            "value": "nosniff"
+          },
+          {
+            "key": "X-Frame-Options",
+            "value": "DENY"
+          },
+          {
+            "key": "Referrer-Policy",
+            "value": "strict-origin-when-cross-origin"
+          },
+          {
+            "key": "Permissions-Policy",
+            "value": "camera=(self), microphone=(), geolocation=(self)"
+          }
+        ]
+      },
       {
         "source": "/",
         "headers": [
@@ -57,7 +78,7 @@
         "headers": [
           {
             "key": "Cache-Control",
-            "value": "no-cache, no-store, must-revalidate"
+            "value": "public, no-cache, must-revalidate"
           }
         ]
       },
@@ -66,7 +87,7 @@
         "headers": [
           {
             "key": "Cache-Control",
-            "value": "no-cache, no-store, must-revalidate"
+            "value": "public, no-cache, must-revalidate"
           }
         ]
       },
@@ -75,7 +96,7 @@
         "headers": [
           {
             "key": "Cache-Control",
-            "value": "no-cache, no-store, must-revalidate"
+            "value": "public, no-cache, must-revalidate"
           }
         ]
       },
@@ -84,7 +105,7 @@
         "headers": [
           {
             "key": "Cache-Control",
-            "value": "no-cache, no-store, must-revalidate"
+            "value": "public, no-cache, must-revalidate"
           }
         ]
       },
@@ -93,7 +114,7 @@
         "headers": [
           {
             "key": "Cache-Control",
-            "value": "public, max-age=31536000, immutable"
+            "value": "public, max-age=3600, s-maxage=86400, stale-while-revalidate=604800, must-revalidate"
           }
         ]
       },
@@ -102,7 +123,7 @@
         "headers": [
           {
             "key": "Cache-Control",
-            "value": "public, max-age=31536000, immutable"
+            "value": "public, max-age=604800, s-maxage=2592000, stale-while-revalidate=2592000, must-revalidate"
           }
         ]
       },
@@ -111,7 +132,7 @@
         "headers": [
           {
             "key": "Cache-Control",
-            "value": "public, max-age=31536000, immutable"
+            "value": "public, max-age=3600, s-maxage=86400, stale-while-revalidate=604800, must-revalidate"
           }
         ]
       },

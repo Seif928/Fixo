@@ -416,13 +416,13 @@ class _FavoritesPageState extends ConsumerState<FavoritesPage> {
                           vertical: 2,
                         ),
                         decoration: BoxDecoration(
-                          color: FixoColors.coral.withValues(alpha: 0.12),
+                          color: palette.errorContainer,
                           borderRadius: FixoRadius.borderRadiusPill,
                         ),
                         child: Text(
                           ar ? 'غير متوفرة حالياً' : 'Currently unavailable',
                           style: textTheme.labelSmall?.copyWith(
-                            color: FixoColors.coral,
+                            color: palette.onErrorContainer,
                             fontWeight: FontWeight.w700,
                           ),
                         ),
@@ -485,7 +485,7 @@ class _FavoritesPageState extends ConsumerState<FavoritesPage> {
                   style: FilledButton.styleFrom(
                     minimumSize: const Size(0, 36),
                     backgroundColor: palette.primaryBrand,
-                    foregroundColor: Colors.white,
+                    foregroundColor: palette.onPrimary,
                     shape: RoundedRectangleBorder(
                       borderRadius: FixoRadius.borderRadiusMd,
                     ),
@@ -567,13 +567,13 @@ class _FavoritesPageState extends ConsumerState<FavoritesPage> {
                           vertical: 2,
                         ),
                         decoration: BoxDecoration(
-                          color: FixoColors.coral.withValues(alpha: 0.12),
+                          color: palette.errorContainer,
                           borderRadius: FixoRadius.borderRadiusPill,
                         ),
                         child: Text(
                           ar ? 'غير متوفر حالياً' : 'Currently unavailable',
                           style: textTheme.labelSmall?.copyWith(
-                            color: FixoColors.coral,
+                            color: palette.onErrorContainer,
                             fontWeight: FontWeight.w700,
                           ),
                         ),

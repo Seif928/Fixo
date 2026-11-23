@@ -72,7 +72,12 @@ describe('Tier 4: Real-World Application Scenarios (End-to-End User Journeys)', 
     user: proPersona,
     createdAt: new Date(),
     updatedAt: new Date(),
-    primaryCategory: { id: 'cat-elec', nameEn: 'Electrical Maintenance', nameAr: 'صيانة كهرباء', slug: 'electrical' },
+    primaryCategory: {
+      id: 'cat-elec',
+      nameEn: 'Electrical Maintenance',
+      nameAr: 'صيانة كهرباء',
+      slug: 'electrical',
+    },
     documents: [
       {
         id: 'doc-nat-front',
@@ -121,8 +126,8 @@ describe('Tier 4: Real-World Application Scenarios (End-to-End User Journeys)', 
 
   const adminOwnerActor = {
     id: 'admin-owner-99',
-    email: 'admin.owner@fixo.eg',
     role: 'OWNER',
+    email: 'owner-fixture@example.test',
     authTime: Math.floor(Date.now() / 1000),
   };
 
@@ -135,7 +140,9 @@ describe('Tier 4: Real-World Application Scenarios (End-to-End User Journeys)', 
   const catalogDraftsDb: any[] = [];
   const proProfilesDb: any[] = [mockProProfile];
 
+  const previousOwnerEmail = process.env.FIXO_OWNER_EMAIL;
   beforeAll(async () => {
+    process.env.FIXO_OWNER_EMAIL = 'owner-fixture@example.test';
     prismaMock = {
       isDatabaseConnected: () => false,
       $transaction: jest.fn(async (callback) => callback(prismaMock)),
@@ -149,6 +156,7 @@ describe('Tier 4: Real-World Application Scenarios (End-to-End User Journeys)', 
               adminEmail: where.adminEmail,
               userId: 'admin-owner-99',
               role: 'OWNER',
+              email: 'owner-fixture@example.test',
               isActive: true,
             });
           }
@@ -156,6 +164,7 @@ describe('Tier 4: Real-World Application Scenarios (End-to-End User Journeys)', 
             id: 'mem-001',
             userId: 'admin-owner-99',
             role: 'OWNER',
+            email: 'owner-fixture@example.test',
             isActive: true,
           });
         }),
@@ -170,9 +179,11 @@ describe('Tier 4: Real-World Application Scenarios (End-to-End User Journeys)', 
       },
       serviceOffering: {
         findMany: jest.fn().mockResolvedValue([]),
-        create: jest.fn().mockImplementation(({ data }) =>
-          Promise.resolve({ id: `off-${Date.now()}`, ...data }),
-        ),
+        create: jest
+          .fn()
+          .mockImplementation(({ data }) =>
+            Promise.resolve({ id: `off-${Date.now()}`, ...data }),
+          ),
         findUnique: jest.fn().mockImplementation(({ where }) => {
           const list = memoryStore.getOfferings();
           const item = list.find(
@@ -194,7 +205,9 @@ describe('Tier 4: Real-World Application Scenarios (End-to-End User Journeys)', 
         }),
       },
       serviceCategory: {
-        findMany: jest.fn().mockImplementation(() => memoryStore.getCategories()),
+        findMany: jest
+          .fn()
+          .mockImplementation(() => memoryStore.getCategories()),
         findUnique: jest.fn().mockImplementation(({ where }) => {
           const list = memoryStore.getCategories();
           const item = list.find(
@@ -207,7 +220,9 @@ describe('Tier 4: Real-World Application Scenarios (End-to-End User Journeys)', 
       },
       booking: {
         create: jest.fn().mockImplementation(({ data }) => {
-          const offering = memoryStore.getOfferings().find((o) => o.id === data.offeringId) || memoryStore.getOfferings()[0];
+          const offering =
+            memoryStore.getOfferings().find((o) => o.id === data.offeringId) ||
+            memoryStore.getOfferings()[0];
           const newBooking = {
             id: `bk-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
             orderCode: `FIXO-${Date.now().toString().slice(-6)}`,
@@ -217,7 +232,8 @@ describe('Tier 4: Real-World Application Scenarios (End-to-End User Journeys)', 
             scheduledDate: data.scheduledDate,
             timeWindow: data.timeWindow,
             status: BookingStatus.DRAFT,
-            paymentMethod: data.paymentMethod || PaymentMethodType.CASH_ON_SERVICE,
+            paymentMethod:
+              data.paymentMethod || PaymentMethodType.CASH_ON_SERVICE,
             paymentStatus: PaymentStatus.PENDING,
             baseInspectionEgp: Number(offering?.baseInspectionEgp || 120),
             serviceFeeEgp: 20,
@@ -231,7 +247,13 @@ describe('Tier 4: Real-World Application Scenarios (End-to-End User Journeys)', 
             completedAt: null,
             offering: {
               ...offering,
-              category: { id: offering.categoryId, nameEn: 'Electrical', nameAr: 'كهرباء', slug: 'electrical', isActive: true },
+              category: {
+                id: offering.categoryId,
+                nameEn: 'Electrical',
+                nameAr: 'كهرباء',
+                slug: 'electrical',
+                isActive: true,
+              },
             },
             customer: customerPersona,
             address: customerAddress,
@@ -258,7 +280,8 @@ describe('Tier 4: Real-World Application Scenarios (End-to-End User Journeys)', 
         }),
         findUniqueOrThrow: jest.fn().mockImplementation(({ where }) => {
           const b = bookingsDb.find((item) => item.id === where.id);
-          if (!b) return Promise.reject(new NotFoundException('Booking not found'));
+          if (!b)
+            return Promise.reject(new NotFoundException('Booking not found'));
           return Promise.resolve({
             ...b,
             proProfile: b.proProfileId ? mockProProfile : null,
@@ -270,8 +293,10 @@ describe('Tier 4: Real-World Application Scenarios (End-to-End User Journeys)', 
         findMany: jest.fn().mockImplementation(({ where }) => {
           return Promise.resolve(
             bookingsDb.filter((b) => {
-              if (where?.customerId && b.customerId !== where.customerId) return false;
-              if (where?.proProfileId && b.proProfileId !== where.proProfileId) return false;
+              if (where?.customerId && b.customerId !== where.customerId)
+                return false;
+              if (where?.proProfileId && b.proProfileId !== where.proProfileId)
+                return false;
               if (where?.status && b.status !== where.status) return false;
               return true;
             }),
@@ -293,7 +318,11 @@ describe('Tier 4: Real-World Application Scenarios (End-to-End User Journeys)', 
       },
       bookingStatusEvent: {
         create: jest.fn().mockImplementation(({ data }) => {
-          const event = { id: `evt-${Date.now()}`, ...data, createdAt: new Date() };
+          const event = {
+            id: `evt-${Date.now()}`,
+            ...data,
+            createdAt: new Date(),
+          };
           statusEventsDb.push(event);
           return Promise.resolve(event);
         }),
@@ -314,7 +343,11 @@ describe('Tier 4: Real-World Application Scenarios (End-to-End User Journeys)', 
       },
       paymentRecord: {
         create: jest.fn().mockImplementation(({ data }) => {
-          const rec = { id: `pay-${Date.now()}`, ...data, createdAt: new Date() };
+          const rec = {
+            id: `pay-${Date.now()}`,
+            ...data,
+            createdAt: new Date(),
+          };
           paymentsDb.push(rec);
           return Promise.resolve(rec);
         }),
@@ -376,7 +409,11 @@ describe('Tier 4: Real-World Application Scenarios (End-to-End User Journeys)', 
         update: jest.fn().mockImplementation(({ where, data }) => {
           const idx = catalogDraftsDb.findIndex((d) => d.id === where.id);
           if (idx === -1) return Promise.resolve(null);
-          catalogDraftsDb[idx] = { ...catalogDraftsDb[idx], ...data, updatedAt: new Date() };
+          catalogDraftsDb[idx] = {
+            ...catalogDraftsDb[idx],
+            ...data,
+            updatedAt: new Date(),
+          };
           return Promise.resolve(catalogDraftsDb[idx]);
         }),
         count: jest.fn().mockResolvedValue(catalogDraftsDb.length),
@@ -386,7 +423,11 @@ describe('Tier 4: Real-World Application Scenarios (End-to-End User Journeys)', 
       },
       adminAuditLog: {
         create: jest.fn().mockImplementation(({ data }) => {
-          const log = { id: `audit-${Date.now()}`, ...data, createdAt: new Date() };
+          const log = {
+            id: `audit-${Date.now()}`,
+            ...data,
+            createdAt: new Date(),
+          };
           auditLogsDb.push(log);
           return Promise.resolve(log);
         }),
@@ -394,7 +435,11 @@ describe('Tier 4: Real-World Application Scenarios (End-to-End User Journeys)', 
       },
       review: {
         create: jest.fn().mockImplementation(({ data }) => {
-          const rev = { id: `rev-${Date.now()}`, ...data, createdAt: new Date() };
+          const rev = {
+            id: `rev-${Date.now()}`,
+            ...data,
+            createdAt: new Date(),
+          };
           reviewsDb.push(rev);
           return Promise.resolve(rev);
         }),
@@ -427,17 +472,27 @@ describe('Tier 4: Real-World Application Scenarios (End-to-End User Journeys)', 
     await app.init();
 
     memoryStore = moduleFixture.get<InMemoryStoreService>(InMemoryStoreService);
-    servicesController = moduleFixture.get<ServicesController>(ServicesController);
+    servicesController =
+      moduleFixture.get<ServicesController>(ServicesController);
     bookingsService = moduleFixture.get<BookingsService>(BookingsService);
     proService = moduleFixture.get<ProService>(ProService);
-    adminAccessController = moduleFixture.get<AdminAccessController>(AdminAccessController);
-    adminCatalogController = moduleFixture.get<AdminCatalogController>(AdminCatalogController);
-    adminProfessionalsController = moduleFixture.get<AdminProfessionalsController>(AdminProfessionalsController);
+    adminAccessController = moduleFixture.get<AdminAccessController>(
+      AdminAccessController,
+    );
+    adminCatalogController = moduleFixture.get<AdminCatalogController>(
+      AdminCatalogController,
+    );
+    adminProfessionalsController =
+      moduleFixture.get<AdminProfessionalsController>(
+        AdminProfessionalsController,
+      );
 
     memoryStore.resetToSeedState();
   });
 
   afterAll(async () => {
+    if (previousOwnerEmail === undefined) delete process.env.FIXO_OWNER_EMAIL;
+    else process.env.FIXO_OWNER_EMAIL = previousOwnerEmail;
     if (app) await app.close();
   });
 
@@ -449,13 +504,16 @@ describe('Tier 4: Real-World Application Scenarios (End-to-End User Journeys)', 
       const targetOffering = offerings[0];
       expect(targetOffering).toBeDefined();
 
-      const createdBooking = await bookingsService.createBooking(customerPersona.id, {
-        offeringId: targetOffering.id,
-        addressId: customerAddress.id,
-        scheduledDate: '2026-11-20',
-        timeWindow: TimeWindow.MORNING_09_12,
-        issueDescription: 'Ring doorbell twice upon arrival',
-      });
+      const createdBooking = await bookingsService.createBooking(
+        customerPersona.id,
+        {
+          offeringId: targetOffering.id,
+          addressId: customerAddress.id,
+          scheduledDate: '2026-11-20',
+          timeWindow: TimeWindow.MORNING_09_12,
+          issueDescription: 'Ring doorbell twice upon arrival',
+        },
+      );
 
       expect(createdBooking.status).toBe(BookingStatus.DRAFT);
       expect(createdBooking.pricing.totalEgp).toBeGreaterThan(0);
@@ -475,9 +533,12 @@ describe('Tier 4: Real-World Application Scenarios (End-to-End User Journeys)', 
 
     it('Step 2: Pro availability check enables technician for dispatch matching', async () => {
       // Pro is online
-      const updatedAvailability = await proService.updateAvailability(proPersona.id, {
-        isOnline: true,
-      });
+      const updatedAvailability = await proService.updateAvailability(
+        proPersona.id,
+        {
+          isOnline: true,
+        },
+      );
       expect(updatedAvailability.isOnline).toBe(true);
 
       const catalog = await proService.getCatalogOptions();
@@ -508,8 +569,12 @@ describe('Tier 4: Real-World Application Scenarios (End-to-End User Journeys)', 
         },
       });
 
-      const events = statusEventsDb.filter((e) => e.bookingId === scenarioBookingId);
-      const confirmedEvent = events.find((e) => e.toStatus === BookingStatus.CONFIRMED);
+      const events = statusEventsDb.filter(
+        (e) => e.bookingId === scenarioBookingId,
+      );
+      const confirmedEvent = events.find(
+        (e) => e.toStatus === BookingStatus.CONFIRMED,
+      );
       expect(confirmedEvent).toBeDefined();
     });
 
@@ -632,7 +697,9 @@ describe('Tier 4: Real-World Application Scenarios (End-to-End User Journeys)', 
       expect(reviewResult.rating).toBe(5);
       expect(reviewResult.comment).toContain('خدمة ممتازة');
       expect(reviewResult.tipAmountEgp).toBe(20);
-      expect(reviewsDb.some((r) => r.bookingId === fulfillmentBookingId)).toBe(true);
+      expect(reviewsDb.some((r) => r.bookingId === fulfillmentBookingId)).toBe(
+        true,
+      );
     });
   });
 
@@ -668,7 +735,9 @@ describe('Tier 4: Real-World Application Scenarios (End-to-End User Journeys)', 
       );
 
       expect(reviewOutcome).toBeDefined();
-      expect(reviewOutcome.verificationStatus).toBe(ProVerificationStatus.APPROVED);
+      expect(reviewOutcome.verificationStatus).toBe(
+        ProVerificationStatus.APPROVED,
+      );
     });
 
     it('Step 3: Admin drafts catalog entry and publishes version with transaction lock', async () => {
@@ -690,9 +759,13 @@ describe('Tier 4: Real-World Application Scenarios (End-to-End User Journeys)', 
       expect(draft.titleEn).toBe('Emergency AC Circuit Board Diagnosis');
 
       // Publish draft
-      const published = await adminCatalogController.publish(mockReq, draft.id, {
-        version: 1,
-      });
+      const published = await adminCatalogController.publish(
+        mockReq,
+        draft.id,
+        {
+          version: 1,
+        },
+      );
 
       expect(published).toBeDefined();
       expect(published.publishedVersion).toBe(1);

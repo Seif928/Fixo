@@ -1,0 +1,71 @@
+name: FIXO Full-Stack CI (Free QA)
+
+on:
+  push:
+    branches: [main, fixo-connected-communications, 'codex/**']
+  pull_request:
+    branches: [main, fixo-connected-communications, 'codex/**']
+
+jobs:
+  backend:
+    name: Backend Lint, Tests & Prisma Check
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: Fixo/backend
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: fixo_ci_password
+          POSTGRES_DB: fixo_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    env:
+      DATABASE_URL: postgresql://postgres:fixo_ci_password@localhost:5432/fixo_test
+      DIRECT_URL: postgresql://postgres:fixo_ci_password@localhost:5432/fixo_test
+      TEST_DATABASE_URL: postgresql://postgres:fixo_ci_password@localhost:5432/fixo_test
+      NODE_ENV: test
+      SMS_PROVIDER_TYPE: DEV_SANDBOX_SMS
+      ALLOW_DEV_SMS: 'true'
+      ALLOW_TEST_FIXED_OTP: 'true'
+      ALLOW_IN_MEMORY_FALLBACK: 'false'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: 'npm'
+          cache-dependency-path: Fixo/backend/package-lock.json
+      - name: Generate isolated test credentials
+        run: node -e "const fs=require('fs'),crypto=require('crypto'); for(const key of ['JWT_ACCESS_SECRET','JWT_REFRESH_SECRET','OTP_HMAC_SECRET']) fs.appendFileSync(process.env.GITHUB_ENV,key+'='+crypto.randomBytes(32).toString('hex')+'\n');"
+      - run: npm ci
+      - run: npm run prisma:validate
+      - run: npm run prisma:generate
+      - run: npx prisma migrate deploy
+      - run: npm run lint
+      - run: npm test
+      - run: npm audit --omit=dev --audit-level=high
+
+  mobile:
+    name: Flutter App and Web
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: Fixo/mobile
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: 'stable'
+      - run: flutter pub get
+      - run: flutter analyze
+      - run: flutter test
+
+      - run: flutter build web --release --no-wasm-dry-run --dart-define=FIXO_API_BASE_URL=https://fixo-api.vercel.app/api/v1

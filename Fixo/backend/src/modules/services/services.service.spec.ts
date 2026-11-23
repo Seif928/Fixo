@@ -250,6 +250,7 @@ describe('ServicesController & ProfessionalsController (Phase 2 Marketplace API)
       jest.spyOn(prisma.serviceOffering, 'findMany').mockResolvedValue([]);
       jest.spyOn(prisma.serviceOffering, 'count').mockResolvedValue(0);
       jest.spyOn(prisma.proProfile, 'findMany').mockResolvedValue([]);
+      jest.spyOn(prisma.proProfile, 'count').mockResolvedValue(0);
 
       getCategoriesSpy = jest.spyOn(memoryStore, 'getCategories');
       getZonesSpy = jest.spyOn(memoryStore, 'getZones');
@@ -443,6 +444,60 @@ describe('ServicesController & ProfessionalsController (Phase 2 Marketplace API)
       } finally {
         process.env.ENABLE_DEMO_SEED = originalEnv;
       }
+    });
+
+    it('pushes id/slug filter and take: 1 to Postgres on getServiceById', async () => {
+      jest.spyOn(prisma.serviceOffering, 'findMany').mockResolvedValueOnce([]);
+      await expect(
+        servicesController.getServiceById('off-ac-deep-clean'),
+      ).rejects.toThrow(NotFoundException);
+
+      expect(prisma.serviceOffering.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: {
+            isActive: true,
+            OR: [
+              { id: 'off-ac-deep-clean' },
+              { slug: 'off-ac-deep-clean' },
+            ],
+          },
+          take: 1,
+        }),
+      );
+    });
+
+    it('pushes filters, skip/take, and minimal user projection to Postgres on listProfessionals', async () => {
+      jest.spyOn(prisma.coverageZone, 'findUnique').mockResolvedValueOnce({
+        id: 'z-giza',
+        slug: 'giza',
+        nameEn: 'Giza Governorate',
+        nameAr: 'محافظة الجيزة',
+        governorate: 'Giza',
+        isActive: true,
+      } as any);
+      jest.spyOn(prisma.proProfile, 'findMany').mockResolvedValueOnce([]);
+
+      await professionalsController.listProfessionals({
+        page: 2,
+        limit: 10,
+        categoryId: 'plumbing',
+        zone: 'giza',
+        search: 'ahmed',
+      });
+
+      expect(prisma.proProfile.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          skip: 10,
+          take: 10,
+          include: expect.objectContaining({
+            user: { select: { fullName: true } },
+          }),
+          where: expect.objectContaining({
+            verificationStatus: 'APPROVED',
+            AND: expect.any(Array),
+          }),
+        }),
+      );
     });
   });
 });

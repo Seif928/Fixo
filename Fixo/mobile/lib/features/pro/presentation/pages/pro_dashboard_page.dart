@@ -1,3 +1,5 @@
+import '../../../../core/theme/fixo_workspace_theme.dart';
+import '../../../../core/widgets/workspace_heading.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -120,9 +122,9 @@ class _ProDashboardPageState extends ConsumerState<ProDashboardPage> {
               ),
               title: Row(
                 children: [
-                  const Icon(
+                  Icon(
                     Icons.pin_rounded,
-                    color: FixoColors.primaryForest,
+                    color: Theme.of(context).colorScheme.primary,
                   ),
                   const SizedBox(width: 8),
                   Text(
@@ -221,7 +223,12 @@ class _ProDashboardPageState extends ConsumerState<ProDashboardPage> {
   }
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context) => FixoWorkspaceTheme(
+    workspace: FixoWorkspace.professional,
+    child: Consumer(builder: (context, ref, _) => _buildPage(context, ref)),
+  );
+
+  Widget _buildPage(BuildContext context, WidgetRef ref) {
     final ar = ref.watch(appLocaleProvider).languageCode == 'ar';
     final palette = context.fixoPalette;
     final dashboard = _dashboard;
@@ -241,7 +248,11 @@ class _ProDashboardPageState extends ConsumerState<ProDashboardPage> {
           titleSpacing: 0,
           title: Row(
             children: [
-              const FixoBrandMark(iconBoxSize: 26, showSubtitle: false),
+              const FixoBrandMark(
+                iconBoxSize: 26,
+                showSubtitle: false,
+                iconOnly: true,
+              ),
               const SizedBox(width: FixoSpacing.xs),
               Expanded(
                 child: Text(
@@ -270,7 +281,7 @@ class _ProDashboardPageState extends ConsumerState<ProDashboardPage> {
                           : (ar ? 'غير متاح' : 'Offline'),
                       style: FixoTypography.labelSm(
                         color: dashboard.isOnline
-                            ? FixoColors.primaryForest
+                            ? Theme.of(context).colorScheme.primary
                             : palette.mutedText,
                       ).copyWith(fontWeight: FontWeight.bold),
                     ),
@@ -278,7 +289,7 @@ class _ProDashboardPageState extends ConsumerState<ProDashboardPage> {
                     Switch(
                       value: dashboard.isOnline,
                       onChanged: _togglingOnline ? null : _toggleAvailability,
-                      activeTrackColor: FixoColors.primaryForest,
+                      activeTrackColor: Theme.of(context).colorScheme.primary,
                     ),
                   ],
                 ),
@@ -291,10 +302,23 @@ class _ProDashboardPageState extends ConsumerState<ProDashboardPage> {
                 padding: const EdgeInsets.all(FixoSpacing.md),
                 child: Center(
                   child: ConstrainedBox(
-                    constraints: const BoxConstraints(maxWidth: 680),
+                    constraints: const BoxConstraints(maxWidth: 1040),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
+                        WorkspaceHeading(
+                          workspace: FixoWorkspace.professional,
+                          isArabic: ar,
+                          action: OutlinedButton.icon(
+                            onPressed: () =>
+                                context.push(AppRoutes.proSchedule),
+                            icon: const Icon(Icons.calendar_month_outlined),
+                            label: Text(
+                              ar ? 'إدارة مواعيدي' : 'Manage my schedule',
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: FixoSpacing.md),
                         if (_errorMessage != null)
                           Container(
                             margin: const EdgeInsets.only(
@@ -302,13 +326,13 @@ class _ProDashboardPageState extends ConsumerState<ProDashboardPage> {
                             ),
                             padding: const EdgeInsets.all(FixoSpacing.sm),
                             decoration: BoxDecoration(
-                              color: FixoColors.errorContainer,
+                              color: palette.errorContainer,
                               borderRadius: FixoRadius.borderRadiusMd,
                             ),
                             child: Text(
                               _errorMessage!,
                               style: FixoTypography.bodySm(
-                                color: FixoColors.onErrorContainer,
+                                color: palette.onErrorContainer,
                               ),
                             ),
                           ),
@@ -317,6 +341,7 @@ class _ProDashboardPageState extends ConsumerState<ProDashboardPage> {
                           // Active Job Offer Banner
                           if (dashboard.activeOffers.isNotEmpty) ...[
                             ...dashboard.activeOffers.map((offer) {
+                              const proSky = Color(0xFF93C5FD);
                               return Container(
                                 margin: const EdgeInsets.only(
                                   bottom: FixoSpacing.md,
@@ -324,12 +349,18 @@ class _ProDashboardPageState extends ConsumerState<ProDashboardPage> {
                                 padding: const EdgeInsets.all(FixoSpacing.md),
                                 decoration: BoxDecoration(
                                   gradient: const LinearGradient(
+                                    begin: Alignment.topLeft,
+                                    end: Alignment.bottomRight,
                                     colors: [
-                                      FixoColors.deepestForest,
-                                      FixoColors.primaryForest,
+                                      Color(0xFF0F172A),
+                                      Color(0xFF172236),
+                                      Color(0xFF1E293B),
                                     ],
                                   ),
                                   borderRadius: FixoRadius.borderRadiusLg,
+                                  border: Border.all(
+                                    color: proSky.withValues(alpha: 0.42),
+                                  ),
                                   boxShadow: FixoShadows.level2Interactive,
                                 ),
                                 child: Column(
@@ -343,7 +374,7 @@ class _ProDashboardPageState extends ConsumerState<ProDashboardPage> {
                                             vertical: 3,
                                           ),
                                           decoration: BoxDecoration(
-                                            color: FixoColors.limeAccent,
+                                            color: proSky,
                                             borderRadius:
                                                 FixoRadius.borderRadiusPill,
                                           ),
@@ -362,17 +393,17 @@ class _ProDashboardPageState extends ConsumerState<ProDashboardPage> {
                                           ),
                                         ),
                                         const Spacer(),
-                                        Icon(
+                                        const Icon(
                                           Icons.timer_outlined,
                                           size: 16,
-                                          color: FixoColors.limeAccent,
+                                          color: proSky,
                                         ),
                                         const SizedBox(width: 4),
                                         Text(
                                           '${offer.remainingSeconds}s',
                                           style:
                                               FixoTypography.labelMd(
-                                                color: FixoColors.limeAccent,
+                                                color: proSky,
                                                 tabularFigures: true,
                                               ).copyWith(
                                                 fontWeight: FontWeight.bold,
@@ -394,7 +425,7 @@ class _ProDashboardPageState extends ConsumerState<ProDashboardPage> {
                                       '${offer.districtLine} • ${ar ? offer.zoneNameAr : offer.zoneNameEn}',
                                       style: FixoTypography.bodySm(
                                         color: Colors.white.withValues(
-                                          alpha: 0.8,
+                                          alpha: 0.82,
                                         ),
                                       ),
                                     ),
@@ -410,7 +441,7 @@ class _ProDashboardPageState extends ConsumerState<ProDashboardPage> {
                                           '${offer.netArtisanEgp} ${ar ? 'ج.م صافي أرباحك' : 'EGP Net payout'}',
                                           style:
                                               FixoTypography.labelLg(
-                                                color: FixoColors.limeAccent,
+                                                color: proSky,
                                               ).copyWith(
                                                 fontWeight: FontWeight.w800,
                                               ),
@@ -418,8 +449,7 @@ class _ProDashboardPageState extends ConsumerState<ProDashboardPage> {
                                         FilledButton.icon(
                                           style: FilledButton.styleFrom(
                                             minimumSize: const Size(0, 38),
-                                            backgroundColor:
-                                                FixoColors.limeAccent,
+                                            backgroundColor: proSky,
                                             foregroundColor:
                                                 FixoColors.deepestForest,
                                             shape: RoundedRectangleBorder(
@@ -488,7 +518,9 @@ class _ProDashboardPageState extends ConsumerState<ProDashboardPage> {
                                           '${dashboard.todayEarningsEgp}',
                                           style:
                                               FixoTypography.displayMobile(
-                                                color: FixoColors.primaryForest,
+                                                color: Theme.of(
+                                                  context,
+                                                ).colorScheme.primary,
                                               ).copyWith(
                                                 fontWeight: FontWeight.w900,
                                               ),
@@ -511,7 +543,9 @@ class _ProDashboardPageState extends ConsumerState<ProDashboardPage> {
                                         vertical: 4,
                                       ),
                                       decoration: BoxDecoration(
-                                        color: FixoColors.secondaryContainer,
+                                        color: Theme.of(
+                                          context,
+                                        ).colorScheme.primaryContainer,
                                         borderRadius:
                                             FixoRadius.borderRadiusPill,
                                       ),
@@ -532,8 +566,7 @@ class _ProDashboardPageState extends ConsumerState<ProDashboardPage> {
                                                 : '${dashboard.ratingAvg.toStringAsFixed(1)} (${dashboard.reviewsCount})',
                                             style:
                                                 FixoTypography.labelSm(
-                                                  color:
-                                                      FixoColors.deepestForest,
+                                                  color: palette.deepForest,
                                                 ).copyWith(
                                                   fontWeight: FontWeight.bold,
                                                 ),
@@ -653,7 +686,9 @@ class _ProDashboardPageState extends ConsumerState<ProDashboardPage> {
                                             style:
                                                 FixoTypography.labelSm(
                                                   color: isToday
-                                                      ? FixoColors.primaryForest
+                                                      ? Theme.of(
+                                                          context,
+                                                        ).colorScheme.primary
                                                       : palette.mutedText,
                                                   tabularFigures: true,
                                                 ).copyWith(
@@ -667,7 +702,9 @@ class _ProDashboardPageState extends ConsumerState<ProDashboardPage> {
                                             height: 60 * ratio,
                                             decoration: BoxDecoration(
                                               color: isToday
-                                                  ? FixoColors.primaryForest
+                                                  ? Theme.of(
+                                                      context,
+                                                    ).colorScheme.primary
                                                   : palette.surfaceHigh,
                                               borderRadius:
                                                   BorderRadius.circular(6),
@@ -863,13 +900,13 @@ class _ProDashboardPageState extends ConsumerState<ProDashboardPage> {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                 decoration: BoxDecoration(
-                  color: FixoColors.secondaryContainer,
+                  color: Theme.of(context).colorScheme.primaryContainer,
                   borderRadius: FixoRadius.borderRadiusPill,
                 ),
                 child: Text(
                   job.status,
                   style: FixoTypography.labelSm(
-                    color: FixoColors.primaryForest,
+                    color: Theme.of(context).colorScheme.primary,
                   ).copyWith(fontSize: 10, fontWeight: FontWeight.bold),
                 ),
               ),
@@ -918,7 +955,7 @@ class _ProDashboardPageState extends ConsumerState<ProDashboardPage> {
               Text(
                 '${job.netArtisanEgp} ${ar ? 'ج.م صافي' : 'EGP Net'}',
                 style: FixoTypography.labelMd(
-                  color: FixoColors.primaryForest,
+                  color: Theme.of(context).colorScheme.primary,
                 ).copyWith(fontWeight: FontWeight.w800),
               ),
             ],
@@ -948,7 +985,7 @@ class _ProDashboardPageState extends ConsumerState<ProDashboardPage> {
                 FilledButton.icon(
                   style: FilledButton.styleFrom(
                     minimumSize: const Size(0, 36),
-                    backgroundColor: FixoColors.primaryForest,
+                    backgroundColor: Theme.of(context).colorScheme.primary,
                   ),
                   onPressed: () =>
                       _advanceStatus(job.bookingId, 'PRO_EN_ROUTE', ar),
@@ -959,7 +996,7 @@ class _ProDashboardPageState extends ConsumerState<ProDashboardPage> {
                 FilledButton.icon(
                   style: FilledButton.styleFrom(
                     minimumSize: const Size(0, 36),
-                    backgroundColor: FixoColors.primaryForest,
+                    backgroundColor: Theme.of(context).colorScheme.primary,
                   ),
                   onPressed: () => _advanceStatus(job.bookingId, 'ARRIVED', ar),
                   icon: const Icon(Icons.pin_drop_outlined, size: 16),
@@ -969,7 +1006,7 @@ class _ProDashboardPageState extends ConsumerState<ProDashboardPage> {
                 FilledButton.icon(
                   style: FilledButton.styleFrom(
                     minimumSize: const Size(0, 36),
-                    backgroundColor: FixoColors.primaryForest,
+                    backgroundColor: Theme.of(context).colorScheme.primary,
                   ),
                   onPressed: () =>
                       _showArrivalPinDialog(context, job.bookingId, ar),
@@ -980,8 +1017,11 @@ class _ProDashboardPageState extends ConsumerState<ProDashboardPage> {
                 FilledButton.icon(
                   style: FilledButton.styleFrom(
                     minimumSize: const Size(0, 36),
-                    backgroundColor: FixoColors.secondary,
-                    foregroundColor: Colors.white,
+                    backgroundColor: context.fixoPalette.success,
+                    foregroundColor:
+                        Theme.of(context).brightness == Brightness.dark
+                        ? FixoColors.deepestForest
+                        : Colors.white,
                   ),
                   onPressed: () =>
                       _advanceStatus(job.bookingId, 'COMPLETED', ar),

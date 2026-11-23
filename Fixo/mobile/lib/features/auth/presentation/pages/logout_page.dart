@@ -94,9 +94,7 @@ class _LogoutPageState extends ConsumerState<LogoutPage>
     final isActuallyAuthed = authState.isAuthenticated && !_signedOutSuccess;
 
     return Scaffold(
-      backgroundColor: isDark
-          ? const Color(0xFF17191C)
-          : const Color(0xFFF6F2EB),
+      backgroundColor: palette.canvasBackground,
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
@@ -149,8 +147,8 @@ class _LogoutPageState extends ConsumerState<LogoutPage>
                 shape: BoxShape.circle,
                 gradient: RadialGradient(
                   colors: [
-                    FixoColors.secondaryForest.withValues(
-                      alpha: isDark ? 0.18 : 0.08,
+                    palette.primaryBrand.withValues(
+                      alpha: isDark ? 0.14 : 0.08,
                     ),
                     Colors.transparent,
                   ],
@@ -237,23 +235,17 @@ class _LogoutPageState extends ConsumerState<LogoutPage>
             height: 76,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
-              color: isDark ? const Color(0xFF292C31) : Colors.white,
+              color: palette.cardSurface,
               border: Border.all(
-                color: const Color(0xFFC6A779).withValues(alpha: 0.45),
+                color: palette.primaryBrand.withValues(alpha: 0.45),
                 width: 1.5,
               ),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.15),
-                  blurRadius: 20,
-                  offset: const Offset(0, 8),
-                ),
-              ],
+              boxShadow: FixoShadows.level1CardResting,
             ),
-            child: const Icon(
+            child: Icon(
               Icons.lock_person_outlined,
               size: 36,
-              color: Color(0xFFC6A779),
+              color: palette.primaryBrand,
             ),
           ),
         ),
@@ -286,20 +278,10 @@ class _LogoutPageState extends ConsumerState<LogoutPage>
           Container(
             padding: const EdgeInsets.all(18),
             decoration: BoxDecoration(
-              color: isDark ? const Color(0xFF22252A) : Colors.white,
+              color: palette.cardSurface,
               borderRadius: BorderRadius.circular(20),
-              border: Border.all(
-                color: isDark
-                    ? Colors.white.withValues(alpha: 0.08)
-                    : Colors.black.withValues(alpha: 0.06),
-              ),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: isDark ? 0.35 : 0.05),
-                  blurRadius: 16,
-                  offset: const Offset(0, 6),
-                ),
-              ],
+              border: Border.all(color: palette.subtleBorder),
+              boxShadow: FixoShadows.level1CardResting,
             ),
             child: Row(
               children: [
@@ -341,19 +323,17 @@ class _LogoutPageState extends ConsumerState<LogoutPage>
                               vertical: 2,
                             ),
                             decoration: BoxDecoration(
-                              color: const Color(
-                                0xFFC6A779,
-                              ).withValues(alpha: 0.15),
+                              color: palette.primaryContainer,
                               borderRadius: BorderRadius.circular(6),
                             ),
                             child: Text(
                               isPro
                                   ? (ar ? 'فني معتمد' : 'Pro')
                                   : (ar ? 'عميل' : 'Customer'),
-                              style: const TextStyle(
+                              style: TextStyle(
                                 fontSize: 10,
                                 fontWeight: FontWeight.w800,
-                                color: Color(0xFFC6A779),
+                                color: palette.onPrimaryContainer,
                               ),
                             ),
                           ),
@@ -382,16 +362,17 @@ class _LogoutPageState extends ConsumerState<LogoutPage>
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
           decoration: BoxDecoration(
-            color: isDark ? const Color(0xFF1D1F23) : const Color(0xFFF0EBE3),
+            color: palette.surfaceLow,
             borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: palette.subtleBorder),
           ),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              const Icon(
+              Icon(
                 Icons.verified_user_outlined,
                 size: 16,
-                color: FixoColors.secondaryForest,
+                color: palette.success,
               ),
               const SizedBox(width: 8),
               Flexible(
@@ -509,13 +490,13 @@ class _LogoutPageState extends ConsumerState<LogoutPage>
             height: 84,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
-              color: FixoColors.secondaryForest.withValues(alpha: 0.15),
-              border: Border.all(color: FixoColors.secondaryForest, width: 2),
+              color: palette.successContainer,
+              border: Border.all(color: palette.success, width: 2),
             ),
-            child: const Icon(
+            child: Icon(
               Icons.check_circle_outline_rounded,
               size: 46,
-              color: FixoColors.secondaryForest,
+              color: palette.success,
             ),
           ),
         ),
@@ -545,8 +526,8 @@ class _LogoutPageState extends ConsumerState<LogoutPage>
         ElevatedButton.icon(
           key: const Key('post-logout-signin-btn'),
           style: ElevatedButton.styleFrom(
-            backgroundColor: FixoColors.primaryForest,
-            foregroundColor: Colors.white,
+            backgroundColor: palette.primaryBrand,
+            foregroundColor: palette.onPrimary,
             padding: const EdgeInsets.symmetric(vertical: 16),
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(16),

@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -36,25 +37,50 @@ class EgyptPlace {
 /// Name lookup only: catalog centroids cannot become address coordinates.
 class EgyptPlaces {
   EgyptPlaces(List<EgyptPlace> places)
-    : byId = {for (final p in places) p.id: p};
+    : byId = {for (final p in places) p.id: p} {
+    for (final p in places) {
+      if (p.parent == null) {
+        _governorates.add(p);
+      } else {
+        (_childrenByGov[p.governorateId] ??= <EgyptPlace>[]).add(p);
+      }
+    }
+    for (final entry in _childrenByGov.entries) {
+      for (final p in entry.value) {
+        final parent = byId[p.parent];
+        _searchById[p.id] = normalizePlaceName(
+          '${p.nameEn} ${p.nameAr} ${parent?.nameAr ?? ''} ${parent?.nameEn ?? ''}',
+        );
+      }
+    }
+  }
+
   final Map<String, EgyptPlace> byId;
-  List<EgyptPlace> get governorates =>
-      byId.values.where((p) => p.parent == null).toList();
+  final List<EgyptPlace> _governorates = <EgyptPlace>[];
+  final Map<String, List<EgyptPlace>> _childrenByGov =
+      <String, List<EgyptPlace>>{};
+  final Map<String, String> _searchById = <String, String>{};
+
+  List<EgyptPlace> get governorates => List.unmodifiable(_governorates);
+
   List<EgyptPlace> search(String governorateId, String query) {
+    final children = _childrenByGov[governorateId];
+    if (children == null || children.isEmpty) return const <EgyptPlace>[];
     final q = normalizePlaceName(query);
-    return byId.values
-        .where(
-          (p) =>
-              p.governorateId == governorateId &&
-              p.parent != null &&
-              (q.isEmpty
-                  ? p.parent == governorateId
-                  : normalizePlaceName(
-                      '${p.nameEn} ${p.nameAr} ${byId[p.parent]?.nameAr ?? ''} ${byId[p.parent]?.nameEn ?? ''}',
-                    ).contains(q)),
-        )
-        .take(50)
-        .toList();
+    if (q.isEmpty) {
+      return children
+          .where((p) => p.parent == governorateId)
+          .take(50)
+          .toList();
+    }
+    final results = <EgyptPlace>[];
+    for (final p in children) {
+      if ((_searchById[p.id] ?? '').contains(q)) {
+        results.add(p);
+        if (results.length >= 50) break;
+      }
+    }
+    return results;
   }
 
   String localLabel(EgyptPlace place, bool ar) {
@@ -65,15 +91,17 @@ class EgyptPlaces {
   }
 }
 
+List<EgyptPlace> _parseEgyptPlacesList(String rawJson) {
+  final data = jsonDecode(rawJson) as Map<String, dynamic>;
+  return (data['places'] as List)
+      .map((p) => EgyptPlace.fromJson(Map<String, dynamic>.from(p)))
+      .toList();
+}
+
 final egyptPlacesProvider = FutureProvider<EgyptPlaces>((ref) async {
-  final data =
-      jsonDecode(await rootBundle.loadString('assets/locations/egypt.json'))
-          as Map<String, dynamic>;
-  return EgyptPlaces(
-    (data['places'] as List)
-        .map((p) => EgyptPlace.fromJson(Map<String, dynamic>.from(p)))
-        .toList(),
-  );
+  final raw = await rootBundle.loadString('assets/locations/egypt.json');
+  final places = await compute(_parseEgyptPlacesList, raw);
+  return EgyptPlaces(places);
 });
 
 class SelectedServiceArea {

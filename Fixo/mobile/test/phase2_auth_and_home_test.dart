@@ -487,7 +487,7 @@ void main() {
           ),
           findsOneWidget,
         );
-        expect(find.text('Welcome to FIXO'), findsOneWidget);
+        expect(find.text('Sign in to FIXO'), findsOneWidget);
       },
     );
   });

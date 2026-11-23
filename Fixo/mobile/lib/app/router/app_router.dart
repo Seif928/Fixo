@@ -1,3 +1,4 @@
+import '../../core/theme/fixo_workspace_theme.dart';
 import '../../features/support/support_page.dart' deferred as support_page;
 import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart';
@@ -9,30 +10,49 @@ import 'package:go_router/go_router.dart';
 import '../../features/auth/presentation/controllers/auth_controller.dart';
 import '../../features/auth/presentation/controllers/account_entry_controller.dart';
 import '../../features/auth/presentation/pages/phone_auth_page.dart';
-import '../../features/auth/presentation/pages/email_auth_page.dart';
+import '../../features/auth/presentation/pages/email_auth_page.dart'
+    deferred as email_auth_page;
 import '../../features/auth/presentation/pages/phone_password_page.dart';
-import '../../features/auth/presentation/pages/logout_page.dart';
-import '../../features/chat/presentation/chat_page.dart';
-import '../../features/profile/presentation/profile_page.dart';
-import '../../features/favorites/presentation/pages/favorites_page.dart';
-import '../../features/complaints/presentation/pages/my_complaints_page.dart';
-import '../../features/admin/presentation/admin_page.dart' deferred as admin_page;
-import '../../features/booking/presentation/pages/create_booking_page.dart';
-import '../../features/booking/presentation/pages/order_tracking_page.dart';
-import '../../features/booking/presentation/pages/orders_page.dart';
-import '../../features/booking/presentation/pages/review_page.dart';
+import '../../features/auth/presentation/pages/logout_page.dart'
+    deferred as logout_page;
+import '../../features/chat/presentation/chat_page.dart' deferred as chat_page;
+import '../../features/profile/presentation/profile_page.dart'
+    deferred as profile_page;
+import '../../features/favorites/presentation/pages/favorites_page.dart'
+    deferred as favorites_page;
+import '../../features/complaints/presentation/pages/my_complaints_page.dart'
+    deferred as my_complaints_page;
+import '../../features/admin/presentation/admin_page.dart'
+    deferred as admin_page;
+import '../../features/booking/presentation/pages/create_booking_page.dart'
+    deferred as create_booking_page;
+import '../../features/booking/presentation/pages/order_tracking_page.dart'
+    deferred as order_tracking_page;
+import '../../features/booking/presentation/pages/orders_page.dart'
+    deferred as orders_page;
+import '../../features/booking/presentation/pages/review_page.dart'
+    deferred as review_page;
 import '../../features/customer_home/domain/marketplace_models.dart';
 import '../../features/customer_home/presentation/pages/customer_home_page.dart';
 import '../../features/onboarding/presentation/pages/onboarding_page.dart';
-import '../../features/payment/presentation/pages/checkout_page.dart';
-import '../../features/pro/presentation/pages/incoming_job_page.dart' deferred as incoming_job_page;
-import '../../features/pro/presentation/pages/pro_account_entry_page.dart' deferred as pro_account_entry_page;
-import '../../features/pro/presentation/pages/pro_dashboard_page.dart' deferred as pro_dashboard_page;
-import '../../features/pro/presentation/pages/pro_signup_page.dart' deferred as pro_signup_page;
-import '../../features/pro/presentation/pages/pro_skills_page.dart' deferred as pro_skills_page;
-import '../../features/pro/presentation/pages/pro_verification_docs_page.dart' deferred as pro_verification_docs_page;
-import '../../features/pro/presentation/pages/pro_verification_status_page.dart' deferred as pro_verification_status_page;
-import '../../features/pro/presentation/pages/pro_schedule_page.dart' deferred as pro_schedule_page;
+import '../../features/payment/presentation/pages/checkout_page.dart'
+    deferred as checkout_page;
+import '../../features/pro/presentation/pages/incoming_job_page.dart'
+    deferred as incoming_job_page;
+import '../../features/pro/presentation/pages/pro_account_entry_page.dart'
+    deferred as pro_account_entry_page;
+import '../../features/pro/presentation/pages/pro_dashboard_page.dart'
+    deferred as pro_dashboard_page;
+import '../../features/pro/presentation/pages/pro_signup_page.dart'
+    deferred as pro_signup_page;
+import '../../features/pro/presentation/pages/pro_skills_page.dart'
+    deferred as pro_skills_page;
+import '../../features/pro/presentation/pages/pro_verification_docs_page.dart'
+    deferred as pro_verification_docs_page;
+import '../../features/pro/presentation/pages/pro_verification_status_page.dart'
+    deferred as pro_verification_status_page;
+import '../../features/pro/presentation/pages/pro_schedule_page.dart'
+    deferred as pro_schedule_page;
 import 'app_routes.dart';
 
 /// Listenable bridge that notifies `GoRouter` whenever `authControllerProvider`
@@ -111,14 +131,21 @@ GoRouter createAppRouter({
         return authPath;
       }
 
-      // Redirect authenticated users away from the login screen to Customer Home
-      if (authed && !setupRequired && path == AppRoutes.phoneAuth) {
+      // Redirect authenticated users away from the login and onboarding screens to Customer Home
+      if (authed &&
+          !setupRequired &&
+          (path == AppRoutes.phoneAuth || path == AppRoutes.onboarding)) {
         return wantsPro ? AppRoutes.proEntry : AppRoutes.customerHome;
       }
 
       return null;
     },
     routes: <RouteBase>[
+      GoRoute(path: '/login', redirect: (_, _) => AppRoutes.phoneAuth),
+      GoRoute(path: '/register', redirect: (_, _) => AppRoutes.phoneAuth),
+      GoRoute(path: '/dashboard', redirect: (_, _) => AppRoutes.customerHome),
+      GoRoute(path: '/bookings', redirect: (_, _) => AppRoutes.myOrders),
+      GoRoute(path: '/profile', redirect: (_, _) => AppRoutes.customerProfile),
       GoRoute(path: '/', redirect: (_, _) => initialLocation),
       _motionRoute(
         path: AppRoutes.admin,
@@ -141,13 +168,23 @@ GoRouter createAppRouter({
         name: 'myOrders',
         builder: (_, state) {
           final chats = state.uri.queryParameters['view'] == 'chat';
-          return OrdersPage(key: ValueKey(chats), showChats: chats);
+          return DeferredRouteView(
+            key: ValueKey(chats),
+            loadLibrary: orders_page.loadLibrary,
+            builder: (_) => orders_page.OrdersPage(
+              key: ValueKey(chats),
+              showChats: chats,
+            ),
+          );
         },
       ),
       _motionRoute(
         path: AppRoutes.customerProfile,
         name: 'customerProfile',
-        builder: (_, _) => const ProfilePage(),
+        builder: (_, _) => DeferredRouteView(
+          loadLibrary: profile_page.loadLibrary,
+          builder: (_) => profile_page.ProfilePage(),
+        ),
       ),
       _motionRoute(
         path: '/support',
@@ -168,25 +205,38 @@ GoRouter createAppRouter({
       _motionRoute(
         path: AppRoutes.logout,
         name: 'logout',
-        builder: (_, _) => const LogoutPage(),
+        builder: (_, _) => DeferredRouteView(
+          loadLibrary: logout_page.loadLibrary,
+          builder: (_) => logout_page.LogoutPage(),
+        ),
       ),
       _motionRoute(
         path: AppRoutes.favorites,
         name: 'favorites',
-        builder: (_, _) => const FavoritesPage(),
+        builder: (_, _) => DeferredRouteView(
+          loadLibrary: favorites_page.loadLibrary,
+          builder: (_) => favorites_page.FavoritesPage(),
+        ),
       ),
       _motionRoute(
         path: AppRoutes.myComplaints,
         name: 'myComplaints',
-        builder: (_, _) => const MyComplaintsPage(),
+        builder: (_, _) => DeferredRouteView(
+          loadLibrary: my_complaints_page.loadLibrary,
+          builder: (_) => my_complaints_page.MyComplaintsPage(),
+        ),
       ),
       _motionRoute(
         path: AppRoutes.customerChat,
         name: 'customerChat',
-        builder: (context, state) => ChatPage(
-          key: ValueKey(state.pathParameters['orderId']),
-          bookingId: state.pathParameters['orderId']!,
-        ),
+        builder: (context, state) {
+          final orderId = state.pathParameters['orderId']!;
+          return DeferredRouteView(
+            key: ValueKey(orderId),
+            loadLibrary: chat_page.loadLibrary,
+            builder: (_) => chat_page.ChatPage(bookingId: orderId),
+          );
+        },
       ),
       _motionRoute(
         path: AppRoutes.onboarding,
@@ -203,7 +253,11 @@ GoRouter createAppRouter({
             _ => null,
           };
           if (state.uri.queryParameters['method'] == 'email') {
-            return EmailAuthPage(professional: isPro);
+            return DeferredRouteView(
+              loadLibrary: email_auth_page.loadLibrary,
+              builder: (_) =>
+                  email_auth_page.EmailAuthPage(professional: isPro),
+            );
           }
           if (!kReleaseMode &&
               state.uri.queryParameters['method'] == 'dev-otp') {
@@ -224,9 +278,12 @@ GoRouter createAppRouter({
           final extra = state.extra as Map<String, dynamic>?;
           final offering = extra?['offering'] as ServiceOfferModel?;
           final preferredPro = extra?['preferredPro'] as ProfessionalCardModel?;
-          return CreateBookingPage(
-            initialOffering: offering,
-            initialPreferredPro: preferredPro,
+          return DeferredRouteView(
+            loadLibrary: create_booking_page.loadLibrary,
+            builder: (_) => create_booking_page.CreateBookingPage(
+              initialOffering: offering,
+              initialPreferredPro: preferredPro,
+            ),
           );
         },
       ),
@@ -235,7 +292,10 @@ GoRouter createAppRouter({
         name: 'checkout',
         builder: (context, state) {
           final bookingId = state.pathParameters['bookingId'] ?? '';
-          return CheckoutPage(bookingId: bookingId);
+          return DeferredRouteView(
+            loadLibrary: checkout_page.loadLibrary,
+            builder: (_) => checkout_page.CheckoutPage(bookingId: bookingId),
+          );
         },
       ),
       _motionRoute(
@@ -243,7 +303,10 @@ GoRouter createAppRouter({
         name: 'orderTracking',
         builder: (context, state) {
           final orderId = state.pathParameters['orderId'] ?? '';
-          return OrderTrackingPage(orderId: orderId);
+          return DeferredRouteView(
+            loadLibrary: order_tracking_page.loadLibrary,
+            builder: (_) => order_tracking_page.OrderTrackingPage(orderId: orderId),
+          );
         },
       ),
       _motionRoute(
@@ -251,7 +314,10 @@ GoRouter createAppRouter({
         name: 'rateReview',
         builder: (context, state) {
           final orderId = state.pathParameters['orderId'] ?? '';
-          return ReviewPage(orderId: orderId);
+          return DeferredRouteView(
+            loadLibrary: review_page.loadLibrary,
+            builder: (_) => review_page.ReviewPage(orderId: orderId),
+          );
         },
       ),
       _motionRoute(
@@ -275,8 +341,7 @@ GoRouter createAppRouter({
         name: 'proVerificationDocs',
         builder: (context, state) => DeferredRouteView(
           loadLibrary: pro_verification_docs_page.loadLibrary,
-          builder: (_) =>
-              pro_verification_docs_page.ProVerificationDocsPage(),
+          builder: (_) => pro_verification_docs_page.ProVerificationDocsPage(),
         ),
       ),
       _motionRoute(
@@ -311,7 +376,8 @@ GoRouter createAppRouter({
           final jobId = state.pathParameters['jobId'] ?? '';
           return DeferredRouteView(
             loadLibrary: incoming_job_page.loadLibrary,
-            builder: (_) => incoming_job_page.IncomingJobPage(jobOfferId: jobId),
+            builder: (_) =>
+                incoming_job_page.IncomingJobPage(jobOfferId: jobId),
           );
         },
       ),
@@ -336,7 +402,10 @@ GoRoute _motionRoute({
     reverseTransitionDuration: FixoMotion.reduced(context)
         ? Duration.zero
         : FixoMotion.page,
-    child: builder(context, state),
+    child: FixoWorkspaceTheme(
+      workspace: FixoWorkspace.forPath(state.uri.path),
+      child: builder(context, state),
+    ),
     transitionsBuilder: (context, animation, secondaryAnimation, child) =>
         FixoPageMotion(
           animation: animation,
